@@ -106,7 +106,7 @@ for an older conversation. No command is typed.
 
 Earliest standalone value: works without tmux (F5).
 
-- [ ] **T1.1 Session model and Provider interface** · S · deps: T0.2
+- [x] **T1.1 Session model and Provider interface** · S · deps: T0.2
   - AC: the types from §6 live in `internal/session`, with a registry `session.Providers()`.
   - AC: the doc comments state the "never panic, warnings instead" contract.
 - [ ] **T1.2 `session/jsonl` bounded reader** · M · deps: T1.1

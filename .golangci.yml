@@ -25,6 +25,9 @@ linters:
         - fmt.Fprint
     misspell:
       locale: US
+      # Agents write British spellings in their data; we must match them.
+      ignore-rules:
+        - cancelled
   exclusions:
     rules:
       - path: _test\.go
