@@ -93,7 +93,7 @@ for an older conversation. No command is typed.
 - [x] **T0.7 Build tooling** · S · deps: T0.2
   - AC: the Makefile (or justfile) has targets `build`, `test`, `e2e`, `lint`, `bench`, `fuzz-short`.
   - AC: the golangci-lint config enables vet, staticcheck, errcheck, gofumpt and misspell.
-- [ ] **T0.8 GitHub Actions CI** · M · deps: T0.7
+- [x] **T0.8 GitHub Actions CI** · M · deps: T0.7
   - AC: lint and `go test -race ./...` run on `ubuntu-latest` and `macos-latest`.
   - AC: an e2e job installs tmux (apt / brew) and runs `go test -tags e2e ./e2e/...`. It is a placeholder until M2.
   - AC: the job fails if the stripped binary exceeds 15 MB.
