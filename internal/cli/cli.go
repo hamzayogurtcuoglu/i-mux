@@ -10,6 +10,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
 
 // Exit codes.
@@ -92,7 +94,7 @@ func Run(e *Env, args []string) int {
 		if isAgentArg(name) || strings.HasPrefix(name, "-") {
 			return finish(e, defaultAction(e, args))
 		}
-		fmt.Fprintf(e.Stderr, "ajan: %s\n\n", tr("cli.unknown_command", name))
+		fmt.Fprintf(e.Stderr, "ajan: %s\n\n", i18n.T("cli.unknown_command", name))
 		printHelp(e.Stderr)
 		return ExitUsage
 	}
@@ -158,13 +160,13 @@ func parseFlags(fs *flag.FlagSet, args []string) ([]string, error) {
 }
 
 func printHelp(w io.Writer) {
-	fmt.Fprintln(w, tr("cli.help.header"))
+	fmt.Fprintln(w, i18n.T("cli.help.header"))
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, tr("cli.help.usage"))
+	fmt.Fprintln(w, i18n.T("cli.help.usage"))
 	fmt.Fprintln(w, "  ajan [agent]")
 	fmt.Fprintln(w, "  ajan <command> [flags]")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, tr("cli.help.commands"))
+	fmt.Fprintln(w, i18n.T("cli.help.commands"))
 	names := make([]string, 0, len(commands))
 	width := 0
 	for n, c := range commands {
@@ -178,12 +180,12 @@ func printHelp(w io.Writer) {
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		fmt.Fprintf(w, "  %-*s  %s\n", width, n, commands[n].Summary)
+		fmt.Fprintf(w, "  %-*s  %s\n", width, n, i18n.T(commands[n].Summary))
 	}
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, tr("cli.help.footer"))
+	fmt.Fprintln(w, i18n.T("cli.help.footer"))
 }
 
 func printCommandHelp(w io.Writer, c *command) {
-	fmt.Fprintf(w, "ajan %s %s\n  %s\n", c.Name, c.Args, c.Summary)
+	fmt.Fprintf(w, "ajan %s %s\n  %s\n", c.Name, c.Args, i18n.T(c.Summary))
 }

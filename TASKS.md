@@ -83,7 +83,7 @@ for an older conversation. No command is typed.
   - AC: an invalid RE2 regex is rejected with its line number. `{prompt}` may appear at most once per template.
   - AC: `config init` writes a commented file and refuses to overwrite it without `--force`.
   - AC: `config show` prints the effective merged config.
-- [ ] **T0.5 `internal/i18n`** · S · deps: T0.2
+- [x] **T0.5 `internal/i18n`** · S · deps: T0.2
   - AC: `T(key, args...)` works with an `en` catalog. Locale comes from config `locale`, then `AJAN_LANG`, then `LANG`.
   - AC: a test fails if code uses a key that is missing from the `en` catalog.
 - [ ] **T0.6 `internal/state`** · S · deps: T0.3

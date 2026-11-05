@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 )
 
@@ -12,7 +13,7 @@ func init() {
 	register(&command{
 		Name:    "config",
 		Args:    "[init [--force] | path | show]",
-		Summary: "Write a commented default config, print its path, or print the effective config.",
+		Summary: "cmd.config",
 		Run:     runConfig,
 	})
 }
@@ -21,7 +22,10 @@ func init() {
 func loadConfig(e *Env) (*config.Config, error) {
 	cfg, warns, err := config.Load(paths.Config())
 	for _, w := range warns {
-		fmt.Fprintf(e.Stderr, "ajan: warning: %s\n", w)
+		fmt.Fprintf(e.Stderr, "ajan: %s\n", i18n.T("cli.warning", w))
+	}
+	if cfg != nil {
+		i18n.Init(cfg.Locale)
 	}
 	return cfg, err
 }
@@ -46,12 +50,12 @@ func runConfig(e *Env, args []string) error {
 		}
 		err := config.WriteTemplate(paths.Config(), *force)
 		if errors.Is(err, config.ErrExists) {
-			return fmt.Errorf("%s already exists (use --force to overwrite)", paths.Config())
+			return errors.New(i18n.T("config.exists", paths.Config()))
 		}
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(e.Stdout, "wrote %s\n", paths.Config())
+		fmt.Fprintln(e.Stdout, i18n.T("config.wrote", paths.Config()))
 		return nil
 	case "show":
 		cfg, err := loadConfig(e)
@@ -65,6 +69,6 @@ func runConfig(e *Env, args []string) error {
 		_, err = e.Stdout.Write(b)
 		return err
 	default:
-		return usagef("config: unknown subcommand %q (init, path, show)", sub)
+		return &UsageError{Msg: i18n.T("config.unknown_sub", sub)}
 	}
 }

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"strings"
 	"testing"
 )
@@ -70,5 +71,13 @@ func TestConfigCommands(t *testing.T) {
 	out, _, code = runCLI(t, "config", "show")
 	if code != 0 || !strings.Contains(out, `on_limit = "ask"`) {
 		t.Fatalf("show: %d %q", code, out)
+	}
+}
+
+func TestCommandSummariesInCatalog(t *testing.T) {
+	for name, c := range commands {
+		if !c.Hidden && !i18n.Has(c.Summary) {
+			t.Errorf("command %s: summary key %q missing from the i18n catalog", name, c.Summary)
+		}
 	}
 }
