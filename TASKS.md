@@ -109,7 +109,7 @@ Earliest standalone value: works without tmux (F5).
 - [x] **T1.1 Session model and Provider interface** · S · deps: T0.2
   - AC: the types from §6 live in `internal/session`, with a registry `session.Providers()`.
   - AC: the doc comments state the "never panic, warnings instead" contract.
-- [ ] **T1.2 `session/jsonl` bounded reader** · M · deps: T1.1
+- [x] **T1.2 `session/jsonl` bounded reader** · M · deps: T1.1
   - Head window, tail window (starting at the first full line), reverse line scanner, per-line size cap.
   - AC: tests cover window boundaries that split a line, CRLF, an empty file, and a final line
     without a newline (file being written).
