@@ -1,0 +1,8 @@
+/bin/
+/dist/
+/ajan
+*.test
+*.out
+/coverage*
+/e2e/.tmp/
+/testdata/large/

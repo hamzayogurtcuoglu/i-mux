@@ -67,7 +67,7 @@ for an older conversation. No command is typed.
 - [x] **T0.1 Record project decisions (Q23)** · S · deps: none
   - AC: the module path, license and tap name are written into ARCHITECTURE §20 (Q23 closed).
   - AC: `LICENSE` file added.
-- [ ] **T0.2 Go toolchain and CLI skeleton** · S · deps: T0.1
+- [x] **T0.2 Go toolchain and CLI skeleton** · S · deps: T0.1
   - `brew install go`, then `go mod init`. Set the `go` directive to the current stable release.
   - Add `cmd/ajan/main.go` and the `internal/cli` dispatcher (stdlib `flag`).
   - AC: `go build ./...` succeeds with `CGO_ENABLED=0`.
