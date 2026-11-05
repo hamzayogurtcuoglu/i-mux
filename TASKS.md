@@ -201,7 +201,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: `--from` defaults to the newest session of any agent for the cwd.
   - AC: `ajan sessions` lists agent, id, updated time, size and a first-request preview (40 chars).
   - AC: handoffs older than `keep_days` are pruned at most once a day.
-- [ ] **T1.15 Large-fixture generator and benchmarks** · S · deps: T1.5, T1.12
+- [x] **T1.15 Large-fixture generator and benchmarks** · S · deps: T1.5, T1.12
   - AC: `scripts/gen-large-fixture` creates a synthetic 64 MB Claude session at test time; it is not committed.
   - AC: `ajan handoff --print` on it takes < 1 s with peak RSS < 80 MB (§17).
 - [ ] **T1.16 (USER) Quality review on real data** · S · deps: T1.14

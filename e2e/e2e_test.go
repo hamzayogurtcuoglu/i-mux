@@ -11,11 +11,18 @@ import (
 	"testing"
 )
 
-func TestBinaryRuns(t *testing.T) {
+// ajanBin returns the binary under test (built by `make e2e`).
+func ajanBin(t *testing.T) string {
+	t.Helper()
 	bin := os.Getenv("AJAN_E2E_BIN")
 	if bin == "" {
 		t.Skip("AJAN_E2E_BIN not set (run via make e2e)")
 	}
+	return bin
+}
+
+func TestBinaryRuns(t *testing.T) {
+	bin := ajanBin(t)
 	out, err := exec.Command(bin, "version").CombinedOutput()
 	if err != nil {
 		t.Fatalf("%v: %s", err, out)
