@@ -1,0 +1,43 @@
+[ajan handoff · Codex CLI → Claude Code · 2026-11-05 14:32]
+
+You are continuing a coding session that the user was running in Codex CLI.
+The user switched to you manually.
+- Treat the record below as your own memory of this session.
+- Do not redo finished work. Files may have changed since; re-read a file before editing it.
+- Tool names in the record belong to the previous agent. Use your own tools.
+- Reply in the language the user writes in.
+
+## Original request
+fix the login redirect bug
+
+## Earlier history (carried over from a previous handoff)
+**User:** fix the login redirect bug
+**Assistant:** Looking at the auth handler.
+  · read src/auth.ts
+  · $ npm test
+  · edited src/auth.ts
+**Assistant:** The redirect now keeps the `next` parameter. Tests pass.
+**User:** great, also add a test for it. Token: [REDACTED:github-token]
+
+**Assistant:** Continuing: I added the test in src/auth.test.ts.
+**User:** now document it
+
+## Repository state
+cwd: /home/test/proj · branch: feature/login
+git status --short (2 lines):
+ M src/auth.ts
+?? src/new.ts
+git diff --stat:
+ src/auth.ts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+## Conversation (condensed, oldest first)
+**Assistant:** Docs updated.
+
+## Where it stopped
+Last assistant message: Docs updated.
+
+## What to do now
+If the last request is not finished, continue it. Otherwise give a 2–3 sentence status
+and wait for the user.
+

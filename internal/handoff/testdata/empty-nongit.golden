@@ -1,0 +1,22 @@
+[ajan handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]
+
+You are continuing a coding session that the user was running in Claude Code.
+The user switched to you manually.
+- Treat the record below as your own memory of this session.
+- Do not redo finished work. Files may have changed since; re-read a file before editing it.
+- Tool names in the record belong to the previous agent. Use your own tools.
+- Reply in the language the user writes in.
+
+## Repository state
+cwd: /home/test/proj · not a git repository
+
+## Conversation (condensed, oldest first)
+(no messages recorded)
+
+## Where it stopped
+(nothing recorded)
+
+## What to do now
+If the last request is not finished, continue it. Otherwise give a 2–3 sentence status
+and wait for the user.
+

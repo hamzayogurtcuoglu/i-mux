@@ -1,0 +1,37 @@
+[ajan handoff · Codex CLI → Claude Code · 2026-11-05 14:32]
+
+Welcome back. While you were away the user continued in Gemini CLI, then Codex CLI; here is what happened there.
+- Files may have changed since; re-read a file before editing it.
+- Tool names in the record belong to the other agent. Use your own tools.
+- Reply in the language the user writes in.
+
+## Files touched
+Edited: src/auth.ts
+
+## Repository state
+cwd: /home/test/proj · branch: feature/login
+git status --short (2 lines):
+ M src/auth.ts
+?? src/new.ts
+git diff --stat:
+ src/auth.ts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+## Conversation (while you were away, oldest first)
+*(in Gemini CLI)*
+**User:** rename the helper
+**Assistant:** Renamed to parseNext.
+  · edited src/auth.ts
+*(in Codex CLI)*
+**User:** run the tests
+**Assistant:** All green.
+  · $ npm test
+
+## Where it stopped
+Last user request: run the tests
+Last assistant message: All green.
+
+## What to do now
+Pick up from here. If the last request is not finished, continue it. Otherwise give a 2–3 sentence status
+and wait for the user.
+

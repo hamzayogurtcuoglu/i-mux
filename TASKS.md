@@ -180,7 +180,7 @@ Earliest standalone value: works without tmux (F5).
 - [x] **T1.11 `handoff/redact`** · S · deps: T0.2
   - AC: positive and negative tests per pattern (§8.5). Ordinary identifiers such as `skip`, `sk_test_var` and `AKIAlike` in prose are not mangled.
   - AC: output is `[REDACTED:<kind>]`.
-- [ ] **T1.12 Handoff builder** · L · deps: T1.4, T1.9, T1.10, T1.11
+- [x] **T1.12 Handoff builder** · L · deps: T1.4, T1.9, T1.10, T1.11
   - Sections, budget allocator (§8.3), newest-first Conversation fill, omitted counts, chained
     carry-over, reason line, delta mode, argv byte guard.
   - AC: golden files (`-update` flag) cover: short session, long session (truncation), compacted
