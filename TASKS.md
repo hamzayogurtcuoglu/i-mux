@@ -121,7 +121,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: config `bin` overrides win. A symlinked binary keeps its *unresolved* dir for `PATH` prepend.
   - AC: version probing (`<bin> --version`, 2 s timeout) is cached in state and **never** run with a prompt.
   - AC: table tests cover template expansion, including a prompt containing quotes, newlines and `$()`.
-- [ ] **T1.4 `handoff/clean`** · S · deps: T1.1
+- [x] **T1.4 `handoff/clean`** · S · deps: T1.1
   - AC: data-driven tag stripping (§7.1 list).
   - AC: `<command-name>`/`<command-args>` become `/name args`.
   - AC: a `<task-notification>` becomes a one-line notice.
