@@ -190,7 +190,7 @@ Earliest standalone value: works without tmux (F5).
     - the rune count is ≤ `budget_chars` and the UTF-8 byte length is ≤ `max_arg_bytes`;
     - line 1 is always the marker; output is valid UTF-8;
     - output is deterministic for a fixed clock.
-- [ ] **T1.13 `internal/launch` core** · S · deps: T1.3
+- [x] **T1.13 `internal/launch` core** · S · deps: T1.3
   - LaunchSpec → argv/env, argv-size check, `syscall.Exec`.
   - AC: argv is never passed through a shell. `PATH` is prepended correctly.
   - AC: a spec over `max_arg_bytes` is rejected before exec.
