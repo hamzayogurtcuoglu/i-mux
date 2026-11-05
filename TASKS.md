@@ -177,7 +177,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: branch, `status --short` (capped at 40 lines plus "+N more") and `diff --stat` (capped at 25).
   - AC: a 2 s timeout per git call. A non-repo and a missing git binary both return a typed result, not an error.
   - AC: tests use a temp repo created in the test.
-- [ ] **T1.11 `handoff/redact`** · S · deps: T0.2
+- [x] **T1.11 `handoff/redact`** · S · deps: T0.2
   - AC: positive and negative tests per pattern (§8.5). Ordinary identifiers such as `skip`, `sk_test_var` and `AKIAlike` in prose are not mangled.
   - AC: output is `[REDACTED:<kind>]`.
 - [ ] **T1.12 Handoff builder** · L · deps: T1.4, T1.9, T1.10, T1.11
