@@ -28,6 +28,13 @@ jobs:
       - name: go vet
         run: go vet ./... && go vet -tags e2e ./...
 
+  fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Fixture privacy guard
+        run: ./scripts/check-fixtures.sh
+
   test:
     strategy:
       fail-fast: false

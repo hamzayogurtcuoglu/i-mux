@@ -97,7 +97,7 @@ for an older conversation. No command is typed.
   - AC: lint and `go test -race ./...` run on `ubuntu-latest` and `macos-latest`.
   - AC: an e2e job installs tmux (apt / brew) and runs `go test -tags e2e ./e2e/...`. It is a placeholder until M2.
   - AC: the job fails if the stripped binary exceeds 15 MB.
-- [ ] **T0.9 Test infrastructure and fixture privacy guard** · S · deps: T0.2
+- [x] **T0.9 Test infrastructure and fixture privacy guard** · S · deps: T0.2
   - AC: `internal/testutil` provides a temp `AJAN_HOME`, fake agent homes and a frozen clock.
   - AC: `scripts/check-fixtures.sh` fails if `testdata/` contains `/Users/` or a `/home/` path other than `/home/test`.
   - AC: it also fails on real-looking secrets (same regexes as T1.11) or email addresses. It runs in CI.
