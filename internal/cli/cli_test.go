@@ -50,3 +50,25 @@ func TestUnknownCommandExit2(t *testing.T) {
 		t.Fatalf("stderr should contain the error and the help: %q", errOut)
 	}
 }
+
+func TestConfigCommands(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("AJAN_HOME", home)
+	out, _, code := runCLI(t, "config", "path")
+	if code != 0 || strings.TrimSpace(out) != home+"/config.toml" {
+		t.Fatalf("path: %q %d", out, code)
+	}
+	if _, _, code := runCLI(t, "config", "init"); code != 0 {
+		t.Fatalf("init exit %d", code)
+	}
+	if _, errOut, code := runCLI(t, "config", "init"); code == 0 || !strings.Contains(errOut, "--force") {
+		t.Fatalf("second init should refuse: %d %q", code, errOut)
+	}
+	if _, _, code := runCLI(t, "config", "init", "--force"); code != 0 {
+		t.Fatalf("init --force exit %d", code)
+	}
+	out, _, code = runCLI(t, "config", "show")
+	if code != 0 || !strings.Contains(out, `on_limit = "ask"`) {
+		t.Fatalf("show: %d %q", code, out)
+	}
+}

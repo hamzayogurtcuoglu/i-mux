@@ -77,7 +77,7 @@ for an older conversation. No command is typed.
 - [x] **T0.3 `internal/paths`** · S · deps: T0.2
   - AC: `AJAN_HOME` overrides `~/.ajan`.
   - AC: umask is set to 077 at startup; directories are created 0700 and files 0600. A test asserts the modes.
-- [ ] **T0.4 `internal/config` (TOML)** · M · deps: T0.3
+- [x] **T0.4 `internal/config` (TOML)** · M · deps: T0.3
   - Built-in defaults (§16), merging of user values, validation, plus `ajan config init|path|show`.
   - AC: unit tests cover defaults only, partial overrides, per-agent overrides, and an unknown key (warning).
   - AC: an invalid RE2 regex is rejected with its line number. `{prompt}` may appear at most once per template.
