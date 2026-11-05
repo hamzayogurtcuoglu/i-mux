@@ -74,7 +74,7 @@ for an older conversation. No command is typed.
   - AC: `ajan version` prints version, commit and date injected via `-ldflags`.
   - AC: `ajan help` lists the commands. Unknown command → exit code 2 with help.
   - AC: the only third-party module in `go.mod` is `github.com/BurntSushi/toml` (D13).
-- [ ] **T0.3 `internal/paths`** · S · deps: T0.2
+- [x] **T0.3 `internal/paths`** · S · deps: T0.2
   - AC: `AJAN_HOME` overrides `~/.ajan`.
   - AC: umask is set to 077 at startup; directories are created 0700 and files 0600. A test asserts the modes.
 - [ ] **T0.4 `internal/config` (TOML)** · M · deps: T0.3

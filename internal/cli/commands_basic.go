@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 )
 
@@ -25,7 +26,9 @@ func init() {
 }
 
 // setup runs once per process before dispatch.
-func setup() {}
+func setup() {
+	paths.SetUmask()
+}
 
 // isAgentArg reports whether s names an agent (`ajan claude`).
 func isAgentArg(s string) bool { return false }
