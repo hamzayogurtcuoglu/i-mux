@@ -194,7 +194,7 @@ Earliest standalone value: works without tmux (F5).
   - LaunchSpec → argv/env, argv-size check, `syscall.Exec`.
   - AC: argv is never passed through a shell. `PATH` is prepended correctly.
   - AC: a spec over `max_arg_bytes` is rejected before exec.
-- [ ] **T1.14 `ajan handoff` and `ajan sessions` commands** · M · deps: T1.5–T1.8, T1.12, T1.13
+- [x] **T1.14 `ajan handoff` and `ajan sessions` commands** · M · deps: T1.5–T1.8, T1.12, T1.13
   - AC: flags as in §13.
   - AC: the file is written to `handoffs/` with mode 0600; `--print` writes to stdout and warnings to stderr.
   - AC: without `--print`, the target CLI is exec'd in the current terminal (F5); in tests it is a fake agent.
