@@ -166,7 +166,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: JSON-string `arguments` are decoded; argv `command` arrays are handled.
   - AC: `token_count.rate_limits` is parsed when present and ignored when absent.
   - AC: a fuzz target exists.
-- [ ] **T1.9 `handoff/toolsum`** · M · deps: T1.1
+- [x] **T1.9 `handoff/toolsum`** · M · deps: T1.1
   - AC: table-driven tests over the §8.4 rules, using each agent's real tool names:
     - Claude: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, TodoWrite, `mcp__srv__tool`;
     - Gemini: the §7.2 list;
