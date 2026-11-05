@@ -5,6 +5,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 )
 
@@ -33,7 +34,7 @@ func setup() {
 }
 
 // isAgentArg reports whether s names an agent (`ajan claude`).
-func isAgentArg(s string) bool { return false }
+func isAgentArg(s string) bool { return session.Known(s) }
 
 // defaultAction handles `ajan` and `ajan <agent>`.
 func defaultAction(e *Env, args []string) error {

@@ -115,7 +115,7 @@ Earliest standalone value: works without tmux (F5).
     without a newline (file being written).
   - AC: a 17 MiB line is skipped with a warning.
   - AC: the benchmark reaches ≥ 100 MB/s tail scan on the dev machine.
-- [ ] **T1.3 `internal/agent` registry and binary resolution** · M · deps: T0.4, T0.6
+- [x] **T1.3 `internal/agent` registry and binary resolution** · M · deps: T0.4, T0.6
   - IDs, display names, install hints, default templates (§7.5), and `{prompt}/{id}/{uuid}` expansion.
   - Resolution uses `LookPath` and captures `PATH` into the bin cache (§9.1).
   - AC: config `bin` overrides win. A symlinked binary keeps its *unresolved* dir for `PATH` prepend.
