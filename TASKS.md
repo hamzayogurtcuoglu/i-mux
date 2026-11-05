@@ -150,7 +150,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: `info`/`warning` messages become notices; `error` messages go to `Errors`.
   - AC: string vs `[{text}]` content handled; non-text parts become `[attachment]`.
   - AC: a fuzz target exists.
-- [ ] **T1.7 Copilot provider** · M · deps: T1.1, T1.2
+- [x] **T1.7 Copilot provider** · M · deps: T1.1, T1.2
   - `workspace.yaml` top-level scalar reader, events parser, `toolCallId` → success mapping,
     `report_intent` skipped, todos via optional `sqlite3` CLI (Q5).
   - AC: the fixture covers every event type in §7.3.
