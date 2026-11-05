@@ -158,7 +158,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: a missing `sqlite3` gives a warning only.
   - AC: `cwd` comes from `workspace.yaml`, else from `session.start.data.context.cwd`.
   - AC: a fuzz target exists.
-- [ ] **T1.8 Codex provider** · M · deps: T1.1, T1.2
+- [x] **T1.8 Codex provider** · M · deps: T1.1, T1.2
   - Find: date-directory walk newest first with early stop (by `--since`), matching cwd from
     `session_meta`; honors `CODEX_HOME`.
   - AC: the transcript comes from `response_item` only (an `event_msg` duplicate test proves no doubles).
