@@ -86,7 +86,7 @@ for an older conversation. No command is typed.
 - [x] **T0.5 `internal/i18n`** · S · deps: T0.2
   - AC: `T(key, args...)` works with an `en` catalog. Locale comes from config `locale`, then `AJAN_LANG`, then `LANG`.
   - AC: a test fails if code uses a key that is missing from the `en` catalog.
-- [ ] **T0.6 `internal/state`** · S · deps: T0.3
+- [x] **T0.6 `internal/state`** · S · deps: T0.3
   - AC: `state.json` writes go temp file → fsync → rename, under `flock(state.lock)`.
   - AC: a test with two concurrent writer processes never produces corrupt JSON or lost updates.
   - AC: unknown top-level fields survive a read-modify-write. A `version` field is present.
