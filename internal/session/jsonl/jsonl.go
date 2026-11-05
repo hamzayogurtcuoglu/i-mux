@@ -104,6 +104,16 @@ func ReadAt(r io.ReaderAt, size int64, opt Options, fn LineFunc) (Stats, error) 
 	return st, ignoreStop(err)
 }
 
+// Scan reads every line of a stream (no windows).
+func Scan(r io.Reader, maxLine int, fn LineFunc) (Stats, error) {
+	if maxLine <= 0 {
+		maxLine = DefaultMaxLine
+	}
+	var st Stats
+	_, err := scan(r, 0, -1, maxLine, &st, fn)
+	return st, ignoreStop(err)
+}
+
 func ignoreStop(err error) error {
 	if errors.Is(err, ErrStop) {
 		return nil

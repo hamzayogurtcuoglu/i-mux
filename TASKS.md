@@ -142,7 +142,7 @@ Earliest standalone value: works without tmux (F5).
     - unknown line types and malformed JSON lines counted in `Warnings`;
     - chained-handoff first message detected.
   - AC: the `FuzzClaudeLoad` fuzz target runs 60 s in `fuzz-short` without panics.
-- [ ] **T1.6 Gemini provider** · M · deps: T1.1, T1.2
+- [x] **T1.6 Gemini provider** · M · deps: T1.1, T1.2
   - Project-id resolution: `projects.json`, then sha256 dir, then `.project_root` scan.
   - Parsers for `.json` and for `.jsonl` (header + `$set` patches + bare message lines, keyed by id).
   - AC: fixtures cover both directory layouts and both file formats.
