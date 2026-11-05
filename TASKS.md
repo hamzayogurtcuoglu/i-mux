@@ -173,7 +173,7 @@ Earliest standalone value: works without tmux (F5).
     - Copilot: view, rg, bash, create, edit, report_intent;
     - Codex: `shell` argv, apply_patch headers.
   - AC: `FileActivity` classification is correct, failed calls are suffixed, and paths are shown relative to cwd.
-- [ ] **T1.10 `internal/gitinfo`** · S · deps: T0.2
+- [x] **T1.10 `internal/gitinfo`** · S · deps: T0.2
   - AC: branch, `status --short` (capped at 40 lines plus "+N more") and `diff --stat` (capped at 25).
   - AC: a 2 s timeout per git call. A non-repo and a missing git binary both return a typed result, not an error.
   - AC: tests use a temp repo created in the test.
