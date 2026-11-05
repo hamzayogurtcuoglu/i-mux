@@ -126,7 +126,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: `<command-name>`/`<command-args>` become `/name args`.
   - AC: a `<task-notification>` becomes a one-line notice.
   - AC: middle truncation is rune-safe (tests with Turkish `ğüşıöç` and emoji at the cut points), with an omitted-count marker.
-- [ ] **T1.5 Claude provider** · L · deps: T1.1, T1.2, T1.4
+- [x] **T1.5 Claude provider** · L · deps: T1.1, T1.2, T1.4
   - Find: by id, by encoded cwd, fallback scan by `"cwd"`; honors `CLAUDE_CONFIG_DIR`.
   - Load: implements every rule in §7.1.
   - AC: synthetic fixtures and tests cover:
