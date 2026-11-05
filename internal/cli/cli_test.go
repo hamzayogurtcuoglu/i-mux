@@ -2,9 +2,10 @@ package cli
 
 import (
 	"bytes"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"strings"
 	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
 
 func runCLI(t *testing.T, args ...string) (stdout, stderr string, code int) {

@@ -52,10 +52,6 @@ type UsageError struct{ Msg string }
 
 func (u *UsageError) Error() string { return u.Msg }
 
-func usagef(format string, args ...any) error {
-	return &UsageError{Msg: fmt.Sprintf(format, args...)}
-}
-
 // ExitCodeError carries an explicit exit code. Msg may be empty (silent exit).
 type ExitCodeError struct {
 	Code int

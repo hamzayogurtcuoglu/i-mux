@@ -90,7 +90,7 @@ for an older conversation. No command is typed.
   - AC: `state.json` writes go temp file → fsync → rename, under `flock(state.lock)`.
   - AC: a test with two concurrent writer processes never produces corrupt JSON or lost updates.
   - AC: unknown top-level fields survive a read-modify-write. A `version` field is present.
-- [ ] **T0.7 Build tooling** · S · deps: T0.2
+- [x] **T0.7 Build tooling** · S · deps: T0.2
   - AC: the Makefile (or justfile) has targets `build`, `test`, `e2e`, `lint`, `bench`, `fuzz-short`.
   - AC: the golangci-lint config enables vet, staticcheck, errcheck, gofumpt and misspell.
 - [ ] **T0.8 GitHub Actions CI** · M · deps: T0.7
