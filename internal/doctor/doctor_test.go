@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
@@ -14,6 +15,14 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
+
+// TestMain lifts the agent probe timeout. The fake agents are freshly written
+// scripts, and macOS scans a new executable on its first run, which can exceed
+// the production timeout when every package's tests run in parallel.
+func TestMain(m *testing.M) {
+	agent.SetProbeTimeout(30 * time.Second)
+	os.Exit(m.Run())
+}
 
 type fakeTmux struct{ version string }
 

@@ -4,6 +4,7 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
@@ -234,19 +236,49 @@ func isExecutable(p string) bool {
 
 var versionRe = regexp.MustCompile(`\d+\.\d+(?:\.\d+)?(?:[-+][0-9A-Za-z.\-]+)?`)
 
-// ProbeVersion runs `<bin> --version` (never with a prompt) with a 2 s
-// timeout and returns the first version-looking token.
-func ProbeVersion(path, pathEnv string) string {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+// probeTimeout bounds every agent probe (`--version`, `--help`). Node-based
+// CLIs can take over a second to start on a busy machine, and macOS scans a
+// newly written executable on its first run, so 2 s proved too tight. Version
+// probes run in parallel and are cached for a day, so the bound only matters
+// for a binary that hangs.
+var probeTimeout = 5 * time.Second
+
+// SetProbeTimeout changes the probe timeout and returns a func that restores
+// it. It exists for tests, whose fake agents are freshly written scripts and
+// must not depend on machine load.
+func SetProbeTimeout(d time.Duration) (restore func()) {
+	old := probeTimeout
+	probeTimeout = d
+	return func() { probeTimeout = old }
+}
+
+// Probe runs `<path> args...` with the probe timeout and returns stdout, plus
+// stderr when withStderr is set. Callers must never pass a prompt. On timeout
+// the whole process group is killed: a child the CLI started would otherwise
+// keep the output pipe open and the probe would wait for it. WaitDelay is a
+// backstop if something outside the group still holds the pipe.
+func Probe(ctx context.Context, path, pathEnv string, withStderr bool, args ...string) []byte {
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, path, "--version")
-	cmd.Env = append(os.Environ(), "PATH="+pathEnv)
+	cmd := exec.CommandContext(ctx, path, args...)
+	cmd.Env = append(os.Environ(), "PATH="+pathEnv, "NO_COLOR=1")
 	cmd.Stdin = nil
-	out, err := cmd.Output()
-	if err != nil && len(out) == 0 {
-		return ""
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if withStderr {
+		cmd.Stderr = &out
 	}
-	return versionRe.FindString(string(out))
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	cmd.WaitDelay = time.Second
+	_ = cmd.Run() // a non-zero exit or a timeout still returns what was printed
+	return out.Bytes()
+}
+
+// ProbeVersion runs `<bin> --version` (never with a prompt) and returns the
+// first version-looking token of its stdout.
+func ProbeVersion(path, pathEnv string) string {
+	return versionRe.FindString(string(Probe(context.Background(), path, pathEnv, false, "--version")))
 }
 
 // RefreshCache resolves every agent in the current (interactive) process and

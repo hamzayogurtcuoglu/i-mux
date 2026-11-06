@@ -75,6 +75,15 @@ func TestRegistry(t *testing.T) {
 	}
 }
 
+// TestMain lifts the version-probe timeout. Fake agents are freshly written
+// shell scripts, and macOS scans a new executable on its first run: about
+// 0.2 s when idle, but over 2 s when every package's tests run in parallel.
+// The probe logic is what these tests check, not machine speed.
+func TestMain(m *testing.M) {
+	SetProbeTimeout(30 * time.Second)
+	os.Exit(m.Run())
+}
+
 func writeExe(t *testing.T, path, script string) {
 	t.Helper()
 	testutil.WriteFile(t, path, []byte("#!/bin/sh\n"+script+"\n"))
@@ -167,5 +176,21 @@ func TestRefreshCache(t *testing.T) {
 	b, _ := os.ReadFile(counter)
 	if strings.Count(string(b), "x") != 1 {
 		t.Fatalf("probed %d times", strings.Count(string(b), "x"))
+	}
+}
+
+func TestProbeVersionTimesOutOnHangingBinary(t *testing.T) {
+	h := testutil.Isolate(t)
+	bin := filepath.Join(h.Home, "bin", "hang")
+	// The shell forks sleep, which inherits stdout; killing only the shell
+	// must not leave the probe waiting for the child to close the pipe.
+	writeExe(t, bin, "sleep 20; echo 9.9.9")
+	defer SetProbeTimeout(300 * time.Millisecond)()
+	start := time.Now()
+	if v := ProbeVersion(bin, "/usr/bin:/bin"); v != "" {
+		t.Fatalf("version %q from a hanging binary", v)
+	}
+	if d := time.Since(start); d > 5*time.Second {
+		t.Fatalf("probe took %v; the timeout did not stop it", d)
 	}
 }

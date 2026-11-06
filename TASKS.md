@@ -120,7 +120,7 @@ Earliest standalone value: works without tmux (F5).
   - IDs, display names, install hints, default templates (§7.5), and `{prompt}/{id}/{uuid}` expansion.
   - Resolution uses `LookPath` and captures `PATH` into the bin cache (§9.1).
   - AC: config `bin` overrides win. A symlinked binary keeps its *unresolved* dir for `PATH` prepend.
-  - AC: version probing (`<bin> --version`, 2 s timeout) is cached in state and **never** run with a prompt.
+  - AC: version probing (`<bin> --version`, 5 s timeout, the whole process group killed on timeout) is cached in state and **never** run with a prompt.
   - AC: table tests cover template expansion, including a prompt containing quotes, newlines and `$()`.
 - [x] **T1.4 `handoff/clean`** · S · deps: T1.1
   - AC: data-driven tag stripping (§7.1 list).

@@ -6,7 +6,6 @@ package doctor
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -17,7 +16,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
@@ -274,15 +272,7 @@ func hasNode(x agent.Resolved) bool {
 // checkFlags runs `<agent> --help` (never with a prompt) and checks that the
 // flags used by the launch templates appear in it.
 func checkFlags(ctx context.Context, r *Report, cfg *config.Config, a agent.Info, x agent.Resolved) {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, x.Path, "--help")
-	cmd.Env = append(os.Environ(), "PATH="+x.PathEnv, "NO_COLOR=1")
-	var out bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &out
-	cmd.Stdin = nil
-	_ = cmd.Run()
-	help := out.String()
+	help := string(agent.Probe(ctx, x.Path, x.PathEnv, true, "--help"))
 	if strings.TrimSpace(help) == "" {
 		return
 	}
