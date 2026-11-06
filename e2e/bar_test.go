@@ -45,12 +45,12 @@ func TestAgentBar(t *testing.T) {
 	}
 
 	// Focus change: the bar follows, and no ajan process runs.
-	before := len(h.records())
+	before := h.uiRecords()
 	mark := c.Mark()
 	h.mustTmux("select-pane", "-t", second)
 	c.waitScreenAfter(h, mark, "▶ Gemini", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
-	if after := len(h.records()); after != before {
+	if after := h.uiRecords(); after != before {
 		t.Fatalf("focus change ran ajan (%d new tmux invocations)", after-before)
 	}
 

@@ -113,6 +113,10 @@ var en = map[string]string{
 	"doctor.key_prefix":       "menu: prefix %s (works everywhere)",
 	"doctor.key_vscode":       "VS Code: if %s does nothing, add it to terminal.integrated.commandsToSkipShell exclusions or set terminal.integrated.sendKeybindingsToShell = true",
 
+	// watcher
+	"watch.running":     "watcher running (pid %d)",
+	"watch.not_running": "watcher not running",
+
 	// config command
 	"config.exists":      "%s already exists (use --force to overwrite)",
 	"config.wrote":       "wrote %s",

@@ -19,6 +19,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
 )
 
 // H is one isolated e2e environment: its own tmux socket, AJAN_HOME, fake
@@ -79,9 +80,15 @@ func newH(t *testing.T, extraConfig string) *H {
 		}
 		fmt.Fprintf(&cfg, "[agents.%s]\nbin = %q\n\n", a, filepath.Join(h.Fakes, "fake-"+a))
 	}
+	if !strings.Contains(tables, "[limits]") {
+		// A fast watcher keeps tests short; it still has to see a screen
+		// twice before it acts.
+		cfg.WriteString("[limits]\npoll_interval = \"200ms\"\nidle_interval = \"500ms\"\ngrace = \"0s\"\n\n")
+	}
 	cfg.WriteString(tables)
 	testutil.WriteFile(t, filepath.Join(homes.Ajan, "config.toml"), []byte(cfg.String()))
 	t.Cleanup(func() {
+		_ = exec.Command(h.Bin, "__watch", "stop").Run()
 		_ = exec.Command(h.Tmux, "-L", h.Socket, "kill-server").Run()
 		h.waitQuiet()
 		h.checkBins()
@@ -346,4 +353,22 @@ func (h *H) capture(pane string) string {
 func (h *H) control(agent, script string) {
 	h.t.Helper()
 	testutil.WriteFile(h.t, filepath.Join(h.Log, agent+".sh"), []byte(script))
+}
+
+func (h *H) readFile(p string) string {
+	b, _ := os.ReadFile(p)
+	return string(b)
+}
+
+// uiRecords counts tmux invocations made by processes other than the
+// watcher (whose ticks also go through the recorder).
+func (h *H) uiRecords() int {
+	_, pid := watch.Status()
+	n := 0
+	for _, r := range h.records() {
+		if r.Pid != pid {
+			n++
+		}
+	}
+	return n
 }

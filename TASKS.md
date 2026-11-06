@@ -323,7 +323,7 @@ Earliest standalone value: works without tmux (F5).
     - rollover past midnight and a DST transition;
     - unparseable text → zero value.
   - AC: `time/tzdata` is embedded. A fuzz target exists.
-- [ ] **T3.3 Watcher lifecycle** · M · deps: T0.6, T2.1
+- [x] **T3.3 Watcher lifecycle** · M · deps: T0.6, T2.1
   - AC: `__watch run|ensure|stop|status`.
   - AC: the singleton uses a pidfile `flock`; `ensure` either starts the daemon (`Setsid`, detached stdio) or sends SIGUSR1.
   - AC: the watcher exits 0 when the ajan server is gone.

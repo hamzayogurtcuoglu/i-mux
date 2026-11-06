@@ -28,9 +28,12 @@ func TestNoResidentProcesses(t *testing.T) {
 	if s := strings.TrimSpace(string(out)); s != "" {
 		t.Fatalf("resident ajan __exec processes: %s", s)
 	}
-	out, _ = exec.Command("pgrep", "-f", "^"+regexp.QuoteMeta(h.Bin)).Output()
-	if s := strings.TrimSpace(string(out)); s != "" {
-		t.Fatalf("resident ajan processes: %s", s)
+	// The watcher is the only resident ajan process (§2).
+	out, _ = exec.Command("pgrep", "-af", "^"+regexp.QuoteMeta(h.Bin)).Output()
+	for _, l := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if l != "" && !strings.HasSuffix(l, " __watch run") {
+			t.Fatalf("resident ajan process: %s", l)
+		}
 	}
 }
 
