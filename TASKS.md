@@ -281,7 +281,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: the key path does the same.
   - AC: right-click on a border opens the menu for *that* pane (Q28).
   - AC: picker → row → "Continue in Codex" launches fake-codex with a handoff built from the picked session.
-- [ ] **T2.9 `ajan split`** · S · deps: T2.4
+- [x] **T2.9 `ajan split`** · S · deps: T2.4
   - AC: `-h`/`-v`, same cwd, pane options set, and the label shows in the border.
 - [ ] **T2.10 Pane-died handling** · M · deps: T2.4
   - AC: an agent exit falls back to the login shell in `@ajan_cwd` with `@ajan_agent` cleared and the trail closed.

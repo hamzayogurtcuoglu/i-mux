@@ -23,6 +23,7 @@ var en = map[string]string{
 	"cmd.attach":   "Attach to an ajan session (default: the most recently used one).",
 	"cmd.ls":       "List ajan sessions and their panes.",
 	"cmd.switch":   "Continue this pane's conversation in another agent (with context).",
+	"cmd.split":    "Open a new pane with an agent in the same directory.",
 
 	// workspace: start / attach / ls
 	"start.no_agent":  "no agent CLI is installed. Install one of:\n%s",

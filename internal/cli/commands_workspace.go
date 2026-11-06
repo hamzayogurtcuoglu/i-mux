@@ -229,3 +229,53 @@ func runLs(e *Env, args []string) error {
 	}
 	return tw.Flush()
 }
+
+func init() {
+	register(&command{
+		Name:    "split",
+		Args:    "<agent> [-h|-v] [--pane %N]",
+		Summary: "cmd.split",
+		Run:     runSplit,
+	})
+}
+
+// runSplit opens a new pane with agent next to the target pane, in that
+// pane's project directory.
+func runSplit(e *Env, args []string) error {
+	fs := newFlags(e, "split")
+	horiz := fs.Bool("h", false, "split side by side")
+	vert := fs.Bool("v", false, "split one above the other (default)")
+	paneF := fs.String("pane", "", "pane to split (default: this pane, $TMUX_PANE)")
+	clientF := fs.String("client", "", "tmux client to show messages on")
+	pos, err := parseFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 || *horiz && *vert {
+		return &UsageError{Msg: i18n.T("cli.usage", "split <agent> [-h|-v]")}
+	}
+	id, err := parseAgentFlag("agent", pos[0])
+	if err != nil {
+		return err
+	}
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, isTerminal(os.Stdin))
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	p, err := w.Pane(ctx, pane)
+	if err != nil {
+		return err
+	}
+	np, err := w.Split(ctx, p.ID, id, p.CWD, *horiz)
+	if err != nil {
+		w.Message(ctx, *clientF, pane, workspace.SwitchError(id, err))
+		return err
+	}
+	fmt.Fprintln(e.Stdout, np)
+	return nil
+}
