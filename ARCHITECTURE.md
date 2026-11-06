@@ -1,6 +1,6 @@
 # ajan: Architecture
 
-> Status: design, before implementation. Last updated 2026-11-05.
+> Status: implemented (M0–M8); the open questions in §20 are being closed by manual checks. Last updated 2026-11-06.
 > Companion document: [TASKS.md](TASKS.md) (milestones and task plan).
 > "ajan" is Turkish for "agent" and is a working name.
 

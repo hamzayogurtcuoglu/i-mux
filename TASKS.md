@@ -2,7 +2,8 @@
 
 > Companion to [ARCHITECTURE.md](ARCHITECTURE.md). Section references (§N) point there;
 > open questions are `Q1`…`Q29` in ARCHITECTURE §20.
-> Last updated 2026-11-05.
+> Last updated 2026-11-06. All tasks are done except the manual (USER) ones: T1.16, T2.13,
+> T6.1 and the Q18 part of T5.6.
 
 **Hard requirement:** the user switches a conversation between agents **directly from the UI**,
 with one click on the agent bar or one keystroke in the menu. The CLI is secondary. Every
