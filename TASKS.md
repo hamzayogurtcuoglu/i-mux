@@ -252,7 +252,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: the preview popup and the limits popup item are wired (limits shows "coming soon" until M4).
   - AC: Close pane works.
   - AC: menu latency is < 100 ms p95 (§17), measured in e2e.
-- [ ] **T2.8a Agent bar (clickable second status line)** · M · deps: T2.2, T2.8
+- [x] **T2.8a Agent bar (clickable second status line)** · M · deps: T2.2, T2.8
   - Generate `status-format[1]` (§9.3) from `order` and the bin cache, with `#[range=user|ajan:<x>]` regions.
     Add the `MouseDown1Status` binding that falls back to `switch-client -t =` for other ranges.
   - AC: golden test of the generated format.

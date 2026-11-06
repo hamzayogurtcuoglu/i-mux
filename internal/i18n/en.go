@@ -56,6 +56,7 @@ var en = map[string]string{
 	"menu.limits":         "Limits",
 	"menu.limits_soon":    "The limits panel is coming soon",
 	"menu.close":          "Close pane",
+	"bar.sessions":        "Sessions",
 	"tmux.missing":        "tmux is not installed (brew install tmux / apt install tmux)",
 	"tmux.too_old":        "tmux %s is too old; ajan needs %s or newer",
 

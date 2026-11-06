@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -272,7 +273,7 @@ func (h *H) records() []tmux.Recorded {
 // and returns it with its tmux client name.
 func (h *H) attach(cols, rows int) (*Client, string) {
 	h.t.Helper()
-	c := h.startClient(cols, rows, h.Homes.Project, h.Tmux, "-L", h.Socket, "attach-session")
+	c := h.startClient(cols, rows, h.Homes.Project, h.Tmux, "-u", "-L", h.Socket, "attach-session")
 	var name string
 	h.waitFor("client attached", 5*time.Second, func() bool {
 		out, _ := h.tmux("list-clients", "-F", "#{client_name}")
@@ -282,8 +283,31 @@ func (h *H) attach(cols, rows int) (*Client, string) {
 	return c, name
 }
 
-// waitScreen waits until the client's output contains s.
+// waitScreen waits until the client's output (escape sequences removed)
+// contains s.
 func (c *Client) waitScreen(h *H, s string, timeout time.Duration) {
 	h.t.Helper()
-	h.waitFor("screen to show "+strconv.Quote(s), timeout, func() bool { return strings.Contains(c.Output(), s) })
+	h.waitFor("screen to show "+strconv.Quote(s), timeout, func() bool { return strings.Contains(c.Text(), s) })
 }
+
+// waitScreenAfter is waitScreen for output written after offset (see Mark).
+func (c *Client) waitScreenAfter(h *H, offset int, s string, timeout time.Duration) {
+	h.t.Helper()
+	h.waitFor("screen to show "+strconv.Quote(s), timeout, func() bool {
+		out := c.Output()
+		if offset > len(out) {
+			offset = len(out)
+		}
+		return strings.Contains(stripANSI(out[offset:]), s)
+	})
+}
+
+// Mark returns the current output length (for waitScreenAfter).
+func (c *Client) Mark() int { return len(c.Output()) }
+
+// Text is the client's output without escape sequences.
+func (c *Client) Text() string { return stripANSI(c.Output()) }
+
+var ansiRe = regexp.MustCompile("\x1b(\\[[0-9;?<>=]*[ -/]*[@-~]|\\][^\x07\x1b]*(\x07|\x1b\\\\)|[()][0-9A-Za-z]|[=>78DEHMNOc])")
+
+func stripANSI(s string) string { return ansiRe.ReplaceAllString(s, "") }
