@@ -32,6 +32,12 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	// On macOS the temp dir is under a symlink (/var → /private/var), and
+	// os.Executable reports the resolved path: resolve it so tests that match
+	// the binary's command line (pgrep) see the same path the processes use.
+	if dir, err = filepath.EvalSymlinks(dir); err != nil {
+		panic(err)
+	}
 	if bin := os.Getenv("AJAN_E2E_BIN"); bin != "" {
 		stagedBin = filepath.Join(dir, "ajan")
 		if err := copyFile(bin, stagedBin, 0o755); err != nil {

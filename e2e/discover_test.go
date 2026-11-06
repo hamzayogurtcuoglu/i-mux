@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -27,12 +26,8 @@ func TestDiscoverTwoPanesSameCWD(t *testing.T) {
 	h.run("gemini", 2)
 	// Make the first chat the newest by mtime, as if pane 1 kept talking:
 	// newest-file-wins alone would now hand it to pane 2.
-	b1, err := os.ReadFile(filepath.Join(h.Log, "gemini-1.session"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	future := time.Now().Add(time.Minute)
-	if err := os.Chtimes(strings.TrimSpace(string(b1)), future, future); err != nil {
+	if err := os.Chtimes(h.sessionPath("gemini", 1), future, future); err != nil {
 		t.Fatal(err)
 	}
 

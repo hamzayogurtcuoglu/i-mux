@@ -319,8 +319,11 @@ func (c *Client) Inside(tmuxEnv string) bool {
 // --- output parsing --------------------------------------------------------
 
 // Delim starts a delimiter line printed between batched commands' output:
-// `display -p "\x1eajan:<key>"`.
-const Delim = "\x1eajan:"
+// `display -p "\t\tajan:<key>"`. It starts with tabs because captured screen
+// text never contains a tab (tmux stores a tab as cursor movement), and tabs
+// pass through display-message unchanged; control characters such as \x1e
+// would not: tmux 3.4 prints them as octal escapes ("\036").
+const Delim = "\t\tajan:"
 
 // DelimCmd returns the command that prints the delimiter line for key.
 func DelimCmd(key string) Cmd { return Cmd{"display-message", "-p", Delim + key} }

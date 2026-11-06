@@ -62,8 +62,7 @@ func TestExecByteExactArgv(t *testing.T) {
 		t.Errorf("PWD=%q, want %q", env["PWD"], h.Homes.Project)
 	}
 	// The fake wrote a session file where Claude would.
-	sess, err := os.ReadFile(filepath.Join(h.Log, "claude-1.session"))
-	if err != nil || !strings.Contains(string(sess), "11111111-2222-4333-8444-555555555555.jsonl") {
-		t.Fatalf("session file: %q %v", sess, err)
+	if sess := h.sessionPath("claude", 1); !strings.HasSuffix(sess, "11111111-2222-4333-8444-555555555555.jsonl") {
+		t.Fatalf("session file: %q", sess)
 	}
 }

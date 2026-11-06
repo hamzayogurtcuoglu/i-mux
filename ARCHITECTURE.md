@@ -892,7 +892,7 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `ajan pick`. It 
   2. Server gone (`no server running`) → exit 0.
   3. No non-control clients → sleep `limits.idle_interval` (15 s) or until `SIGUSR1`.
   4. For live panes with `@ajan_agent`, one batched exec of
-     `display -p '\x1eajan:%N' \; capture-pane -p -J -t %N \; …` (the visible screen; its last
+     `display -p '\t\tajan:%N' \; capture-pane -p -J -t %N \; …` (the visible screen; its last
      `limits.scan_lines` non-blank lines are scanned, because inline CLIs write from the top and a
      short session's message is not on the bottom rows). The delimiter line splits the output.
   5. Per pane, skip if the FNV-64 hash of the capture equals last tick's.

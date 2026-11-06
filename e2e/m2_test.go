@@ -5,7 +5,6 @@ package e2e
 import (
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -44,12 +43,7 @@ func TestSwitchLatencyLargeSession(t *testing.T) {
 	pane := h.startSession("claude")
 	h.run("claude", 1)
 	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@ajan_trail}"))
-	b, err := os.ReadFile(filepath.Join(h.Log, "claude-1.session"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	path := strings.TrimSpace(string(b))
-	f, err := os.Create(path)
+	f, err := os.Create(h.sessionPath("claude", 1))
 	if err != nil {
 		t.Fatal(err)
 	}

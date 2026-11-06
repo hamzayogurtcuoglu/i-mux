@@ -187,7 +187,7 @@ func TestQuote(t *testing.T) {
 }
 
 func FuzzSectionsRows(f *testing.F) {
-	f.Add("pre\n\x1eajan:%1\na\tb\n\x1eajan:%2\n", 3)
+	f.Add("pre\n\t\tajan:%1\na\tb\n\t\tajan:%2\n", 3)
 	f.Add("", 1)
 	f.Fuzz(func(t *testing.T, s string, n int) {
 		if n < 1 || n > 16 {
@@ -298,7 +298,10 @@ func TestIntegrationRealTmux(t *testing.T) {
 	}
 	for _, opt := range []string{"@q", "@d"} {
 		out, err = c.Do(Cmd{"show-options", "-gv", opt})
-		if err != nil || strings.TrimSuffix(out, "\n") != tricky {
+		// tmux ≥ 3.4 reports an unexpanded $ as \$ (3.2 as $). Either way
+		// $HOME must not have been expanded to a path.
+		got := strings.ReplaceAll(strings.TrimSuffix(out, "\n"), `\$`, `$`)
+		if err != nil || got != tricky {
 			t.Fatalf("%s round trip: %q %v", opt, out, err)
 		}
 	}

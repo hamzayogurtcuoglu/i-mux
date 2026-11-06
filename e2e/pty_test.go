@@ -42,13 +42,15 @@ func (h *H) startClient(cols, rows int, dir string, argv ...string) *Client {
 	if err != nil {
 		h.t.Fatalf("pty: %v", err)
 	}
-	ws := winsize{Row: uint16(rows), Col: uint16(cols)}
-	if err := ioctl(master.Fd(), syscall.TIOCSWINSZ, uintptr(unsafe.Pointer(&ws))); err != nil {
-		h.t.Fatalf("TIOCSWINSZ: %v", err)
-	}
 	slave, err := os.OpenFile(slaveName, os.O_RDWR|syscall.O_NOCTTY, 0)
 	if err != nil {
 		h.t.Fatalf("open %s: %v", slaveName, err)
+	}
+	// Set the size on the slave: macOS rejects TIOCSWINSZ on a master whose
+	// slave is not open yet (ENOTTY).
+	ws := winsize{Row: uint16(rows), Col: uint16(cols)}
+	if err := ioctl(slave.Fd(), syscall.TIOCSWINSZ, uintptr(unsafe.Pointer(&ws))); err != nil {
+		h.t.Fatalf("TIOCSWINSZ: %v", err)
 	}
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = dir

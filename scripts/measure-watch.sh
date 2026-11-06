@@ -21,7 +21,7 @@ tmp=$(mktemp -d "${TMPDIR:-/tmp}/ajan-perf.XXXXXX")
 SOCK="ajan-perf-$$"
 cleanup() {
 	tmux -L "$SOCK" kill-server 2>/dev/null || true
-	[ -n "${client:-}" ] && kill "$client" 2>/dev/null || true
+	if [ -n "${client:-}" ]; then kill "$client" 2>/dev/null || true; fi
 	"$BIN" __watch stop >/dev/null 2>&1 || true
 	rm -rf "$tmp"
 }
