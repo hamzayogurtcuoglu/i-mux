@@ -351,7 +351,7 @@ Earliest standalone value: works without tmux (F5).
     shows the menu (Q24).
   - AC: a limit line printed within the grace period → no action. A repeat line → no second prompt (seen-set + cooldown).
   - AC: the status bar shows the limit, which clears after expiry (with a fake clock).
-- [ ] **T3.9 Performance measurement** · S · deps: T3.8
+- [x] **T3.9 Performance measurement** · S · deps: T3.8
   - AC: `scripts/measure-watch.sh` reports max RSS and mean CPU for both the attached and detached cases.
   - AC: the numbers are recorded in `docs/PERF.md` and are within §17. If not, an issue with the control-mode plan exists (Q21).
 
