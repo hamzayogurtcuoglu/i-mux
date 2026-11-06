@@ -4,7 +4,7 @@
 # Regex patterns use TOML literal strings ('...'), so backslashes need no escaping.
 
 # Agent order: menu order, agent bar order and auto-switch priority.
-order         = ["claude", "gemini", "copilot", "codex"]
+order         = ["claude", "antigravity", "gemini", "copilot", "codex"]
 
 # Agent started by a plain `imux`. "" = first installed agent in `order`.
 default_agent = ""
@@ -99,6 +99,20 @@ resume                   = true
 patterns                 = []
 replace_default_patterns = false
 
+# Antigravity CLI (agy): Google's successor to Gemini CLI for personal Google
+# accounts. Its conversations are not readable files, so a handoff from it is
+# rebuilt from the pane's scrollback plus its task list (brain/<id>/task.md).
+[agents.antigravity]
+bin                      = ""   # "" = agy on PATH
+args                     = []
+new_args                 = ["-i", "{prompt}"]
+resume_args              = ["--conversation", "{id}", "-i", "{prompt}"]
+resume                   = true
+patterns                 = []
+replace_default_patterns = false
+
+# Gemini CLI: still works with a Gemini API key or Vertex AI. Google stopped
+# serving personal Google accounts in Gemini CLI on 2026-06-18.
 [agents.gemini]
 bin                      = ""
 args                     = []

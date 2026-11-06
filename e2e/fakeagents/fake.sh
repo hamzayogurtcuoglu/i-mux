@@ -125,6 +125,15 @@ EOF
 			"$id" "$hash" "$ts" "$ts" "$(cat "$msgs")" >"$session.tmp"
 		mv "$session.tmp" "$session"
 		;;
+	antigravity)
+		# Like agy: no readable conversation file (imux uses the scrollback),
+		# only the plan as a markdown checklist in brain/<id>/task.md.
+		id=$(opt --conversation "$@") || id=$(uuid)
+		dir="$HOME/.gemini/antigravity-cli/brain/$id"
+		mkdir -p "$dir"
+		printf '# Task\n\n- [x] fake antigravity step done %s\n- [/] fake antigravity step in progress %s\n' "$n" "$n" >"$dir/task.md"
+		printf '%s\n' "$dir/task.md" >"$log/$agent-$n.task"
+		;;
 	copilot)
 		id=$(opt --resume "$@") || id=$(uuid)
 		dir="${COPILOT_HOME:-$HOME/.copilot}/session-state/$id"
@@ -143,6 +152,11 @@ EOF
 write_session "$@"
 
 echo "fake $agent ready (run $n, pane $pane)"
+if [ "$agent" = antigravity ]; then
+	# The conversation is only on screen, as with the real agy.
+	echo "> $req"
+	echo "$reply"
+fi
 last=""
 for a in "$@"; do last="$a"; done
 echo "argc $# · last argument $(printf %s "$last" | wc -c | tr -d ' ') bytes"

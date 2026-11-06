@@ -45,7 +45,18 @@ var Defaults = map[session.AgentID][]Spec{
 		{`you'?ve hit your .*limit`, SevLimit},
 		{`approaching (?:5-hour|weekly|opus weekly|opus usage) limit`, SevWarn},
 	},
+	// Antigravity CLI does not document its quota message; these are the
+	// usual phrasings (unverified, ARCHITECTURE Q30).
+	session.Antigravity: {
+		{`quota (?:exceeded|exhausted|reached|runs? out)`, SevLimit},
+		{`you'?ve (?:reached|hit|exhausted|run out of) your .*(?:quota|limit)`, SevLimit},
+		{`out of (?:quota|credits)`, SevLimit},
+		{`resource_exhausted`, SevLimit},
+	},
 	session.Gemini: {
+		// Google ended Gemini CLI sign-in for personal accounts on
+		// 2026-06-18: the CLI is unusable, so offer to continue elsewhere.
+		{`no longer supported for gemini code assist`, SevLimit},
 		{`usage limit reached for`, SevLimit},
 		{`exhausted your daily quota`, SevLimit},
 		{`quota exceeded`, SevLimit},

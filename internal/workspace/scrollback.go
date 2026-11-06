@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session/antigravity"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -30,10 +31,17 @@ func init() {
 			return nil, err
 		}
 		id := p.Agent
-		if l := p.Trail.Last(); id == "" && l != nil {
+		l := p.Trail.Last()
+		if id == "" && l != nil {
 			id = l.Agent
 		}
-		return ScrollbackSession(id, p.CWD, out, w.Now()), nil
+		s := ScrollbackSession(id, p.CWD, out, w.Now())
+		if id == session.Antigravity && l != nil && l.Agent == id {
+			// Antigravity keeps its plan as a markdown checklist; the
+			// conversation itself is only in the scrollback.
+			s.Todos = antigravity.Todos(session.Env{}.UserHome(), l.StartTime().Add(-discoverSlack))
+		}
+		return s, nil
 	}
 }
 

@@ -74,7 +74,7 @@ func newH(t *testing.T, extraConfig string) *H {
 		top, tables = extraConfig[:i+1], extraConfig[i+1:]
 	}
 	cfg.WriteString(top + "\n")
-	for _, a := range []string{"claude", "gemini", "copilot", "codex"} {
+	for _, a := range []string{"claude", "antigravity", "gemini", "copilot", "codex"} {
 		if strings.Contains(tables, "[agents."+a+"]") {
 			continue // the test configures this agent itself
 		}

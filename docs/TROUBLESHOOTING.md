@@ -67,7 +67,20 @@ i-mux reads the source agent's own session files (`~/.claude/projects`, `~/.gemi
 `imux doctor` warns when an agent is older than the version i-mux was checked against, or when its
 `--help` does not mention the flags of its launch template (`--session-id`, `-i`, `--resume`,
 `resume`). Update it (`npm i -g @anthropic-ai/claude-code`, `@google/gemini-cli`,
-`@github/copilot`, `@openai/codex`) or adjust `new_args` / `resume_args` in `config.toml`.
+`@github/copilot`, `@openai/codex`; Antigravity CLI updates itself) or adjust `new_args` / `resume_args` in `config.toml`.
+
+## Gemini CLI: "This client is no longer supported for Gemini Code Assist for individuals"
+
+Google stopped serving personal Google accounts (free, Google AI Pro and Ultra) in Gemini CLI on
+2026-06-18. Updating Gemini CLI does not help. Either:
+
+- install Antigravity CLI, Google's successor, and use it as the `antigravity` agent:
+  `curl -fsSL https://antigravity.google/cli/install.sh | bash` (installs `agy` to `~/.local/bin`),
+  then sign in once by running `agy`; or
+- keep Gemini CLI with a Gemini API key (`GEMINI_API_KEY`), Vertex AI, or a Code Assist
+  Standard/Enterprise license.
+
+`imux doctor` warns when Gemini CLI is still set to a personal Google sign-in.
 
 ## The new agent exits right away after a switch
 

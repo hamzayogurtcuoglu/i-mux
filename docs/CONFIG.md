@@ -10,7 +10,7 @@ line number.
 
 | Key | Default | Description |
 |---|---|---|
-| `order` | `["claude", "gemini", "copilot", "codex"]` | Agent order: menu order, agent bar order and auto-switch priority. |
+| `order` | `["claude", "antigravity", "gemini", "copilot", "codex"]` | Agent order: menu order, agent bar order and auto-switch priority. |
 | `default_agent` | `""` | Agent started by a plain `imux`. "" = first installed agent in `order`. |
 | `on_limit` | `"ask"` | What happens when an agent hits its usage limit: ask  = show a "continue in ..." menu (default) auto = switch to the first installed, non-limited agent in `order` off  = only show the limit in the status bar |
 | `on_exit` | `"shell"` | What a pane does when its agent exits: "shell" (drop to your login shell) or "close". |
@@ -49,6 +49,8 @@ line number.
 | `agents.claude.resume` | `true` | Resume the agent's earlier session when switching back to it. |
 | `agents.claude.patterns` | `[]` | Extra limit patterns: [{ re = 'my limit text', severity = "limit" }] (limit, warn or ignore; case-insensitive). |
 | `agents.claude.replace_default_patterns` | `false` | Use only `patterns`, not the built-in ones. |
+| `agents.antigravity.new_args` | `["-i", "{prompt}"]` | Template for a new session; the handoff goes in {prompt}. |
+| `agents.antigravity.resume_args` | `["--conversation", "{id}", "-i", "{prompt}"]` | Template for resuming a native session ({id}) with a delta handoff. |
 | `agents.gemini.new_args` | `["-i", "{prompt}"]` | Template for a new session; the handoff goes in {prompt}. |
 | `agents.gemini.resume_args` | `["--resume", "{id}", "-i", "{prompt}"]` | Template for resuming a native session ({id}) with a delta handoff. |
 | `agents.gemini.home` | `""` | Where the agent keeps its sessions. "" = ~/.gemini |
@@ -72,7 +74,7 @@ A placeholder with an empty value is dropped together with the flag before it.
 # Regex patterns use TOML literal strings ('...'), so backslashes need no escaping.
 
 # Agent order: menu order, agent bar order and auto-switch priority.
-order         = ["claude", "gemini", "copilot", "codex"]
+order         = ["claude", "antigravity", "gemini", "copilot", "codex"]
 
 # Agent started by a plain `imux`. "" = first installed agent in `order`.
 default_agent = ""
@@ -167,6 +169,20 @@ resume                   = true
 patterns                 = []
 replace_default_patterns = false
 
+# Antigravity CLI (agy): Google's successor to Gemini CLI for personal Google
+# accounts. Its conversations are not readable files, so a handoff from it is
+# rebuilt from the pane's scrollback plus its task list (brain/<id>/task.md).
+[agents.antigravity]
+bin                      = ""   # "" = agy on PATH
+args                     = []
+new_args                 = ["-i", "{prompt}"]
+resume_args              = ["--conversation", "{id}", "-i", "{prompt}"]
+resume                   = true
+patterns                 = []
+replace_default_patterns = false
+
+# Gemini CLI: still works with a Gemini API key or Vertex AI. Google stopped
+# serving personal Google accounts in Gemini CLI on 2026-06-18.
 [agents.gemini]
 bin                      = ""
 args                     = []

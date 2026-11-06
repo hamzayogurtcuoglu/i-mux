@@ -35,11 +35,12 @@ func TestLimitAuto(t *testing.T) {
 	pane := h.startSession("claude")
 	h.attach(120, 40)
 	h.run("claude", 1)
-	argv := h.run("gemini", 1)
+	// Antigravity follows Claude in the default order.
+	argv := h.run("antigravity", 1)
 	if len(argv) != 2 || !strings.Contains(argv[1], "because Claude Code hit its usage limit (resets ") {
 		t.Fatalf("auto switch handoff: %.400q", argv)
 	}
-	h.waitFor("pane runs gemini", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@imux_agent}") == "gemini" })
+	h.waitFor("pane runs antigravity", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@imux_agent}") == "antigravity" })
 	st, _ := state.Read()
 	l := st.Limits["claude"]
 	if l == nil || l.Source != "screen" || l.Pane != pane || l.ResetAt.IsZero() || !strings.Contains(l.Text, "5-hour limit reached") {

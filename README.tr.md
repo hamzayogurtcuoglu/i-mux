@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Bir yapay zekâ kodlama agent'ında kullanım limitine mi takıldınız? Sohbetin tamamıyla başka bir agent'ta devam edin.</b><br>
-  Claude Code · Gemini CLI · GitHub Copilot CLI · OpenAI Codex CLI
+  Claude Code · Antigravity CLI · Gemini CLI · GitHub Copilot CLI · OpenAI Codex CLI
 </p>
 
 <p align="center">
@@ -37,7 +37,10 @@ Go 1.27+ ile kendiniz de derleyebilirsiniz:
 go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
 ```
 
-Sonra en az bir agent CLI'ı kurun ve kurulumu denetleyin:
+Sonra en az bir agent CLI'ı kurun ve kurulumu denetleyin. Google modellerini kişisel Google hesabıyla
+kullanmak için [Antigravity CLI](https://antigravity.google/docs/cli/) (`agy`) kurun: Google
+kişisel hesaplara Gemini CLI'da 2026-06-18'de hizmeti kesti; Gemini CLI artık yalnızca Gemini API
+anahtarı, Vertex AI ya da Code Assist Standard/Enterprise lisansıyla çalışıyor.
 
 ```sh
 imux doctor

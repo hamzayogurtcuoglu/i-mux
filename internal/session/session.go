@@ -18,14 +18,15 @@ type AgentID string
 
 // Known agents.
 const (
-	Claude  AgentID = "claude"
-	Gemini  AgentID = "gemini"
-	Copilot AgentID = "copilot"
-	Codex   AgentID = "codex"
+	Claude      AgentID = "claude"
+	Antigravity AgentID = "antigravity" // Antigravity CLI (agy), Google's successor to Gemini CLI for personal accounts
+	Gemini      AgentID = "gemini"
+	Copilot     AgentID = "copilot"
+	Codex       AgentID = "codex"
 )
 
 // AllAgents lists the known agents in default order.
-var AllAgents = []AgentID{Claude, Gemini, Copilot, Codex}
+var AllAgents = []AgentID{Claude, Antigravity, Gemini, Copilot, Codex}
 
 // Known reports whether id is a known agent.
 func Known(id string) bool {
@@ -42,6 +43,8 @@ func DisplayName(id AgentID) string {
 	switch id {
 	case Claude:
 		return "Claude Code"
+	case Antigravity:
+		return "Antigravity CLI"
 	case Gemini:
 		return "Gemini CLI"
 	case Copilot:
@@ -57,6 +60,8 @@ func ShortName(id AgentID) string {
 	switch id {
 	case Claude:
 		return "Claude"
+	case Antigravity:
+		return "Antigravity"
 	case Gemini:
 		return "Gemini"
 	case Copilot:

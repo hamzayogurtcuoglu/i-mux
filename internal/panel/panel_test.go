@@ -126,6 +126,7 @@ func TestReportTableAndJSON(t *testing.T) {
 		"Gemini", "● ok", "today: 2 requests · 200 in / 20 out · 10 cache read",
 		"Copilot", "not installed", "this month: 0 premium requests",
 		"Codex", "◐ approaching a limit", "rate limits: n/a (update Codex)",
+		"Antigravity", "quota: run /usage in agy",
 		"CodexBar (brew install --cask codexbar)",
 	} {
 		if !strings.Contains(out, want) {
@@ -152,8 +153,9 @@ func TestReportTableAndJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(b.String()), &back); err != nil {
 		t.Fatal(err)
 	}
-	if len(back.Agents) != 4 || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
-		back.Agents[1].Usage.Window != "today" || back.Agents[1].Usage.Replies != 2 || back.Agents[3].Status != "warn" {
+	if len(back.Agents) != 5 || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
+		back.Agents[1].Agent != "antigravity" || back.Agents[1].Usage.Window != "in-cli" ||
+		back.Agents[2].Usage.Window != "today" || back.Agents[2].Usage.Replies != 2 || back.Agents[4].Status != "warn" {
 		t.Fatalf("json %+v\n%s", back, b.String())
 	}
 	if short(812) != "812" || short(34500) != "34.5K" || short(2_000_000) != "2M" {

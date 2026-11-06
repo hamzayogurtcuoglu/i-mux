@@ -70,7 +70,7 @@ func TestRegistry(t *testing.T) {
 	for _, a := range Ordered(cfg) {
 		ids = append(ids, a.ID)
 	}
-	if !reflect.DeepEqual(ids, []session.AgentID{"codex", "claude", "gemini", "copilot"}) {
+	if !reflect.DeepEqual(ids, []session.AgentID{"codex", "claude", "antigravity", "gemini", "copilot"}) {
 		t.Fatalf("ordered %v", ids)
 	}
 }

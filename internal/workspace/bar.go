@@ -20,7 +20,7 @@ const (
 )
 
 // shortNames are used when the bar would not fit (Q29).
-var shortNames = map[session.AgentID]string{"claude": "Cl", "gemini": "Ge", "copilot": "Cp", "codex": "Cx"}
+var shortNames = map[session.AgentID]string{"claude": "Cl", "antigravity": "Ag", "gemini": "Ge", "copilot": "Cp", "codex": "Cx"}
 
 // limitMarkerWidth is the room kept for a "⛔15:00 " marker per agent.
 const limitMarkerWidth = 8

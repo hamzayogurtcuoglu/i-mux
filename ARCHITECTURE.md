@@ -525,6 +525,38 @@ after the binary, before the template.
 | gemini | `-i {prompt}` | `--resume {id} -i {prompt}` | `-i` and UUID resume verified; the combination is unverified |
 | copilot | `-i {prompt}` | `--resume {id}` + paste delta | unverified |
 | codex | `{prompt}` | `resume {id} {prompt}` | verified (help, 0.38.0) |
+| antigravity | `-i {prompt}` | `--conversation {id} -i {prompt}` | flags documented (antigravity.google/docs/cli/reference); the combination and `agy` itself unverified locally (Q30) |
+
+### 7.6 Antigravity CLI (`agy`)
+
+Added 2026-11-06. Google stopped serving personal Google accounts (free, Google AI Pro and Ultra)
+in Gemini CLI on 2026-06-18. Sign-in then fails with "This client is no longer supported for Gemini
+Code Assist for individuals. … migrate to the Antigravity suite of products". Gemini CLI keeps
+working with an API key, Vertex AI and Code Assist Standard/Enterprise, so it stays as an agent;
+Antigravity CLI is added as the `antigravity` agent and follows Claude in the default order.
+
+- **Binary and install** [verified by reading Google's installer, not running it]:
+  `curl -fsSL https://antigravity.google/cli/install.sh | bash` installs the native binary `agy`
+  to `~/.local/bin` (macOS and Linux, so WSL too). No Node.js needed.
+- **Launch** [documented in the official CLI reference]: `-i, --prompt-interactive` runs an initial
+  prompt and stays interactive; `--conversation <id>` resumes; `-c, --continue` the newest.
+  Whether `--conversation` and `-i` combine is not documented. imux rarely has the id anyway (agy
+  prints it only on a clean exit, and only print mode reports `conversation_id`), so returning to
+  Antigravity normally starts a new conversation with the full handoff.
+- **Store:** not documented. On the dev machine the Antigravity app keeps conversations as
+  protobuf (`~/.gemini/antigravity/conversations/<id>.pb`) and its plans as markdown under
+  `~/.gemini/antigravity/brain/<id>/` (`task.md`, `implementation_plan.md`, `walkthrough.md`); the
+  CLI's settings live in `~/.gemini/antigravity-cli/`.
+- **As a handoff source:** imux does not parse the protobuf. No provider is registered, so
+  discovery reports "not found" and the switch rebuilds the conversation from the pane's
+  scrollback (§18), like any agent without a readable session. Added on top: the checklist of the
+  newest `brain/<id>/task.md` (in `~/.gemini/antigravity-cli/brain` or `~/.gemini/antigravity/brain`)
+  changed during this pane's run becomes the handoff's task list (`internal/session/antigravity`).
+- **Limits:** quota messages are not documented; the default patterns are the usual phrasings
+  ("quota exceeded", "you've reached your … quota", "out of credits", `RESOURCE_EXHAUSTED`) (Q31).
+  `imux limits` points to `/usage` inside agy, as there is no local usage data.
+- **Gemini CLI side:** the watcher treats Gemini's sign-in error as switch-worthy, and
+  `imux doctor` warns when `~/.gemini/settings.json` selects `oauth-personal`.
 
 ## 8. Handoff document
 
@@ -1430,7 +1462,9 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
 | Q26 | Lowest tmux version supporting `#[range=user\|X]` + `mouse_status_range` (present in 3.8). | Clickable agent bar on older tmux (Ubuntu 22.04 ships 3.2a) | **Partly answered (2026-11-06):** absent from tmux 3.2a (its man page lists only `range=left\|right\|window`). i-mux assumes 3.4 (`tmux.ClickMinVersion`); below it the bar is an indicator and the menus carry the switching. The e2e click test runs on CI tmux ≥ 3.4. |
 | Q27 | Mouse clicks on the status line reach tmux in VS Code's integrated terminal, iTerm2, Terminal.app and Ghostty (mouse reporting on). | Click-to-switch | Manual test (T2.13). Terminal.app needs no setting; VS Code forwards mouse events to TUI apps when mouse mode is requested. |
 | Q28 | `run-shell` and `if -F` in a `MouseDown1Status` binding expand `#{pane_id}` to the active pane, and `run-shell -t =` in `MouseDown3Border` expands it to the pane under the mouse. | Correct target pane on click | **Answered (2026-11-06, tmux 3.2a, e2e T2.8d):** `run-shell -t =` targets the pane that owns the clicked border. A "Border" is a pane's right or bottom edge, so the vertical border between side-by-side panes opens the left pane's menu. Clicks on the `pane-border-status` line itself are ignored by 3.2a. |
-| Q29 | A two-line status bar fits small terminals; the agent bar text does not overflow when 4 agents and limit markers are shown. | Layout | Visual check at 80 columns. Overflow rule: drop "(not installed)" entries first, then use short names (`Cl Ge Cx Cp`). |
+| Q29 | A two-line status bar fits small terminals; the agent bar text does not overflow when 5 agents and limit markers are shown. | Layout | Visual check at 80 columns. Overflow rule: drop "(not installed)" entries first, then use short names (`Cl Ag Ge Cx Cp`). |
+| Q30 | `agy -i "<prompt>"` accepts a 30K-character handoff as its first prompt, and `agy --conversation <id> -i "<prompt>"` resumes and submits it. | Switching to Antigravity | Install agy, run `agy --help` (the doctor's flag check does it too), then one manual switch by the user. |
+| Q31 | Antigravity CLI's on-screen text when a quota runs out. | Limit detection for Antigravity | Note the exact line the next time it happens and add it to `limits.Defaults`. |
 
 ## 21. Verification log (2026-11-05, dev machine)
 

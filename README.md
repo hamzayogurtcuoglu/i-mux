@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Hit your usage limit in one AI coding agent? Keep going in another, with the whole conversation.</b><br>
-  Claude Code · Gemini CLI · GitHub Copilot CLI · OpenAI Codex CLI
+  Claude Code · Antigravity CLI · Gemini CLI · GitHub Copilot CLI · OpenAI Codex CLI
 </p>
 
 <p align="center">
@@ -43,7 +43,10 @@ With Go 1.27+ you can also build it yourself:
 go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
 ```
 
-Then install at least one agent CLI and check the setup:
+Then install at least one agent CLI and check the setup. For Google's models with a personal Google
+account, install [Antigravity CLI](https://antigravity.google/docs/cli/) (`agy`):
+Google stopped serving personal accounts in Gemini CLI on 2026-06-18, so Gemini CLI now works only
+with a Gemini API key, Vertex AI or a Code Assist Standard/Enterprise license.
 
 ```sh
 imux doctor

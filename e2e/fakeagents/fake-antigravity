@@ -1,0 +1,3 @@
+#!/bin/sh
+# Fake Antigravity CLI (agy) for e2e tests (see fake.sh).
+FAKE_AGENT=antigravity exec /bin/sh "$(dirname "$0")/fake.sh" "$@"

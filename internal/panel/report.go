@@ -84,6 +84,9 @@ func Collect(ctx context.Context, cfg *config.Config, st *state.State, installed
 			row.Usage = &Usage{Window: "month", From: m.Start, PremiumRequests: m.PremiumRequests, Sessions: m.Sessions}
 		case session.Codex:
 			row.Usage = &Usage{Window: "latest", RateLimits: CodexLimits(ctx, f)}
+		case session.Antigravity:
+			// No readable local usage data; agy shows it with /usage.
+			row.Usage = &Usage{Window: "in-cli"}
 		}
 		r.Agents = append(r.Agents, row)
 	}
@@ -152,6 +155,8 @@ func usageText(row Row, now time.Time) string {
 		return i18n.T("limits.gemini", u.Replies) + " · " + tokens()
 	case "month":
 		return i18n.T("limits.copilot", strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", u.PremiumRequests), "0"), "."))
+	case "in-cli":
+		return i18n.T("limits.antigravity")
 	case "latest":
 		rl := u.RateLimits
 		if rl == nil {

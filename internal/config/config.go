@@ -17,7 +17,7 @@ import (
 )
 
 // AgentIDs are the agents imux knows, in default order.
-var AgentIDs = []string{"claude", "gemini", "copilot", "codex"}
+var AgentIDs = []string{"claude", "antigravity", "gemini", "copilot", "codex"}
 
 // Duration is a time.Duration written as a Go duration string ("2.5s").
 type Duration struct{ time.Duration }
@@ -138,6 +138,14 @@ func defaultAgents() map[string]*Agent {
 		"claude": {
 			NewArgs:    []string{"--session-id", "{uuid}", "{prompt}"},
 			ResumeArgs: []string{"--resume", "{id}", "{prompt}"},
+			Resume:     true,
+		},
+		// Antigravity CLI: -i runs an initial prompt and stays interactive,
+		// --conversation resumes by id (documented separately; their
+		// combination is unverified, and imux rarely knows the id).
+		"antigravity": {
+			NewArgs:    []string{"-i", "{prompt}"},
+			ResumeArgs: []string{"--conversation", "{id}", "-i", "{prompt}"},
 			Resume:     true,
 		},
 		"gemini": {
