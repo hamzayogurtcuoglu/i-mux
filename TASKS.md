@@ -211,7 +211,7 @@ Earliest standalone value: works without tmux (F5).
 
 ## M2: tmux workspace and manual switch
 
-- [ ] **T2.1 `internal/tmux` wrapper** · M · deps: T0.2
+- [x] **T2.1 `internal/tmux` wrapper** · M · deps: T0.2
   - Socket and config flags (`AJAN_TMUX_SOCKET`), command batching with `;`, delimiter-based
     output splitting, typed errors (no server / no session / no pane), version parsing.
   - A **command recorder** (`AJAN_TMUX_RECORD=<file>`) is used by tests.
