@@ -135,8 +135,32 @@ func (h *H) dumpPanes() {
 	panes, _ := h.tmux("list-panes", "-a", "-F",
 		"#{pane_id} pid=#{pane_pid} dead=#{pane_dead} status=#{pane_dead_status} signal=#{pane_dead_signal} remain=#{remain-on-exit} cmd=#{pane_current_command} agent=#{@ajan_agent}")
 	h.t.Logf("--- panes ---\n%s", panes)
-	hooks, _ := h.tmux("show-hooks", "-g")
-	h.t.Logf("--- hooks ---\n%s", hooks)
+	// The processes of this test (tmux server, pane processes, their
+	// children), to tell a zombie or stopped agent from a running one.
+	pids := map[string]bool{}
+	for _, f := range strings.Fields(panes) {
+		if p, ok := strings.CutPrefix(f, "pid="); ok {
+			pids[p] = true
+		}
+	}
+	if ps, err := exec.Command("ps", "-A", "-o", "pid=,ppid=,stat=,etime=,args=").Output(); err == nil {
+		var b strings.Builder
+		for _, l := range strings.Split(string(ps), "\n") {
+			f := strings.Fields(l)
+			if len(f) > 4 && (pids[f[0]] || pids[f[1]] || strings.Contains(l, h.Socket) || strings.Contains(l, h.Homes.Root)) {
+				b.WriteString(l + "\n")
+			}
+		}
+		h.t.Logf("--- processes ---\n%s", b.String())
+	}
+	if out, err := exec.Command("grep", "-E", "^Sig(Blk|Ign|Cgt)", "/proc/self/status").Output(); err == nil {
+		h.t.Logf("--- test process signal masks ---\n%s", out)
+	}
+	if srv, _ := h.tmux("display-message", "-p", "#{pid}"); strings.TrimSpace(srv) != "" {
+		if out, err := exec.Command("grep", "-E", "^(State|Sig(Blk|Ign|Cgt))", "/proc/"+strings.TrimSpace(srv)+"/status").Output(); err == nil {
+			h.t.Logf("--- tmux server %s ---\n%s", strings.TrimSpace(srv), out)
+		}
+	}
 	// The last tmux calls made through ajan by hooks and UI commands, with
 	// the pid that made them (not the watcher: it polls every tick).
 	_, watcher := watch.Status()
