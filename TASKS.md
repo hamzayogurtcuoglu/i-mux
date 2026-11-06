@@ -315,7 +315,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: the §10.1 defaults have `limit` / `warn` / `ignore` severities.
   - AC: config can add patterns or replace the defaults.
   - AC: tests run real-world strings against each severity, including Claude's ` ∙ ` separator and the Opus fallback (ignore).
-- [ ] **T3.2 Reset-time parser** · M · deps: T0.2
+- [x] **T3.2 Reset-time parser** · M · deps: T0.2
   - AC: table tests cover:
     - `∙ resets 3pm`, `resets 3:45pm (Europe/Istanbul)`, `reset at 15:00`;
     - the legacy `|<epoch>` form;
