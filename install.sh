@@ -228,7 +228,9 @@ else
 	elif have dnf; then
 		pm="dnf install -y tmux"
 	elif have pacman; then
-		pm="pacman -S --noconfirm tmux"
+		# A fresh Arch has no package database yet, and -Sy alone risks a
+		# partial upgrade; -Syu is how Arch installs a package safely.
+		pm="pacman -Syu --needed --noconfirm tmux"
 	elif have zypper; then
 		pm="zypper --non-interactive install tmux"
 	elif have apk; then
