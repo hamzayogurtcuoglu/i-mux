@@ -51,3 +51,36 @@ func GeminiToday(ctx context.Context, f *sources.Finder, now time.Time) Day {
 	}
 	return d
 }
+
+// Month is usage over a calendar month.
+type Month struct {
+	Start           time.Time // local first day of the month
+	PremiumRequests float64
+	Sessions        int
+}
+
+// StartOfMonth returns local midnight of the first day of t's month.
+func StartOfMonth(t time.Time) time.Time {
+	l := t.Local()
+	return time.Date(l.Year(), l.Month(), 1, 0, 0, 0, 0, time.Local)
+}
+
+// CopilotMonth sums premium requests this calendar month: per session the
+// latest session.shutdown / session.usage_checkpoint total, for sessions
+// whose last event falls in this month.
+func CopilotMonth(ctx context.Context, f *sources.Finder, now time.Time) Month {
+	m := Month{Start: StartOfMonth(now)}
+	refs := f.Find(ctx, []session.AgentID{session.Copilot}, session.Query{Since: m.Start, Limit: maxSessions})
+	for _, r := range refs {
+		if r.UpdatedAt.Before(m.Start) {
+			continue
+		}
+		s, err := f.Load(ctx, r, time.Time{})
+		if err != nil {
+			continue
+		}
+		m.Sessions++
+		m.PremiumRequests += s.Usage.PremiumRequests
+	}
+	return m
+}

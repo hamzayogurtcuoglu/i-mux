@@ -368,7 +368,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: the 64 MB fixture is handled in < 300 ms.
 - [x] **T4.2 Gemini usage today** · S · deps: T1.6
   - AC: requests and tokens across all project dirs with chats modified today, in the local time zone.
-- [ ] **T4.3 Copilot premium requests this month** · S · deps: T1.7
+- [x] **T4.3 Copilot premium requests this month** · S · deps: T1.7
   - AC: per session, the latest `session.shutdown` or `session.usage_checkpoint` total, summed per calendar month.
 - [ ] **T4.4 Codex rate limits** · S · deps: T1.8
   - AC: shows the newest `rate_limits` (percentages and resets) when present, otherwise "n/a (update Codex)".
