@@ -27,12 +27,12 @@ func (f *fakeRunner) Run(_ context.Context, _ string, args []string) ([]byte, []
 func TestArgvBatchingAndEscaping(t *testing.T) {
 	c := &Client{Socket: "s", Config: "/conf"}
 	got := c.Argv(Cmd{"set", "-p", "@x", "a;"}, Cmd{"display", "-p", "mid;dle"})
-	want := []string{"-L", "s", "-f", "/conf", "set", "-p", "@x", `a\;`, ";", "display", "-p", "mid;dle"}
+	want := []string{"-L", "s", "-f", "/conf", "-u", "set", "-p", "@x", `a\;`, ";", "display", "-p", "mid;dle"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %q\nwant %q", got, want)
 	}
 	c.Config = ""
-	if got := c.Argv(Cmd{"ls"}); !reflect.DeepEqual(got, []string{"-L", "s", "ls"}) {
+	if got := c.Argv(Cmd{"ls"}); !reflect.DeepEqual(got, []string{"-L", "s", "-u", "ls"}) {
 		t.Fatalf("no config: %q", got)
 	}
 }
@@ -92,7 +92,7 @@ func TestRecorder(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("want 2 records, got %d", len(got))
 	}
-	if !reflect.DeepEqual(got[1].Args, []string{"-L", "s", "display", "-p", "x", ";", "set", "-g", "@y", "1"}) {
+	if !reflect.DeepEqual(got[1].Args, []string{"-L", "s", "-u", "display", "-p", "x", ";", "set", "-g", "@y", "1"}) {
 		t.Fatalf("args %q", got[1].Args)
 	}
 	if got[0].Pid != os.Getpid() || got[0].T == 0 {
@@ -183,6 +183,12 @@ func TestQuote(t *testing.T) {
 	}
 	if EscapeFormat("a#b") != "a##b" {
 		t.Fatal("EscapeFormat")
+	}
+	if EscapeMessage("50% #1") != "50%% ##1" {
+		t.Fatal("EscapeMessage")
+	}
+	if d := DelimCmd("%3"); d[2] != Delim+"%%3" {
+		t.Fatalf("DelimCmd: %q", d)
 	}
 }
 
@@ -276,7 +282,7 @@ func TestIntegrationRealTmux(t *testing.T) {
 	sec := Sections(out)
 	rows := Rows(sec[pane], 2)
 	if len(rows) != 1 || rows[0][0] != pane || rows[0][1] != val {
-		t.Fatalf("option round trip: %q", sec[pane])
+		t.Fatalf("option round trip: %q (output %q)", sec[pane], out)
 	}
 	if r := Rows(sec["panes"], 2); len(r) != 1 || r[0][1] != "it" {
 		t.Fatalf("panes: %q", sec["panes"])

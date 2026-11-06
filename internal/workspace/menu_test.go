@@ -26,7 +26,7 @@ func TestPaneMenuDisplayMenuArgs(t *testing.T) {
 		t.Fatal(err)
 	}
 	args := f.calls[len(f.calls)-1]
-	if args[2] != "display-menu" {
+	if args[3] != "display-menu" { // after -L <socket> -u
 		t.Fatalf("not a display-menu: %q", args)
 	}
 	got := strings.Join(args, "\x00")

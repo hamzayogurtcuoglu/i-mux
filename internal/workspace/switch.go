@@ -328,10 +328,10 @@ func (w *WS) Message(ctx context.Context, client, pane, msg string) {
 	if pane != "" {
 		c = append(c, "-t", pane)
 	}
-	_, err := w.T.Run(ctx, append(c, tmux.EscapeFormat(msg)))
+	_, err := w.T.Run(ctx, append(c, tmux.EscapeMessage(msg)))
 	if err != nil && client != "" {
 		// The client may have gone; let tmux pick one.
-		_, _ = w.T.Run(ctx, tmux.Cmd{"display-message", "-t", pane, tmux.EscapeFormat(msg)})
+		_, _ = w.T.Run(ctx, tmux.Cmd{"display-message", "-t", pane, tmux.EscapeMessage(msg)})
 	}
 }
 

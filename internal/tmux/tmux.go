@@ -146,9 +146,12 @@ func (c *Client) BaseArgs() []string {
 }
 
 // Argv returns the full argument vector (without the binary) for cmds,
-// joined with ";" separators.
+// joined with ";" separators. It adds -u: without a UTF-8 locale (LANG unset,
+// as under launchd, cron or CI) tmux ≥ 3.5 prints tabs, control characters
+// and non-ASCII text in command output as "_", which breaks the tab-separated
+// rows ajan parses and the agents' screens the watcher reads.
 func (c *Client) Argv(cmds ...Cmd) []string {
-	args := c.BaseArgs()
+	args := append(c.BaseArgs(), "-u")
 	for i, cmd := range cmds {
 		if i > 0 {
 			args = append(args, ";")
@@ -326,7 +329,8 @@ func (c *Client) Inside(tmuxEnv string) bool {
 const Delim = "\t\tajan:"
 
 // DelimCmd returns the command that prints the delimiter line for key.
-func DelimCmd(key string) Cmd { return Cmd{"display-message", "-p", Delim + key} }
+// Keys are often pane ids ("%3"), so they are escaped for display-message.
+func DelimCmd(key string) Cmd { return Cmd{"display-message", "-p", Delim + EscapeMessage(key)} }
 
 // Sections splits batched output at delimiter lines. Output before the first
 // delimiter is returned under the key "".
@@ -515,3 +519,11 @@ func isSafe(s string) bool {
 // EscapeFormat makes text safe inside a tmux format (menu item names, status
 // lines, display-message): "#" starts a format, so it is doubled.
 func EscapeFormat(s string) string { return strings.ReplaceAll(s, "#", "##") }
+
+// EscapeMessage makes text literal for display-message, which also runs it
+// through strftime: "%" is doubled as well as "#". An unknown conversion
+// such as the "%0" of a pane id is kept by tmux 3.4 but empties the whole
+// message on tmux 3.8.
+func EscapeMessage(s string) string {
+	return strings.NewReplacer("#", "##", "%", "%%").Replace(s)
+}

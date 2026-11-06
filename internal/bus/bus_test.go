@@ -33,7 +33,7 @@ func (f *fakeTmux) Run(_ context.Context, _ string, args []string) ([]byte, []by
 			b.WriteString(f.panes)
 		case "display-message":
 			if i+2 < len(args) && strings.HasPrefix(args[i+2], tmux.Delim) {
-				b.WriteString(args[i+2] + "\n")
+				b.WriteString(strings.ReplaceAll(args[i+2], "%%", "%") + "\n") // as tmux expands it
 			}
 		case "capture-pane":
 			b.WriteString(f.screens[args[i+4]])

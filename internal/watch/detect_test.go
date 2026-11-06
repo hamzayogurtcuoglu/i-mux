@@ -27,7 +27,7 @@ func (f *fakeServer) Run(_ context.Context, _ string, args []string) ([]byte, []
 	var b strings.Builder
 	for i := 0; i < len(args); i++ {
 		if args[i] == "display-message" && i+2 < len(args) && strings.HasPrefix(args[i+2], tmux.Delim) {
-			b.WriteString(args[i+2] + "\n")
+			b.WriteString(strings.ReplaceAll(args[i+2], "%%", "%") + "\n") // as tmux expands it
 		}
 		switch args[i] {
 		case "list-clients":

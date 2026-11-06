@@ -176,5 +176,5 @@ func (w *WS) limitsCmd() string {
 		c := "display-popup -E -w 80% -h 60%"
 		return c + " " + tmux.Quote(sh)
 	}
-	return "display-message " + tmux.Quote(i18n.T("menu.limits_soon"))
+	return "display-message " + tmux.Quote(tmux.EscapeMessage(i18n.T("menu.limits_soon")))
 }

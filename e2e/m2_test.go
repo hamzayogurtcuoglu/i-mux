@@ -5,7 +5,6 @@ package e2e
 import (
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -23,14 +22,15 @@ func TestNoResidentProcesses(t *testing.T) {
 	h.mustAjan("split", "gemini", "--pane", pane)
 	h.run("gemini", 1)
 	time.Sleep(300 * time.Millisecond)
-	out, _ := exec.Command("pgrep", "-f", "^"+regexp.QuoteMeta(h.Bin)+" __exec").Output()
-	if s := strings.TrimSpace(string(out)); s != "" {
-		t.Fatalf("resident ajan __exec processes: %s", s)
+	// The watcher is the only resident ajan process (§2); no __exec stays.
+	// ps, not pgrep -a: on macOS -a means "include ancestors".
+	out, err := exec.Command("ps", "-A", "-o", "args=").Output()
+	if err != nil {
+		t.Fatal(err)
 	}
-	// The watcher is the only resident ajan process (§2).
-	out, _ = exec.Command("pgrep", "-af", "^"+regexp.QuoteMeta(h.Bin)).Output()
-	for _, l := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		if l != "" && !strings.HasSuffix(l, " __watch run") {
+	for _, l := range strings.Split(string(out), "\n") {
+		l = strings.TrimSpace(l)
+		if strings.HasPrefix(l, h.Bin+" ") && !strings.HasSuffix(l, " __watch run") {
 			t.Fatalf("resident ajan process: %s", l)
 		}
 	}
