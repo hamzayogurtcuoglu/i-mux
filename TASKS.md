@@ -273,7 +273,7 @@ Earliest standalone value: works without tmux (F5).
     with context, preview, and new-pane variants.
   - AC: `ajan switch --from-session <agent>:<id>` builds the handoff from the picked conversation.
   - AC: < 150 ms p95 with 50 synthetic candidate files (§17).
-- [ ] **T2.8d UI e2e: real client, simulated keys and clicks** · M · deps: T2.8a–T2.8c
+- [x] **T2.8d UI e2e: real client, simulated keys and clicks** · M · deps: T2.8a–T2.8c
   - The test starts a pty-backed `tmux attach` client on the test socket at a fixed size (e.g. 120×40).
     It writes key bytes (`Ctrl+\` = `0x1c`, then `g`) and SGR mouse sequences
     (`ESC[<0;X;YM` / `ESC[<0;X;Ym`) at the computed column of "Gemini" on the agent bar.
