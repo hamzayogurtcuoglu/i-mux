@@ -384,7 +384,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: idle/busy and "seconds since change" come from two captures 1 s apart, or from the watcher's
     hash timestamps when it is running.
   - AC: `--json` is supported.
-- [ ] **T5.2 `ajan read`** · S · deps: T5.1
+- [x] **T5.2 `ajan read`** · S · deps: T5.1
   - AC: `-n` lines, ANSI stripped, wrapped lines joined (`-J`).
 - [ ] **T5.3 `ajan send`** · M · deps: T5.1
   - AC: the sender prefix comes from `TMUX_PANE` / `AJAN_AGENT`.

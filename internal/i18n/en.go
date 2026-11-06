@@ -28,6 +28,7 @@ var en = map[string]string{
 	"cmd.doctor":   "Check tmux, the agent CLIs and ~/.ajan; print key hints.",
 	"cmd.limits":   "Show detected limits and local usage of each agent.",
 	"cmd.panes":    "List panes with their agent and idle/busy state (agent bus).",
+	"cmd.read":     "Print the last lines of another pane (agent bus).",
 
 	// workspace: start / attach / ls
 	"start.no_agent":       "no agent CLI is installed. Install one of:\n%s",
