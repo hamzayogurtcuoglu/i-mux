@@ -341,3 +341,9 @@ func (h *H) capture(pane string) string {
 	out, _ := h.tmux("capture-pane", "-p", "-J", "-t", pane)
 	return out
 }
+
+// control writes the fake agent's control script ($AJAN_FAKE_LOG/<agent>.sh).
+func (h *H) control(agent, script string) {
+	h.t.Helper()
+	testutil.WriteFile(h.t, filepath.Join(h.Log, agent+".sh"), []byte(script))
+}

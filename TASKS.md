@@ -287,7 +287,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: an agent exit falls back to the login shell in `@ajan_cwd` with `@ajan_agent` cleared and the trail closed.
   - AC: `on_exit = "close"` kills the pane instead.
   - AC: `@ajan_fallback` + exit within 10 s with status ≠ 0 respawns from the fallback spec. M6 uses this; it is tested here with a fake agent.
-- [ ] **T2.11 Scrollback fallback transcript** · S · deps: T2.6
+- [x] **T2.11 Scrollback fallback transcript** · S · deps: T2.6
   - AC: when no session is found, the handoff uses `capture-pane -S -3000 -J` text, marked as
     reconstructed, and the user is notified.
   - AC: e2e with a fake agent that writes no session file.

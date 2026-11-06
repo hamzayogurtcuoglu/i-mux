@@ -90,7 +90,9 @@ type SwitchResult struct {
 	Fresh    bool // no previous conversation: started without context
 	Resumed  bool // a picked conversation continued natively in its own agent
 	Pasted   bool // the handoff was pasted into the agent (inject = "paste")
-	Warnings []string
+	// Reconstructed: no session file; the context came from the scrollback.
+	Reconstructed bool
+	Warnings      []string
 }
 
 // Switch moves pane req.Pane to agent req.To with the conversation as
@@ -152,6 +154,7 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	if built != nil {
 		res.From = built.From
 		res.Warnings = built.Warnings
+		res.Reconstructed = built.Reconstructed
 		path, err := handoff.Save(built.Doc.Text, built.From, req.To, w.Now())
 		if err != nil {
 			return nil, err
@@ -250,7 +253,10 @@ func (w *WS) notifySwitch(ctx context.Context, client, pane string, r *SwitchRes
 	default:
 		msg = i18n.T("switch.done", session.ShortName(r.To), clean.Thousands(r.Runes))
 	}
-	if len(r.Warnings) > 0 {
+	switch {
+	case r.Reconstructed:
+		msg += " · " + i18n.T("switch.reconstructed")
+	case len(r.Warnings) > 0:
 		msg += " · " + i18n.T("switch.warnings", len(r.Warnings))
 	}
 	if r.Handoff != "" && !w.State().Notices["cross_provider_ack"] {

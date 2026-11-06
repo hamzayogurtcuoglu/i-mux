@@ -29,6 +29,9 @@ type HandoffResult struct {
 	Ref      session.Ref // zero when reconstructed from scrollback
 	Source   *session.Session
 	Warnings []string
+	// Reconstructed is set when no session file was found and the pane's
+	// scrollback was used instead.
+	Reconstructed bool
 }
 
 // ErrNoSource means neither a session file nor the scrollback had anything.
@@ -64,6 +67,10 @@ func (w *WS) BuildHandoff(ctx context.Context, f *sources.Finder, req HandoffReq
 		s, err = w.scrollbackSession(ctx, p)
 		if err != nil {
 			return nil, err
+		}
+		res.Reconstructed = true
+		if len(s.Entries) == 0 && p.Agent == "" {
+			return nil, ErrNoSource // a plain shell with an empty screen: nothing to carry over
 		}
 	default:
 		return nil, err
