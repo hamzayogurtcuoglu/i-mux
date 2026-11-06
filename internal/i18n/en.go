@@ -19,6 +19,23 @@ var en = map[string]string{
 	"cmd.handoff":  "Build a handoff from an agent session; start the target agent here, or --print it.",
 	"cmd.sessions": "List agent sessions found for this directory.",
 	"cmd.internal": "Internal command (used by tmux bindings and hooks).",
+	"cmd.attach":   "Attach to an ajan session (default: the most recently used one).",
+	"cmd.ls":       "List ajan sessions and their panes.",
+
+	// workspace: start / attach / ls
+	"start.no_agent": "no agent CLI is installed. Install one of:\n%s",
+	"start.window":   "opened a new window (%s)",
+	"start.created":  "created session %s (pane %s)",
+	"start.exists":   "session %s already exists",
+	"attach.none":    "no ajan session is running; start one with 'ajan'",
+	"attach.no_such": "no ajan session named %q",
+	"ls.none":        "no ajan sessions",
+	"ls.header":      "SESSION\tPANE\tAGENT\tSTATE\tCWD",
+	"ls.attached":    "attached",
+	"ls.detached":    "detached",
+	"ls.dead":        "exited",
+	"tmux.missing":   "tmux is not installed (brew install tmux / apt install tmux)",
+	"tmux.too_old":   "tmux %s is too old; ajan needs %s or newer",
 
 	// config command
 	"config.exists":      "%s already exists (use --force to overwrite)",

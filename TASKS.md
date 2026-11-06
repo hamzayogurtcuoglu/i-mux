@@ -225,7 +225,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: the spec file is deleted after reading.
   - AC: `AJAN_PANE`, `AJAN_AGENT` and `PATH` are set.
   - AC: e2e: the fake agent receives byte-exact argv, including quotes, newlines, `$()`, backticks and Turkish text.
-- [ ] **T2.4 Start and attach** (`ajan [agent]`, `ajan attach`, `ajan ls`) · M · deps: T2.1–T2.3, T1.3
+- [x] **T2.4 Start and attach** (`ajan [agent]`, `ajan attach`, `ajan ls`) · M · deps: T2.1–T2.3, T1.3
   - Session naming (§13), pane options (§9.4), `remain-on-exit on`, and a pre-assigned Claude `--session-id`.
   - Bin cache refresh, `__watch ensure` (a no-op until M3), exec into `tmux attach`.
   - AC: e2e shows the pane options are set and the fake claude got `--session-id <uuid>`.

@@ -35,9 +35,3 @@ func setup() {
 
 // isAgentArg reports whether s names an agent (`ajan claude`).
 func isAgentArg(s string) bool { return session.Known(s) }
-
-// defaultAction handles `ajan` and `ajan <agent>`.
-func defaultAction(e *Env, args []string) error {
-	printHelp(e.Stdout)
-	return nil
-}

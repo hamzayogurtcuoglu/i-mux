@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -61,10 +62,21 @@ func newH(t *testing.T, extraConfig string) *H {
 	// PATH holds tmux and the base system only: never a real agent CLI.
 	t.Setenv("PATH", filepath.Dir(tm)+":/usr/bin:/bin")
 	var cfg strings.Builder
+	// Top-level keys of extraConfig must come before any table.
+	top, tables := extraConfig, ""
+	if strings.HasPrefix(extraConfig, "[") {
+		top, tables = "", extraConfig
+	} else if i := strings.Index(extraConfig, "\n["); i >= 0 {
+		top, tables = extraConfig[:i+1], extraConfig[i+1:]
+	}
+	cfg.WriteString(top + "\n")
 	for _, a := range []string{"claude", "gemini", "copilot", "codex"} {
+		if strings.Contains(tables, "[agents."+a+"]") {
+			continue // the test configures this agent itself
+		}
 		fmt.Fprintf(&cfg, "[agents.%s]\nbin = %q\n\n", a, filepath.Join(h.Fakes, "fake-"+a))
 	}
-	cfg.WriteString(extraConfig)
+	cfg.WriteString(tables)
 	testutil.WriteFile(t, filepath.Join(homes.Ajan, "config.toml"), []byte(cfg.String()))
 	t.Cleanup(func() {
 		_ = exec.Command(h.Tmux, "-L", h.Socket, "kill-server").Run()
@@ -174,4 +186,44 @@ func splitNUL(b []byte) []string {
 		parts = parts[:len(parts)-1]
 	}
 	return parts
+}
+
+// ajan runs the binary in the project directory.
+func (h *H) ajan(args ...string) (string, string, error) {
+	h.t.Helper()
+	return h.ajanEnv(nil, args...)
+}
+
+// ajanEnv runs the binary with extra environment variables.
+func (h *H) ajanEnv(env []string, args ...string) (string, string, error) {
+	h.t.Helper()
+	cmd := exec.Command(h.Bin, args...)
+	cmd.Dir = h.Homes.Project
+	cmd.Env = append(os.Environ(), env...)
+	var o, e bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &o, &e
+	err := cmd.Run()
+	return o.String(), e.String(), err
+}
+
+// mustAjan runs ajan and fails the test on error.
+func (h *H) mustAjan(args ...string) string {
+	h.t.Helper()
+	out, errOut, err := h.ajan(args...)
+	if err != nil {
+		h.t.Fatalf("ajan %s: %v\nstdout: %s\nstderr: %s", strings.Join(args, " "), err, out, errOut)
+	}
+	return out
+}
+
+// paneOpt reads one pane option (formats allowed).
+func (h *H) paneOpt(pane, format string) string {
+	h.t.Helper()
+	return strings.TrimSuffix(h.mustTmux("display-message", "-p", "-t", pane, format), "\n")
+}
+
+// runs counts the runs of agent so far.
+func (h *H) runs(agent string) int {
+	m, _ := filepath.Glob(filepath.Join(h.Log, agent+"-*.env"))
+	return len(m)
 }

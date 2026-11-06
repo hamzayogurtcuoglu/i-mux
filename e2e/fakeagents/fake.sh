@@ -17,6 +17,13 @@ agent="${FAKE_AGENT:?FAKE_AGENT not set}"
 log="${AJAN_FAKE_LOG:-${TMPDIR:-/tmp}/ajan-fake}"
 mkdir -p "$log"
 
+# Version probes (ajan's bin cache) are not runs.
+if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
+	echo "$agent 0.0.0-fake"
+	echo "$agent --version" >>"$log/version-probes"
+	exit 0
+fi
+
 # Claim the next run number atomically (noclobber create).
 n=1
 while ! (set -C; : >"$log/$agent-$n.argv") 2>/dev/null; do
