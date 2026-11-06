@@ -8,7 +8,7 @@ Inside the workspace the pane menu's **Limits** item opens it in a popup (`imux 
 AGENT    STATUS                 USAGE (local data)
 Claude   ⛔ limited until 15:00  last 5 h: 42 replies · 310.5K in / 28.1K out · 12.4M cache read
                                 "5-hour limit reached ∙ resets 3pm" (seen 12 min ago)
-Gemini   ● ok                   today: 8 requests · 41.2K in / 3.9K out
+Antigravity ● ok                today: 8 requests · 41.2K in / 3.9K out
 Copilot  not installed          this month: 0 premium requests
 Codex    ◐ approaching a limit  5 h window 81% used (resets 15:40) · weekly 23% used (resets Nov 8 09:00)
 
@@ -18,7 +18,7 @@ Usage is counted from local session files. For exact plan percentages, see Codex
 | Agent | Usage shown | Source |
 |---|---|---|
 | Claude | replies and tokens in the last 5 hours | `message.usage` of recently modified session files, read backwards, deduplicated by `message.id` |
-| Gemini | requests (Gemini replies) and tokens today, local time | chats in every project modified today |
+| Antigravity | requests (model replies) and tokens today, local time | conversations in every project modified today (`~/.gemini/antigravity-cli/brain/*/…/transcript_full.jsonl`) |
 | Copilot | premium requests this calendar month | the latest `session.shutdown` / `session.usage_checkpoint` total of each session |
 | Codex | the newest rate-limit percentages and reset times | `token_count` events with `rate_limits` (newer Codex versions only; otherwise "n/a") |
 
@@ -62,12 +62,12 @@ Field names are stable; new fields may be added.
 | Field | Meaning |
 |---|---|
 | `agents[]` | one entry per agent, in the configured `order` |
-| `agent`, `name`, `installed` | id (`claude`, `gemini`, `copilot`, `codex`), product name, whether its CLI was found |
+| `agent`, `name`, `installed` | id (`claude`, `antigravity`, `copilot`, `codex`), product name, whether its CLI was found |
 | `status` | `limited` (a limit was seen and has not expired), `warn` (an "approaching" message was seen) or `ok` |
 | `limit` | present when `status` is not `ok`: the record from `~/.imux/state.json` (`reset_at` is omitted when the message had no reset time; `expires_at` is then `at` + `limits.default_expiry`) |
-| `usage.window` | `5h` (Claude), `today` (Gemini), `month` (Copilot), `latest` (Codex) |
+| `usage.window` | `5h` (Claude), `today` (Antigravity), `month` (Copilot), `latest` (Codex) |
 | `usage.from` | start of the window (local midnight for `today`, the first of the month for `month`) |
-| `usage.replies` | assistant replies (Claude: unique `message.id`s; Gemini: requests) |
+| `usage.replies` | assistant replies (Claude: unique `message.id`s; Antigravity: model replies) |
 | `usage.*_tokens` | token counts; zero values are omitted |
 | `usage.premium_requests` | Copilot premium requests |
 | `usage.sessions` | session files that contributed |

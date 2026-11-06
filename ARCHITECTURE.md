@@ -423,7 +423,11 @@ means a known unknown, tracked in §20.
   - The installed CLI (1.0.110) is outdated, while the local session files come from 2.1.x apps.
     `imux doctor` recommends updating it.
 
-### 7.2 Gemini CLI
+### 7.2 Gemini CLI (removed 2026-11-07)
+
+> **Removed.** Google stopped serving personal Google accounts in Gemini CLI on 2026-06-18, and
+> i-mux replaced it with Antigravity CLI (§7.6). Configs that still name `gemini` load with a
+> warning (`config.RemovedAgents`). The notes below are kept as history.
 
 - **Store:** `~/.gemini/tmp/<project-id>/chats/session-<YYYY-MM-DDTHH-MM>-<shortid>.json[l]`.
 - **Project id** [verified in the installed 0.30.0 source, `config/storage.js`]:
@@ -522,41 +526,58 @@ after the binary, before the template.
 | Agent | New session | Resume | Status |
 |---|---|---|---|
 | claude | `--session-id {uuid} {prompt}` | `--resume {id} {prompt}` | verified (help, 1.0.110) |
-| gemini | `-i {prompt}` | `--resume {id} -i {prompt}` | `-i` and UUID resume verified; the combination is unverified |
 | copilot | `-i {prompt}` | `--resume {id}` + paste delta | unverified |
 | codex | `{prompt}` | `resume {id} {prompt}` | verified (help, 0.38.0) |
-| antigravity | `-i {prompt}` | `--conversation {id} -i {prompt}` | flags documented (antigravity.google/docs/cli/reference); the combination and `agy` itself unverified locally (Q30) |
+| antigravity | `-i {prompt}` | `--conversation {id} -i {prompt}` | both flags verified in `agy --help` (1.5.2); their combination is unverified (Q30) |
 
 ### 7.6 Antigravity CLI (`agy`)
 
 Added 2026-11-06. Google stopped serving personal Google accounts (free, Google AI Pro and Ultra)
 in Gemini CLI on 2026-06-18. Sign-in then fails with "This client is no longer supported for Gemini
-Code Assist for individuals. … migrate to the Antigravity suite of products". Gemini CLI keeps
-working with an API key, Vertex AI and Code Assist Standard/Enterprise, so it stays as an agent;
-Antigravity CLI is added as the `antigravity` agent and follows Claude in the default order.
+Code Assist for individuals. … migrate to the Antigravity suite of products". Antigravity CLI is
+the `antigravity` agent and follows Claude in the default order. Gemini CLI support was removed on
+2026-11-07 (§7.2).
 
 - **Binary and install** [verified by reading Google's installer, not running it]:
   `curl -fsSL https://antigravity.google/cli/install.sh | bash` installs the native binary `agy`
   to `~/.local/bin` (macOS and Linux, so WSL too). No Node.js needed.
-- **Launch** [documented in the official CLI reference]: `-i, --prompt-interactive` runs an initial
-  prompt and stays interactive; `--conversation <id>` resumes; `-c, --continue` the newest.
-  Whether `--conversation` and `-i` combine is not documented. imux rarely has the id anyway (agy
-  prints it only on a clean exit, and only print mode reports `conversation_id`), so returning to
-  Antigravity normally starts a new conversation with the full handoff.
-- **Store:** not documented. On the dev machine the Antigravity app keeps conversations as
-  protobuf (`~/.gemini/antigravity/conversations/<id>.pb`) and its plans as markdown under
-  `~/.gemini/antigravity/brain/<id>/` (`task.md`, `implementation_plan.md`, `walkthrough.md`); the
-  CLI's settings live in `~/.gemini/antigravity-cli/`.
-- **As a handoff source:** imux does not parse the protobuf. No provider is registered, so
-  discovery reports "not found" and the switch rebuilds the conversation from the pane's
-  scrollback (§18), like any agent without a readable session. Added on top: the checklist of the
-  newest `brain/<id>/task.md` (in `~/.gemini/antigravity-cli/brain` or `~/.gemini/antigravity/brain`)
-  changed during this pane's run becomes the handoff's task list (`internal/session/antigravity`).
-- **Limits:** quota messages are not documented; the default patterns are the usual phrasings
-  ("quota exceeded", "you've reached your … quota", "out of credits", `RESOURCE_EXHAUSTED`) (Q31).
-  `imux limits` points to `/usage` inside agy, as there is no local usage data.
-- **Gemini CLI side:** the watcher treats Gemini's sign-in error as switch-worthy, and
-  `imux doctor` warns when `~/.gemini/settings.json` selects `oauth-personal`.
+- **Launch** [verified in `agy --help`, 1.5.2]: `-i, --prompt-interactive` runs an initial prompt
+  and stays interactive; `--conversation <id>` resumes by id; `-c, --continue` the newest. The id is
+  the `brain/<id>` directory name of the conversation.
+- **Store** [verified on Antigravity CLI 1.5.2, 2026-11-06; not documented by Google]: every
+  conversation has a directory `~/.gemini/antigravity-cli/brain/<conversation-id>/` (the desktop app
+  uses `~/.gemini/antigravity/brain/`) holding
+  - `.system_generated/logs/transcript_full.jsonl` (and `transcript.jsonl`): one step per line,
+    `{step_index, source, type, status, created_at, content, …}`:
+    - `USER_EXPLICIT`/`USER_INPUT`: `content` wraps the request in `<USER_REQUEST>`, followed by
+      context such as `<ADDITIONAL_METADATA>` and `<USER_SETTINGS_CHANGE>` (stripped);
+    - `MODEL`/`PLANNER_RESPONSE`: `content` (text), `thinking` (skipped),
+      `tool_calls[{name, args}]`, `input_tokens`, `cache_read_tokens`, `output_tokens`;
+    - `MODEL`/`GENERIC`, `LIST_DIRECTORY`, …: a tool's result, in tool-call order; `status: ERROR`
+      with an `error` string;
+    - `SYSTEM`/`SYSTEM_MESSAGE`, `CONVERSATION_HISTORY`: skipped.
+    Tool names seen: `run_command` (`CommandLine`), `read_file` (`Path`), `list_dir`
+    (`DirectoryPath`), `manage_task`. Argument names are mapped to the summarizer's (`command`,
+    `file_path`, `path`, `query`, `url`).
+  - `task.md`: the plan as a markdown checklist (`[x]` done, `[/]` in progress).
+  - The transcript has no working directory. `~/.gemini/antigravity-cli/history.jsonl` has one
+    `{display, timestamp (ms), workspace}` line per typed prompt; a conversation's directory is the
+    entry with the same text within 10 minutes, else the closest entry within a minute.
+  - Also present and not read: `conversations/<id>.pb` (protobuf), `conversation_summaries.db`.
+- **As a handoff source:** `internal/session/antigravity` reads the transcript like the other
+  providers read theirs: user and assistant turns, tool lines, failed tools, token usage, the task
+  list, and a chained handoff when the first request is one (imux starts agy with the handoff as its
+  first prompt). Discovery for a pane uses the run's start time; a conversation without a known
+  directory matches only a time-bounded query. The scrollback (§18) remains the fallback.
+- **Return with resume:** the trail records the conversation id found at switch time, so switching
+  back to Antigravity runs `agy --conversation <id> -i "<delta>"` (verified with a fake agy; the real
+  combination is Q30).
+- **Limits:** quota messages are not documented. The defaults keep Gemini CLI's verified wording
+  (Antigravity runs Gemini models: "usage limit reached for", "exhausted your daily quota") plus the
+  usual phrasings (Q31). `imux limits` shows today's requests and tokens from the transcripts.
+- **Agent bar:** its range is `imux:agy`, because `imux:antigravity` is 16 bytes and tmux drops
+  ranges over 15 bytes (the entry could not be clicked in v0.2.0). `workspace.AgentRange` picks the
+  binary name whenever the id would not fit.
 
 ## 8. Handoff document
 
@@ -1463,7 +1484,7 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
 | Q27 | Mouse clicks on the status line reach tmux in VS Code's integrated terminal, iTerm2, Terminal.app and Ghostty (mouse reporting on). | Click-to-switch | Manual test (T2.13). Terminal.app needs no setting; VS Code forwards mouse events to TUI apps when mouse mode is requested. |
 | Q28 | `run-shell` and `if -F` in a `MouseDown1Status` binding expand `#{pane_id}` to the active pane, and `run-shell -t =` in `MouseDown3Border` expands it to the pane under the mouse. | Correct target pane on click | **Answered (2026-11-06, tmux 3.2a, e2e T2.8d):** `run-shell -t =` targets the pane that owns the clicked border. A "Border" is a pane's right or bottom edge, so the vertical border between side-by-side panes opens the left pane's menu. Clicks on the `pane-border-status` line itself are ignored by 3.2a. |
 | Q29 | A two-line status bar fits small terminals; the agent bar text does not overflow when 5 agents and limit markers are shown. | Layout | Visual check at 80 columns. Overflow rule: drop "(not installed)" entries first, then use short names (`Cl Ag Ge Cx Cp`). |
-| Q30 | `agy -i "<prompt>"` accepts a 30K-character handoff as its first prompt, and `agy --conversation <id> -i "<prompt>"` resumes and submits it. | Switching to Antigravity | Install agy, run `agy --help` (the doctor's flag check does it too), then one manual switch by the user. |
+| Q30 | `agy -i "<prompt>"` accepts a 30K-character handoff as its first prompt, and `agy --conversation <id> -i "<prompt>"` resumes and submits it. | Switching to Antigravity | Both flags are in `agy --help` (1.5.2, verified). Remaining: one manual Claude → Antigravity → Claude → Antigravity round trip by the user. |
 | Q31 | Antigravity CLI's on-screen text when a quota runs out. | Limit detection for Antigravity | Note the exact line the next time it happens and add it to `limits.Defaults`. |
 
 ## 21. Verification log (2026-11-05, dev machine)
@@ -1529,6 +1550,13 @@ only file names, key names, type names, counts and CLI help text were inspected.
   - Mouse key locations include `Pane`, `Border`, `Status`, `StatusLeft`, `StatusRight`;
     `{mouse}` / `=` targets the pane or window under the mouse.
 - **terminfo:** `tmux-256color` present. `getconf ARG_MAX` = 1048576.
+- **2026-11-06/07, Antigravity CLI 1.5.2** (installed by the user with Google's installer):
+  `agy --help` lists `-i/--prompt-interactive`, `--conversation`, `-c/--continue`, `-p/--print`.
+  The transcript layout in §7.6 was read from the user's own conversations (structure only) and
+  from the CLI's bundled docs (`builtin/skills/agy-customizations/docs/rules.md`: rules come from
+  `GEMINI.md` and `AGENTS.md`). A handoff built from a real conversation by the new reader carries
+  the user and assistant turns, and no terminal chrome or account e-mail (the scrollback fallback
+  carried both).
 
 ## 22. Prior art (studied, not copied)
 

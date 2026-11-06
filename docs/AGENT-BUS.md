@@ -12,7 +12,7 @@ tmux socket. Inside a pane `TMUX`, `TMUX_PANE`, `IMUX_PANE` and `IMUX_AGENT` are
 | `imux read <target> [-n 60]` | Prints the last *n* lines of the target's screen and scrollback (wrapped lines joined, escape sequences removed). |
 | `imux send <target> "<message>" [--wait-idle] [--no-enter]` | Types the message into the target, prefixed with `[from <agent> <pane>] `, and presses Enter. `-` reads the message from stdin. `--wait-idle` waits until the target is idle first. |
 | `imux wait <target> [--timeout 600] [--idle 5s] [--print]` | Waits until the target's screen has not changed for `--idle` (default `bus.idle_after`). Exit 0 when idle, 124 on timeout. `--print` prints the final screen. |
-| `imux snippet [claude\|gemini\|agents]` | Prints instructions you may paste into `CLAUDE.md`, `GEMINI.md` or `AGENTS.md`. |
+| `imux snippet [claude\|antigravity\|agents]` | Prints instructions you may paste into `CLAUDE.md`, `GEMINI.md` or `AGENTS.md`. |
 
 Busy or idle: agents redraw spinners and timers while they work, so a screen that stays the same
 means the agent is waiting. `imux panes` uses the watcher's record of screen changes when it is
@@ -21,16 +21,16 @@ running, and otherwise samples each screen twice, one second apart.
 ## Targets
 
 - `%N`: a pane id as shown by `imux panes` (`%3`). It must be a pane of i-mux's tmux server.
-- An agent name (`claude`, `gemini`, `copilot`, `codex`): the one live pane running that agent in
+- An agent name (`claude`, `antigravity`, `copilot`, `codex`): the one live pane running that agent in
   the caller's tmux session, else on the whole server. When several panes match, the command fails
   and lists them: use the pane id.
 
 ## A typical exchange
 
 ```sh
-imux send gemini "Please review src/auth.ts and list problems, most important first"
-imux wait gemini --timeout 900
-imux read gemini -n 120
+imux send codex "Please review src/auth.ts and list problems, most important first"
+imux wait codex --timeout 900
+imux read codex -n 120
 ```
 
 The receiving agent sees the message as if the user typed it:
@@ -74,5 +74,5 @@ have more permissions than the first. imux limits the damage but cannot judge me
 - Messages are pasted, never run: i-mux does not execute message text. Bracketed paste is used only
   when the receiving program asked for it.
 
-Agent sandboxes: an agent running in a sandbox (Codex `workspace-write`, Gemini `--sandbox`) may
+Agent sandboxes: an agent running in a sandbox (Codex `workspace-write`, Antigravity `--sandbox`) may
 not be allowed to reach the tmux socket, and then `imux send` fails inside it (open question Q18).

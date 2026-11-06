@@ -475,14 +475,25 @@ Google stopped serving personal Google accounts in Gemini CLI on 2026-06-18 (ARC
 - [x] **T9.1 `antigravity` agent** · M · deps: T1.3, T2.6
   - AC: `agy` is a registered agent (menu key `a`, bar short name `Ag`), after Claude in the
     default order; new conversations start with `agy -i <handoff>`.
-  - AC: a handoff from an Antigravity pane comes from the scrollback plus the newest
-    `brain/<id>/task.md` changed during the run (unit and e2e tests with a fake agy).
-- [x] **T9.2 Gemini personal sign-in** · S · deps: T2.12, T3.1
-  - AC: `imux doctor` warns when Gemini CLI selects `oauth-personal`; the watcher treats the
-    "no longer supported for Gemini Code Assist" error as switch-worthy.
-- [ ] **T9.3 (USER) Verify agy** · S · deps: T9.1
-  - Install agy, sign in once, run `imux doctor` (checks `-i` in `agy --help`), switch a Claude
-    pane to Antigravity and back, and note agy's quota message when it appears (Q30, Q31).
+- [x] **T9.2 Agent-bar range fits tmux's limit** · S · deps: T2.8a
+  - AC: every agent's range is ≤ 15 bytes (`imux:agy` for Antigravity); a test covers every
+    registered agent, and the e2e test clicks "Antigravity" with a real mouse event.
+- [x] **T9.3 Transcript reader** · M · deps: T1.1, T1.2
+  - AC: `internal/session/antigravity` reads `brain/<id>/.system_generated/logs/transcript_full.jsonl`
+    (turns, tools with mapped argument names, failed tools, tokens, task list, chained handoff) and
+    finds the directory through `history.jsonl`; synthetic fixtures only.
+  - AC: e2e round trip Claude → Antigravity → Codex → Antigravity: the handoff from Antigravity is
+    built from the transcript (not the scrollback), and the way back resumes with
+    `--conversation <id> -i <delta>`.
+- [x] **T9.4 Remove Gemini CLI** · M · deps: T9.1
+  - AC: no Gemini agent, provider, patterns or doctor check; a config naming `gemini` loads with a
+    warning; tests and screenshots use Antigravity.
+- [x] **T9.5 Chained handoffs keep headings in the user's text** · S · deps: T1.12
+  - AC: reading a handoff back splits only at its own section headings, so a request with `## `
+    lines survives every hop whole (unit test, plus a check on a real handoff).
+- [ ] **T9.6 (USER) Verify agy for real** · S · deps: T9.1–T9.3
+  - One real round trip Claude → Antigravity → Claude → Antigravity (Q30), and note agy's quota
+    message when it appears (Q31).
 ---
 
 ## Testing strategy

@@ -39,14 +39,16 @@ Rules:
   `[REDACTED:<kind>]`.
 - **Chained handoffs.** When the source conversation itself started from a handoff, its original
   request is carried over and its history goes into `## Earlier history`; the old handoff is not
-  shown as a user message.
+  shown as a user message. When reading a handoff back, only the section headings above split it:
+  a `## ` line in the user's own text (a pasted brief) stays inside its section, so the original
+  request survives every hop whole.
 - **No session file.** If the source agent's session cannot be found, the pane's terminal
   scrollback is used instead and the record says it was reconstructed.
 
 ## Example (synthetic)
 
 ```markdown
-[i-mux handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]
+[i-mux handoff · Claude Code → Antigravity CLI · 2026-11-05 14:32]
 
 You are continuing a coding session that the user was running in Claude Code (model: claude-opus-4-1).
 They switched to you because Claude Code hit its usage limit (resets 15:00).
@@ -101,10 +103,10 @@ Switching a pane back to an agent that already ran there resumes that agent's ow
 natively (for example `claude --resume <id> "<delta>"`) instead of starting over. The **delta**
 only covers what happened in the other agents since, so nothing is repeated:
 
-- the preamble becomes "Welcome back. While you were away the user continued in Gemini CLI, then
+- the preamble becomes "Welcome back. While you were away the user continued in Antigravity CLI, then
   Codex CLI; here is what happened there.";
 - it keeps `## Files touched`, `## Repository state`, `## Conversation (while you were away)` with
-  `*(in Gemini CLI)*` markers, `## Where it stopped` and `## What to do now`;
+  `*(in Antigravity CLI)*` markers, `## Where it stopped` and `## What to do now`;
 - with nothing new, the agent resumes without a prompt.
 
 If the resume fails within 10 seconds (for example the session was deleted), i-mux starts a new

@@ -50,11 +50,11 @@ enabled for every terminal.
 
 ## A switch says "no session file found" or the handoff looks empty
 
-i-mux reads the source agent's own session files (`~/.claude/projects`, `~/.gemini/tmp`,
+i-mux reads the source agent's own session files (`~/.claude/projects`, `~/.gemini/antigravity-cli/brain`,
 `~/.copilot/session-state`, `~/.codex/sessions`).
 
 - When none is found, the handoff is rebuilt from the pane's terminal scrollback and the message
-  says so. Agents that use the alternate screen (Gemini, Copilot) leave only the visible screen.
+  says so. Agents that use the alternate screen (Copilot) leave only the visible screen.
 - Check what i-mux finds: `imux sessions` in the project directory, and `imux handoff --print`.
 - Agents keep sessions per directory: i-mux uses the directory the pane started in.
 - Custom locations: `[agents.claude] home = "..."` (also `CLAUDE_CONFIG_DIR`, `CODEX_HOME`,
@@ -66,21 +66,23 @@ i-mux reads the source agent's own session files (`~/.claude/projects`, `~/.gemi
 
 `imux doctor` warns when an agent is older than the version i-mux was checked against, or when its
 `--help` does not mention the flags of its launch template (`--session-id`, `-i`, `--resume`,
-`resume`). Update it (`npm i -g @anthropic-ai/claude-code`, `@google/gemini-cli`,
-`@github/copilot`, `@openai/codex`; Antigravity CLI updates itself) or adjust `new_args` / `resume_args` in `config.toml`.
+`resume`). Update it (`npm i -g @anthropic-ai/claude-code`, `@github/copilot`,
+`@openai/codex`; Antigravity CLI updates itself, or run `agy update`) or adjust `new_args` / `resume_args` in `config.toml`.
 
 ## Gemini CLI: "This client is no longer supported for Gemini Code Assist for individuals"
 
 Google stopped serving personal Google accounts (free, Google AI Pro and Ultra) in Gemini CLI on
-2026-06-18. Updating Gemini CLI does not help. Either:
+2026-06-18; updating Gemini CLI does not help. i-mux therefore supports Antigravity CLI, Google's
+successor, instead of Gemini CLI:
 
-- install Antigravity CLI, Google's successor, and use it as the `antigravity` agent:
-  `curl -fsSL https://antigravity.google/cli/install.sh | bash` (installs `agy` to `~/.local/bin`),
-  then sign in once by running `agy`; or
-- keep Gemini CLI with a Gemini API key (`GEMINI_API_KEY`), Vertex AI, or a Code Assist
-  Standard/Enterprise license.
+```sh
+curl -fsSL https://antigravity.google/cli/install.sh | bash   # installs agy to ~/.local/bin
+agy                                                          # sign in once, then exit
+imux doctor                                                  # should list "Antigravity CLI ✓"
+```
 
-`imux doctor` warns when Gemini CLI is still set to a personal Google sign-in.
+A config file from an older i-mux that still names `gemini` keeps working: the entry is ignored with
+a warning.
 
 ## The new agent exits right away after a switch
 
@@ -96,7 +98,7 @@ handoff automatically.
   panes only while a client is attached.
 - It reads the last 25 lines of each agent's screen. Messages that appear within 20 seconds of an
   agent starting are ignored (resumed sessions often redraw old ones).
-- Add your own patterns: `[agents.gemini] patterns = [{ re = 'quota is used up', severity = "limit" }]`.
+- Add your own patterns: `[agents.antigravity] patterns = [{ re = 'quota is used up', severity = "limit" }]`.
 - `~/.imux/watch.log` lists what it matched (pattern ids only, never screen text).
 
 ## Windows

@@ -6,6 +6,29 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-07
+
+### Fixed
+
+- **Clicking "Antigravity" on the agent bar did nothing.** Its range `imux:antigravity` is 16 bytes
+  and tmux drops ranges over 15; it is now `imux:agy`. A test covers every agent's range.
+- **Chained handoffs cut the original request at the user's own `## ` headings** (e.g. a pasted
+  brief): reading a handoff back now splits only at its own section headings.
+
+### Changed
+
+- **Handoffs from Antigravity come from its transcript**, not the screen:
+  `~/.gemini/antigravity-cli/brain/<id>/.system_generated/logs/transcript_full.jsonl` gives the
+  user and assistant turns, the commands it ran and the files it read, token usage and its task
+  list, without terminal decoration or the account e-mail. Switching back to Antigravity resumes
+  its own conversation (`agy --conversation <id>`) with only what happened elsewhere.
+- `imux limits` shows Antigravity's requests and tokens today.
+
+### Removed
+
+- **Gemini CLI.** Google stopped serving personal accounts in it on 2026-06-18; use Antigravity CLI.
+  A config that still names `gemini` loads with a warning.
+
 ## [0.2.0] - 2026-11-06
 
 ### Added

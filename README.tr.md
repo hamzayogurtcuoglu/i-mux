@@ -2,11 +2,11 @@
 
 <p align="center">
   <b>Bir yapay zekâ kodlama agent'ında kullanım limitine mi takıldınız? Sohbetin tamamıyla başka bir agent'ta devam edin.</b><br>
-  Claude Code · Antigravity CLI · Gemini CLI · GitHub Copilot CLI · OpenAI Codex CLI
+  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI
 </p>
 
 <p align="center">
-  <img src="docs/images/limit.svg" alt="Claude limite takılıyor, i-mux Gemini ya da Codex'te sürdürmeyi öneriyor" width="880">
+  <img src="docs/images/limit.svg" alt="Claude limite takılıyor, i-mux Antigravity ya da Codex'te sürdürmeyi öneriyor" width="880">
 </p>
 
 i-mux, agent CLI'larınızı bir terminal çalışma alanında çalıştırır. Biri limite takıldığında ya da
@@ -37,10 +37,10 @@ Go 1.27+ ile kendiniz de derleyebilirsiniz:
 go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
 ```
 
-Sonra en az bir agent CLI'ı kurun ve kurulumu denetleyin. Google modellerini kişisel Google hesabıyla
-kullanmak için [Antigravity CLI](https://antigravity.google/docs/cli/) (`agy`) kurun: Google
-kişisel hesaplara Gemini CLI'da 2026-06-18'de hizmeti kesti; Gemini CLI artık yalnızca Gemini API
-anahtarı, Vertex AI ya da Code Assist Standard/Enterprise lisansıyla çalışıyor.
+Sonra en az bir agent CLI'ı kurun ve kurulumu denetleyin. Google modelleri için
+[Antigravity CLI](https://antigravity.google/docs/cli/) (`agy`) kurun:
+`curl -fsSL https://antigravity.google/cli/install.sh | bash`. Google kişisel hesaplara Gemini
+CLI'da 2026-06-18'de hizmeti kesti; bu yüzden i-mux Gemini CLI yerine Antigravity CLI'ı destekliyor.
 
 ```sh
 imux doctor
@@ -59,18 +59,18 @@ imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 | Tuş / eylem | Ne yapar |
 |---|---|
 | `Ctrl+\` | bölme menüsü: agent değiştir, oturumlar, yeni bölme, devir belgesi, limitler |
-| `Ctrl+\` sonra `c` `g` `p` `x` | Claude / Gemini / Copilot / Codex'te sürdür |
+| `Ctrl+\` sonra `c` `a` `p` `x` | Claude / Antigravity / Copilot / Codex'te sürdür |
 | alttaki çubukta bir agent'a tıklamak | o agent'ta sürdür |
 | `prefix S` | projenin önceki sohbetlerinden birini seç |
 | `prefix a` | bölme menüsü (terminal `Ctrl+\` tuşunu kendine ayırıyorsa) |
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/switched.svg" alt="Gemini oturumu i-mux'un devir belgesiyle sürdürüyor"></td>
+    <td width="50%"><img src="docs/images/switched.svg" alt="Antigravity oturumu i-mux'un devir belgesiyle sürdürüyor"></td>
     <td width="50%"><img src="docs/images/menu.svg" alt="i-mux bölme menüsü"></td>
   </tr>
   <tr>
-    <td align="center">Gemini, Claude'un kaldığı yerden devam ediyor</td>
+    <td align="center">Antigravity, Claude'un kaldığı yerden devam ediyor</td>
     <td align="center">Bölme menüsü (<code>Ctrl+\</code>)</td>
   </tr>
 </table>

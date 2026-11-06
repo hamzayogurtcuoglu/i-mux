@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Hit your usage limit in one AI coding agent? Keep going in another, with the whole conversation.</b><br>
-  Claude Code · Antigravity CLI · Gemini CLI · GitHub Copilot CLI · OpenAI Codex CLI
+  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/limit.svg" alt="Claude hits its usage limit and i-mux offers to continue in Gemini or Codex" width="880">
+  <img src="docs/images/limit.svg" alt="Claude hits its usage limit and i-mux offers to continue in Antigravity or Codex" width="880">
 </p>
 
 i-mux runs your agent CLIs in a terminal workspace. When one hits its limit, or whenever you like,
@@ -43,10 +43,10 @@ With Go 1.27+ you can also build it yourself:
 go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
 ```
 
-Then install at least one agent CLI and check the setup. For Google's models with a personal Google
-account, install [Antigravity CLI](https://antigravity.google/docs/cli/) (`agy`):
-Google stopped serving personal accounts in Gemini CLI on 2026-06-18, so Gemini CLI now works only
-with a Gemini API key, Vertex AI or a Code Assist Standard/Enterprise license.
+Then install at least one agent CLI and check the setup. For Google's models, install
+[Antigravity CLI](https://antigravity.google/docs/cli/) (`agy`):
+`curl -fsSL https://antigravity.google/cli/install.sh | bash`. Google stopped serving personal
+accounts in Gemini CLI on 2026-06-18, so i-mux supports Antigravity CLI instead of Gemini CLI.
 
 ```sh
 imux doctor
@@ -65,18 +65,18 @@ imux            # start the first installed agent (or: imux claude)
 | Key / action | What it does |
 |---|---|
 | `Ctrl+\` | pane menu: switch agent, sessions, new pane, preview handoff, limits |
-| `Ctrl+\` then `c` `g` `p` `x` | continue in Claude / Gemini / Copilot / Codex |
+| `Ctrl+\` then `c` `a` `p` `x` | continue in Claude / Antigravity / Copilot / Codex |
 | click an agent on the bottom bar | continue in that agent |
 | `prefix S` | pick any earlier conversation of the project |
 | `prefix a` | the pane menu, for terminals that keep `Ctrl+\` |
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/switched.svg" alt="Gemini continues the session with i-mux's handoff"></td>
+    <td width="50%"><img src="docs/images/switched.svg" alt="Antigravity continues the session with i-mux's handoff"></td>
     <td width="50%"><img src="docs/images/menu.svg" alt="The i-mux pane menu"></td>
   </tr>
   <tr>
-    <td align="center">Gemini picks up where Claude stopped</td>
+    <td align="center">Antigravity picks up where Claude stopped</td>
     <td align="center">The pane menu (<code>Ctrl+\</code>)</td>
   </tr>
 </table>

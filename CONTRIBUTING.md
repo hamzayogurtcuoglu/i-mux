@@ -35,8 +35,8 @@ document is model-facing and always English.
   into the repository: conversations contain code, secrets and personal data.
   `scripts/check-fixtures.sh` runs in CI and rejects home-directory paths other than `/home/test`,
   real-looking API keys and tokens, and email addresses in any `testdata/` directory.
-- **Tests never launch a real agent CLI** (`claude`, `gemini`, `copilot`, `codex`), never use the
-  network, and never read the developer's real `~/.claude`, `~/.gemini`, `~/.copilot`, `~/.codex`
+- **Tests never launch a real agent CLI** (`claude`, `agy`, `copilot`, `codex`), never use the
+  network, and never read the developer's real `~/.claude`, `~/.gemini/antigravity-cli`, `~/.copilot`, `~/.codex`
   or `~/.imux`. Unit tests call `testutil.Isolate(t)`, which points `HOME`, `IMUX_HOME` and every
   agent home at temp directories. End-to-end tests use the POSIX sh fake agents in
   `e2e/fakeagents` (configured as the agents' `bin`) with a `PATH` that holds no real agent; the
