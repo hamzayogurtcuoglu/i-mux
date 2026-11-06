@@ -305,7 +305,7 @@ Earliest standalone value: works without tmux (F5).
     Q20 (Shift+Enter in Claude and Gemini), Q19 (first-run dialogs keep the prompt) and
     Q22 (switch mid-session loses nothing visible).
   - AC: results are recorded in ARCHITECTURE §20/§21. Defaults change if needed (e.g. key, inject mode).
-- [ ] **T2.14 M2 e2e suite** · L · deps: T2.3–T2.11
+- [x] **T2.14 M2 e2e suite** · L · deps: T2.3–T2.11
   - AC: covers start, attach, split, manual switch (argv and paste), menu items, pane-died fallback and
     scrollback fallback, on Linux and macOS CI.
 

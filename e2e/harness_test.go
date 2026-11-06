@@ -328,7 +328,7 @@ func (h *H) noRun(agent string, n int, d time.Duration) {
 func (h *H) waitQuiet() {
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		out, _ := exec.Command("pgrep", "-f", h.Bin+"|"+h.Log).Output()
+		out, _ := exec.Command("pgrep", "-f", "^"+regexp.QuoteMeta(h.Bin)).Output()
 		if len(strings.TrimSpace(string(out))) == 0 {
 			return
 		}

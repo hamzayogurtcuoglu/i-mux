@@ -105,7 +105,7 @@ func (w *WS) SessionMenu(ref session.Ref, p *Pane, client string) *Menu {
 		})
 	}
 	m.Items = append(m.Items, Separator(),
-		MenuItem{Name: i18n.T("menu.preview"), Key: "v", Cmd: w.previewCmd(p, client, key)},
+		MenuItem{Name: i18n.T("menu.preview"), Key: "v", Cmd: w.previewCmd(p, key)},
 		Separator())
 	if own {
 		a := agent.MustGet(ref.Agent)

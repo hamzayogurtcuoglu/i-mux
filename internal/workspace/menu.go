@@ -136,8 +136,8 @@ func (w *WS) PaneMenu(p *Pane, client string) *Menu {
 		})
 	}
 	m.Items = append(m.Items, Separator(),
-		MenuItem{Name: i18n.T("menu.preview"), Key: "v", Cmd: w.previewCmd(p, client, ""), Disabled: cur == "" && p.Trail.Last() == nil},
-		MenuItem{Name: i18n.T("menu.limits"), Key: "l", Cmd: w.limitsCmd(client)},
+		MenuItem{Name: i18n.T("menu.preview"), Key: "v", Cmd: w.previewCmd(p, ""), Disabled: cur == "" && p.Trail.Last() == nil},
+		MenuItem{Name: i18n.T("menu.limits"), Key: "l", Cmd: w.limitsCmd()},
 		Separator(),
 		MenuItem{Name: i18n.T("menu.close"), Key: "k", Cmd: "kill-pane -t " + p.ID},
 	)
@@ -146,16 +146,15 @@ func (w *WS) PaneMenu(p *Pane, client string) *Menu {
 
 // previewCmd opens the handoff preview popup for a pane (or a picked
 // conversation with from = "agent:id").
-func (w *WS) previewCmd(p *Pane, client, from string) string {
+func (w *WS) previewCmd(p *Pane, from string) string {
 	args := []string{w.Self, "handoff", "--pane", p.ID, "--print"}
 	if from != "" {
 		args = []string{w.Self, "handoff", "--session", from, "--cwd", p.CWD, "--print"}
 	}
 	sh := tmux.ShJoin(args...) + " 2>&1 | less -R"
+	// Menu items run on the client that chose them: no -c (tmux 3.2a
+	// rejects -c inside menu item commands).
 	c := "display-popup -E -w 90% -h 90%"
-	if client != "" {
-		c += " -c " + tmux.Quote(client)
-	}
 	if p.CWD != "" {
 		c += " -d " + tmux.Quote(p.CWD)
 	}
@@ -166,18 +165,11 @@ func (w *WS) previewCmd(p *Pane, client, from string) string {
 var limitsPanel = false
 
 // limitsCmd opens the limits panel; until M4 it says it is coming.
-func (w *WS) limitsCmd(client string) string {
+func (w *WS) limitsCmd() string {
 	if limitsPanel {
 		sh := tmux.ShJoin(w.Self, "limits", "--pager")
 		c := "display-popup -E -w 80% -h 60%"
-		if client != "" {
-			c += " -c " + tmux.Quote(client)
-		}
 		return c + " " + tmux.Quote(sh)
 	}
-	c := "display-message"
-	if client != "" {
-		c += " -c " + tmux.Quote(client)
-	}
-	return c + " " + tmux.Quote(i18n.T("menu.limits_soon"))
+	return "display-message " + tmux.Quote(i18n.T("menu.limits_soon"))
 }
