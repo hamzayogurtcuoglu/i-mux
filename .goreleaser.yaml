@@ -49,12 +49,19 @@ release:
     name: i-mux
   draft: false
   prerelease: auto
+  # The installer is attached to every release too, so this also works:
+  #   curl -fsSL https://github.com/hamzayogurtcuoglu/i-mux/releases/latest/download/install.sh | sh
+  extra_files:
+    - glob: ./install.sh
 
 # Homebrew formula in hamzayogurtcuoglu/homebrew-tap:
 #   brew install hamzayogurtcuoglu/tap/imux
+# Published only when the HOMEBREW_TAP_GITHUB_TOKEN secret is set (a token
+# that can push to the tap repository); without it the release still ships.
 brews:
   - name: imux
     ids: [imux]
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}false{{ else }}true{{ end }}'
     repository:
       owner: hamzayogurtcuoglu
       name: homebrew-tap

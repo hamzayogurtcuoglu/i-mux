@@ -1,7 +1,10 @@
 name: Release smoke test
 
-# After a release is published: install it the way users do and check that
-# it runs. `imux doctor --ci` skips the agent checks (no agent CLIs here).
+# After a release is published, install it exactly the way the README tells
+# users to, with the one-line installer piped into sh, on macOS (Apple Silicon
+# and Intel), Ubuntu (x86_64 and ARM) and several Linux distributions in
+# containers (WSL runs the same Linux binaries). `imux doctor --ci` skips the
+# agent checks (no agent CLIs here).
 on:
   release:
     types: [published]
@@ -14,31 +17,87 @@ on:
 permissions:
   contents: read
 
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  # The installer from the released commit, fetched like users fetch it.
+  INSTALLER: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.release.tag_name || inputs.tag }}/install.sh
+
 jobs:
-  install-script:
+  one-liner:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13]
+        os: [macos-latest, macos-15-intel, ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
-    env:
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
-      - uses: actions/checkout@v5
-      - name: Install with install.sh (installs tmux if missing)
-        run: sh install.sh --version "$TAG" --prefix "$HOME/.local/bin" --yes
-      - name: imux version
+      # Like a first-time user: a clean environment whose PATH lacks
+      # ~/.local/bin, and each OS's default shell (zsh on macOS, bash on Linux).
+      - name: Install with the one-line installer (also installs tmux)
         run: |
-          "$HOME/.local/bin/imux" version
-          "$HOME/.local/bin/imux" version | grep -q "${TAG#v}"
+          if [ "$RUNNER_OS" = macOS ]; then user_shell=/bin/zsh; else user_shell=/bin/bash; fi
+          echo "USER_SHELL=$user_shell" >> "$GITHUB_ENV"
+          env -i HOME="$HOME" USER="$USER" SHELL="$user_shell" TERM=dumb \
+            PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin \
+            INSTALLER="$INSTALLER" TAG="$TAG" \
+            sh -c 'curl -fsSL "$INSTALLER" | sh -s -- --version "$TAG" --yes'
+      - name: A new terminal finds imux on PATH
+        run: |
+          env -i HOME="$HOME" USER="$USER" TERM=dumb PATH=/usr/bin:/bin \
+            "$USER_SHELL" -ic 'command -v imux && imux version' 2>/dev/null | tee out.txt
+          grep -q "${TAG#v}" out.txt
       - name: imux doctor --ci
         run: '"$HOME/.local/bin/imux" doctor --ci'
+      - name: Without --version the installer picks the latest release
+        if: ${{ github.event_name == 'release' && !github.event.release.prerelease }}
+        run: |
+          curl -fsSL "$INSTALLER" | sh -s -- --prefix "$RUNNER_TEMP/latest" --no-modify-path
+          "$RUNNER_TEMP/latest/imux" version | grep -q "${TAG#v}"
+      - name: The installer attached to the release works too
+        run: |
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/download/$TAG/install.sh" \
+            | sh -s -- --version "$TAG" --prefix "$RUNNER_TEMP/asset" --no-modify-path
+          "$RUNNER_TEMP/asset/imux" version | grep -q "${TAG#v}"
 
-  homebrew:
+  distros:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, macos-13]
+        include:
+          - image: debian:stable-slim
+            prep: apt-get update -q && apt-get install -y -q curl ca-certificates
+          - image: ubuntu:22.04
+            prep: apt-get update -q && apt-get install -y -q curl ca-certificates
+          - image: fedora:latest
+            prep: dnf install -y -q curl tar gzip
+          - image: alpine:latest
+            prep: apk add --no-cache curl
+          - image: archlinux:latest
+            prep: pacman -Sy --noconfirm curl
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    steps:
+      - name: curl (the one thing the one-liner assumes)
+        shell: sh
+        run: ${{ matrix.prep }}
+      - name: Install with the one-line installer (installs tmux as root)
+        shell: sh
+        run: curl -fsSL "$INSTALLER" | SHELL=/bin/sh sh -s -- --version "$TAG" --yes
+      - name: imux is on PATH for a new login shell, and works
+        shell: sh
+        run: |
+          sh -lc 'imux version' | tee out.txt
+          grep -q "${TAG#v}" out.txt
+          sh -lc 'imux doctor --ci'
+
+  homebrew:
+    # Runs once the tap exists: create hamzayogurtcuoglu/homebrew-tap, add the
+    # HOMEBREW_TAP_GITHUB_TOKEN secret, and set the repository variable
+    # HOMEBREW_TAP_ENABLED=true.
+    if: ${{ vars.HOMEBREW_TAP_ENABLED == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, macos-15-intel]
     runs-on: ${{ matrix.os }}
     steps:
       - name: brew install

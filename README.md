@@ -25,26 +25,32 @@ tmux setup is untouched). Everything stays on your machine.
 
 ## Install
 
-macOS, Linux, or Windows through WSL. Requires tmux 3.2+ (3.4+ for the clickable agent bar).
-
-```sh
-brew install hamzayogurtcuoglu/tap/imux
-```
+One line on macOS, Linux, or Windows through WSL (open a WSL terminal):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
 ```
 
+It downloads the release for your OS and CPU, verifies its checksum, installs `imux` to
+`~/.local/bin`, adds that directory to your shell's PATH (zsh, bash or fish) and offers to install
+tmux (3.2+; 3.4+ for the clickable agent bar) if it is missing. Open a new terminal afterwards.
+Options go after `sh -s --`, for example `... | sh -s -- --yes` to install tmux without asking,
+`--version v0.1.0`, `--prefix DIR` or `--no-modify-path`.
+
+With Go 1.27+ you can also build it yourself:
+
 ```sh
-go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest   # Go 1.27+
+go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
 ```
 
-The install script verifies the checksum, installs to `~/.local/bin` and offers to install tmux if
-it is missing. Then install at least one agent CLI and check the setup:
+Then install at least one agent CLI and check the setup:
 
 ```sh
 imux doctor
 ```
+
+To uninstall, delete `~/.local/bin/imux` and `~/.imux`, and remove the line the installer added to
+your shell profile (marked `# Added by the imux installer`).
 
 ## Usage
 

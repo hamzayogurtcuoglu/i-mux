@@ -56,31 +56,55 @@ func fakeRelease(t *testing.T, bin string, corrupt bool) string {
 func runInstall(t *testing.T, base, path string, args ...string) (string, error) {
 	t.Helper()
 	cmd := exec.Command("sh", append([]string{filepath.Join(testutil.ModuleRoot(t), "install.sh")}, args...)...)
-	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH="+path)
+	// HOME is the test's temporary home (testutil.Isolate), so the profile the
+	// script edits is never the developer's.
+	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH="+path, "SHELL=/bin/zsh", "ZDOTDIR=")
 	cmd.Stdin = nil
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
 
 // TestInstallScript (T7.3): downloads, verifies the checksum, installs to
-// --prefix, and hints at PATH; a wrong checksum aborts.
+// --prefix, and puts the prefix on PATH in the shell profile exactly once; a
+// wrong checksum aborts.
 func TestInstallScript(t *testing.T) {
 	bin := imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")
 	}
-	testutil.Isolate(t)
+	h := testutil.Isolate(t)
 	prefix := filepath.Join(t.TempDir(), "bin")
 	tm, _ := exec.LookPath("tmux")
 	path := filepath.Dir(tm) + ":/usr/bin:/bin"
-	out, err := runInstall(t, fakeRelease(t, bin, false), path, "--prefix", prefix, "--version", "v9.9.9")
+	base := fakeRelease(t, bin, false)
+	out, err := runInstall(t, base, path, "--prefix", prefix, "--version", "v9.9.9")
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, out)
 	}
-	for _, want := range []string{"Checksum verified.", "Installed " + prefix + "/imux", "is not on your PATH", "tmux found"} {
+	profile := filepath.Join(h.Home, ".zshrc")
+	for _, want := range []string{"Checksum verified.", "Installed " + prefix + "/imux", "Added " + prefix + " to PATH in " + profile, "tmux found", "Open a new terminal"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
+	}
+	line := `export PATH="` + prefix + `:$PATH"`
+	// A second run (an upgrade) installs again without a second PATH line;
+	// a version without the "v" is accepted.
+	out, err = runInstall(t, base, path, "--prefix", prefix, "--version", "9.9.9")
+	if err != nil || !strings.Contains(out, "already on PATH in "+profile) {
+		t.Fatalf("reinstall: %v\n%s", err, out)
+	}
+	if b, _ := os.ReadFile(profile); strings.Count(string(b), line) != 1 {
+		t.Fatalf("profile should hold the PATH line once:\n%s", b)
+	}
+	// --no-modify-path leaves the profile alone and only explains.
+	other := filepath.Join(t.TempDir(), "bin")
+	out, err = runInstall(t, base, path, "--prefix", other, "--version", "v9.9.9", "--no-modify-path")
+	if err != nil || !strings.Contains(out, "is not on your PATH") {
+		t.Fatalf("--no-modify-path: %v\n%s", err, out)
+	}
+	if b, _ := os.ReadFile(profile); strings.Contains(string(b), other) {
+		t.Fatalf("--no-modify-path changed the profile:\n%s", b)
 	}
 	v, err := exec.Command(filepath.Join(prefix, "imux"), "version").Output()
 	if err != nil || !strings.HasPrefix(string(v), "imux ") {
@@ -101,7 +125,7 @@ func TestInstallScriptWithoutTmux(t *testing.T) {
 	}
 	testutil.Isolate(t)
 	tools := t.TempDir()
-	for _, name := range []string{"sh", "curl", "tar", "gzip", "sha256sum", "shasum", "mkdir", "cp", "chmod", "mv", "sed", "awk", "cut", "head", "uname", "mktemp", "rm", "id", "cat"} {
+	for _, name := range []string{"sh", "curl", "tar", "gzip", "sha256sum", "shasum", "mkdir", "cp", "chmod", "mv", "sed", "awk", "cut", "head", "uname", "mktemp", "rm", "id", "cat", "basename", "dirname", "grep", "tr"} {
 		if p, err := exec.LookPath(name); err == nil {
 			_ = os.Symlink(p, filepath.Join(tools, name))
 		}

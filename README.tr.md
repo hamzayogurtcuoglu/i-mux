@@ -19,26 +19,32 @@ soketinde; sizin tmux ayarlarınıza dokunmaz). Her şey makinenizde kalır.
 
 ## Kurulum
 
-macOS, Linux ya da WSL ile Windows. tmux 3.2+ gerekir (tıklanabilir agent çubuğu için 3.4+).
-
-```sh
-brew install hamzayogurtcuoglu/tap/imux
-```
+macOS, Linux ya da WSL ile Windows'ta (bir WSL terminali açın) tek satır:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
 ```
 
+Betik işletim sisteminize ve işlemcinize uygun sürümü indirir, sağlama toplamını doğrular, `imux`'u
+`~/.local/bin` dizinine kurar, bu dizini kabuğunuzun PATH'ine ekler (zsh, bash ya da fish) ve tmux
+eksikse (3.2+; tıklanabilir agent çubuğu için 3.4+) kurmayı önerir. Ardından yeni bir terminal açın.
+Seçenekler `sh -s --` sonrasına yazılır, örneğin tmux'u sormadan kurmak için `... | sh -s -- --yes`,
+ya da `--version v0.1.0`, `--prefix DİZİN`, `--no-modify-path`.
+
+Go 1.27+ ile kendiniz de derleyebilirsiniz:
+
 ```sh
-go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest   # Go 1.27+
+go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
 ```
 
-Kurulum betiği sağlama toplamını doğrular, `~/.local/bin` dizinine kurar ve tmux eksikse kurmayı
-önerir. Sonra en az bir agent CLI'ı kurun ve kurulumu denetleyin:
+Sonra en az bir agent CLI'ı kurun ve kurulumu denetleyin:
 
 ```sh
 imux doctor
 ```
+
+Kaldırmak için `~/.local/bin/imux` ve `~/.imux` silin, kabuk profilinize eklenen satırı da
+(`# Added by the imux installer` ile işaretli) kaldırın.
 
 ## Kullanım
 

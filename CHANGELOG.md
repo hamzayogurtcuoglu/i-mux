@@ -6,7 +6,10 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
-First release candidate (v0.1 and the MVP).
+## [0.1.0] - 2026-11-06
+
+First release (v0.1 and the MVP). Install with one line on macOS, Linux and WSL:
+`curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh`.
 
 ### Added
 
