@@ -27,6 +27,8 @@ jobs:
           version: latest
       - name: go vet
         run: go vet ./... && go vet -tags e2e ./...
+      - name: Generated files are current
+        run: go generate ./... && git diff --exit-code
 
   fixtures:
     runs-on: ubuntu-latest

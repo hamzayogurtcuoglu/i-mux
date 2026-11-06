@@ -444,7 +444,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
 - [ ] **T8.1 README** · M · deps: MVP
   - AC: pitch, demo GIF (recorded with fake or real agents, no private content), install
     (brew / curl), quick start, keys, `on_limit` modes, privacy section (cross-provider disclosure, redaction, argv).
-- [ ] **T8.2 `docs/CONFIG.md`** · S · deps: T0.4
+- [x] **T8.2 `docs/CONFIG.md`** · S · deps: T0.4
   - AC: generated from the built-in defaults by `go generate`; CI fails if it is stale.
 - [ ] **T8.3 `docs/HANDOFF.md`** · S · deps: T1.12
   - AC: the format spec plus a synthetic example document.

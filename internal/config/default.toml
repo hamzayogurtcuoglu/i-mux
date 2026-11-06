@@ -37,8 +37,9 @@ include_git         = true
 include_source_path = true
 # Delete handoff files older than this many days.
 keep_days           = 30
-# How much of a session file is read: the head (original request) and the tail (recent history).
+# How much of a session file is read: the head (original request) ...
 head_bytes          = 1048576
+# ... and the tail (recent history, latest task list).
 tail_bytes          = 8388608
 
 [limits]
@@ -50,7 +51,7 @@ idle_interval  = "15s"
 grace          = "20s"
 # After a limit prompt, the same pane is not prompted again for this long.
 cooldown       = "10m"
-# Number of bottom screen lines that are scanned.
+# Number of last non-blank lines of an agent's screen that are scanned.
 scan_lines     = 25
 # How long a limit without a parseable reset time is shown.
 default_expiry = "5h"
@@ -62,6 +63,7 @@ enabled           = true
 confirm           = false
 # A pane counts as idle once its screen did not change for this long.
 idle_after        = "5s"
+# Largest message `ajan send` delivers.
 max_message_bytes = 16384
 # Messages per minute per sending pane (stops agent ping-pong loops).
 rate_per_minute   = 20
@@ -75,7 +77,9 @@ menu_key_prefix   = "a"
 picker_key_prefix = "S"
 # Clickable agent bar (second status line).
 agent_bar         = true
+# Mouse support (clicks on the agent bar, pane borders and menus).
 mouse             = true
+# Scrollback lines kept per pane.
 history_limit     = 50000
 
 # Per-agent settings. Placeholders in templates:
