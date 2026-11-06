@@ -91,15 +91,14 @@ func (w *WS) FindResumable(ctx context.Context, f *sources.Finder, p *Pane, to s
 }
 
 // BuildDelta renders the "welcome back" handoff for a resume: every run
-// after the prior one, oldest first, each loaded with Since = the prior
-// run's end. current is the pane's current run's session when known (it
-// was discovered for the switch). It returns nil when nothing happened
+// after the prior one, oldest first, each loaded with the entries since
+// that run started (never before the prior run's end, with slack for
+// CLIs that write whole-second timestamps). current is the pane's current
+// run's session when known (it was discovered for the switch). It returns
+// nil when nothing happened
 // elsewhere (resume without a prompt).
 func (w *WS) BuildDelta(ctx context.Context, f *sources.Finder, p *Pane, r *Resumable, to session.AgentID, current *session.Ref) (*handoff.Doc, []*session.Session, error) {
-	since := r.Prior.EndTime()
-	if since.IsZero() {
-		since = r.Prior.StartTime()
-	}
+	priorEnd := r.Prior.EndTime()
 	var srcs []*session.Session
 	entries := 0
 	var from session.AgentID
@@ -116,6 +115,12 @@ func (w *WS) BuildDelta(ctx context.Context, f *sources.Finder, p *Pane, r *Resu
 		}
 		if err != nil {
 			return nil, nil, err
+		}
+		// Only what happened during that run: a run that itself resumed an
+		// older session must not carry that session's earlier history.
+		since := e.StartTime().Add(-discoverSlack)
+		if since.Before(priorEnd.Add(-discoverSlack)) {
+			since = priorEnd.Add(-discoverSlack)
 		}
 		s, err := f.Load(ctx, ref, since)
 		if err != nil {

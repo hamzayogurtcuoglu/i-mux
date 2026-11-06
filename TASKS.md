@@ -416,7 +416,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: `--no-resume` and per-agent `resume = false` disable it.
 - [x] **T6.4 Post-resume session discovery** · S · deps: T6.3
   - AC: the trail entry records the session that is actually written to, whether the CLI appends or forks.
-- [ ] **T6.5 M6 e2e** · M · deps: T6.3, T6.4
+- [x] **T6.5 M6 e2e** · M · deps: T6.3, T6.4
   - AC: fake claude → fake gemini → fake claude gives argv `--resume <id> "<delta>"`, and the delta contains only gemini's part.
   - AC: a resume that fails fast (exit 1 in < 1 s) respawns with the full handoff.
 
