@@ -77,9 +77,7 @@ func TestMenuItemsByKey(t *testing.T) {
 	c.waitScreen(h, "fake claude ready", 5*time.Second)
 	open := func() int {
 		t.Helper()
-		mark := c.Mark()
-		c.Write(keyCtrlBackslash)
-		c.waitScreenAfter(h, mark, "ajan · ", 5*time.Second)
+		c.openWith(h, keyCtrlBackslash, "ajan · ")
 		return c.Mark()
 	}
 

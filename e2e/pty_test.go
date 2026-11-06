@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -128,4 +129,29 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return string(b)
+}
+
+// openWith sends keys until want appears on the screen (up to 3 attempts,
+// pressing Escape in between): under load the first key press can reach a
+// client that is still drawing. It returns the output offset before the
+// successful attempt.
+func (c *Client) openWith(h *H, keys, want string) int {
+	h.t.Helper()
+	for attempt := 0; ; attempt++ {
+		mark := c.Mark()
+		c.Write(keys)
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			out := c.Output()
+			if mark <= len(out) && strings.Contains(stripANSI(out[mark:]), want) {
+				return mark
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		if attempt == 2 {
+			h.t.Fatalf("%q did not show after %q (3 attempts)", want, keys)
+		}
+		c.Write("\x1b")
+		time.Sleep(200 * time.Millisecond)
+	}
 }
