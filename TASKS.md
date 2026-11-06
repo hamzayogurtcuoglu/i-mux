@@ -392,7 +392,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: guards per §12 (enabled, size, rate, no self-send, ajan socket only); `--wait-idle`; `bus.confirm` menu.
 - [x] **T5.4 `ajan wait`** · S · deps: T5.1
   - AC: exit 0 when idle, 124 on timeout. `--print` outputs the final screen.
-- [ ] **T5.5 `ajan snippet`** · S · deps: T5.3, T5.4
+- [x] **T5.5 `ajan snippet`** · S · deps: T5.3, T5.4
   - AC: prints CLAUDE.md, GEMINI.md and AGENTS.md variants.
   - AC: a test asserts that no code path writes to those files.
 - [ ] **T5.6 M5 e2e and sandbox check** · M · deps: T5.1–T5.4

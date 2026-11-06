@@ -30,6 +30,8 @@ var en = map[string]string{
 	"cmd.panes":    "List panes with their agent and idle/busy state (agent bus).",
 	"cmd.read":     "Print the last lines of another pane (agent bus).",
 	"cmd.send":     "Send a message to another agent's pane (agent bus).",
+	"cmd.snippet":  "Print agent-bus instructions to paste into CLAUDE.md, GEMINI.md or AGENTS.md.",
+	"snippet.hint": "Paste the following into %s yourself if you want this agent to use the bus (ajan never edits it):",
 	"cmd.wait":     "Wait until another pane is idle (agent bus); exit 124 on timeout.",
 
 	// workspace: start / attach / ls

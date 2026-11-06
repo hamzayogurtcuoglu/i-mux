@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
@@ -34,5 +35,20 @@ func TestExecSpecReadsDeletesAndExecs(t *testing.T) {
 	}
 	if _, _, code := runCLI(t, "__exec", p); code != ExitError {
 		t.Fatalf("consumed spec: exit %d", code)
+	}
+}
+
+func TestSnippetCommandWritesNothing(t *testing.T) {
+	h := testutil.Isolate(t)
+	inProject(t, h)
+	out, errOut, code := runCLI(t, "snippet", "claude")
+	if code != 0 || !strings.Contains(out, "ajan send") || !strings.Contains(errOut, "CLAUDE.md") {
+		t.Fatalf("snippet: %d %q %q", code, out, errOut)
+	}
+	if ents, _ := os.ReadDir(h.Project); len(ents) != 0 {
+		t.Fatalf("snippet created files: %v", ents)
+	}
+	if _, _, code := runCLI(t, "snippet", "vim"); code != ExitUsage {
+		t.Fatalf("unknown target: exit %d", code)
 	}
 }
