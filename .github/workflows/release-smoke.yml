@@ -1,0 +1,49 @@
+name: Release smoke test
+
+# After a release is published: install it the way users do and check that
+# it runs. `ajan doctor --ci` skips the agent checks (no agent CLIs here).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to test (e.g. v0.1.0)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  install-script:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install with install.sh (installs tmux if missing)
+        run: sh install.sh --version "$TAG" --prefix "$HOME/.local/bin" --yes
+      - name: ajan version
+        run: |
+          "$HOME/.local/bin/ajan" version
+          "$HOME/.local/bin/ajan" version | grep -q "${TAG#v}"
+      - name: ajan doctor --ci
+        run: '"$HOME/.local/bin/ajan" doctor --ci'
+
+  homebrew:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: brew install
+        run: brew install hamzayogurtcuoglu/tap/ajan
+      - name: ajan version and doctor
+        run: |
+          ajan version
+          ajan doctor --ci
