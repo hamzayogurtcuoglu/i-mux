@@ -88,11 +88,15 @@ func newH(t *testing.T, extraConfig string) *H {
 	cfg.WriteString(tables)
 	testutil.WriteFile(t, filepath.Join(homes.Ajan, "config.toml"), []byte(cfg.String()))
 	t.Cleanup(func() {
+		failed := t.Failed()
+		if failed {
+			h.dumpPanes() // while the server still runs
+		}
 		_ = exec.Command(h.Bin, "__watch", "stop").Run()
 		_ = exec.Command(h.Tmux, "-L", h.Socket, "kill-server").Run()
 		h.waitQuiet()
 		h.checkBins()
-		if t.Failed() {
+		if failed {
 			h.dumpLogs()
 		}
 	})
@@ -124,6 +128,24 @@ func (h *H) dumpLogs() {
 	if b, err := os.ReadFile(filepath.Join(h.Homes.Ajan, "watch.log")); err == nil {
 		h.t.Logf("--- watch.log ---\n%.4000s", b)
 	}
+}
+
+// dumpPanes logs the state of every pane and the last tmux calls.
+func (h *H) dumpPanes() {
+	panes, _ := h.tmux("list-panes", "-a", "-F",
+		"#{pane_id} dead=#{pane_dead} status=#{pane_dead_status} remain=#{remain-on-exit} cmd=#{pane_current_command} agent=#{@ajan_agent}")
+	h.t.Logf("--- panes ---\n%s", panes)
+	// The last tmux calls made through ajan (hooks, UI commands, the
+	// watcher), with the pid that made them.
+	recs := h.records()
+	if len(recs) > 25 {
+		recs = recs[len(recs)-25:]
+	}
+	var b strings.Builder
+	for _, r := range recs {
+		fmt.Fprintf(&b, "%d %.300q\n", r.Pid, r.Args)
+	}
+	h.t.Logf("--- last tmux calls ---\n%s", b.String())
 }
 
 // tmux runs a tmux command on the test socket.
