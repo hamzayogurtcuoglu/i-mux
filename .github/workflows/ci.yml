@@ -37,7 +37,7 @@ jobs:
       - name: Fixture privacy guard
         run: ./scripts/check-fixtures.sh
       - name: shellcheck
-        run: shellcheck -s sh install.sh scripts/*.sh e2e/fakeagents/fake.sh e2e/fakeagents/fake-*
+        run: shellcheck -s sh install.sh scripts/*.sh scripts/screenshots/*.sh e2e/fakeagents/fake.sh e2e/fakeagents/fake-*
 
   test:
     strategy:

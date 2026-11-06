@@ -45,6 +45,15 @@ document is model-facing and always English.
   terminals or your quota; their results go into ARCHITECTURE §20/§21 as structure only (flag
   names, key names, counts), never conversation content.
 
+## Screenshots
+
+The images in `docs/images` are real ajan screens with demo agents (`scripts/screenshots`), not
+mock-ups. After a UI change, regenerate them on Linux or macOS with tmux 3.4+ and python3:
+
+```sh
+make build && scripts/screenshots/shoot.sh
+```
+
 ## Pull requests
 
 - One topic per pull request, with tests in the same change; `go vet`, lint and CI green.
