@@ -362,7 +362,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
 
 ## M4: Limits panel
 
-- [ ] **T4.1 Claude 5-hour usage** · M · deps: T1.2, T1.5
+- [x] **T4.1 Claude 5-hour usage** · M · deps: T1.2, T1.5
   - AC: files modified in the window are reverse-scanned until timestamps fall outside it.
   - AC: usage is deduped by `message.id`.
   - AC: the 64 MB fixture is handled in < 300 ms.
