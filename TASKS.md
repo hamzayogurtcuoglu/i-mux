@@ -339,7 +339,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: `auto` picks the first installed, non-limited agent in `order`.
   - AC: `off` notifies only. If every agent is limited, it notifies only.
   - AC: the `state.json` limit record follows §15.
-- [ ] **T3.6 Status bar and pane flag** · S · deps: T3.4
+- [x] **T3.6 Status bar and pane flag** · S · deps: T3.4
   - AC: `@ajan_status` and `@ajan_flag` are set only when they change. Expired limits are cleared on the next tick.
   - AC: `warn` shows `◐`.
 - [ ] **T3.7 Switch reason from the session** · S · deps: T1.5, T2.6

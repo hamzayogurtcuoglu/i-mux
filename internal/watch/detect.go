@@ -51,8 +51,11 @@ type Detector struct {
 	Now      func() time.Time
 	Log      *log.Logger
 
-	// OnTick runs after the pane list is read (status bar upkeep).
-	OnTick func(ctx context.Context, panes []PaneRow, clients []Client)
+	// OnTick runs after the pane list is read (status bar upkeep). The
+	// commands it returns join this tick's second exec.
+	OnTick func(ctx context.Context, panes []PaneRow, clients []Client) []tmux.Cmd
+	// OnTickFailed runs when the exec carrying OnTick's commands failed.
+	OnTickFailed func()
 	// OnEvent runs for each new limit or warn line outside grace and
 	// cooldown. It reports whether it prompted or acted, which starts the
 	// pane's cooldown.
@@ -102,13 +105,20 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 		}
 	}
 	d.prune(panes)
+	var extra []tmux.Cmd
 	if d.OnTick != nil {
-		d.OnTick(ctx, panes, clients)
+		extra = d.OnTick(ctx, panes, clients)
 	}
 	if len(clients) == 0 || len(agents) == 0 {
+		if len(extra) > 0 {
+			if _, err := d.T.Run(ctx, extra...); err != nil {
+				d.tickFailed()
+				return len(clients) > 0, err
+			}
+		}
 		return len(clients) > 0, nil
 	}
-	var cmds []tmux.Cmd
+	cmds := extra
 	for _, p := range agents {
 		start := p.Height - d.Cfg.ScanLines
 		if start < 0 {
@@ -118,6 +128,9 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	}
 	out, err = d.T.Run(ctx, cmds...)
 	if err != nil {
+		if len(extra) > 0 {
+			d.tickFailed()
+		}
 		return true, err
 	}
 	sec = tmux.Sections(out)
@@ -170,6 +183,12 @@ func (d *Detector) scan(ctx context.Context, p PaneRow, screen string, clients [
 		if d.OnEvent != nil && d.OnEvent(ctx, ev, clients) {
 			d.cooldown[p.ID] = now.Add(d.Cfg.Cooldown.Duration)
 		}
+	}
+}
+
+func (d *Detector) tickFailed() {
+	if d.OnTickFailed != nil {
+		d.OnTickFailed()
 	}
 }
 

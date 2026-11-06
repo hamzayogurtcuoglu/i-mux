@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -39,7 +40,15 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	}
 	w.T = tc
 	actor := &watch.Actor{W: w, Log: logger}
-	return &watch.Detector{T: tc, Patterns: set, Cfg: cfg.Limits, Now: time.Now, Log: logger, OnEvent: actor.OnEvent}, tc, nil
+	keeper := &watch.StatusKeeper{W: w}
+	return &watch.Detector{
+		T: tc, Patterns: set, Cfg: cfg.Limits, Now: time.Now, Log: logger,
+		OnEvent: actor.OnEvent,
+		OnTick: func(_ context.Context, panes []watch.PaneRow, _ []watch.Client) []tmux.Cmd {
+			return keeper.Commands(panes)
+		},
+		OnTickFailed: keeper.Forget,
+	}, tc, nil
 }
 
 func runWatch(e *Env, args []string) error {
