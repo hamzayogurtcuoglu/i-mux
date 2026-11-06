@@ -119,12 +119,11 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 		return len(clients) > 0, nil
 	}
 	cmds := extra
+	// The visible screen is captured and its last scan_lines non-blank
+	// lines are scanned: inline CLIs write from the top, so on a short
+	// session the message is not on the bottom rows of the screen.
 	for _, p := range agents {
-		start := p.Height - d.Cfg.ScanLines
-		if start < 0 {
-			start = 0
-		}
-		cmds = append(cmds, tmux.DelimCmd(p.ID), tmux.Cmd{"capture-pane", "-p", "-J", "-t", p.ID, "-S", strconv.Itoa(start)})
+		cmds = append(cmds, tmux.DelimCmd(p.ID), tmux.Cmd{"capture-pane", "-p", "-J", "-t", p.ID})
 	}
 	out, err = d.T.Run(ctx, cmds...)
 	if err != nil {
@@ -160,7 +159,7 @@ func (d *Detector) scan(ctx context.Context, p PaneRow, screen string, clients [
 		seen = map[string]bool{}
 		d.seen[inst] = seen
 	}
-	for _, raw := range strings.Split(screen, "\n") {
+	for _, raw := range lastLines(screen, d.Cfg.ScanLines) {
 		line := Normalize(raw)
 		if line == "" {
 			continue
@@ -190,6 +189,15 @@ func (d *Detector) tickFailed() {
 	if d.OnTickFailed != nil {
 		d.OnTickFailed()
 	}
+}
+
+// lastLines returns the last n lines of screen after trailing blank lines.
+func lastLines(screen string, n int) []string {
+	lines := strings.Split(strings.TrimRight(screen, " \t\r\n"), "\n")
+	if n > 0 && len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return lines
 }
 
 // prune forgets panes that are gone and instances that ended.

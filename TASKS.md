@@ -344,7 +344,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: `warn` shows `◐`.
 - [x] **T3.7 Switch reason from the session** · S · deps: T1.5, T2.6
   - AC: a manual switch whose source's last `APIError` is limit-like reports reason "limit" in the handoff.
-- [ ] **T3.8 M3 e2e** · L · deps: T3.5, T3.6
+- [x] **T3.8 M3 e2e** · L · deps: T3.5, T3.6
   - The fake agent prints a limit line after 3 s.
   - AC: `auto`: the fake target's argv holds a handoff whose reason mentions the limit and reset time.
   - AC: `ask`: the recorder shows the expected `display-menu`. A real attached client (pty) on the test socket

@@ -81,7 +81,7 @@ done by tmux on a dedicated socket. ajan only:
 | D2 | **Dedicated socket `tmux -L ajan`** with a generated `~/.ajan/tmux.conf` | Isolation from the user's tmux. The user's own overrides go in `~/.ajan/tmux.local.conf`, which is sourced last. |
 | D3 | **Handoff = condensed markdown passed as the target CLI's initial prompt** | Works with every CLI that accepts an initial prompt. No dependency on internal session formats of the *target*. |
 | D4 | **Returning to an agent that already has a native session in this pane resumes it natively** (`claude --resume <id> "<delta>"`), plus a *delta* handoff | Full fidelity on the way back; only what happened elsewhere is summarized. |
-| D5 | **Limit detection by polling the screen** (every ~2.5 s, bottom 25 visible lines, agent panes only) | Agents redraw spinners constantly, so streaming output (`pipe-pane`) would cost CPU around the clock. |
+| D5 | **Limit detection by polling the screen** (every ~2.5 s, the last 25 non-blank lines of the visible screen, agent panes only) | Agents redraw spinners constantly, so streaming output (`pipe-pane`) would cost CPU around the clock. |
 | D6 | **One `tmux` exec per tick, batched** (`cmd1 \; cmd2 \; …`), and **skip unchanged screens by hash** | Keeps the watcher's CPU near zero regardless of pane count. A control-mode client (`tmux -C`) is a later optimization, used only if measurements require it (§17). |
 | D7 | **The watcher sleeps when no client is attached and exits when the ajan tmux server is gone** | No work when nobody can see a prompt anyway. A `client-attached` hook wakes it. |
 | D8 | **Session files are parsed only at switch time**, reading a bounded head and tail window | Long Claude sessions are tens of MB (the largest local file is about 64 MB). |
@@ -892,8 +892,9 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `ajan pick`. It 
   2. Server gone (`no server running`) → exit 0.
   3. No non-control clients → sleep `limits.idle_interval` (15 s) or until `SIGUSR1`.
   4. For live panes with `@ajan_agent`, one batched exec of
-     `display -p '\x1eajan:%N' \; capture-pane -p -J -t %N -S <height-25> \; …`.
-     The delimiter line splits the output.
+     `display -p '\x1eajan:%N' \; capture-pane -p -J -t %N \; …` (the visible screen; its last
+     `limits.scan_lines` non-blank lines are scanned, because inline CLIs write from the top and a
+     short session's message is not on the bottom rows). The delimiter line splits the output.
   5. Per pane, skip if the FNV-64 hash of the capture equals last tick's.
      Otherwise strip ANSI and normalize whitespace, then match each line against the agent's patterns.
   6. Sleep `limits.poll_interval` (2.5 s).
@@ -1424,7 +1425,7 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
 | Q21 | Watcher CPU with 4–8 panes on exec-per-tick is within budget. | Lightness | M3 measurement (§17). |
 | Q22 | Agents write transcripts incrementally, so SIGHUP from `respawn-pane -k` loses nothing that was already shown. | Data loss on switch | e2e can't prove it for real CLIs; manual: switch mid-session and compare file vs screen. |
 | Q23 | ~~Final name, GitHub owner/module path, license, Homebrew tap name.~~ **Closed (2026-11-05):** binary `ajan`; repository `github.com/hamzayogurtcuoglu/i-mux`, Go module `github.com/hamzayogurtcuoglu/i-mux`; license MIT; Homebrew tap `hamzayogurtcuoglu/homebrew-tap` (`brew install hamzayogurtcuoglu/tap/ajan`). | M0, M7 | Decided. |
-| Q24 | A `display-menu -c <client>` issued from a detached process (watcher) shows on that client. | `ask` mode | M3 e2e with a real attached client (driven by `script`/pty) on a test socket. |
+| Q24 | A `display-menu -c <client>` issued from a detached process (watcher) shows on that client. | `ask` mode | **Answered (2026-11-06, tmux 3.2a, e2e T3.8):** yes. The menu appears on the pty-attached client. Note: `display-menu` keeps its own tmux client waiting until the menu closes, so ajan spawns that client and does not wait. |
 | Q25 | Copilot `session.resume.data.sessionLimits` carries limit data when it is non-null. | Copilot limits | Inspect after a Copilot limit occurs. |
 | Q26 | Lowest tmux version supporting `#[range=user\|X]` + `mouse_status_range` (present in 3.8). | Clickable agent bar on older tmux (Ubuntu 22.04 ships 3.2a) | **Partly answered (2026-11-06):** absent from tmux 3.2a (its man page lists only `range=left\|right\|window`). ajan assumes 3.4 (`tmux.ClickMinVersion`); below it the bar is an indicator and the menus carry the switching. The e2e click test runs on CI tmux ≥ 3.4. |
 | Q27 | Mouse clicks on the status line reach tmux in VS Code's integrated terminal, iTerm2, Terminal.app and Ghostty (mouse reporting on). | Click-to-switch | Manual test (T2.13). Terminal.app needs no setting; VS Code forwards mouse events to TUI apps when mouse mode is requested. |

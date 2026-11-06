@@ -113,7 +113,7 @@ func TestDetectorExecBudget(t *testing.T) {
 	last := strings.Join(h.f.execs[len(h.f.execs)-1], " ")
 	// Live agent panes only (not the shell %2, not the dead %3), bottom
 	// scan_lines of the screen.
-	if !strings.Contains(last, "capture-pane -p -J -t %1 -S 15") || !strings.Contains(last, "capture-pane -p -J -t %4 -S 0") ||
+	if !strings.Contains(last, "capture-pane -p -J -t %1") || !strings.Contains(last, "capture-pane -p -J -t %4") ||
 		strings.Contains(last, "%2") || strings.Contains(last, "%3") {
 		t.Fatalf("capture batch: %s", last)
 	}
@@ -190,6 +190,15 @@ func TestDetectorGraceAndNewRun(t *testing.T) {
 	h.tick(t)
 	if len(h.d.hashes) != 0 || len(h.d.seen) != 0 {
 		t.Fatalf("state kept for gone panes: %v %v", h.d.hashes, h.d.seen)
+	}
+}
+
+func TestLastLines(t *testing.T) {
+	if got := strings.Join(lastLines("a\nb\nc\nd\n\n   \n\n", 2), ","); got != "c,d" {
+		t.Fatalf("got %q", got)
+	}
+	if got := strings.Join(lastLines("x\n", 25), ","); got != "x" {
+		t.Fatalf("got %q", got)
 	}
 }
 
