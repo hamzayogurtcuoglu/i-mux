@@ -15,6 +15,7 @@ import (
 
 var catalogs = map[string]map[string]string{
 	"en": en,
+	"tr": tr,
 }
 
 var (

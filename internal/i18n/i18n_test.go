@@ -16,6 +16,9 @@ func TestResolve(t *testing.T) {
 		{"", "", "C", "en"},
 		{"", "xx", "en_US", "en"},
 		{"", "", "de_DE.UTF-8", "en"},
+		{"", "", "tr_TR.UTF-8", "tr"},
+		{"", "tr", "en_US.UTF-8", "tr"},
+		{"tr", "", "", "tr"},
 	}
 	for _, c := range cases {
 		if got := Resolve(c.cfg, c.ajan, c.lang); got != c.want {
@@ -109,5 +112,32 @@ func moduleRoot(t *testing.T) string {
 			t.Fatal("go.mod not found")
 		}
 		dir = parent
+	}
+}
+
+// TestLocalesKeepFormatVerbs: a translation uses the same format verbs as
+// English, in the same order (a missing or extra %s would garble output).
+func TestLocalesKeepFormatVerbs(t *testing.T) {
+	verbs := regexp.MustCompile(`%[-+# 0]*[0-9]*(?:\.[0-9]+)?[a-zA-Z]`)
+	strip := func(s string) string { return strings.ReplaceAll(s, "%%", "") }
+	for _, l := range Locales() {
+		if l == "en" {
+			continue
+		}
+		for k, v := range Catalog(l) {
+			want := verbs.FindAllString(strip(en[k]), -1)
+			got := verbs.FindAllString(strip(v), -1)
+			if strings.Join(want, " ") != strings.Join(got, " ") {
+				t.Errorf("%s %s: verbs %v, English has %v", l, k, got, want)
+			}
+		}
+	}
+}
+
+func TestTurkish(t *testing.T) {
+	SetLocale("tr")
+	defer SetLocale("en")
+	if got := T("time.days_ago", 3); got != "3 gün önce" {
+		t.Fatalf("got %q", got)
 	}
 }

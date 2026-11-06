@@ -455,7 +455,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: covers VS Code `Ctrl+\`, the nvm PATH, extended keys / Shift+Enter, terminfo, outdated CLIs, and "session not found".
 - [x] **T8.6 CHANGELOG and CONTRIBUTING** · S · deps: none
   - AC: CONTRIBUTING states the fixture privacy rules and the "never launch real agents in tests" rule.
-- [ ] **T8.7 Turkish locale (optional)** · M · deps: T0.5
+- [x] **T8.7 Turkish locale (optional)** · M · deps: T0.5
   - AC: a `tr` catalog with full key coverage (test-enforced) and a `README.tr.md`.
 
 ---
