@@ -49,3 +49,26 @@ release:
     name: i-mux
   draft: false
   prerelease: auto
+
+# Homebrew formula in hamzayogurtcuoglu/homebrew-tap:
+#   brew install hamzayogurtcuoglu/tap/ajan
+brews:
+  - name: ajan
+    ids: [ajan]
+    repository:
+      owner: hamzayogurtcuoglu
+      name: homebrew-tap
+      token: "{{ envOrDefault \"HOMEBREW_TAP_GITHUB_TOKEN\" \"\" }}"
+    directory: Formula
+    homepage: https://github.com/hamzayogurtcuoglu/i-mux
+    description: Continue an AI coding conversation in another agent CLI, inside tmux
+    license: MIT
+    dependencies:
+      - name: tmux
+    install: |
+      bin.install "ajan"
+    test: |
+      assert_match "ajan", shell_output("#{bin}/ajan version")
+    commit_author:
+      name: hamzayogurtcuoglu
+      email: hamzayogurtcuoglu@users.noreply.github.com
