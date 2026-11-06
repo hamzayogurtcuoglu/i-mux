@@ -246,7 +246,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: waits for the screen to be stable (1.5 s, max 20 s), then `load-buffer` + `paste-buffer -p -d` + Enter.
   - AC: e2e: the fake agent reading stdin receives the full document.
   - AC: the prompt does not appear in argv.
-- [ ] **T2.8 Menu (`__menu`) and key bindings** · M · deps: T2.6, T2.2
+- [x] **T2.8 Menu (`__menu`) and key bindings** · M · deps: T2.6, T2.2
   - AC: items follow §9.3. Not-installed agents are disabled; limited agents get the suffix.
   - AC: the recorder shows the expected `display-menu` arguments.
   - AC: the preview popup and the limits popup item are wired (limits shows "coming soon" until M4).

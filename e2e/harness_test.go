@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -47,7 +48,7 @@ func newH(t *testing.T, extraConfig string) *H {
 		t: t, Bin: bin, Homes: homes, Tmux: tm,
 		Socket: "ajan-test-" + hex.EncodeToString(r[:]),
 		Log:    filepath.Join(homes.Root, "fakelog"),
-		Fakes:  filepath.Join(testutil.ModuleRoot(t), "e2e", "fakeagents"),
+		Fakes:  stagedFakes,
 		Rec:    filepath.Join(homes.Root, "tmux-record.jsonl"),
 	}
 	if err := os.MkdirAll(h.Log, 0o700); err != nil {
@@ -265,4 +266,24 @@ func (h *H) startSession(agent string) string {
 func (h *H) records() []tmux.Recorded {
 	r, _ := tmux.ReadRecord(h.Rec)
 	return r
+}
+
+// attach starts a pty client of cols×rows attached to the project's session
+// and returns it with its tmux client name.
+func (h *H) attach(cols, rows int) (*Client, string) {
+	h.t.Helper()
+	c := h.startClient(cols, rows, h.Homes.Project, h.Tmux, "-L", h.Socket, "attach-session")
+	var name string
+	h.waitFor("client attached", 5*time.Second, func() bool {
+		out, _ := h.tmux("list-clients", "-F", "#{client_name}")
+		name = strings.TrimSpace(out)
+		return name != ""
+	})
+	return c, name
+}
+
+// waitScreen waits until the client's output contains s.
+func (c *Client) waitScreen(h *H, s string, timeout time.Duration) {
+	h.t.Helper()
+	h.waitFor("screen to show "+strconv.Quote(s), timeout, func() bool { return strings.Contains(c.Output(), s) })
 }

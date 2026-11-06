@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -16,6 +17,42 @@ func init() {
 		Hidden:  true,
 		Run:     runExecSpec,
 	})
+	register(&command{
+		Name:    "__menu",
+		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id>]",
+		Summary: "cmd.internal",
+		Hidden:  true,
+		Run:     runMenu,
+	})
+}
+
+// runMenu opens the pane menu (or the session picker) on a client. It is run
+// by key bindings and clicks; errors are shown with display-message.
+func runMenu(e *Env, args []string) error {
+	fs := newFlags(e, "__menu")
+	paneF := fs.String("pane", "", "target pane")
+	clientF := fs.String("client", "", "client to show the menu on")
+	if _, err := parseFlags(fs, args); err != nil {
+		return err
+	}
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	p, err := w.Pane(ctx, pane)
+	if err != nil {
+		return err
+	}
+	if err := w.Show(ctx, w.PaneMenu(p, *clientF), *clientF, pane); err != nil {
+		w.Message(ctx, *clientF, pane, err.Error())
+		return err
+	}
+	return nil
 }
 
 // runExecSpec reads a launch spec (deleting it), fills in the pane from

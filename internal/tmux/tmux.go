@@ -106,6 +106,7 @@ type Client struct {
 	Socket  string // -L name
 	Config  string // -f file used when the server starts; "" = tmux's default
 	Runner  Runner
+	Spawner Spawner       // for Spawn; nil = the Runner if it can, else exec
 	Record  string        // AJAN_TMUX_RECORD file; "" = off
 	Timeout time.Duration // per exec; 0 = 5 s
 
@@ -197,6 +198,45 @@ func (c *Client) Run(ctx context.Context, cmds ...Cmd) (string, error) {
 func notFound(err error) bool {
 	var ee *exec.Error
 	return errors.As(err, &ee) || errors.Is(err, fs.ErrNotExist)
+}
+
+// Spawner starts tmux without waiting for it. Tests replace it.
+type Spawner interface {
+	Spawn(bin string, args []string) error
+}
+
+type execSpawner struct{}
+
+func (execSpawner) Spawn(bin string, args []string) error {
+	cmd := exec.Command(bin, args...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil // /dev/null: hold no caller pipes
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
+}
+
+// Spawn runs cmds in a tmux client that is not waited for. display-menu
+// blocks its client until the menu closes, so menus are opened this way and
+// ajan exits at once.
+func (c *Client) Spawn(cmds ...Cmd) error {
+	args := c.Argv(cmds...)
+	c.record(args)
+	sp := c.Spawner
+	if sp == nil {
+		if r, ok := c.Runner.(Spawner); ok {
+			sp = r
+		} else {
+			sp = execSpawner{}
+		}
+	}
+	if err := sp.Spawn(c.Bin, args); err != nil {
+		if notFound(err) {
+			return &Error{Args: args, Kind: ErrNotFound, Err: err}
+		}
+		return &Error{Args: args, Err: err}
+	}
+	return nil
 }
 
 // Do is Run with a background context.

@@ -25,6 +25,11 @@ type fakeTmux struct {
 	errs    map[string]string // first command → stderr (failure)
 }
 
+func (f *fakeTmux) Spawn(bin string, args []string) error {
+	_, _, err := f.Run(context.Background(), bin, args)
+	return err
+}
+
 func (f *fakeTmux) Run(_ context.Context, _ string, args []string) ([]byte, []byte, error) {
 	f.calls = append(f.calls, args)
 	cmd := ""

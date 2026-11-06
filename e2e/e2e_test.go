@@ -7,6 +7,7 @@ package e2e
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -14,11 +15,53 @@ import (
 // ajanBin returns the binary under test (built by `make e2e`).
 func ajanBin(t *testing.T) string {
 	t.Helper()
-	bin := os.Getenv("AJAN_E2E_BIN")
-	if bin == "" {
+	if os.Getenv("AJAN_E2E_BIN") == "" {
 		t.Skip("AJAN_E2E_BIN not set (run via make e2e)")
 	}
-	return bin
+	return stagedBin
+}
+
+// stagedBin and stagedFakes are copies of the binary under test and of
+// e2e/fakeagents in a private temp dir. Running them from the local file
+// system keeps latency measurements honest on slow mounts (WSL's /mnt/c
+// costs ~65 ms per exec).
+var stagedBin, stagedFakes string
+
+func TestMain(m *testing.M) {
+	dir, err := os.MkdirTemp("", "ajan-e2e-")
+	if err != nil {
+		panic(err)
+	}
+	if bin := os.Getenv("AJAN_E2E_BIN"); bin != "" {
+		stagedBin = filepath.Join(dir, "ajan")
+		if err := copyFile(bin, stagedBin, 0o755); err != nil {
+			panic(err)
+		}
+	}
+	stagedFakes = filepath.Join(dir, "fakeagents")
+	if err := os.Mkdir(stagedFakes, 0o755); err != nil {
+		panic(err)
+	}
+	ents, err := os.ReadDir("fakeagents")
+	if err != nil {
+		panic(err)
+	}
+	for _, e := range ents {
+		if err := copyFile(filepath.Join("fakeagents", e.Name()), filepath.Join(stagedFakes, e.Name()), 0o755); err != nil {
+			panic(err)
+		}
+	}
+	code := m.Run()
+	os.RemoveAll(dir)
+	os.Exit(code)
+}
+
+func copyFile(src, dst string, mode os.FileMode) error {
+	b, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, b, mode)
 }
 
 func TestBinaryRuns(t *testing.T) {
