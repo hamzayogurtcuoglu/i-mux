@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-06
+
 ### Added
 
 - **Antigravity CLI (`agy`)** as a fifth agent: Google's successor to Gemini CLI for personal
@@ -14,6 +16,7 @@ All notable changes to i-mux are listed here. The format follows
   list from `brain/<id>/task.md`. It follows Claude in the default order (`a` in the menu).
 - `imux doctor` warns when Gemini CLI is set to sign in with a personal Google account, which
   Google stopped serving in Gemini CLI on 2026-06-18, and points to Antigravity CLI or an API key.
+- The release smoke tests now run for every release (they were never triggered for v0.1.0).
 - The watcher recognizes Gemini CLI's "no longer supported for Gemini Code Assist for
   individuals" sign-in error and offers to continue in another agent.
 
