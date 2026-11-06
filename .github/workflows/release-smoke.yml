@@ -5,9 +5,17 @@ name: Release smoke test
 # and Intel), Ubuntu (x86_64 and ARM) and several Linux distributions in
 # containers (WSL runs the same Linux binaries). `imux doctor --ci` skips the
 # agent checks (no agent CLIs here).
+#
+# The Release workflow calls this after publishing: a release created with
+# GITHUB_TOKEN does not trigger `on: release` workflows. It can also be run
+# by hand for any tag.
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to test (e.g. v0.1.0)
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       tag:
@@ -18,9 +26,9 @@ permissions:
   contents: read
 
 env:
-  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  TAG: ${{ inputs.tag }}
   # The installer from the released commit, fetched like users fetch it.
-  INSTALLER: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.release.tag_name || inputs.tag }}/install.sh
+  INSTALLER: https://raw.githubusercontent.com/${{ github.repository }}/${{ inputs.tag }}/install.sh
 
 jobs:
   one-liner:
@@ -48,7 +56,8 @@ jobs:
       - name: imux doctor --ci
         run: '"$HOME/.local/bin/imux" doctor --ci'
       - name: Without --version the installer picks the latest release
-        if: ${{ github.event_name == 'release' && !github.event.release.prerelease }}
+        # Only a full release (no "-rc1" suffix) is "latest".
+        if: ${{ !contains(inputs.tag, '-') }}
         run: |
           curl -fsSL "$INSTALLER" | sh -s -- --prefix "$RUNNER_TEMP/latest" --no-modify-path
           "$RUNNER_TEMP/latest/imux" version | grep -q "${TAG#v}"
