@@ -83,6 +83,7 @@ func newH(t *testing.T, extraConfig string) *H {
 	testutil.WriteFile(t, filepath.Join(homes.Ajan, "config.toml"), []byte(cfg.String()))
 	t.Cleanup(func() {
 		_ = exec.Command(h.Tmux, "-L", h.Socket, "kill-server").Run()
+		h.waitQuiet()
 		h.checkBins()
 		if t.Failed() {
 			h.dumpLogs()
@@ -311,3 +312,26 @@ func (c *Client) Text() string { return stripANSI(c.Output()) }
 var ansiRe = regexp.MustCompile("\x1b(\\[[0-9;?<>=]*[ -/]*[@-~]|\\][^\x07\x1b]*(\x07|\x1b\\\\)|[()][0-9A-Za-z]|[=>78DEHMNOc])")
 
 func stripANSI(s string) string { return ansiRe.ReplaceAllString(s, "") }
+
+// noRun asserts that agent run n does not appear within d.
+func (h *H) noRun(agent string, n int, d time.Duration) {
+	h.t.Helper()
+	time.Sleep(d)
+	if _, err := os.Stat(filepath.Join(h.Log, fmt.Sprintf("%s-%d.env", agent, n))); err == nil {
+		h.t.Fatalf("unexpected fake %s run %d", agent, n)
+	}
+}
+
+// waitQuiet waits (up to 5 s) until no ajan process started from the staged
+// binary and no fake agent of this test is left: background commands run by
+// menus and hooks may still be finishing when a test ends.
+func (h *H) waitQuiet() {
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		out, _ := exec.Command("pgrep", "-f", h.Bin+"|"+h.Log).Output()
+		if len(strings.TrimSpace(string(out))) == 0 {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}

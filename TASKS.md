@@ -261,7 +261,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: not-installed agents are dimmed; `@ajan_lim_<agent>` markers render next to the names.
   - AC: with `tmux.agent_bar = false` there is a single status line and no binding.
   - AC: at 80 columns the overflow rule (Q29) applies.
-- [ ] **T2.8b `ajan __click`** · S · deps: T2.8a, T2.6
+- [x] **T2.8b `ajan __click`** · S · deps: T2.8a, T2.6
   - AC: `ajan:<agent>` → `switch` in-process for an installed, non-limited agent.
   - AC: a limited agent → a confirm menu; a not-installed agent → an install hint.
   - AC: `ajan:cur` / `ajan:menu` → pane menu; `ajan:sessions` → picker.

@@ -29,6 +29,13 @@ func init() {
 		Run:     runMenu,
 	})
 	register(&command{
+		Name:    "__click",
+		Args:    "<range> --pane %N [--client C]",
+		Summary: "cmd.internal",
+		Hidden:  true,
+		Run:     runClick,
+	})
+	register(&command{
 		Name:    "pick",
 		Args:    "[--pane %N]",
 		Summary: "cmd.pick",
@@ -87,6 +94,34 @@ func runMenu(e *Env, args []string) error {
 		return err
 	}
 	return nil
+}
+
+// runClick handles a click on an agent-bar region (range=user|ajan:<x>).
+func runClick(e *Env, args []string) error {
+	fs := newFlags(e, "__click")
+	paneF := fs.String("pane", "", "active pane of the clicked client")
+	clientF := fs.String("client", "", "the clicked client")
+	pos, err := parseFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return &UsageError{Msg: i18n.T("cli.usage", "__click <range> --pane %N")}
+	}
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
+	w, cfg, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	p, err := w.Pane(ctx, pane)
+	if err != nil {
+		return err
+	}
+	return w.Click(ctx, sources.New(cfg), pos[0], p, *clientF)
 }
 
 // runPick opens the session picker on the client attached to the pane's
