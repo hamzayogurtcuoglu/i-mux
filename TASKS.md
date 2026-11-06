@@ -448,7 +448,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: generated from the built-in defaults by `go generate`; CI fails if it is stale.
 - [x] **T8.3 `docs/HANDOFF.md`** · S · deps: T1.12
   - AC: the format spec plus a synthetic example document.
-- [ ] **T8.4 `docs/AGENT-BUS.md`** · S · deps: T5.5
+- [x] **T8.4 `docs/AGENT-BUS.md`** · S · deps: T5.5
   - AC: commands, target syntax, the snippet, and security notes (prompt injection, `bus.confirm`).
 - [ ] **T8.5 `docs/TROUBLESHOOTING.md`** · S · deps: T2.12, T2.13
   - AC: covers VS Code `Ctrl+\`, the nvm PATH, extended keys / Shift+Enter, terminfo, outdated CLIs, and "session not found".
