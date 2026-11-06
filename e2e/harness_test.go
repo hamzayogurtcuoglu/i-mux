@@ -16,6 +16,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 // H is one isolated e2e environment: its own tmux socket, AJAN_HOME, fake
@@ -258,4 +259,10 @@ func (h *H) startSession(agent string) string {
 	h.t.Helper()
 	h.mustAjan(agent, "-d")
 	return strings.TrimSpace(h.mustTmux("list-panes", "-a", "-F", "#{pane_id}"))
+}
+
+// records returns the tmux invocations recorded so far.
+func (h *H) records() []tmux.Recorded {
+	r, _ := tmux.ReadRecord(h.Rec)
+	return r
 }

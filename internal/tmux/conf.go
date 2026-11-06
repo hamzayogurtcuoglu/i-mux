@@ -35,13 +35,25 @@ func (in *ConfInput) Clickable() bool {
 	return in.AgentBar != "" && in.Cfg.Tmux.Mouse && in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
 }
 
-// runShell returns the tmux command `run-shell -b '<ajan> args...'`. args
-// are sh words; formats (#{pane_id}) are expanded by run-shell before the
-// shell sees them, and the values ajan uses there (pane ids, client names,
-// agent-bar ranges, exit statuses) need no sh quoting.
-func runShell(self string, args ...string) string {
-	return "run-shell -b " + Quote(ShQuote(self)+" "+strings.Join(args, " "))
+// Silent is appended to every shell command ajan's bindings, hooks and menu
+// items run: tmux shows any output of run-shell (or a non-zero exit) in the
+// pane's view mode, so ajan reports results with display-message instead.
+const Silent = " >/dev/null 2>&1 || true"
+
+// UICommand returns the sh command line that runs ajan with args silently.
+// args are sh words; formats (#{pane_id}) are expanded by run-shell before
+// the shell sees them, and the values ajan puts there (pane ids, client
+// names, agent-bar ranges, exit statuses, agent:id) need no sh quoting.
+func UICommand(self string, args ...string) string {
+	return ShQuote(self) + " " + strings.Join(args, " ") + Silent
 }
+
+// RunShell returns the tmux command `run-shell -b '<ajan> args...'`.
+func RunShell(self string, args ...string) string {
+	return "run-shell -b " + Quote(UICommand(self, args...))
+}
+
+func runShell(self string, args ...string) string { return RunShell(self, args...) }
 
 // BoundKeys lists the "table key" pairs the config binds, so a reload can
 // unbind keys that a changed config no longer uses.
@@ -128,7 +140,7 @@ func GenerateConf(in *ConfInput) string {
 	}
 	if cfg.Tmux.Mouse {
 		w("# Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).")
-		w("bind -n MouseDown3Border run-shell -t = -b %s", Quote(ShQuote(in.Self)+" __menu "+pane))
+		w("bind -n MouseDown3Border run-shell -t = -b %s", Quote(UICommand(in.Self, "__menu", pane)))
 	}
 	w("set -g  @ajan_keys %s", Quote(strings.Join(BoundKeys(in), ",")))
 	w("")

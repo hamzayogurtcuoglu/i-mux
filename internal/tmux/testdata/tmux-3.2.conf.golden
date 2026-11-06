@@ -21,15 +21,15 @@ set -g  status 2
 set -g  status-format[1] '#[align=left] ajan #[range=user|ajan:menu]☰#[norange default]'
 
 # Pane menu, session picker.
-bind -n 'C-\' run-shell -b '/opt/ajan/bin/ajan __menu --pane #{pane_id} --client #{client_name}'
-bind    a run-shell -b '/opt/ajan/bin/ajan __menu --pane #{pane_id} --client #{client_name}'
-bind    S run-shell -b '/opt/ajan/bin/ajan __menu --sessions --pane #{pane_id} --client #{client_name}'
+bind -n 'C-\' run-shell -b '/opt/ajan/bin/ajan __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    a run-shell -b '/opt/ajan/bin/ajan __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    S run-shell -b '/opt/ajan/bin/ajan __menu --sessions --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).
-bind -n MouseDown3Border run-shell -t = -b '/opt/ajan/bin/ajan __menu --pane #{pane_id} --client #{client_name}'
+bind -n MouseDown3Border run-shell -t = -b '/opt/ajan/bin/ajan __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 set -g  @ajan_keys 'root C-\,prefix a,prefix S,root MouseDown3Border'
 
 # Pane lifecycle and watcher.
-set-hook -g pane-died "run-shell -b '/opt/ajan/bin/ajan __pane-died #{pane_id} #{pane_dead_status}'"
-set-hook -g client-attached "run-shell -b '/opt/ajan/bin/ajan __watch ensure'"
+set-hook -g pane-died "run-shell -b '/opt/ajan/bin/ajan __pane-died #{pane_id} #{pane_dead_status} >/dev/null 2>&1 || true'"
+set-hook -g client-attached "run-shell -b '/opt/ajan/bin/ajan __watch ensure >/dev/null 2>&1 || true'"
 
 source-file -q /home/test/.ajan/tmux.local.conf

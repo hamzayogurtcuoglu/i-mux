@@ -236,7 +236,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: discovery order is pre-assigned id → newest file with mtime ≥ `@ajan_start` and matching cwd →
     exclude files claimed by other panes' trails.
   - AC: e2e with two fake-claude panes in the same cwd resolves each correctly.
-- [ ] **T2.6 `ajan switch`** · M · deps: T2.5, T1.12
+- [x] **T2.6 `ajan switch`** · M · deps: T2.5, T1.12
   - AC: `@ajan_lock` blocks a concurrent second switch (with a message).
   - AC: the source is parsed and the handoff file written **before** `respawn-pane -k`. A parse or write
     failure leaves the old agent running.
