@@ -56,12 +56,16 @@ type Detector struct {
 	OnTick func(ctx context.Context, panes []PaneRow, clients []Client) []tmux.Cmd
 	// OnTickFailed runs when the exec carrying OnTick's commands failed.
 	OnTickFailed func()
+	// OnActivity receives, after each attached tick, when each agent pane's
+	// screen last changed (the bus uses it for idle/busy).
+	OnActivity func(at time.Time, changed map[string]time.Time)
 	// OnEvent runs for each new limit or warn line outside grace and
 	// cooldown. It reports whether it prompted or acted, which starts the
 	// pane's cooldown.
 	OnEvent func(ctx context.Context, ev Event, clients []Client) bool
 
 	hashes   map[string]uint64          // pane → hash of the last capture
+	changed  map[string]time.Time       // pane → when its screen last changed
 	seen     map[string]map[string]bool // pane instance → matched lines
 	cooldown map[string]time.Time       // pane → no prompts until
 }
@@ -76,6 +80,7 @@ const (
 func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	if d.hashes == nil {
 		d.hashes, d.seen, d.cooldown = map[string]uint64{}, map[string]map[string]bool{}, map[string]time.Time{}
+		d.changed = map[string]time.Time{}
 	}
 	out, err := d.T.Run(ctx,
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", clientFormat},
@@ -145,7 +150,11 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 			continue
 		}
 		d.hashes[p.ID] = sum
+		d.changed[p.ID] = d.Now()
 		d.scan(ctx, p, screen, clients)
+	}
+	if d.OnActivity != nil {
+		d.OnActivity(d.Now(), d.changed)
 	}
 	return true, nil
 }
@@ -216,6 +225,11 @@ func (d *Detector) prune(panes []PaneRow) {
 	for id := range d.cooldown {
 		if !live[id] {
 			delete(d.cooldown, id)
+		}
+	}
+	for id := range d.changed {
+		if !live[id] {
+			delete(d.changed, id)
 		}
 	}
 	for k := range d.seen {

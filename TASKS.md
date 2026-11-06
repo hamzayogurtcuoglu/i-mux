@@ -379,7 +379,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
 
 ## M5: Agent bus
 
-- [ ] **T5.1 Target resolution and `ajan panes`** · M · deps: T2.1
+- [x] **T5.1 Target resolution and `ajan panes`** · M · deps: T2.1
   - AC: `%N` or an agent name, resolved in the caller's session first, then server-wide. Ambiguity → error listing the candidates.
   - AC: idle/busy and "seconds since change" come from two captures 1 s apart, or from the watcher's
     hash timestamps when it is running.

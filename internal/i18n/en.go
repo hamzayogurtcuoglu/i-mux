@@ -27,6 +27,7 @@ var en = map[string]string{
 	"cmd.pick":     "Open the session picker on the attached client.",
 	"cmd.doctor":   "Check tmux, the agent CLIs and ~/.ajan; print key hints.",
 	"cmd.limits":   "Show detected limits and local usage of each agent.",
+	"cmd.panes":    "List panes with their agent and idle/busy state (agent bus).",
 
 	// workspace: start / attach / ls
 	"start.no_agent":       "no agent CLI is installed. Install one of:\n%s",
@@ -142,6 +143,12 @@ var en = map[string]string{
 	"limits.codex_primary":   "5 h window %.0f%% used (resets %s)",
 	"limits.codex_secondary": "weekly %.0f%% used (resets %s)",
 	"limits.press_enter":     "Press Enter to close.",
+
+	// agent bus
+	"bus.bad_target":    "%q is neither a pane id (%%N) nor an agent name",
+	"bus.ambiguous":     "several panes run %s: %s; use a pane id",
+	"bus.no_agent_pane": "no pane runs %s",
+	"panes.header":      "PANE\tAGENT\tSESSION\tSTATE\tIDLE\tCWD",
 
 	// config command
 	"config.exists":      "%s already exists (use --force to overwrite)",

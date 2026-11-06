@@ -53,6 +53,7 @@ func WatchLog() string   { return filepath.Join(Home(), "watch.log") }
 func Handoffs() string   { return filepath.Join(Home(), "handoffs") }
 func Launch() string     { return filepath.Join(Home(), "launch") }
 func BusDir() string     { return filepath.Join(Home(), "bus") }
+func Activity() string   { return filepath.Join(Home(), "activity.json") }
 func PruneStamp() string { return filepath.Join(Home(), ".pruned") }
 
 // Ensure creates Home and its subdirectories with DirMode. Existing

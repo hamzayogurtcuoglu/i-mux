@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/bus"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/limits"
@@ -48,6 +49,13 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 			return keeper.Commands(panes)
 		},
 		OnTickFailed: keeper.Forget,
+		OnActivity: func(at time.Time, changed map[string]time.Time) {
+			a := &bus.Activity{At: at.UnixMilli(), Changed: map[string]int64{}}
+			for p, t := range changed {
+				a.Changed[p] = t.UnixMilli()
+			}
+			_ = bus.WriteActivity(a)
+		},
 	}, tc, nil
 }
 
