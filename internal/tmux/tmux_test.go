@@ -290,15 +290,17 @@ func TestIntegrationRealTmux(t *testing.T) {
 	// Quote produces strings tmux's own parser reads back verbatim.
 	conf := filepath.Join(t.TempDir(), "q.conf")
 	tricky := `it's "x" $HOME ~ \n`
-	if err := os.WriteFile(conf, []byte("set -g @q "+Quote(tricky)+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(conf, []byte("set -g @q "+Quote(tricky)+"\nset -g @d "+QuoteDouble(tricky)+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := c.Do(Cmd{"source-file", conf}); err != nil {
 		t.Fatal(err)
 	}
-	out, err = c.Do(Cmd{"show-options", "-gv", "@q"})
-	if err != nil || strings.TrimSuffix(out, "\n") != tricky {
-		t.Fatalf("Quote round trip: %q %v", out, err)
+	for _, opt := range []string{"@q", "@d"} {
+		out, err = c.Do(Cmd{"show-options", "-gv", opt})
+		if err != nil || strings.TrimSuffix(out, "\n") != tricky {
+			t.Fatalf("%s round trip: %q %v", opt, out, err)
+		}
 	}
 	if !c.Running(ctx) {
 		t.Fatal("server should be running")

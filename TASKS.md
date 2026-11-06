@@ -216,7 +216,7 @@ Earliest standalone value: works without tmux (F5).
     output splitting, typed errors (no server / no session / no pane), version parsing.
   - A **command recorder** (`AJAN_TMUX_RECORD=<file>`) is used by tests.
   - AC: unit tests use a fake runner. An integration test runs against a real tmux on a random socket.
-- [ ] **T2.2 tmux.conf generator** · M · deps: T2.1, T0.4
+- [x] **T2.2 tmux.conf generator** · M · deps: T2.1, T0.4
   - AC: the golden test matches §9.2. The file is regenerated only when its content hash changes, and the
     running server reloads via `source-file`.
   - AC: `tmux -L <test> -f <generated> start-server` loads without errors on CI tmux versions (≥ 3.2).

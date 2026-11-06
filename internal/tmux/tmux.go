@@ -425,6 +425,14 @@ func Quote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
+// QuoteDouble returns s as a double-quoted word of a tmux command string,
+// for commands nested inside commands (if-shell, hooks). Backslash, double
+// quote and $ (environment expansion) are escaped.
+func QuoteDouble(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, `$`, `\$`)
+	return `"` + r.Replace(s) + `"`
+}
+
 // ShQuote quotes s for sh (run-shell passes its command to /bin/sh -c).
 func ShQuote(s string) string {
 	if s != "" && isSafe(s) {
