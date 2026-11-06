@@ -78,3 +78,22 @@ func TestCopilotMonth(t *testing.T) {
 		t.Fatalf("month %+v", m)
 	}
 }
+
+func TestCodexLimits(t *testing.T) {
+	h := testutil.Isolate(t)
+	f := sources.New(config.Default())
+	write := func(id, extra string, mtime time.Time) {
+		p := filepath.Join(h.Codex, "sessions", "2026", "11", "05", "rollout-2026-11-05T08-00-00-"+id+".jsonl")
+		testutil.WriteFile(t, p, []byte(`{"timestamp":"2026-11-05T08:00:00.000Z","type":"session_meta","payload":{"id":"`+id+`","cwd":"`+h.Project+`"}}`+"\n"+extra))
+		testutil.Touch(t, p, mtime)
+	}
+	write("cccccccc-0000-4000-8000-000000000001", "", testutil.FrozenTime)
+	if CodexLimits(context.Background(), f) != nil {
+		t.Fatal("no rate_limits should give nil")
+	}
+	write("cccccccc-0000-4000-8000-000000000002", `{"timestamp":"2026-11-05T08:00:10.000Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"primary":{"used_percent":42.5,"window_minutes":300,"resets_in_seconds":3600}}}}`+"\n", testutil.FrozenTime.Add(-time.Hour))
+	rl := CodexLimits(context.Background(), f)
+	if rl == nil || rl.PrimaryUsedPercent != 42.5 || rl.PrimaryResetsAt.IsZero() {
+		t.Fatalf("rate limits %+v", rl)
+	}
+}

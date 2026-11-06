@@ -84,3 +84,19 @@ func CopilotMonth(ctx context.Context, f *sources.Finder, now time.Time) Month {
 	}
 	return m
 }
+
+// CodexLimits returns the newest rate-limit snapshot Codex wrote (nil when
+// no session has one: older Codex versions do not write it).
+func CodexLimits(ctx context.Context, f *sources.Finder) *session.RateLimitSnapshot {
+	refs := f.Find(ctx, []session.AgentID{session.Codex}, session.Query{Limit: 20})
+	for _, r := range refs {
+		s, err := f.Load(ctx, r, time.Time{})
+		if err != nil {
+			continue
+		}
+		if rl := s.Usage.RateLimits; rl != nil {
+			return rl
+		}
+	}
+	return nil
+}

@@ -370,7 +370,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: requests and tokens across all project dirs with chats modified today, in the local time zone.
 - [x] **T4.3 Copilot premium requests this month** · S · deps: T1.7
   - AC: per session, the latest `session.shutdown` or `session.usage_checkpoint` total, summed per calendar month.
-- [ ] **T4.4 Codex rate limits** · S · deps: T1.8
+- [x] **T4.4 Codex rate limits** · S · deps: T1.8
   - AC: shows the newest `rate_limits` (percentages and resets) when present, otherwise "n/a (update Codex)".
 - [ ] **T4.5 `ajan limits` rendering** · S · deps: T4.1–T4.4, T3.6
   - AC: table output, `--json` (schema documented) and `--pager`.
