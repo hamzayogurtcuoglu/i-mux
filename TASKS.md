@@ -266,7 +266,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: a limited agent → a confirm menu; a not-installed agent → an install hint.
   - AC: `ajan:cur` / `ajan:menu` → pane menu; `ajan:sessions` → picker.
   - AC: a plain-shell pane starts the agent there, with context from the trail if available.
-- [ ] **T2.8c Session picker (`__menu --sessions`, `__menu --session`, `ajan pick`, `prefix S`)** · M · deps: T2.8, T1.5–T1.8
+- [x] **T2.8c Session picker (`__menu --sessions`, `__menu --session`, `ajan pick`, `prefix S`)** · M · deps: T2.8, T1.5–T1.8
   - AC: shows up to 9 rows per page across installed agents for `@ajan_cwd`, newest first, with "More…" paging.
   - AC: the preview is the first user request, cleaned, one line, 40 characters.
   - AC: the second-level menu offers resume (own agent, if supported), continue in other agents

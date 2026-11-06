@@ -24,6 +24,7 @@ var en = map[string]string{
 	"cmd.ls":       "List ajan sessions and their panes.",
 	"cmd.switch":   "Continue this pane's conversation in another agent (with context).",
 	"cmd.split":    "Open a new pane with an agent in the same directory.",
+	"cmd.pick":     "Open the session picker on the attached client.",
 
 	// workspace: start / attach / ls
 	"start.no_agent":      "no agent CLI is installed. Install one of:\n%s",
@@ -57,8 +58,20 @@ var en = map[string]string{
 	"menu.limits_soon":    "The limits panel is coming soon",
 	"menu.close":          "Close pane",
 	"bar.sessions":        "Sessions",
-	"tmux.missing":        "tmux is not installed (brew install tmux / apt install tmux)",
-	"tmux.too_old":        "tmux %s is too old; ajan needs %s or newer",
+
+	// session picker
+	"picker.title":             "Sessions · %s",
+	"picker.no_preview":        "(no text)",
+	"picker.more":              "More…",
+	"picker.none":              "No conversations found for %s",
+	"picker.session_title":     "%s · %s",
+	"picker.resume":            "Continue in %s (resume)",
+	"picker.continue":          "Continue in %s (with context)",
+	"picker.resume_new_pane":   "New pane: %s (resume)",
+	"picker.continue_new_pane": "New pane: %s (with context)",
+	"pick.no_client":           "no client is attached to this ajan session",
+	"tmux.missing":             "tmux is not installed (brew install tmux / apt install tmux)",
+	"tmux.too_old":             "tmux %s is too old; ajan needs %s or newer",
 
 	// config command
 	"config.exists":      "%s already exists (use --force to overwrite)",

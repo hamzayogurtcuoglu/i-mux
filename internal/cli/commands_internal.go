@@ -2,11 +2,15 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
 func init() {
@@ -24,14 +28,72 @@ func init() {
 		Hidden:  true,
 		Run:     runMenu,
 	})
+	register(&command{
+		Name:    "pick",
+		Args:    "[--pane %N]",
+		Summary: "cmd.pick",
+		Run:     runPick,
+	})
 }
 
-// runMenu opens the pane menu (or the session picker) on a client. It is run
-// by key bindings and clicks; errors are shown with display-message.
+// runMenu opens the pane menu, the session picker (--sessions) or the menu
+// of one picked conversation (--session) on a client. It is run by key
+// bindings, clicks and menu items; errors are shown with display-message.
 func runMenu(e *Env, args []string) error {
 	fs := newFlags(e, "__menu")
 	paneF := fs.String("pane", "", "target pane")
 	clientF := fs.String("client", "", "client to show the menu on")
+	sessionsF := fs.Bool("sessions", false, "open the session picker")
+	pageF := fs.Int("page", 0, "picker page (0-based)")
+	sessionF := fs.String("session", "", "menu for one conversation (<agent>:<id>)")
+	if _, err := parseFlags(fs, args); err != nil {
+		return err
+	}
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
+	w, cfg, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	p, err := w.Pane(ctx, pane)
+	if err != nil {
+		return err
+	}
+	client := *clientF
+	var m *workspace.Menu
+	switch {
+	case *sessionsF:
+		m = w.PickerMenu(ctx, sources.New(cfg), p, client, *pageF)
+		if m == nil {
+			w.Message(ctx, client, pane, i18n.T("picker.none", paths.Shorten(p.CWD)))
+			return nil
+		}
+	case *sessionF != "":
+		f := sources.New(cfg)
+		ref, err := f.Resolve(ctx, "", *sessionF, p.CWD)
+		if err != nil {
+			w.Message(ctx, client, pane, err.Error())
+			return err
+		}
+		m = w.SessionMenu(ref, p, client)
+	default:
+		m = w.PaneMenu(p, client)
+	}
+	if err := w.Show(ctx, m, client, pane); err != nil {
+		w.Message(ctx, client, pane, err.Error())
+		return err
+	}
+	return nil
+}
+
+// runPick opens the session picker on the client attached to the pane's
+// session (`ajan pick`, the same menu as ⧉ Sessions and prefix S).
+func runPick(e *Env, args []string) error {
+	fs := newFlags(e, "pick")
+	paneF := fs.String("pane", "", "pane to continue a conversation in (default: this pane)")
 	if _, err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -48,11 +110,11 @@ func runMenu(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := w.Show(ctx, w.PaneMenu(p, *clientF), *clientF, pane); err != nil {
-		w.Message(ctx, *clientF, pane, err.Error())
-		return err
+	client := w.ClientFor(ctx, p)
+	if client == "" {
+		return errors.New(i18n.T("pick.no_client"))
 	}
-	return nil
+	return runMenu(e, []string{"--sessions", "--pane", p.ID, "--client", client})
 }
 
 // runExecSpec reads a launch spec (deleting it), fills in the pane from

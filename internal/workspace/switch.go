@@ -76,6 +76,9 @@ type SwitchReq struct {
 	NoResume bool         // never resume natively (M6)
 	From     *session.Ref // a conversation picked in the session picker
 	Client   string       // client to show messages on ("" = tmux picks)
+	// NewPane opens the target in a new pane split from Pane (side by side)
+	// instead of replacing Pane's agent. Used with From.
+	NewPane bool
 }
 
 // SwitchResult says what happened.
@@ -101,11 +104,13 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	if err != nil {
 		return nil, err
 	}
-	lock, err := w.lockPane(ctx, p)
-	if err != nil {
-		return nil, err
+	if !req.NewPane {
+		lock, err := w.lockPane(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+		defer lock.release(ctx)
 	}
-	defer lock.release(ctx)
 
 	all, err := w.Panes(ctx)
 	if err != nil {
@@ -159,16 +164,26 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	} else if !native {
 		res.Fresh = true
 	}
-	if err := w.respawn(ctx, p, l, trail); err != nil {
+	target := p.ID
+	if req.NewPane {
+		l.Pane = ""
+		np, err := w.launchNew(ctx, l, func(cmd []string) tmux.Cmd {
+			return append(tmux.Cmd{"split-window", "-h", "-t", p.ID, "-c", l.CWD, "-P", "-F", "#{pane_id}"}, cmd...)
+		})
+		if err != nil {
+			return nil, err
+		}
+		target, res.Pane = np, np
+	} else if err := w.respawn(ctx, p, l, trail); err != nil {
 		return nil, err
 	}
-	w.notifySwitch(ctx, req.Client, p.ID, res)
+	w.notifySwitch(ctx, req.Client, target, res)
 	if w.pasteMode(l) {
 		res.Pasted = true
-		if err := w.WaitStable(ctx, p.ID); err != nil {
+		if err := w.WaitStable(ctx, target); err != nil {
 			return res, err
 		}
-		if err := w.Paste(ctx, p.ID, l.Prompt, true); err != nil {
+		if err := w.Paste(ctx, target, l.Prompt, true); err != nil {
 			return res, err
 		}
 	}
