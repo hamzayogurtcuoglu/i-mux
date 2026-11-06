@@ -93,6 +93,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D14 | **All UI strings in one catalog** (`internal/i18n`), English first | The primary user is Turkish; a `tr` catalog can be added without touching call sites. The handoff preamble is model-facing and always English. |
 | D15 | **Distribution:** GoReleaser (darwin/linux × arm64/amd64), `install.sh` (installs tmux if missing), Homebrew tap with `depends_on "tmux"` | Users never need Go. |
 | D16 | **The UI is built only from tmux-native elements:** a clickable second status line (`status-format[1]` with `#[range=user\|…]` regions), `display-menu` (mouse and keyboard), `display-popup` and pane border labels. No TUI framework. | tmux draws everything and handles mouse and keys, so nothing of ours stays resident and the lightness budget holds. tmux 3.8 supports `range=user\|X` (verified in its man page): a click fires the `MouseDown1Status` binding with `X` in `#{mouse_status_range}`. |
+| D17 | **The primary UI is a sidebar pane on the left of each window** (added 2026-11-07, at the user's request, after the bottom agent bar): a small `imux __sidebar` process drawing with ANSI escapes and reading keys and SGR mouse events, no TUI library. The agent bar stays as an option (`tmux.agent_bar`). | A sidebar can show what a status line cannot: every pane's agent and state, the switch targets, split buttons and help, all clickable. A familiar agent-workspace layout, built on tmux. Cost: one resident process per window (~6 MB, no CPU while idle: it sleeps until a tmux hook or the watcher signals it). |
 
 ## 4. Components
 
@@ -803,6 +804,60 @@ generates format strings and menu items, then exits (D16).
   - Right-click on a border (`MouseDown3Border`) opens that pane's menu.
   - Left click keeps tmux's default behavior (focus and resize).
 
+#### Sidebar (default since v0.4)
+
+Each imux window has a sidebar pane on its left (`tmux.sidebar = true`, width `tmux.sidebar_width`,
+default 30 columns), running `imux __sidebar`:
+
+```
+ i-mux · acme-api
+ ⎇ main · 3 changed
+ ──────────────────────────
+ PANES
+ ▌● Claude      working
+   ○ Codex      idle
+ ──────────────────────────
+ CONTINUE HERE IN
+   Claude       current
+   Antigravity
+   Codex        ⛔15:00
+   Copilot      not installed
+ ──────────────────────────
+ [→] Split right
+ [↓] Split down
+ [⧉] Sessions
+ [◔] Limits
+ [?] Keys
+ ──────────────────────────
+ ^b b hide · Ctrl+\ menu
+```
+
+- **Target pane:** the agent pane the user last focused in the window (window option `@imux_last`,
+  written by the sidebar). Every action applies to it; the sidebar never becomes a target.
+- **PANES:** one row per pane of the window with its agent and state: `●` working (screen changed in
+  the last 3 s), `○` idle, `⛔` limited, `✕` exited, `·` plain shell. The target is marked `▌`.
+  Click: focus that pane.
+- **CONTINUE HERE IN:** the switch targets, as on the agent bar: click switches the target pane
+  with context (limited agents ask first; missing ones show the install hint).
+- **Buttons:** Split right / Split down open a menu "New pane with: Claude / Antigravity / …" and
+  split the target pane; Sessions opens the session picker; Limits the limits popup; Keys a help
+  popup listing every key.
+- **Keyboard** (when the sidebar is focused): ↑/↓ select, Enter activates, `c a x p` continue in
+  an agent, `v` / `-` split right / down, `s` sessions, `l` limits, `?` keys, Esc back to the
+  target pane. After any action focus returns to the target pane.
+- **Global keys:** `prefix b` shows/hides the sidebars, `prefix v` / `prefix -` split the active
+  pane after asking for the agent, on top of `Ctrl+\` and `prefix a`/`S`.
+- **Lifecycle:** created with every imux window (`split-window -hbf -l <width> -d`), marked
+  `@imux_role=sidebar` and `remain-on-exit off`; it exits when it is the window's last pane, so
+  closing the last agent closes the window. It keeps its width on resize (SIGWINCH →
+  `resize-pane -x`). Menus and commands given the sidebar pane act on the target pane.
+- **Refresh:** event-driven, no polling loop: it redraws on `SIGUSR1`, sent by
+  `imux __sidebar-refresh` from tmux hooks (`pane-focus-in`, `after-split-window`, `pane-exited`,
+  `pane-died`), by imux after a switch or split, and by the watcher when a pane's state changes;
+  plus a 15 s safety refresh. One redraw = one batched tmux exec plus `state.json`.
+- **Pane state:** the watcher already hashes each agent pane's bottom lines every tick; it now also
+  writes `@imux_state` (`working` / `idle`) on change. Only while a client is attached.
+
 #### Agent bar
 
 Each region is marked with `#[range=user|imux:<x>]`. A left click fires `MouseDown1Status`, and
@@ -1387,6 +1442,8 @@ Validation at load:
 | Menu open latency (key or click) | < 100 ms p95 | e2e: timestamp `__menu` / `__click` start → `display-menu` exec, 50 runs |
 | Session picker open latency | < 150 ms p95 with 50 candidate files | e2e with synthetic sessions for all four agents |
 | Agent bar re-render on focus change | 0 i-mux execs | e2e: change the active pane; the recorder shows no i-mux invocation |
+| Sidebar process | ≤ 8 MB RSS, 0% CPU idle (blocked on signals and stdin) | `ps -o rss=,%cpu=` of `imux __sidebar` over 10 min |
+| Sidebar redraw after an event | < 50 ms, one tmux exec | e2e: focus another pane, measure until the sidebar shows it |
 | Switch latency (key → new agent exec), 64 MB Claude session | < 1.5 s | e2e with a generated synthetic 64 MB fixture |
 | `imux handoff --print`, 64 MB session | < 1 s, peak RSS < 80 MB | `go test -bench` + `/usr/bin/time -l` |
 | Parser throughput | ≥ 100 MB/s on JSONL tail scan | `go test -bench ./internal/session/...` |
