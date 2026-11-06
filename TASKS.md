@@ -291,7 +291,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: when no session is found, the handoff uses `capture-pane -S -3000 -J` text, marked as
     reconstructed, and the user is notified.
   - AC: e2e with a fake agent that writes no session file.
-- [ ] **T2.12 `ajan doctor`** · M · deps: T2.2, T1.3
+- [x] **T2.12 `ajan doctor`** · M · deps: T2.2, T1.3
   - AC: it checks:
     - tmux presence and version (≥ 3.2), and the `tmux-256color` terminfo;
     - each agent: installed, path and version, and an "outdated" hint (e.g. Claude 1.0.x);

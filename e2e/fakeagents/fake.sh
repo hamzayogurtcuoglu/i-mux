@@ -17,10 +17,16 @@ agent="${FAKE_AGENT:?FAKE_AGENT not set}"
 log="${AJAN_FAKE_LOG:-${TMPDIR:-/tmp}/ajan-fake}"
 mkdir -p "$log"
 
-# Version probes (ajan's bin cache) are not runs.
+# Version probes (ajan's bin cache) and help (ajan doctor) are not runs.
 if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
-	echo "$agent 0.0.0-fake"
+	echo "$agent ${FAKE_VERSION:-9.9.9}-fake"
 	echo "$agent --version" >>"$log/version-probes"
+	exit 0
+fi
+if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+	echo "Usage: $agent [options] [prompt]"
+	echo "  --session-id <uuid>  -i, --prompt-interactive <prompt>  -r, --resume <id>  resume <id>"
+	echo "$agent --help" >>"$log/version-probes"
 	exit 0
 fi
 
