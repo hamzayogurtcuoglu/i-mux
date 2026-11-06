@@ -23,6 +23,9 @@ type PaneRow struct {
 	Dead    bool
 	Height  int
 	Session string
+	// Unreaped: dead, but tmux has no exit status or signal for it yet,
+	// so the pane-died hook has not run (see reapNudge).
+	Unreaped bool
 }
 
 // Client is one attached client.
@@ -68,12 +71,25 @@ type Detector struct {
 	changed  map[string]time.Time       // pane → when its screen last changed
 	seen     map[string]map[string]bool // pane instance → matched lines
 	cooldown map[string]time.Time       // pane → no prompts until
+	nudges   map[string]int             // dead, unreaped pane → reap nudges sent
 }
 
 const (
-	listFormat   = "#{pane_id}\t#{@ajan_agent}\t#{@ajan_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}"
+	listFormat   = "#{pane_id}\t#{@ajan_agent}\t#{@ajan_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}"
 	clientFormat = "#{client_name}\t#{client_control_mode}\t#{client_session}\t#{client_activity}"
 )
+
+// reapNudge makes the tmux server reap its exited children. tmux builds that
+// use libutempter (Debian, Ubuntu) can lose the SIGCHLD of a pane's process:
+// when the pane's pty closes, libutempter sets SIGCHLD to SIG_DFL while its
+// helper runs, and a child that exits in that window stays a zombie. The pane
+// is then dead with no exit status, and the pane-died hook (ajan __pane-died:
+// shell, close or fallback) never runs. Any child exit makes tmux reap them
+// all, so a run-shell job that exits at once is enough.
+var reapNudge = tmux.Cmd{"run-shell", "-b", "true"}
+
+// maxNudges bounds the nudges sent for one dead pane.
+const maxNudges = 3
 
 // Tick implements Ticker: one exec lists clients and panes; when a client
 // is attached, one more exec captures every agent pane.
@@ -98,21 +114,34 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 		clients = append(clients, Client{Name: r[0], Session: r[2], Activity: act})
 	}
 	var panes, agents []PaneRow
-	for _, r := range tmux.Rows(sec["panes"], 6) {
+	nudge := false
+	nudges := map[string]int{}
+	for _, r := range tmux.Rows(sec["panes"], 7) {
 		p := PaneRow{ID: r[0], Agent: session.AgentID(r[1]), Dead: r[3] == "1", Session: r[5]}
+		p.Unreaped = p.Dead && r[6] == ""
 		p.Height, _ = strconv.Atoi(r[4])
 		if ms, err := strconv.ParseInt(r[2], 10, 64); err == nil && ms > 0 {
 			p.Start = time.UnixMilli(ms)
 		}
 		panes = append(panes, p)
+		// A few nudges per dead pane: tmux 3.2 has no pane_dead_signal, so
+		// a pane killed by a signal there never shows a status.
+		if p.Unreaped {
+			nudges[p.ID] = d.nudges[p.ID] + 1
+			nudge = nudge || nudges[p.ID] <= maxNudges
+		}
 		if p.Agent != "" && !p.Dead && session.Known(string(p.Agent)) {
 			agents = append(agents, p)
 		}
 	}
+	d.nudges = nudges
 	d.prune(panes)
 	var extra []tmux.Cmd
 	if d.OnTick != nil {
 		extra = d.OnTick(ctx, panes, clients)
+	}
+	if nudge {
+		extra = append(extra, reapNudge)
 	}
 	if len(clients) == 0 || len(agents) == 0 {
 		if len(extra) > 0 {

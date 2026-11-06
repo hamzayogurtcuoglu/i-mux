@@ -94,7 +94,7 @@ func ms(t time.Time) string { return strconv.FormatInt(t.UnixMilli(), 10) }
 func TestDetectorExecBudget(t *testing.T) {
 	h := newHarness(t)
 	start := ms(testutil.FrozenTime.Add(-time.Hour))
-	h.f.panes = "%1\tclaude\t" + start + "\t0\t40\ts\n%2\t\t\t0\t40\ts\n%3\tgemini\t" + start + "\t1\t40\ts\n%4\tcodex\t" + start + "\t0\t10\ts\n"
+	h.f.panes = "%1\tclaude\t" + start + "\t0\t40\ts\n%2\t\t\t0\t40\ts\n%3\tgemini\t" + start + "\t1\t40\ts\t0\n%4\tcodex\t" + start + "\t0\t10\ts\n"
 	// No client attached: one exec, no captures.
 	attached, n := h.tick(t)
 	if attached || n != 1 || h.f.captures() != 0 {
@@ -116,6 +116,37 @@ func TestDetectorExecBudget(t *testing.T) {
 	if !strings.Contains(last, "capture-pane -p -J -t %1") || !strings.Contains(last, "capture-pane -p -J -t %4") ||
 		strings.Contains(last, "%2") || strings.Contains(last, "%3") {
 		t.Fatalf("capture batch: %s", last)
+	}
+}
+
+// TestDetectorReapNudge: a dead pane without exit status or signal (tmux lost
+// its SIGCHLD) gets a run-shell job so tmux reaps it, at most maxNudges
+// times; a dead pane with a status does not.
+func TestDetectorReapNudge(t *testing.T) {
+	h := newHarness(t)
+	start := ms(testutil.FrozenTime.Add(-time.Minute))
+	nudged := func() bool {
+		return strings.Contains(strings.Join(h.f.execs[len(h.f.execs)-1], " "), "run-shell -b true")
+	}
+	h.f.panes = "%1\tclaude\t" + start + "\t1\t40\ts\t0\n" // dead, reaped (status 0)
+	if _, n := h.tick(t); n != 1 || nudged() {
+		t.Fatalf("reaped pane: %d execs, %q", n, h.f.execs[len(h.f.execs)-1])
+	}
+	h.f.panes = "%1\tclaude\t" + start + "\t1\t40\ts\t\n" // dead, not reaped
+	for i := 1; i <= maxNudges; i++ {
+		if _, n := h.tick(t); n != 2 || !nudged() {
+			t.Fatalf("tick %d: %d execs, %q", i, n, h.f.execs[len(h.f.execs)-1])
+		}
+	}
+	if _, n := h.tick(t); n != 1 {
+		t.Fatalf("nudged more than %d times", maxNudges)
+	}
+	// Reaped, then dead again (respawned and exited): nudged again.
+	h.f.panes = "%1\tclaude\t" + start + "\t0\t40\ts\t\n"
+	h.tick(t)
+	h.f.panes = "%1\tclaude\t" + start + "\t1\t40\ts\t\n"
+	if h.tick(t); !nudged() {
+		t.Fatal("not nudged after a new death")
 	}
 }
 
