@@ -450,7 +450,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: the format spec plus a synthetic example document.
 - [x] **T8.4 `docs/AGENT-BUS.md`** · S · deps: T5.5
   - AC: commands, target syntax, the snippet, and security notes (prompt injection, `bus.confirm`).
-- [ ] **T8.5 `docs/TROUBLESHOOTING.md`** · S · deps: T2.12, T2.13
+- [x] **T8.5 `docs/TROUBLESHOOTING.md`** · S · deps: T2.12, T2.13
   - AC: covers VS Code `Ctrl+\`, the nvm PATH, extended keys / Shift+Enter, terminfo, outdated CLIs, and "session not found".
 - [ ] **T8.6 CHANGELOG and CONTRIBUTING** · S · deps: none
   - AC: CONTRIBUTING states the fixture privacy rules and the "never launch real agents in tests" rule.
