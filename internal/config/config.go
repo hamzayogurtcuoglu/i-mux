@@ -280,12 +280,10 @@ func Parse(data []byte) (*Config, []string, error) {
 
 var severities = []string{"limit", "warn", "ignore"}
 
-// CompilePattern compiles a limit pattern case-insensitively (RE2).
+// CompilePattern compiles a limit pattern case-insensitively (RE2). A
+// pattern may opt out with a leading (?-i).
 func CompilePattern(re string) (*regexp.Regexp, error) {
-	if !strings.HasPrefix(re, "(?") {
-		re = "(?i)" + re
-	}
-	return regexp.Compile(re)
+	return regexp.Compile("(?i)" + re)
 }
 
 func (c *Config) validate(src []byte) error {

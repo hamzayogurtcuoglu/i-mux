@@ -311,7 +311,7 @@ Earliest standalone value: works without tmux (F5).
 
 ## M3: Watcher and limit-triggered switch
 
-- [ ] **T3.1 Limit pattern sets** · S · deps: T0.4
+- [x] **T3.1 Limit pattern sets** · S · deps: T0.4
   - AC: the §10.1 defaults have `limit` / `warn` / `ignore` severities.
   - AC: config can add patterns or replace the defaults.
   - AC: tests run real-world strings against each severity, including Claude's ` ∙ ` separator and the Opus fallback (ignore).
