@@ -146,6 +146,9 @@ echo "argc $# · last argument $(printf %s "$last" | wc -c | tr -d ' ') bytes"
 [ -n "${FAKE_SCRIPT:-}" ] && eval "$FAKE_SCRIPT"
 
 while IFS= read -r line; do
+	case "$line" in
+	"/exit "*) exit "${line#/exit }" ;; # tests end a run with a given status
+	esac
 	printf '%s\n' "$line" >>"$log/$agent-$n.stdin"
 done
 exit "${FAKE_EXIT_STATUS:-0}"

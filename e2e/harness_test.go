@@ -335,3 +335,9 @@ func (h *H) waitQuiet() {
 		time.Sleep(50 * time.Millisecond)
 	}
 }
+
+// capture returns the visible screen of pane.
+func (h *H) capture(pane string) string {
+	out, _ := h.tmux("capture-pane", "-p", "-J", "-t", pane)
+	return out
+}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
@@ -34,6 +35,13 @@ func init() {
 		Summary: "cmd.internal",
 		Hidden:  true,
 		Run:     runClick,
+	})
+	register(&command{
+		Name:    "__pane-died",
+		Args:    "<pane> <status>",
+		Summary: "cmd.internal",
+		Hidden:  true,
+		Run:     runPaneDied,
 	})
 	register(&command{
 		Name:    "pick",
@@ -122,6 +130,24 @@ func runClick(e *Env, args []string) error {
 		return err
 	}
 	return w.Click(ctx, sources.New(cfg), pos[0], p, *clientF)
+}
+
+// runPaneDied is the pane-died hook: fallback, shell or close (§9.5).
+func runPaneDied(e *Env, args []string) error {
+	if len(args) < 1 || len(args) > 2 {
+		return &UsageError{Msg: i18n.T("cli.usage", "__pane-died <pane> <status>")}
+	}
+	status := -1
+	if len(args) == 2 {
+		if n, err := strconv.Atoi(args[1]); err == nil {
+			status = n
+		}
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	return w.PaneDied(context.Background(), args[0], status)
 }
 
 // runPick opens the session picker on the client attached to the pane's

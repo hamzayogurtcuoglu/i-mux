@@ -283,7 +283,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: picker → row → "Continue in Codex" launches fake-codex with a handoff built from the picked session.
 - [x] **T2.9 `ajan split`** · S · deps: T2.4
   - AC: `-h`/`-v`, same cwd, pane options set, and the label shows in the border.
-- [ ] **T2.10 Pane-died handling** · M · deps: T2.4
+- [x] **T2.10 Pane-died handling** · M · deps: T2.4
   - AC: an agent exit falls back to the login shell in `@ajan_cwd` with `@ajan_agent` cleared and the trail closed.
   - AC: `on_exit = "close"` kills the pane instead.
   - AC: `@ajan_fallback` + exit within 10 s with status ≠ 0 respawns from the fallback spec. M6 uses this; it is tested here with a fake agent.
