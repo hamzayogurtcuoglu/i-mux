@@ -133,11 +133,19 @@ func (h *H) dumpLogs() {
 // dumpPanes logs the state of every pane and the last tmux calls.
 func (h *H) dumpPanes() {
 	panes, _ := h.tmux("list-panes", "-a", "-F",
-		"#{pane_id} dead=#{pane_dead} status=#{pane_dead_status} remain=#{remain-on-exit} cmd=#{pane_current_command} agent=#{@ajan_agent}")
+		"#{pane_id} pid=#{pane_pid} dead=#{pane_dead} status=#{pane_dead_status} signal=#{pane_dead_signal} remain=#{remain-on-exit} cmd=#{pane_current_command} agent=#{@ajan_agent}")
 	h.t.Logf("--- panes ---\n%s", panes)
-	// The last tmux calls made through ajan (hooks, UI commands, the
-	// watcher), with the pid that made them.
-	recs := h.records()
+	hooks, _ := h.tmux("show-hooks", "-g")
+	h.t.Logf("--- hooks ---\n%s", hooks)
+	// The last tmux calls made through ajan by hooks and UI commands, with
+	// the pid that made them (not the watcher: it polls every tick).
+	_, watcher := watch.Status()
+	var recs []tmux.Recorded
+	for _, r := range h.records() {
+		if r.Pid != watcher {
+			recs = append(recs, r)
+		}
+	}
 	if len(recs) > 25 {
 		recs = recs[len(recs)-25:]
 	}
@@ -145,7 +153,7 @@ func (h *H) dumpPanes() {
 	for _, r := range recs {
 		fmt.Fprintf(&b, "%d %.300q\n", r.Pid, r.Args)
 	}
-	h.t.Logf("--- last tmux calls ---\n%s", b.String())
+	h.t.Logf("--- last tmux calls (watcher pid %d excluded) ---\n%s", watcher, b.String())
 }
 
 // tmux runs a tmux command on the test socket.
