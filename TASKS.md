@@ -231,7 +231,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: e2e shows the pane options are set and the fake claude got `--session-id <uuid>`.
   - AC: a second `ajan` in the same cwd attaches instead of creating a new session.
   - AC: inside ajan, `ajan gemini` opens a new window.
-- [ ] **T2.5 Pane trail and session discovery for a pane** · M · deps: T2.4, T1.5–T1.8
+- [x] **T2.5 Pane trail and session discovery for a pane** · M · deps: T2.4, T1.5–T1.8
   - AC: trail JSON is capped at 10 entries.
   - AC: discovery order is pre-assigned id → newest file with mtime ≥ `@ajan_start` and matching cwd →
     exclude files claimed by other panes' trails.

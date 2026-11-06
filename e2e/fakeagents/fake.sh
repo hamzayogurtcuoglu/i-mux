@@ -124,7 +124,7 @@ EOF
 		dir="${COPILOT_HOME:-$HOME/.copilot}/session-state/$id"
 		mkdir -p "$dir"
 		session="$dir/events.jsonl"
-		[ -e "$dir/workspace.yaml" ] || printf 'id: %s\ncwd: %s\n' "$id" "$PWD" >"$dir/workspace.yaml"
+		[ -e "$dir/workspace.yaml" ] || printf 'id: %s\ncwd: %s\ncreated_at: %s\n' "$id" "$PWD" "$ts" >"$dir/workspace.yaml"
 		cat >>"$session" <<EOF
 {"type":"user.message","timestamp":"$ts","data":{"content":"$req"}}
 {"type":"assistant.message","timestamp":"$ts","data":{"content":"$reply"}}

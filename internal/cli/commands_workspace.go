@@ -12,6 +12,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -28,6 +29,36 @@ func init() {
 		Summary: "cmd.ls",
 		Run:     runLs,
 	})
+	paneHandoff = handoffForPane
+}
+
+// handoffForPane builds the handoff of a pane's current conversation
+// (`ajan handoff --pane %N --print`, the menu's preview popup).
+func handoffForPane(e *Env, cfg *config.Config, pane string, to session.AgentID, budget int) (string, error) {
+	w, err := workspace.New(cfg)
+	if err != nil {
+		return "", err
+	}
+	w.Now = now
+	ctx := context.Background()
+	p, err := w.Pane(ctx, pane)
+	if err != nil {
+		return "", err
+	}
+	if to == "" {
+		to = defaultTarget(cfg, p.Agent)
+	}
+	res, err := w.BuildHandoff(ctx, sources.New(cfg), workspace.HandoffReq{Pane: p, To: to, Budget: budget})
+	if errors.Is(err, workspace.ErrNoSource) {
+		return "", errors.New(i18n.T("handoff.no_session", p.CWD))
+	}
+	if err != nil {
+		return "", err
+	}
+	for _, wn := range res.Warnings {
+		fmt.Fprintf(e.Stderr, "ajan: %s\n", i18n.T("cli.warning", wn))
+	}
+	return res.Doc.Text, nil
 }
 
 // attachExec replaces the process with `tmux attach`; tests replace it.

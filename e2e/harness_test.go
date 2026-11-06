@@ -227,3 +227,35 @@ func (h *H) runs(agent string) int {
 	m, _ := filepath.Glob(filepath.Join(h.Log, agent+"-*.env"))
 	return len(m)
 }
+
+// inside returns the environment of a process running in pane (TMUX and
+// TMUX_PANE pointing at the test server).
+func (h *H) inside(pane string) []string {
+	h.t.Helper()
+	sock := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", pane, "#{socket_path}"))
+	return []string{"TMUX=" + sock + ",1,0", "TMUX_PANE=" + pane}
+}
+
+// newPane runs `ajan <agent>` inside pane (opens a window) and returns the
+// new pane's id.
+func (h *H) newPane(from, agent string) string {
+	h.t.Helper()
+	before := h.mustTmux("list-panes", "-a", "-F", "#{pane_id}")
+	if o, e, err := h.ajanEnv(h.inside(from), agent); err != nil {
+		h.t.Fatalf("ajan %s inside %s: %v\n%s%s", agent, from, err, o, e)
+	}
+	for _, p := range strings.Fields(h.mustTmux("list-panes", "-a", "-F", "#{pane_id}")) {
+		if !strings.Contains(before+"\n", p+"\n") {
+			return p
+		}
+	}
+	h.t.Fatal("no new pane")
+	return ""
+}
+
+// startSession runs `ajan <agent> -d` and returns the first pane.
+func (h *H) startSession(agent string) string {
+	h.t.Helper()
+	h.mustAjan(agent, "-d")
+	return strings.TrimSpace(h.mustTmux("list-panes", "-a", "-F", "#{pane_id}"))
+}
