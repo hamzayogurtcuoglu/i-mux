@@ -110,9 +110,12 @@ func GenerateConf(in *ConfInput) string {
 	w("set -g  mouse %s", onOff(cfg.Tmux.Mouse))
 	w("set -g  focus-events on")
 	w("set -g  pane-border-status top")
+	// Windows are named after the active pane's agent ("claude"), not its process ("node").
+	w("set -g  automatic-rename-format %s", Quote("#{?@ajan_agent,#{@ajan_agent},#{pane_current_command}}"))
 	w("set -g  pane-border-format %s", Quote(" #{?@ajan_label,#{@ajan_label},#{pane_current_command}} #{?@ajan_flag,#{@ajan_flag} ,}"))
 	w("set -g  status-right %s", Quote("#{?@ajan_status,#{@ajan_status} · ,}%H:%M "))
 	w("set -g  status-right-length 80")
+	w("set -g  status-left-length 32") // session names are <dir>-<hash>; the default 10 cuts them
 	w("set -gq @ajan_status ''")
 	if in.AgentBar != "" {
 		w("set -g  status 2")

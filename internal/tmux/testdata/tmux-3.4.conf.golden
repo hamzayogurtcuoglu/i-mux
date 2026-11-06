@@ -13,9 +13,11 @@ set -g  history-limit 50000
 set -g  mouse on
 set -g  focus-events on
 set -g  pane-border-status top
+set -g  automatic-rename-format '#{?@ajan_agent,#{@ajan_agent},#{pane_current_command}}'
 set -g  pane-border-format ' #{?@ajan_label,#{@ajan_label},#{pane_current_command}} #{?@ajan_flag,#{@ajan_flag} ,}'
 set -g  status-right '#{?@ajan_status,#{@ajan_status} · ,}%H:%M '
 set -g  status-right-length 80
+set -g  status-left-length 32
 set -gq @ajan_status ''
 set -g  status 2
 set -g  status-format[1] '#[align=left] ajan #[range=user|ajan:menu]☰#[norange default]'
