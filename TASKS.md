@@ -422,7 +422,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
 
 ## M7: Distribution
 
-- [ ] **T7.1 GoReleaser config** · M · deps: T0.2
+- [x] **T7.1 GoReleaser config** · M · deps: T0.2
   - AC: `CGO_ENABLED=0`, darwin/linux × amd64/arm64, `-trimpath -s -w`, version ldflags, tar.gz archives and `checksums.txt`.
   - AC: `goreleaser release --snapshot --clean` works locally and in CI.
 - [ ] **T7.2 Release workflow** · S · deps: T7.1, T0.8

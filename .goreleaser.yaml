@@ -1,0 +1,51 @@
+# GoReleaser configuration (TASKS.md M7). Check locally with:
+#   goreleaser release --snapshot --clean
+version: 2
+
+project_name: ajan
+
+builds:
+  - id: ajan
+    main: ./cmd/ajan
+    binary: ajan
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/hamzayogurtcuoglu/i-mux/internal/version.Version={{ .Version }}
+      - -X github.com/hamzayogurtcuoglu/i-mux/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/hamzayogurtcuoglu/i-mux/internal/version.Date={{ .Date }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: ajan
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^e2e:"
+      - "^test:"
+
+release:
+  github:
+    owner: hamzayogurtcuoglu
+    name: i-mux
+  draft: false
+  prerelease: auto
