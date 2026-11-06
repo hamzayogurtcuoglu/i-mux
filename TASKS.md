@@ -342,7 +342,7 @@ Earliest standalone value: works without tmux (F5).
 - [x] **T3.6 Status bar and pane flag** · S · deps: T3.4
   - AC: `@ajan_status` and `@ajan_flag` are set only when they change. Expired limits are cleared on the next tick.
   - AC: `warn` shows `◐`.
-- [ ] **T3.7 Switch reason from the session** · S · deps: T1.5, T2.6
+- [x] **T3.7 Switch reason from the session** · S · deps: T1.5, T2.6
   - AC: a manual switch whose source's last `APIError` is limit-like reports reason "limit" in the handoff.
 - [ ] **T3.8 M3 e2e** · L · deps: T3.5, T3.6
   - The fake agent prints a limit line after 3 s.

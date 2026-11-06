@@ -82,6 +82,12 @@ func (w *WS) BuildHandoff(ctx context.Context, f *sources.Finder, req HandoffReq
 	if req.Reason != nil {
 		reason = *req.Reason
 	}
+	if reason.Limit && reason.ResetAt.IsZero() {
+		// The watcher may have seen the reset time on the screen.
+		if l := w.State().ActiveLimit(string(s.Agent), w.Now()); l != nil {
+			reason.ResetAt = l.ResetAt
+		}
+	}
 	cwd := p.CWD
 	if req.From != nil && s.CWD != "" {
 		cwd = s.CWD

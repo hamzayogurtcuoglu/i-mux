@@ -15,6 +15,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/limits"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/all" // register providers
 )
@@ -203,13 +204,18 @@ func (f *Finder) Build(ctx context.Context, req BuildRequest) (*handoff.Doc, err
 }
 
 // LimitReason derives the reason from the source's last API error when it is
-// limit-like (manual switches into an agent that just failed with a limit).
+// limit-like (a manual switch away from an agent that just failed with a
+// limit), with the reset time when the error text has one.
 func LimitReason(s *session.Session) handoff.Reason {
 	if s == nil {
 		return handoff.Reason{}
 	}
 	if e := s.LastError(); e != nil && e.LimitLike() {
-		return handoff.Reason{Limit: true}
+		at := e.At
+		if at.IsZero() {
+			at = time.Now()
+		}
+		return handoff.Reason{Limit: true, ResetAt: limits.ParseReset(e.Text, at, time.Local)}
 	}
 	return handoff.Reason{}
 }

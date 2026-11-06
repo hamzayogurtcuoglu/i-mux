@@ -74,7 +74,9 @@ func (w *WS) Click(ctx context.Context, f *sources.Finder, rng string, p *Pane, 
 	case ClickConfirm:
 		return w.Show(ctx, w.ConfirmMenu(id, p, client), client, p.ID)
 	case ClickSwitch:
-		_, err := w.Switch(ctx, f, SwitchReq{Pane: p.ID, To: id, Reason: "manual", Client: client})
+		// No forced reason: a source that just failed with a limit is
+		// reported as such (T3.7).
+		_, err := w.Switch(ctx, f, SwitchReq{Pane: p.ID, To: id, Client: client})
 		if err != nil {
 			w.Message(ctx, client, p.ID, SwitchError(id, err))
 		}
