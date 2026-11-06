@@ -452,7 +452,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: commands, target syntax, the snippet, and security notes (prompt injection, `bus.confirm`).
 - [x] **T8.5 `docs/TROUBLESHOOTING.md`** · S · deps: T2.12, T2.13
   - AC: covers VS Code `Ctrl+\`, the nvm PATH, extended keys / Shift+Enter, terminfo, outdated CLIs, and "session not found".
-- [ ] **T8.6 CHANGELOG and CONTRIBUTING** · S · deps: none
+- [x] **T8.6 CHANGELOG and CONTRIBUTING** · S · deps: none
   - AC: CONTRIBUTING states the fixture privacy rules and the "never launch real agents in tests" rule.
 - [ ] **T8.7 Turkish locale (optional)** · M · deps: T0.5
   - AC: a `tr` catalog with full key coverage (test-enforced) and a `README.tr.md`.
