@@ -386,7 +386,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: `--json` is supported.
 - [x] **T5.2 `ajan read`** · S · deps: T5.1
   - AC: `-n` lines, ANSI stripped, wrapped lines joined (`-J`).
-- [ ] **T5.3 `ajan send`** · M · deps: T5.1
+- [x] **T5.3 `ajan send`** · M · deps: T5.1
   - AC: the sender prefix comes from `TMUX_PANE` / `AJAN_AGENT`.
   - AC: a 0600 temp file → `load-buffer` → `paste-buffer -p -d` → Enter.
   - AC: guards per §12 (enabled, size, rate, no self-send, ajan socket only); `--wait-idle`; `bus.confirm` menu.
