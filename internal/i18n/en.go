@@ -29,6 +29,8 @@ var en = map[string]string{
 	"cmd.limits":   "Show detected limits and local usage of each agent.",
 	"cmd.panes":    "List panes with their agent and idle/busy state (agent bus).",
 	"cmd.read":     "Print the last lines of another pane (agent bus).",
+	"cmd.send":     "Send a message to another agent's pane (agent bus).",
+	"cmd.wait":     "Wait until another pane is idle (agent bus); exit 124 on timeout.",
 
 	// workspace: start / attach / ls
 	"start.no_agent":       "no agent CLI is installed. Install one of:\n%s",
@@ -149,6 +151,18 @@ var en = map[string]string{
 	"bus.bad_target":    "%q is neither a pane id (%%N) nor an agent name",
 	"bus.ambiguous":     "several panes run %s: %s; use a pane id",
 	"bus.no_agent_pane": "no pane runs %s",
+	"bus.disabled":      "the agent bus is disabled (bus.enabled = false)",
+	"bus.too_large":     "message is %d bytes; the limit is %d (bus.max_message_bytes)",
+	"bus.empty":         "empty message",
+	"bus.self":          "the target is this pane",
+	"bus.rate":          "more than %d messages in the last minute from this pane (bus.rate_per_minute)",
+	"bus.sent":          "sent to %s",
+	"bus.pending":       "waiting for the user to confirm delivery to %s",
+	"bus.wait_timeout":  "%s did not become idle in time",
+	"bus.confirm_title": "Message from %s %s to %s %s",
+	"bus.deliver":       "Deliver",
+	"bus.discard":       "Discard",
+	"bus.bad_file":      "not a parked bus message",
 	"panes.header":      "PANE\tAGENT\tSESSION\tSTATE\tIDLE\tCWD",
 
 	// config command
