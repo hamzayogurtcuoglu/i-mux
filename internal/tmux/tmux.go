@@ -210,6 +210,13 @@ type execSpawner struct{}
 func (execSpawner) Spawn(bin string, args []string) error {
 	cmd := exec.Command(bin, args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil // /dev/null: hold no caller pipes
+	// A client started from inside a pane (TMUX set) does not show
+	// display-menu on another client; it is not part of the workspace.
+	for _, kv := range os.Environ() {
+		if !strings.HasPrefix(kv, "TMUX=") && !strings.HasPrefix(kv, "TMUX_PANE=") {
+			cmd.Env = append(cmd.Env, kv)
+		}
+	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}

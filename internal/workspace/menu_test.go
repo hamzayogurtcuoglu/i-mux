@@ -87,7 +87,7 @@ func TestPaneMenuLimitedCurrentAndShell(t *testing.T) {
 	}
 	// Names are escaped for tmux formats.
 	cmd := (&Menu{Title: "a#b", Items: []MenuItem{{Name: "x#{y}", Key: "1", Cmd: "c"}}}).Cmd("", "")
-	if strings.Join(cmd, " ") != "display-menu -T a##b -x C -y C x##{y} 1 c" {
+	if strings.Join(cmd, " ") != "display-menu -T a##b -x C -y C -- x##{y} 1 c" {
 		t.Fatalf("escaping: %q", cmd)
 	}
 }

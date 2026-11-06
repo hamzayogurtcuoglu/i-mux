@@ -395,10 +395,11 @@ get the "continue in …" prompt, and switch manually or automatically with cont
 - [x] **T5.5 `ajan snippet`** · S · deps: T5.3, T5.4
   - AC: prints CLAUDE.md, GEMINI.md and AGENTS.md variants.
   - AC: a test asserts that no code path writes to those files.
-- [ ] **T5.6 M5 e2e and sandbox check** · M · deps: T5.1–T5.4
+- [x] **T5.6 M5 e2e and sandbox check** · M · deps: T5.1–T5.4
   - AC: two fake agents exchange messages, including a multi-line one received intact.
   - AC: the rate limit stops a ping-pong loop.
   - AC: (USER) Q18: whether a sandboxed Codex/Gemini can call `ajan send` is recorded.
+  - Status (2026-11-06): the automated part is done; the Q18 sandbox check is still open (USER).
 
 ## M6: Native resume-back with delta handoff
 

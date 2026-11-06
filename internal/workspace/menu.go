@@ -38,7 +38,9 @@ func (m *Menu) Cmd(client, pane string) tmux.Cmd {
 	if pane != "" {
 		c = append(c, "-t", pane)
 	}
-	c = append(c, "-T", tmux.EscapeFormat(m.Title), "-x", "C", "-y", "C")
+	// "--" ends the options: a disabled first item ("-Claude: limited …")
+	// would otherwise be parsed as flags.
+	c = append(c, "-T", tmux.EscapeFormat(m.Title), "-x", "C", "-y", "C", "--")
 	for i, it := range m.Items {
 		if it.Name == "" {
 			// No separator at the very start or end, and never two in a row.

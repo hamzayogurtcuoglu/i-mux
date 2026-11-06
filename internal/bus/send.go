@@ -153,8 +153,11 @@ func (b *Bus) confirm(ctx context.Context, p *workspace.Pane, req SendReq, text 
 		from = "user"
 	}
 	m := &workspace.Menu{
-		Title: i18n.T("bus.confirm_title", from, req.From, string(p.Agent), p.ID),
+		// tmux cuts a menu title to the width of the items, so the details
+		// are item lines.
+		Title: i18n.T("bus.confirm_menu"),
 		Items: []workspace.MenuItem{
+			{Name: i18n.T("bus.confirm_title", from, req.From, string(p.Agent), p.ID), Disabled: true},
 			{Name: clean.OneLine(req.Msg, 60), Disabled: true},
 			workspace.Separator(),
 			{Name: i18n.T("bus.deliver"), Key: "y", Cmd: b.W.UICommand(deliver...)},

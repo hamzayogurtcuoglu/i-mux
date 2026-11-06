@@ -78,7 +78,7 @@ func TestSendConfirmAndDeliver(t *testing.T) {
 	if err != nil || res.Pending == "" {
 		t.Fatalf("confirm: %+v %v", res, err)
 	}
-	if f.has("paste-buffer") || !f.has("display-menu") || !f.has("Message from claude %1 to gemini %2") {
+	if f.has("paste-buffer") || !f.has("display-menu") || !f.has("From claude %1 to gemini %2:") {
 		t.Fatalf("confirm should ask, not paste: %q", f.calls)
 	}
 	b2, err := os.ReadFile(res.Pending)
