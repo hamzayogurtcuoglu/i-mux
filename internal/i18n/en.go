@@ -116,6 +116,13 @@ var en = map[string]string{
 	// watcher
 	"watch.running":     "watcher running (pid %d)",
 	"watch.not_running": "watcher not running",
+	"watch.ask_title":   "%s hit its limit%s: continue in …",
+	"watch.ask_item":    "%s (with context)",
+	"watch.dismiss":     "Dismiss",
+	"watch.resets":      "(resets %s)",
+	"watch.auto":        "%s hit its limit%s: switching to %s",
+	"watch.off":         "%s hit its limit%s",
+	"watch.all_limited": "%s hit its limit, and every other agent is limited too",
 
 	// config command
 	"config.exists":      "%s already exists (use --force to overwrite)",

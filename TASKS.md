@@ -333,7 +333,7 @@ Earliest standalone value: works without tmux (F5).
   - Batched list and capture, hash skip, ANSI strip, grace, seen-set, cooldown, idle back-off when detached.
   - AC: unit tests with a fake tmux runner assert ≤ 2 execs per tick and 0 captures when no client is attached.
   - AC: grace, seen and cooldown behave as in §10.
-- [ ] **T3.5 Actions (`ask` / `auto` / `off`)** · M · deps: T3.4, T2.6, T2.8
+- [x] **T3.5 Actions (`ask` / `auto` / `off`)** · M · deps: T3.4, T2.6, T2.8
   - AC: `ask` shows `display-menu` on the right client (the one showing the session, else the most recently
     active one) with a title containing the reset time.
   - AC: `auto` picks the first installed, non-limited agent in `order`.

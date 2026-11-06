@@ -165,13 +165,28 @@ func flock(f *os.File, how int) error {
 	}
 }
 
-// ActiveLimit returns the agent's limit if it is still in effect.
+// Blocking reports whether the limit stops the agent (a "warn" record is
+// only shown in the status bar).
+func (l *Limit) Blocking() bool { return l != nil && l.Severity != "warn" }
+
+// ActiveLimit returns the agent's blocking limit if it is still in effect.
 func (s *State) ActiveLimit(agent string, now time.Time) *Limit {
 	if s == nil {
 		return nil
 	}
 	l := s.Limits[agent]
-	if l.Active(now) {
+	if l.Active(now) && l.Blocking() {
+		return l
+	}
+	return nil
+}
+
+// ActiveRecord returns the agent's limit or warning if still in effect.
+func (s *State) ActiveRecord(agent string, now time.Time) *Limit {
+	if s == nil {
+		return nil
+	}
+	if l := s.Limits[agent]; l.Active(now) {
 		return l
 	}
 	return nil

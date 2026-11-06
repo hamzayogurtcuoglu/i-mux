@@ -66,6 +66,9 @@ func (w *WS) Show(ctx context.Context, m *Menu, client, pane string) error {
 // ui returns the tmux command that runs ajan silently with args.
 func (w *WS) ui(args ...string) string { return tmux.RunShell(w.Self, args...) }
 
+// UICommand is ui for other packages (the watcher's prompts).
+func (w *WS) UICommand(args ...string) string { return w.ui(args...) }
+
 // uiTarget returns the --pane/--client arguments.
 func uiTarget(pane, client string) []string {
 	a := []string{"--pane", pane}

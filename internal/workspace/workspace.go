@@ -160,6 +160,10 @@ func (w *WS) State() *state.State {
 	return w.st
 }
 
+// Refresh drops the per-invocation caches (state and binaries); the
+// long-running watcher calls it before each use.
+func (w *WS) Refresh() { w.st, w.bins = nil, nil }
+
 // SetBins replaces the resolved agent binaries (after a cache refresh).
 func (w *WS) SetBins(b map[session.AgentID]agent.Resolved) { w.bins = b }
 

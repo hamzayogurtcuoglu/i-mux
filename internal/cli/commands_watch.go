@@ -33,7 +33,13 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	if err != nil {
 		return nil, nil, err
 	}
-	return &watch.Detector{T: tc, Patterns: set, Cfg: cfg.Limits, Now: time.Now, Log: logger}, tc, nil
+	w, err := workspace.New(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	w.T = tc
+	actor := &watch.Actor{W: w, Log: logger}
+	return &watch.Detector{T: tc, Patterns: set, Cfg: cfg.Limits, Now: time.Now, Log: logger, OnEvent: actor.OnEvent}, tc, nil
 }
 
 func runWatch(e *Env, args []string) error {
