@@ -26,6 +26,7 @@ var en = map[string]string{
 	"cmd.split":    "Open a new pane with an agent in the same directory.",
 	"cmd.pick":     "Open the session picker on the attached client.",
 	"cmd.doctor":   "Check tmux, the agent CLIs and ~/.ajan; print key hints.",
+	"cmd.limits":   "Show detected limits and local usage of each agent.",
 
 	// workspace: start / attach / ls
 	"start.no_agent":       "no agent CLI is installed. Install one of:\n%s",
@@ -123,6 +124,24 @@ var en = map[string]string{
 	"watch.auto":        "%s hit its limit%s: switching to %s",
 	"watch.off":         "%s hit its limit%s",
 	"watch.all_limited": "%s hit its limit, and every other agent is limited too",
+
+	// limits panel
+	"limits.header":          "AGENT\tSTATUS\tUSAGE (local data)",
+	"limits.seen":            "\"%s\" (seen %s)",
+	"limits.footer":          "Usage is counted from local session files. For exact plan percentages, see CodexBar (brew install --cask codexbar).",
+	"limits.not_installed":   "not installed",
+	"limits.limited_until":   "limited until %s",
+	"limits.approaching":     "approaching a limit",
+	"limits.ok":              "ok",
+	"limits.tokens":          "%s in / %s out",
+	"limits.cache":           "%s cache read",
+	"limits.claude":          "last 5 h: %d replies",
+	"limits.gemini":          "today: %d requests",
+	"limits.copilot":         "this month: %s premium requests",
+	"limits.codex_na":        "rate limits: n/a (update Codex)",
+	"limits.codex_primary":   "5 h window %.0f%% used (resets %s)",
+	"limits.codex_secondary": "weekly %.0f%% used (resets %s)",
+	"limits.press_enter":     "Press Enter to close.",
 
 	// config command
 	"config.exists":      "%s already exists (use --force to overwrite)",

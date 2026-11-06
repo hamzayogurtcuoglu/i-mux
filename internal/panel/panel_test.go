@@ -2,14 +2,18 @@ package panel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session/gemini"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
@@ -95,5 +99,64 @@ func TestCodexLimits(t *testing.T) {
 	rl := CodexLimits(context.Background(), f)
 	if rl == nil || rl.PrimaryUsedPercent != 42.5 || rl.PrimaryResetsAt.IsZero() {
 		t.Fatalf("rate limits %+v", rl)
+	}
+}
+
+func TestReportTableAndJSON(t *testing.T) {
+	h := testutil.Isolate(t)
+	loc := time.Local
+	time.Local = time.UTC
+	t.Cleanup(func() { time.Local = loc })
+	now := testutil.FrozenTime
+	geminiChat(t, h, h.Project, "aaaaaaaa-1", now.Add(-time.Hour), 2)
+	reset := now.Add(28 * time.Minute)
+	st := &state.State{Limits: map[string]*state.Limit{
+		"claude": {At: now.Add(-12 * time.Minute), Text: "5-hour limit reached ∙ resets 3pm", ResetAt: reset, ExpiresAt: reset, Source: "screen", Pane: "%1", Severity: "limit"},
+		"codex":  {At: now, ExpiresAt: now.Add(time.Hour), Severity: "warn", Text: "approaching"},
+	}}
+	installed := func(id session.AgentID) bool { return id != "copilot" }
+	rep := Collect(context.Background(), config.Default(), st, installed, now)
+	var b strings.Builder
+	if err := rep.Table(&b); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	for _, want := range []string{
+		"AGENT", "Claude", "⛔ limited until 15:00", `"5-hour limit reached ∙ resets 3pm" (seen 12 min ago)`,
+		"Gemini", "● ok", "today: 2 requests · 200 in / 20 out · 10 cache read",
+		"Copilot", "not installed", "this month: 0 premium requests",
+		"Codex", "◐ approaching a limit", "rate limits: n/a (update Codex)",
+		"CodexBar (brew install --cask codexbar)",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("table lacks %q:\n%s", want, out)
+		}
+	}
+	b.Reset()
+	if err := rep.JSON(&b); err != nil {
+		t.Fatal(err)
+	}
+	var back struct {
+		Agents []struct {
+			Agent  string `json:"agent"`
+			Status string `json:"status"`
+			Limit  *struct {
+				Severity string `json:"severity"`
+			} `json:"limit"`
+			Usage struct {
+				Window  string `json:"window"`
+				Replies int    `json:"replies"`
+			} `json:"usage"`
+		} `json:"agents"`
+	}
+	if err := json.Unmarshal([]byte(b.String()), &back); err != nil {
+		t.Fatal(err)
+	}
+	if len(back.Agents) != 4 || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
+		back.Agents[1].Usage.Window != "today" || back.Agents[1].Usage.Replies != 2 || back.Agents[3].Status != "warn" {
+		t.Fatalf("json %+v\n%s", back, b.String())
+	}
+	if short(812) != "812" || short(34500) != "34.5K" || short(2_000_000) != "2M" {
+		t.Fatal("short")
 	}
 }

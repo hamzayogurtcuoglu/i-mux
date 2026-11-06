@@ -107,8 +107,9 @@ func TestMenuItemsByKey(t *testing.T) {
 	c.Write("q") // quit less; the popup closes
 	time.Sleep(200 * time.Millisecond)
 
-	// Limits: coming soon until M4.
+	// Limits: the panel in a popup.
 	mark = open()
 	c.Write("l")
-	c.waitScreenAfter(h, mark, "limits panel", 5*time.Second)
+	c.waitScreenAfter(h, mark, "USAGE (local data)", 5*time.Second)
+	c.Write("q")
 }

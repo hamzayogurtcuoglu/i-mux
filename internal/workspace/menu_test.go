@@ -40,7 +40,7 @@ func TestPaneMenuDisplayMenuArgs(t *testing.T) {
 		"New pane → Claude\x00C\x00run-shell -b '/opt/ajan/bin/ajan split claude -h --pane %3",
 		"New pane → Gemini\x00G\x00",
 		"Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/ajan/bin/ajan handoff --pane %3 --print 2>&1 | less -R'",
-		"Limits\x00l\x00display-message 'The limits panel is coming soon'",
+		"Limits\x00l\x00display-popup -E -w 80% -h 60% '/opt/ajan/bin/ajan limits --pager'",
 		"Close pane\x00k\x00kill-pane -t %3",
 	}
 	pos := 0

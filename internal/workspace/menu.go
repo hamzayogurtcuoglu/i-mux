@@ -164,8 +164,8 @@ func (w *WS) previewCmd(p *Pane, from string) string {
 	return c + " " + tmux.Quote(sh)
 }
 
-// limitsPanel is set once `ajan limits` exists (M4).
-var limitsPanel = false
+// limitsPanel: `ajan limits` exists (M4); false shows "coming soon".
+var limitsPanel = true
 
 // limitsCmd opens the limits panel; until M4 it says it is coming.
 func (w *WS) limitsCmd() string {
