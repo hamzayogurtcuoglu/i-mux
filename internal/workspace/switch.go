@@ -245,10 +245,16 @@ func shellSource(p *Pane) *Pane {
 }
 
 // recordSource stores the discovered session in the run's trail entry so that
-// other panes never claim it.
+// other panes never claim it (for a resumed run, the session it actually
+// wrote to, whether the CLI appended or forked).
 func recordSource(t Trail, ref session.Ref) Trail {
 	out := append(Trail{}, t...)
 	if l := out.Last(); l != nil && l.Agent == ref.Agent {
+		if l.Resumed {
+			// The session actually written to (a fork has a new id).
+			l.File, l.SessionID = ref.Path, ref.ID
+			return out
+		}
 		if l.File == "" {
 			l.File = ref.Path
 		}

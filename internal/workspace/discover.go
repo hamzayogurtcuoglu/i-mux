@@ -35,6 +35,14 @@ func (w *WS) Discover(ctx context.Context, f *sources.Finder, p *Pane, all []*Pa
 	if prov == nil {
 		return session.Ref{}, sources.ErrNotFound
 	}
+	if cur.Resumed && cur.File == "" {
+		// A resumed CLI either appends to the session it resumed or forks
+		// a new one (T6.4): a session of this agent that started during
+		// this run, and that no other trail claims, is the fork.
+		if ref, ok := w.forkOf(ctx, prov, p, cur, all); ok {
+			return ref, nil
+		}
+	}
 	if cur.File != "" {
 		if fi, err := os.Stat(cur.File); err == nil {
 			if cur.SessionID != "" {
@@ -137,4 +145,36 @@ func (w *WS) Discover(ctx context.Context, f *sources.Finder, p *Pane, all []*Pa
 		}
 	}
 	return session.Ref{}, sources.ErrNotFound
+}
+
+// forkOf looks for a new session started by a resumed run: same agent and
+// directory, a different id, started (or, without a start time, written)
+// after the run began, and not claimed by any trail entry.
+func (w *WS) forkOf(ctx context.Context, prov session.Provider, p *Pane, cur *TrailEntry, all []*Pane) (session.Ref, bool) {
+	start := cur.StartTime().Add(-discoverSlack)
+	refs, err := prov.Find(ctx, session.Query{CWD: p.CWD, Since: start})
+	if err != nil {
+		return session.Ref{}, false
+	}
+	claimed := map[string]bool{cur.SessionID: true}
+	for _, q := range all {
+		for _, e := range q.Trail {
+			if e.Agent == cur.Agent && e.SessionID != "" {
+				claimed[e.SessionID] = true
+			}
+		}
+	}
+	for _, r := range refs {
+		if claimed[r.ID] {
+			continue
+		}
+		t := r.StartedAt
+		if t.IsZero() {
+			t = r.UpdatedAt
+		}
+		if !t.Before(start) {
+			return r, true
+		}
+	}
+	return session.Ref{}, false
 }

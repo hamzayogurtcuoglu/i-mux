@@ -414,7 +414,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: the resume is chosen only when the trail has the agent with an id, the same cwd and an existing file.
   - AC: the fallback spec (full handoff, new session) is written to `@ajan_fallback`.
   - AC: `--no-resume` and per-agent `resume = false` disable it.
-- [ ] **T6.4 Post-resume session discovery** · S · deps: T6.3
+- [x] **T6.4 Post-resume session discovery** · S · deps: T6.3
   - AC: the trail entry records the session that is actually written to, whether the CLI appends or forks.
 - [ ] **T6.5 M6 e2e** · M · deps: T6.3, T6.4
   - AC: fake claude → fake gemini → fake claude gives argv `--resume <id> "<delta>"`, and the delta contains only gemini's part.
