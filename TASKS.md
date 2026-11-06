@@ -425,7 +425,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
 - [x] **T7.1 GoReleaser config** · M · deps: T0.2
   - AC: `CGO_ENABLED=0`, darwin/linux × amd64/arm64, `-trimpath -s -w`, version ldflags, tar.gz archives and `checksums.txt`.
   - AC: `goreleaser release --snapshot --clean` works locally and in CI.
-- [ ] **T7.2 Release workflow** · S · deps: T7.1, T0.8
+- [x] **T7.2 Release workflow** · S · deps: T7.1, T0.8
   - AC: a `v*` tag publishes a GitHub release with the artifacts.
 - [ ] **T7.3 `install.sh`** · M · deps: T7.2
   - AC: detects OS and arch, downloads the release, verifies sha256, and installs to `~/.local/bin`
