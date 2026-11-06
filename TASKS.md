@@ -329,7 +329,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: the watcher exits 0 when the ajan server is gone.
   - AC: `watch.log` rotates at 1 MB.
   - AC: e2e: killing the server ends the watcher within one tick; a second `ensure` does not start a second watcher.
-- [ ] **T3.4 Tick and detector** · M · deps: T3.1, T3.3
+- [x] **T3.4 Tick and detector** · M · deps: T3.1, T3.3
   - Batched list and capture, hash skip, ANSI strip, grace, seen-set, cooldown, idle back-off when detached.
   - AC: unit tests with a fake tmux runner assert ≤ 2 execs per tick and 0 captures when no client is attached.
   - AC: grace, seen and cooldown behave as in §10.

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/limits"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
@@ -28,7 +29,11 @@ func init() {
 // newTicker builds the watcher's per-tick work from the config.
 var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmux.Client, error) {
 	tc := tmux.New(paths.TmuxConf())
-	return watch.PresenceTicker{T: tc}, tc, nil
+	set, err := limits.Compile(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &watch.Detector{T: tc, Patterns: set, Cfg: cfg.Limits, Now: time.Now, Log: logger}, tc, nil
 }
 
 func runWatch(e *Env, args []string) error {
