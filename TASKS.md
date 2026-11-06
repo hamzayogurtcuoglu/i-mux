@@ -427,7 +427,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: `goreleaser release --snapshot --clean` works locally and in CI.
 - [x] **T7.2 Release workflow** · S · deps: T7.1, T0.8
   - AC: a `v*` tag publishes a GitHub release with the artifacts.
-- [ ] **T7.3 `install.sh`** · M · deps: T7.2
+- [x] **T7.3 `install.sh`** · M · deps: T7.2
   - AC: detects OS and arch, downloads the release, verifies sha256, and installs to `~/.local/bin`
     (or `--prefix`), with a PATH hint.
   - AC: if tmux is missing, it offers to install it via brew / apt / dnf / pacman / apk, with confirmation (`--yes` to skip).

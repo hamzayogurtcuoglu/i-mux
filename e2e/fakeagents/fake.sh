@@ -49,7 +49,7 @@ uuid() {
 	if [ -r /proc/sys/kernel/random/uuid ]; then
 		cat /proc/sys/kernel/random/uuid
 	elif command -v uuidgen >/dev/null 2>&1; then
-		uuidgen | tr 'A-Z' 'a-z'
+		uuidgen | tr '[:upper:]' '[:lower:]'
 	else
 		od -An -N16 -tx1 /dev/urandom | tr -d ' \n' |
 			sed 's/^\(........\)\(....\)\(....\)\(....\)\(............\).*/\1-\2-\3-\4-\5/'

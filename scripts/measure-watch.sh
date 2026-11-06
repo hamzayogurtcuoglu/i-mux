@@ -29,7 +29,7 @@ trap cleanup EXIT INT TERM
 
 export HOME="$tmp/home" AJAN_HOME="$tmp/home/.ajan" AJAN_TMUX_SOCKET="$SOCK"
 export CLAUDE_CONFIG_DIR="$HOME/.claude" CODEX_HOME="$HOME/.codex" COPILOT_HOME="$HOME/.copilot"
-export AJAN_FAKE_LOG="$tmp/log" AJAN_TMUX_RECORD="$tmp/record.jsonl" TMUX= TMUX_PANE=
+export AJAN_FAKE_LOG="$tmp/log" AJAN_TMUX_RECORD="$tmp/record.jsonl" TMUX='' TMUX_PANE=
 mkdir -p "$HOME/proj" "$AJAN_HOME" "$AJAN_FAKE_LOG" "$tmp/fake"
 cp e2e/fakeagents/* "$tmp/fake/"
 chmod +x "$tmp/fake/"*
@@ -39,6 +39,7 @@ chmod +x "$tmp/fake/"*
 	done
 } >"$AJAN_HOME/config.toml"
 # Claude and Gemini redraw a spinner line five times a second.
+# shellcheck disable=SC2016 # expanded by the fake agent, not here
 spin='while :; do for c in a b c d; do printf "\r%s working %s" "$c" "$(date +%S)"; sleep 0.2; done; done'
 echo "$spin" >"$AJAN_FAKE_LOG/claude.sh"
 echo "$spin" >"$AJAN_FAKE_LOG/gemini.sh"
@@ -66,7 +67,10 @@ done
 "$BIN" __watch ensure
 sleep 1
 pid=$(cat "$AJAN_HOME/watch.pid")
-[ -n "$pid" ] && kill -0 "$pid" || { echo "watcher not running" >&2; exit 1; }
+if [ -z "$pid" ] || ! kill -0 "$pid"; then
+	echo "watcher not running" >&2
+	exit 1
+fi
 
 hz=$(getconf CLK_TCK 2>/dev/null || echo 100)
 cputicks() { # utime+stime in clock ticks (Linux), or ps cputime in seconds*hz
