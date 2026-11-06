@@ -49,6 +49,7 @@ var en = map[string]string{
 	"switch.done":          "Switched to %s · %s chars of context",
 	"switch.fresh":         "Started %s (no earlier conversation in this pane)",
 	"switch.resumed":       "Resumed the %s conversation",
+	"switch.resumed_delta": "Resumed %s · %s chars of what happened elsewhere",
 	"switch.warnings":      "%d parser warnings",
 	"switch.reconstructed": "no session file found: context reconstructed from the screen",
 	"switch.busy":          "A switch of this pane is already in progress",

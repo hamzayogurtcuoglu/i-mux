@@ -410,7 +410,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
 - [x] **T6.2 Delta builder over multi-hop trails** · M · deps: T1.12, T2.5
   - AC: for a trail `A → B → C → A`, the delta concatenates B and C entries after A's end.
   - AC: the delta budget applies. An empty delta means resume without a prompt.
-- [ ] **T6.3 Resume launch path** · M · deps: T6.1, T6.2, T2.10
+- [x] **T6.3 Resume launch path** · M · deps: T6.1, T6.2, T2.10
   - AC: the resume is chosen only when the trail has the agent with an id, the same cwd and an existing file.
   - AC: the fallback spec (full handoff, new session) is written to `@ajan_fallback`.
   - AC: `--no-resume` and per-agent `resume = false` disable it.

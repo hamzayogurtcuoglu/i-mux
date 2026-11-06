@@ -95,6 +95,8 @@ func runSwitch(e *Env, args []string) error {
 		fmt.Fprintf(e.Stderr, "ajan: %s\n", i18n.T("cli.warning", wn))
 	}
 	switch {
+	case res.Resumed && res.Delta:
+		fmt.Fprintln(e.Stdout, i18n.T("switch.resumed_delta", session.ShortName(to), clean.Thousands(res.Runes)))
 	case res.Resumed:
 		fmt.Fprintln(e.Stdout, i18n.T("switch.resumed", session.ShortName(to)))
 	case res.Fresh:

@@ -90,6 +90,7 @@ type SwitchResult struct {
 	Fresh    bool // no previous conversation: started without context
 	Resumed  bool // a picked conversation continued natively in its own agent
 	Pasted   bool // the handoff was pasted into the agent (inject = "paste")
+	Delta    bool // Resumed with a delta handoff of what happened elsewhere
 	// Reconstructed: no session file; the context came from the scrollback.
 	Reconstructed bool
 	Warnings      []string
@@ -167,6 +168,41 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	} else if !native {
 		res.Fresh = true
 	}
+	// Returning to an agent that already ran in this pane resumes its session
+	// natively with a delta handoff; the full handoff becomes the fallback
+	// for a resume that fails fast (§8.6, §9.5).
+	fallback := ""
+	if !native && !req.NoResume && !req.NewPane && req.From == nil {
+		if r, ok := w.FindResumable(ctx, f, p, req.To); ok {
+			var cur *session.Ref
+			if built != nil && built.Ref.Path != "" {
+				cur = &built.Ref
+			}
+			delta, _, err := w.BuildDelta(ctx, f, p, r, req.To, cur)
+			if err != nil {
+				return nil, err
+			}
+			if built != nil {
+				spec, _, err := w.Spec(Launch{Agent: req.To, CWD: p.CWD, Prompt: built.Doc.Text, Handoff: res.Handoff, Pane: p.ID})
+				if err != nil {
+					return nil, err
+				}
+				if fallback, err = writeSpec(spec); err != nil {
+					return nil, err
+				}
+			}
+			l.ResumeID, l.Prompt, l.Handoff = r.Ref.ID, "", ""
+			res.Resumed, res.Fresh, res.Runes = true, false, 0
+			if delta != nil {
+				path, err := handoff.Save(delta.Text, res.From, req.To, w.Now())
+				if err != nil {
+					return nil, err
+				}
+				l.Prompt, l.Handoff = delta.Text, path
+				res.Handoff, res.Runes, res.Delta = path, delta.Runes, true
+			}
+		}
+	}
 	target := p.ID
 	if req.NewPane {
 		l.Pane = ""
@@ -177,7 +213,10 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 			return nil, err
 		}
 		target, res.Pane = np, np
-	} else if err := w.respawn(ctx, p, l, trail); err != nil {
+	} else if err := w.respawn(ctx, p, l, trail, fallback); err != nil {
+		if fallback != "" {
+			os.Remove(fallback)
+		}
 		return nil, err
 	}
 	w.notifySwitch(ctx, req.Client, target, res)
@@ -221,7 +260,9 @@ func recordSource(t Trail, ref session.Ref) Trail {
 }
 
 // respawn replaces the pane's process with run l and updates its options.
-func (w *WS) respawn(ctx context.Context, p *Pane, l Launch, trail Trail) error {
+// fallback (a spec file) becomes @ajan_fallback in the same exec, so a run
+// that dies at once cannot race it; "" clears it.
+func (w *WS) respawn(ctx context.Context, p *Pane, l Launch, trail Trail, fallback string) error {
 	spec, te, err := w.Spec(l)
 	if err != nil {
 		return err
@@ -233,7 +274,11 @@ func (w *WS) respawn(ctx context.Context, p *Pane, l Launch, trail Trail) error 
 	trail = trail.Push(te, w.Now())
 	cmds := []tmux.Cmd{append(tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", l.CWD}, w.execCmd(specPath)...)}
 	cmds = append(cmds, optCmds(p.ID, te, trail, l.CWD, w.Label(l.Agent))...)
-	cmds = append(cmds, tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, OptFallback})
+	if fallback != "" {
+		cmds = append(cmds, tmux.Cmd{"set-option", "-p", "-t", p.ID, OptFallback, fallback})
+	} else {
+		cmds = append(cmds, tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, OptFallback})
+	}
 	if _, err := w.T.Run(ctx, cmds...); err != nil {
 		os.Remove(specPath)
 		return err
@@ -246,6 +291,8 @@ func (w *WS) respawn(ctx context.Context, p *Pane, l Launch, trail Trail) error 
 func (w *WS) notifySwitch(ctx context.Context, client, pane string, r *SwitchResult) {
 	var msg string
 	switch {
+	case r.Resumed && r.Delta:
+		msg = i18n.T("switch.resumed_delta", session.ShortName(r.To), clean.Thousands(r.Runes))
 	case r.Resumed:
 		msg = i18n.T("switch.resumed", session.ShortName(r.To))
 	case r.Fresh:
