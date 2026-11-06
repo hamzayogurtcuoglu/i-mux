@@ -29,7 +29,7 @@ n=1
 while ! (set -C; : >"$log/$agent-$n.argv") 2>/dev/null; do
 	n=$((n + 1))
 done
-printf '%s\0' "$@" >"$log/$agent-$n.argv"
+[ $# -eq 0 ] || printf '%s\0' "$@" >"$log/$agent-$n.argv"
 {
 	echo "AJAN_PANE=${AJAN_PANE:-}"
 	echo "AJAN_AGENT=${AJAN_AGENT:-}"

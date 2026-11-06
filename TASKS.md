@@ -242,7 +242,7 @@ Earliest standalone value: works without tmux (F5).
     failure leaves the old agent running.
   - AC: options and trail are updated, and a `display-message` reports the result.
   - AC: e2e: fake claude → fake gemini; the gemini argv contains the handoff with the marker and the expected sections.
-- [ ] **T2.7 `inject = "paste"` mode** · S · deps: T2.6
+- [x] **T2.7 `inject = "paste"` mode** · S · deps: T2.6
   - AC: waits for the screen to be stable (1.5 s, max 20 s), then `load-buffer` + `paste-buffer -p -d` + Enter.
   - AC: e2e: the fake agent reading stdin receives the full document.
   - AC: the prompt does not appear in argv.

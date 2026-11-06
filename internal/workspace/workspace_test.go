@@ -230,3 +230,24 @@ func TestPaneParsing(t *testing.T) {
 		t.Fatalf("mismatched id: %v", err)
 	}
 }
+
+func TestPasteModeKeepsPromptOutOfArgv(t *testing.T) {
+	w, _, h := testWS(t)
+	w.Cfg.Handoff.Inject = "paste"
+	s, _, err := w.Spec(Launch{Agent: "gemini", CWD: h.Project, Prompt: "the handoff"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Args) != 0 {
+		t.Fatalf("paste mode argv %q", s.Args)
+	}
+	if !w.pasteMode(Launch{Agent: "gemini", Prompt: "x"}) || w.pasteMode(Launch{Agent: "gemini"}) {
+		t.Fatal("pasteMode")
+	}
+	// An agent whose template has no {prompt} slot always gets a paste.
+	w.Cfg.Handoff.Inject = "argv"
+	w.Cfg.Agents["gemini"].NewArgs = []string{"--interactive"}
+	if !w.pasteMode(Launch{Agent: "gemini", Prompt: "x"}) {
+		t.Fatal("no prompt slot should paste")
+	}
+}

@@ -260,6 +260,9 @@ func (w *WS) Spec(l Launch) (*launch.Spec, TrailEntry, error) {
 	ac := w.Cfg.Agent(string(l.Agent))
 	tpl := ac.NewArgs
 	vars := agent.Vars{Prompt: l.Prompt, UUID: agent.NewUUID()}
+	if w.pasteMode(l) {
+		vars.Prompt = "" // pasted after start (paste.go)
+	}
 	if l.ResumeID != "" {
 		tpl, vars.ID = ac.ResumeArgs, l.ResumeID
 	}

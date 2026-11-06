@@ -86,6 +86,7 @@ type SwitchResult struct {
 	Runes    int
 	Fresh    bool // no previous conversation: started without context
 	Resumed  bool // a picked conversation continued natively in its own agent
+	Pasted   bool // the handoff was pasted into the agent (inject = "paste")
 	Warnings []string
 }
 
@@ -162,6 +163,15 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 		return nil, err
 	}
 	w.notifySwitch(ctx, req.Client, p.ID, res)
+	if w.pasteMode(l) {
+		res.Pasted = true
+		if err := w.WaitStable(ctx, p.ID); err != nil {
+			return res, err
+		}
+		if err := w.Paste(ctx, p.ID, l.Prompt, true); err != nil {
+			return res, err
+		}
+	}
 	return res, nil
 }
 

@@ -92,13 +92,25 @@ type Vars struct {
 }
 
 // Expand replaces placeholders in a launch template. An argument that is
-// exactly "{prompt}" (or "{id}") is dropped when the value is empty, so a
-// resume without a delta passes no empty argument. Values are inserted
-// verbatim: argv never goes through a shell.
+// exactly "{prompt}" (or "{id}", "{uuid}") is dropped when the value is
+// empty, together with the flag right before it ("-i {prompt}" without a
+// prompt passes nothing), so a launch without a prompt passes no empty or
+// dangling argument. "--flag={prompt}" is dropped likewise. Values are
+// inserted verbatim: argv never goes through a shell.
 func Expand(tpl []string, v Vars) []string {
+	empty := func(a string) bool {
+		return (a == "{prompt}" && v.Prompt == "") || (a == "{id}" && v.ID == "") || (a == "{uuid}" && v.UUID == "")
+	}
 	out := make([]string, 0, len(tpl))
-	for _, a := range tpl {
-		if (a == "{prompt}" && v.Prompt == "") || (a == "{id}" && v.ID == "") || (a == "{uuid}" && v.UUID == "") {
+	for i, a := range tpl {
+		if empty(a) {
+			if i > 0 && len(out) > 0 && strings.HasPrefix(tpl[i-1], "-") && !strings.Contains(tpl[i-1], "{") &&
+				!strings.Contains(tpl[i-1], "=") {
+				out = out[:len(out)-1] // the flag that introduced it
+			}
+			continue
+		}
+		if f, val, ok := strings.Cut(a, "="); ok && strings.HasPrefix(f, "-") && empty(val) {
 			continue
 		}
 		if !strings.Contains(a, "{") {

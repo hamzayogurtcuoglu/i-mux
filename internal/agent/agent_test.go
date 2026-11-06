@@ -28,7 +28,12 @@ func TestExpand(t *testing.T) {
 		{"gemini", []string{"--resume", "{id}", "-i", "{prompt}"}, Vars{ID: "g", Prompt: "p"}, []string{"--resume", "g", "-i", "p"}},
 		{"embedded", []string{"--prompt={prompt}", "--x"}, Vars{Prompt: "a b"}, []string{"--prompt=a b", "--x"}},
 		{"prompt has placeholders", []string{"{prompt}"}, Vars{Prompt: "{uuid} {id}", UUID: "U", ID: "I"}, []string{"{uuid} {id}"}},
-		{"no prompt", []string{"-i", "{prompt}"}, Vars{}, []string{"-i"}},
+		{"no prompt drops its flag", []string{"-i", "{prompt}"}, Vars{}, []string{}},
+		{"gemini resume, no delta", []string{"--resume", "{id}", "-i", "{prompt}"}, Vars{ID: "g"}, []string{"--resume", "g"}},
+		{"claude new, no prompt", []string{"--session-id", "{uuid}", "{prompt}"}, Vars{UUID: "u"}, []string{"--session-id", "u"}},
+		{"no id drops its flag", []string{"--resume", "{id}", "{prompt}"}, Vars{Prompt: "p"}, []string{"p"}},
+		{"embedded empty", []string{"--prompt={prompt}", "--x"}, Vars{}, []string{"--x"}},
+		{"codex resume", []string{"resume", "{id}", "{prompt}"}, Vars{ID: "c"}, []string{"resume", "c"}},
 	}
 	for _, c := range cases {
 		if got := Expand(c.tpl, c.v); !reflect.DeepEqual(got, c.want) {
