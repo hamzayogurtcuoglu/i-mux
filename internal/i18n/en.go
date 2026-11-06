@@ -11,12 +11,14 @@ var en = map[string]string{
 	"cli.warning":         "warning: %s",
 	"cli.unknown_agent":   "%s: unknown agent %q (known: %s)",
 	"cli.bad_reason":      "--reason must be manual or limit, not %q",
+	"cli.usage":           "usage: ajan %s",
 
 	// Command summaries
 	"cmd.version":  "Print version, commit and build date.",
 	"cmd.config":   "Write a commented default config, print its path, or print the effective config.",
 	"cmd.handoff":  "Build a handoff from an agent session; start the target agent here, or --print it.",
 	"cmd.sessions": "List agent sessions found for this directory.",
+	"cmd.internal": "Internal command (used by tmux bindings and hooks).",
 
 	// config command
 	"config.exists":      "%s already exists (use --force to overwrite)",

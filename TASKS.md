@@ -221,7 +221,7 @@ Earliest standalone value: works without tmux (F5).
     running server reloads via `source-file`.
   - AC: `tmux -L <test> -f <generated> start-server` loads without errors on CI tmux versions (≥ 3.2).
   - AC: the user's `tmux.local.conf` is sourced last.
-- [ ] **T2.3 `ajan __exec <spec>`** · S · deps: T1.13
+- [x] **T2.3 `ajan __exec <spec>`** · S · deps: T1.13
   - AC: the spec file is deleted after reading.
   - AC: `AJAN_PANE`, `AJAN_AGENT` and `PATH` are set.
   - AC: e2e: the fake agent receives byte-exact argv, including quotes, newlines, `$()`, backticks and Turkish text.
