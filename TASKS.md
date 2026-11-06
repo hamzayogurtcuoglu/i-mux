@@ -407,7 +407,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - Covers Q2 (Gemini `--resume <uuid> -i`), Q6 (Claude 2.x `--resume <id> "<prompt>"`, append vs
     fork), Q14 (Codex `resume <id> "<prompt>"`), Q3 (Copilot flags).
   - AC: the §7.5 template table is updated with the results.
-- [ ] **T6.2 Delta builder over multi-hop trails** · M · deps: T1.12, T2.5
+- [x] **T6.2 Delta builder over multi-hop trails** · M · deps: T1.12, T2.5
   - AC: for a trail `A → B → C → A`, the delta concatenates B and C entries after A's end.
   - AC: the delta budget applies. An empty delta means resume without a prompt.
 - [ ] **T6.3 Resume launch path** · M · deps: T6.1, T6.2, T2.10
