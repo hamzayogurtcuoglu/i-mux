@@ -20,14 +20,14 @@ func TestSwitchPasteMode(t *testing.T) {
 	pane := h.startSession("claude")
 	h.run("claude", 1)
 	start := time.Now()
-	h.mustAjan("switch", "gemini", "--pane", pane)
+	h.mustImux("switch", "gemini", "--pane", pane)
 	if d := time.Since(start); d < workspace.StableFor {
 		t.Fatalf("pasted after %v, before the screen was stable for %v", d, workspace.StableFor)
 	}
 	if argv := h.run("gemini", 1); len(argv) != 0 {
 		t.Fatalf("prompt leaked into argv: %.200q", argv)
 	}
-	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@ajan_trail}"))
+	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@imux_trail}"))
 	doc, err := os.ReadFile(trail.Last().Handoff)
 	if err != nil {
 		t.Fatal(err)
@@ -40,14 +40,14 @@ func TestSwitchPasteMode(t *testing.T) {
 		got = strings.TrimRight(string(b), "\n")
 		return got == want
 	})
-	if !strings.HasPrefix(got, "[ajan handoff · Claude Code → Gemini CLI") {
+	if !strings.HasPrefix(got, "[i-mux handoff · Claude Code → Gemini CLI") {
 		t.Fatalf("stdin %.200q", got)
 	}
 	// The paste file and the tmux buffer are gone.
-	if m, _ := filepath.Glob(filepath.Join(h.Homes.Ajan, "launch", "ajan-*.txt")); len(m) != 0 {
+	if m, _ := filepath.Glob(filepath.Join(h.Homes.Imux, "launch", "imux-*.txt")); len(m) != 0 {
 		t.Fatalf("paste files left: %v", m)
 	}
-	if out, _ := h.tmux("list-buffers", "-F", "#{buffer_name}"); strings.Contains(out, "ajan-") {
+	if out, _ := h.tmux("list-buffers", "-F", "#{buffer_name}"); strings.Contains(out, "imux-") {
 		t.Fatalf("buffer left: %s", out)
 	}
 }

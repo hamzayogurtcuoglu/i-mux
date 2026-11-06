@@ -170,7 +170,7 @@ func TestGoldenChained(t *testing.T) {
 	if !strings.Contains(third, "## Original request\nfix the login redirect bug") || !strings.Contains(third, "now document it") {
 		t.Fatal("chain of a chain lost history")
 	}
-	if strings.Count(third, "[ajan handoff ·") != 1 {
+	if strings.Count(third, "[i-mux handoff ·") != 1 {
 		t.Fatal("nested marker leaked into the document")
 	}
 }

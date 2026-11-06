@@ -15,7 +15,7 @@ func FileName(from, to session.AgentID, t time.Time) string {
 	return t.Format("20060102-150405") + "-" + string(from) + "-to-" + string(to) + ".md"
 }
 
-// Save writes the document to ~/.ajan/handoffs (dir 0700, file 0600) and
+// Save writes the document to ~/.imux/handoffs (dir 0700, file 0600) and
 // returns its path. An existing file with the same name gets a suffix.
 func Save(text string, from, to session.AgentID, t time.Time) (string, error) {
 	dir := paths.Handoffs()
@@ -44,7 +44,7 @@ func itoa(i int) string {
 }
 
 // Prune deletes handoffs older than keepDays. It runs at most once a day,
-// tracked by the mtime of ~/.ajan/.pruned. It reports whether it ran.
+// tracked by the mtime of ~/.imux/.pruned. It reports whether it ran.
 func Prune(keepDays int, now time.Time) bool {
 	if keepDays <= 0 {
 		return false

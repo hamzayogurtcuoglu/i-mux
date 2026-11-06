@@ -14,7 +14,7 @@ import (
 	"unsafe"
 )
 
-// Client is a terminal client (`tmux attach`, `ajan`) running on a pty of a
+// Client is a terminal client (`tmux attach`, `imux`) running on a pty of a
 // fixed size. Tests write key bytes and mouse sequences to it, exactly as a
 // terminal emulator would.
 type Client struct {

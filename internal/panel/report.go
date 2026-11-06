@@ -20,7 +20,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 )
 
-// Report is the limits panel. Its JSON form (`ajan limits --json`) is
+// Report is the limits panel. Its JSON form (`imux limits --json`) is
 // documented in docs/LIMITS.md; field names are stable.
 type Report struct {
 	GeneratedAt time.Time `json:"generated_at"`

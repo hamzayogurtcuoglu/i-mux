@@ -32,15 +32,15 @@ func TestPaneMenuDisplayMenuArgs(t *testing.T) {
 	got := strings.Join(args, "\x00")
 	until := reset.Local().Format("15:04")
 	wantSeq := []string{
-		"-c\x00/dev/pts/4\x00-t\x00%3\x00-T\x00ajan · Claude\x00-x\x00C\x00-y\x00C",
-		"Switch to Gemini (with context) (limited until " + until + ")\x00g\x00run-shell -b '/opt/ajan/bin/ajan switch gemini --pane %3 --client /dev/pts/4 >/dev/null 2>&1 || true'",
+		"-c\x00/dev/pts/4\x00-t\x00%3\x00-T\x00i-mux · Claude\x00-x\x00C\x00-y\x00C",
+		"Switch to Gemini (with context) (limited until " + until + ")\x00g\x00run-shell -b '/opt/imux/bin/imux switch gemini --pane %3 --client /dev/pts/4 >/dev/null 2>&1 || true'",
 		"-Switch to Copilot (with context) (not installed)\x00p\x00",
 		"-Switch to Codex (with context) (not installed)\x00x\x00",
-		"Sessions…\x00s\x00run-shell -b '/opt/ajan/bin/ajan __menu --sessions --pane %3 --client /dev/pts/4",
-		"New pane → Claude\x00C\x00run-shell -b '/opt/ajan/bin/ajan split claude -h --pane %3",
+		"Sessions…\x00s\x00run-shell -b '/opt/imux/bin/imux __menu --sessions --pane %3 --client /dev/pts/4",
+		"New pane → Claude\x00C\x00run-shell -b '/opt/imux/bin/imux split claude -h --pane %3",
 		"New pane → Gemini\x00G\x00",
-		"Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/ajan/bin/ajan handoff --pane %3 --print 2>&1 | less -R'",
-		"Limits\x00l\x00display-popup -E -w 80% -h 60% '/opt/ajan/bin/ajan limits --pager'",
+		"Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/imux/bin/imux handoff --pane %3 --print 2>&1 | less -R'",
+		"Limits\x00l\x00display-popup -E -w 80% -h 60% '/opt/imux/bin/imux limits --pager'",
 		"Close pane\x00k\x00kill-pane -t %3",
 	}
 	pos := 0
@@ -77,7 +77,7 @@ func TestPaneMenuLimitedCurrentAndShell(t *testing.T) {
 	}
 	// A plain shell pane offers to start agents; preview needs a trail.
 	m = w.PaneMenu(&Pane{ID: "%2"}, "")
-	if m.Title != "ajan · shell" || !strings.HasPrefix(m.Items[0].Name, "Start Claude here") {
+	if m.Title != "i-mux · shell" || !strings.HasPrefix(m.Items[0].Name, "Start Claude here") {
 		t.Fatalf("shell menu %+v", m)
 	}
 	for _, it := range m.Items {

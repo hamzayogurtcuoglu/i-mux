@@ -1,4 +1,4 @@
-// Command ajan is a lightweight tmux workspace that moves a conversation
+// Command imux is a lightweight tmux workspace that moves a conversation
 // between AI coding CLIs (Claude Code, Gemini CLI, Copilot CLI, Codex CLI).
 package main
 

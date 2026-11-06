@@ -1,11 +1,11 @@
-// Package tmux runs tmux commands on ajan's private socket (`tmux -L ajan`).
+// Package tmux runs tmux commands on imux's private socket (`tmux -L imux`).
 //
 // Several commands are batched into one exec with `;` separators, and their
 // output is split with delimiter lines (Sections). Failures are classified
 // into typed errors (no server, no session, no pane, no client).
 //
-// Setting AJAN_TMUX_RECORD=<file> appends every invocation to that file as one
-// JSON line; tests use it to assert which tmux commands ajan ran.
+// Setting IMUX_TMUX_RECORD=<file> appends every invocation to that file as one
+// JSON line; tests use it to assert which tmux commands imux ran.
 package tmux
 
 import (
@@ -25,7 +25,7 @@ import (
 )
 
 // DefaultSocket is the socket name used with `tmux -L`.
-const DefaultSocket = "ajan"
+const DefaultSocket = "imux"
 
 // Typed errors. Use errors.Is.
 var (
@@ -107,23 +107,23 @@ type Client struct {
 	Config  string // -f file used when the server starts; "" = tmux's default
 	Runner  Runner
 	Spawner Spawner       // for Spawn; nil = the Runner if it can, else exec
-	Record  string        // AJAN_TMUX_RECORD file; "" = off
+	Record  string        // IMUX_TMUX_RECORD file; "" = off
 	Timeout time.Duration // per exec; 0 = 5 s
 
 	recMu sync.Mutex
 }
 
-// Socket returns the socket name: $AJAN_TMUX_SOCKET or "ajan".
+// Socket returns the socket name: $IMUX_TMUX_SOCKET or "imux".
 func Socket() string {
-	if s := os.Getenv("AJAN_TMUX_SOCKET"); s != "" {
+	if s := os.Getenv("IMUX_TMUX_SOCKET"); s != "" {
 		return s
 	}
 	return DefaultSocket
 }
 
-// New returns a client for ajan's socket with config file conf.
+// New returns a client for imux's socket with config file conf.
 func New(conf string) *Client {
-	bin := os.Getenv("AJAN_TMUX_BIN")
+	bin := os.Getenv("IMUX_TMUX_BIN")
 	if bin == "" {
 		bin = "tmux"
 	}
@@ -132,7 +132,7 @@ func New(conf string) *Client {
 		Socket: Socket(),
 		Config: conf,
 		Runner: ExecRunner{},
-		Record: os.Getenv("AJAN_TMUX_RECORD"),
+		Record: os.Getenv("IMUX_TMUX_RECORD"),
 	}
 }
 
@@ -149,7 +149,7 @@ func (c *Client) BaseArgs() []string {
 // joined with ";" separators. It adds -u: without a UTF-8 locale (LANG unset,
 // as under launchd, cron or CI) tmux ≥ 3.5 prints tabs, control characters
 // and non-ASCII text in command output as "_", which breaks the tab-separated
-// rows ajan parses and the agents' screens the watcher reads.
+// rows imux parses and the agents' screens the watcher reads.
 func (c *Client) Argv(cmds ...Cmd) []string {
 	args := append(c.BaseArgs(), "-u")
 	for i, cmd := range cmds {
@@ -228,7 +228,7 @@ func (execSpawner) Spawn(bin string, args []string) error {
 
 // Spawn runs cmds in a tmux client that is not waited for. display-menu
 // blocks its client until the menu closes, so menus are opened this way and
-// ajan exits at once.
+// imux exits at once.
 func (c *Client) Spawn(cmds ...Cmd) error {
 	args := c.Argv(cmds...)
 	c.record(args)
@@ -322,11 +322,11 @@ func (c *Client) Inside(tmuxEnv string) bool {
 // --- output parsing --------------------------------------------------------
 
 // Delim starts a delimiter line printed between batched commands' output:
-// `display -p "\t\tajan:<key>"`. It starts with tabs because captured screen
+// `display -p "\t\timux:<key>"`. It starts with tabs because captured screen
 // text never contains a tab (tmux stores a tab as cursor movement), and tabs
 // pass through display-message unchanged; control characters such as \x1e
 // would not: tmux 3.4 prints them as octal escapes ("\036").
-const Delim = "\t\tajan:"
+const Delim = "\t\timux:"
 
 // DelimCmd returns the command that prints the delimiter line for key.
 // Keys are often pane ids ("%3"), so they are escaped for display-message.

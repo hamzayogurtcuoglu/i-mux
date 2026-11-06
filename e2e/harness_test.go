@@ -22,23 +22,23 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
 )
 
-// H is one isolated e2e environment: its own tmux socket, AJAN_HOME, fake
+// H is one isolated e2e environment: its own tmux socket, IMUX_HOME, fake
 // agent homes, fake agent log directory and tmux command recorder.
 type H struct {
 	t      *testing.T
-	Bin    string // ajan under test
+	Bin    string // imux under test
 	Homes  *testutil.Homes
 	Socket string
-	Log    string // AJAN_FAKE_LOG
+	Log    string // IMUX_FAKE_LOG
 	Fakes  string // e2e/fakeagents
-	Rec    string // AJAN_TMUX_RECORD
+	Rec    string // IMUX_TMUX_RECORD
 	Tmux   string // tmux binary
 }
 
 // newH sets up the environment. extraConfig is appended to config.toml.
 func newH(t *testing.T, extraConfig string) *H {
 	t.Helper()
-	bin := ajanBin(t)
+	bin := imuxBin(t)
 	tm, err := exec.LookPath("tmux")
 	if err != nil {
 		t.Skip("tmux not installed")
@@ -48,7 +48,7 @@ func newH(t *testing.T, extraConfig string) *H {
 	_, _ = rand.Read(r[:])
 	h := &H{
 		t: t, Bin: bin, Homes: homes, Tmux: tm,
-		Socket: "ajan-test-" + hex.EncodeToString(r[:]),
+		Socket: "imux-test-" + hex.EncodeToString(r[:]),
 		Log:    filepath.Join(homes.Root, "fakelog"),
 		Fakes:  stagedFakes,
 		Rec:    filepath.Join(homes.Root, "tmux-record.jsonl"),
@@ -56,9 +56,9 @@ func newH(t *testing.T, extraConfig string) *H {
 	if err := os.MkdirAll(h.Log, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("AJAN_TMUX_SOCKET", h.Socket)
-	t.Setenv("AJAN_TMUX_RECORD", h.Rec)
-	t.Setenv("AJAN_FAKE_LOG", h.Log)
+	t.Setenv("IMUX_TMUX_SOCKET", h.Socket)
+	t.Setenv("IMUX_TMUX_RECORD", h.Rec)
+	t.Setenv("IMUX_FAKE_LOG", h.Log)
 	t.Setenv("TMUX", "")
 	t.Setenv("TMUX_PANE", "")
 	t.Setenv("SHELL", "/bin/sh")
@@ -86,7 +86,7 @@ func newH(t *testing.T, extraConfig string) *H {
 		cfg.WriteString("[limits]\npoll_interval = \"200ms\"\nidle_interval = \"500ms\"\ngrace = \"0s\"\n\n")
 	}
 	cfg.WriteString(tables)
-	testutil.WriteFile(t, filepath.Join(homes.Ajan, "config.toml"), []byte(cfg.String()))
+	testutil.WriteFile(t, filepath.Join(homes.Imux, "config.toml"), []byte(cfg.String()))
 	t.Cleanup(func() {
 		failed := t.Failed()
 		if failed {
@@ -103,7 +103,7 @@ func newH(t *testing.T, extraConfig string) *H {
 	return h
 }
 
-// checkBins fails the test if ajan ever resolved an agent outside e2e/fakeagents.
+// checkBins fails the test if imux ever resolved an agent outside e2e/fakeagents.
 func (h *H) checkBins() {
 	st, err := state.Read()
 	if err != nil {
@@ -125,7 +125,7 @@ func (h *H) dumpLogs() {
 		b, _ := os.ReadFile(filepath.Join(h.Log, e.Name()))
 		h.t.Logf("--- %s ---\n%.2000s", e.Name(), b)
 	}
-	if b, err := os.ReadFile(filepath.Join(h.Homes.Ajan, "watch.log")); err == nil {
+	if b, err := os.ReadFile(filepath.Join(h.Homes.Imux, "watch.log")); err == nil {
 		h.t.Logf("--- watch.log ---\n%.4000s", b)
 	}
 }
@@ -133,7 +133,7 @@ func (h *H) dumpLogs() {
 // dumpPanes logs the state of every pane and the last tmux calls.
 func (h *H) dumpPanes() {
 	panes, _ := h.tmux("list-panes", "-a", "-F",
-		"#{pane_id} pid=#{pane_pid} dead=#{pane_dead} status=#{pane_dead_status} signal=#{pane_dead_signal} remain=#{remain-on-exit} cmd=#{pane_current_command} agent=#{@ajan_agent}")
+		"#{pane_id} pid=#{pane_pid} dead=#{pane_dead} status=#{pane_dead_status} signal=#{pane_dead_signal} remain=#{remain-on-exit} cmd=#{pane_current_command} agent=#{@imux_agent}")
 	h.t.Logf("--- panes ---\n%s", panes)
 	// The processes of this test (tmux server, pane processes, their
 	// children), to tell a zombie or stopped agent from a running one.
@@ -161,7 +161,7 @@ func (h *H) dumpPanes() {
 			h.t.Logf("--- tmux server %s ---\n%s", strings.TrimSpace(srv), out)
 		}
 	}
-	// The last tmux calls made through ajan by hooks and UI commands, with
+	// The last tmux calls made through imux by hooks and UI commands, with
 	// the pid that made them (not the watcher: it polls every tick).
 	_, watcher := watch.Status()
 	var recs []tmux.Recorded
@@ -268,14 +268,14 @@ func splitNUL(b []byte) []string {
 	return parts
 }
 
-// ajan runs the binary in the project directory.
-func (h *H) ajan(args ...string) (string, string, error) {
+// imux runs the binary in the project directory.
+func (h *H) imux(args ...string) (string, string, error) {
 	h.t.Helper()
-	return h.ajanEnv(nil, args...)
+	return h.imuxEnv(nil, args...)
 }
 
-// ajanEnv runs the binary with extra environment variables.
-func (h *H) ajanEnv(env []string, args ...string) (string, string, error) {
+// imuxEnv runs the binary with extra environment variables.
+func (h *H) imuxEnv(env []string, args ...string) (string, string, error) {
 	h.t.Helper()
 	cmd := exec.Command(h.Bin, args...)
 	cmd.Dir = h.Homes.Project
@@ -286,12 +286,12 @@ func (h *H) ajanEnv(env []string, args ...string) (string, string, error) {
 	return o.String(), e.String(), err
 }
 
-// mustAjan runs ajan and fails the test on error.
-func (h *H) mustAjan(args ...string) string {
+// mustImux runs imux and fails the test on error.
+func (h *H) mustImux(args ...string) string {
 	h.t.Helper()
-	out, errOut, err := h.ajan(args...)
+	out, errOut, err := h.imux(args...)
 	if err != nil {
-		h.t.Fatalf("ajan %s: %v\nstdout: %s\nstderr: %s", strings.Join(args, " "), err, out, errOut)
+		h.t.Fatalf("imux %s: %v\nstdout: %s\nstderr: %s", strings.Join(args, " "), err, out, errOut)
 	}
 	return out
 }
@@ -316,13 +316,13 @@ func (h *H) inside(pane string) []string {
 	return []string{"TMUX=" + sock + ",1,0", "TMUX_PANE=" + pane}
 }
 
-// newPane runs `ajan <agent>` inside pane (opens a window) and returns the
+// newPane runs `imux <agent>` inside pane (opens a window) and returns the
 // new pane's id.
 func (h *H) newPane(from, agent string) string {
 	h.t.Helper()
 	before := h.mustTmux("list-panes", "-a", "-F", "#{pane_id}")
-	if o, e, err := h.ajanEnv(h.inside(from), agent); err != nil {
-		h.t.Fatalf("ajan %s inside %s: %v\n%s%s", agent, from, err, o, e)
+	if o, e, err := h.imuxEnv(h.inside(from), agent); err != nil {
+		h.t.Fatalf("imux %s inside %s: %v\n%s%s", agent, from, err, o, e)
 	}
 	for _, p := range strings.Fields(h.mustTmux("list-panes", "-a", "-F", "#{pane_id}")) {
 		if !strings.Contains(before+"\n", p+"\n") {
@@ -333,10 +333,10 @@ func (h *H) newPane(from, agent string) string {
 	return ""
 }
 
-// startSession runs `ajan <agent> -d` and returns the first pane.
+// startSession runs `imux <agent> -d` and returns the first pane.
 func (h *H) startSession(agent string) string {
 	h.t.Helper()
-	h.mustAjan(agent, "-d")
+	h.mustImux(agent, "-d")
 	return strings.TrimSpace(h.mustTmux("list-panes", "-a", "-F", "#{pane_id}"))
 }
 
@@ -398,7 +398,7 @@ func (h *H) noRun(agent string, n int, d time.Duration) {
 	}
 }
 
-// waitQuiet waits (up to 5 s) until no ajan process started from the staged
+// waitQuiet waits (up to 5 s) until no imux process started from the staged
 // binary and no fake agent of this test is left: background commands run by
 // menus and hooks may still be finishing when a test ends.
 func (h *H) waitQuiet() {
@@ -418,7 +418,7 @@ func (h *H) capture(pane string) string {
 	return out
 }
 
-// control writes the fake agent's control script ($AJAN_FAKE_LOG/<agent>.sh).
+// control writes the fake agent's control script ($IMUX_FAKE_LOG/<agent>.sh).
 func (h *H) control(agent, script string) {
 	h.t.Helper()
 	testutil.WriteFile(h.t, filepath.Join(h.Log, agent+".sh"), []byte(script))

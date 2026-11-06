@@ -13,7 +13,7 @@ import (
 // a prompt, and fails without tmux.
 func TestDoctor(t *testing.T) {
 	h := newH(t, "")
-	out, errOut, err := h.ajan("doctor")
+	out, errOut, err := h.imux("doctor")
 	if err != nil {
 		t.Fatalf("doctor: %v\n%s%s", err, out, errOut)
 	}
@@ -27,13 +27,13 @@ func TestDoctor(t *testing.T) {
 			t.Fatalf("doctor started %s", a)
 		}
 	}
-	if out, _, err := h.ajan("doctor", "--ci"); err != nil || strings.Contains(out, "Claude Code") {
+	if out, _, err := h.imux("doctor", "--ci"); err != nil || strings.Contains(out, "Claude Code") {
 		t.Fatalf("doctor --ci: %v\n%s", err, out)
 	}
 	// Without tmux: a hard failure and a non-zero exit.
 	cmd := exec.Command(h.Bin, "doctor", "--ci")
 	cmd.Dir = h.Homes.Project
-	cmd.Env = append(os.Environ(), "PATH=/nonexistent", "AJAN_TMUX_BIN=tmux")
+	cmd.Env = append(os.Environ(), "PATH=/nonexistent", "IMUX_TMUX_BIN=tmux")
 	b, err := cmd.CombinedOutput()
 	if err == nil || !strings.Contains(string(b), "✗ tmux is not installed") {
 		t.Fatalf("doctor without tmux: %v\n%s", err, b)

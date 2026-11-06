@@ -75,7 +75,7 @@ func newBus(t *testing.T, f *fakeTmux) (*Bus, *clock.Fixed) {
 	t.Helper()
 	testutil.Isolate(t)
 	clk := testutil.Clock()
-	w := &workspace.WS{Cfg: config.Default(), T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: f}, Self: "/opt/ajan", Now: clk.Now}
+	w := &workspace.WS{Cfg: config.Default(), T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: f}, Self: "/opt/imux", Now: clk.Now}
 	b := New(w)
 	b.Sleep = func(time.Duration) {}
 	return b, clk

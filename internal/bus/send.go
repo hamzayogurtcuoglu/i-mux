@@ -27,10 +27,10 @@ var (
 	ErrSelf     = errors.New("cannot send to yourself")
 )
 
-// SendReq is one `ajan send`.
+// SendReq is one `imux send`.
 type SendReq struct {
 	From      string          // sender pane ($TMUX_PANE); "" outside tmux
-	FromAgent session.AgentID // sender agent ($AJAN_AGENT)
+	FromAgent session.AgentID // sender agent ($IMUX_AGENT)
 	Target    string          // "%N" or agent name
 	Msg       string
 	WaitIdle  bool
@@ -58,7 +58,7 @@ func Prefix(agent session.AgentID, pane string) string {
 
 // Send delivers a message to another pane after the §12 guards: the bus is
 // enabled, the message fits bus.max_message_bytes, the sender is within
-// bus.rate_per_minute, and the target is another pane on ajan's socket.
+// bus.rate_per_minute, and the target is another pane on imux's socket.
 // With bus.confirm the user confirms it in a menu first.
 func (b *Bus) Send(ctx context.Context, req SendReq) (*SendResult, error) {
 	cfg := b.W.Cfg.Bus
@@ -173,7 +173,7 @@ func (b *Bus) confirm(ctx context.Context, p *workspace.Pane, req SendReq, text 
 }
 
 // Deliver sends a message parked by confirm mode (or discards it). The file
-// must be inside ~/.ajan/bus.
+// must be inside ~/.imux/bus.
 func (b *Bus) Deliver(ctx context.Context, file, pane string, enter, discard bool) error {
 	if filepath.Dir(filepath.Clean(file)) != filepath.Clean(paths.BusDir()) {
 		return errors.New(i18n.T("bus.bad_file"))

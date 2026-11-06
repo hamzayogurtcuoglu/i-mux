@@ -1,4 +1,4 @@
-// Package cli implements ajan's command-line interface: subcommand dispatch
+// Package cli implements imux's command-line interface: subcommand dispatch
 // with the standard library's flag package, help text and exit codes.
 package cli
 
@@ -60,7 +60,7 @@ type ExitCodeError struct {
 
 func (x *ExitCodeError) Error() string { return x.Msg }
 
-// Main runs ajan with os.Args-style arguments and returns the exit code.
+// Main runs imux with os.Args-style arguments and returns the exit code.
 func Main(args []string) int {
 	return Run(&Env{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}, args[1:])
 }
@@ -90,7 +90,7 @@ func Run(e *Env, args []string) int {
 		if isAgentArg(name) || strings.HasPrefix(name, "-") {
 			return finish(e, defaultAction(e, args))
 		}
-		fmt.Fprintf(e.Stderr, "ajan: %s\n\n", i18n.T("cli.unknown_command", name))
+		fmt.Fprintf(e.Stderr, "imux: %s\n\n", i18n.T("cli.unknown_command", name))
 		printHelp(e.Stderr)
 		return ExitUsage
 	}
@@ -103,26 +103,26 @@ func finish(e *Env, err error) int {
 	}
 	var ue *UsageError
 	if errors.As(err, &ue) {
-		fmt.Fprintf(e.Stderr, "ajan: %s\n", ue.Msg)
+		fmt.Fprintf(e.Stderr, "imux: %s\n", ue.Msg)
 		return ExitUsage
 	}
 	var xe *ExitCodeError
 	if errors.As(err, &xe) {
 		if xe.Msg != "" {
-			fmt.Fprintf(e.Stderr, "ajan: %s\n", xe.Msg)
+			fmt.Fprintf(e.Stderr, "imux: %s\n", xe.Msg)
 		}
 		return xe.Code
 	}
 	if errors.Is(err, flag.ErrHelp) {
 		return ExitOK
 	}
-	fmt.Fprintf(e.Stderr, "ajan: %v\n", err)
+	fmt.Fprintf(e.Stderr, "imux: %v\n", err)
 	return ExitError
 }
 
 // newFlags returns a FlagSet that reports parse errors as usage errors.
 func newFlags(e *Env, c string) *flag.FlagSet {
-	fs := flag.NewFlagSet("ajan "+c, flag.ContinueOnError)
+	fs := flag.NewFlagSet("imux "+c, flag.ContinueOnError)
 	fs.SetOutput(e.Stderr)
 	fs.Usage = func() {
 		if cmd, ok := commands[c]; ok {
@@ -159,8 +159,8 @@ func printHelp(w io.Writer) {
 	fmt.Fprintln(w, i18n.T("cli.help.header"))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, i18n.T("cli.help.usage"))
-	fmt.Fprintln(w, "  ajan [agent]")
-	fmt.Fprintln(w, "  ajan <command> [flags]")
+	fmt.Fprintln(w, "  imux [agent]")
+	fmt.Fprintln(w, "  imux <command> [flags]")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, i18n.T("cli.help.commands"))
 	names := make([]string, 0, len(commands))
@@ -183,5 +183,5 @@ func printHelp(w io.Writer) {
 }
 
 func printCommandHelp(w io.Writer, c *command) {
-	fmt.Fprintf(w, "ajan %s %s\n  %s\n", c.Name, c.Args, i18n.T(c.Summary))
+	fmt.Fprintf(w, "imux %s %s\n  %s\n", c.Name, c.Args, i18n.T(c.Summary))
 }

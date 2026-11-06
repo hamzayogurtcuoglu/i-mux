@@ -22,7 +22,7 @@ func init() {
 func loadConfig(e *Env) (*config.Config, error) {
 	cfg, warns, err := config.Load(paths.Config())
 	for _, w := range warns {
-		fmt.Fprintf(e.Stderr, "ajan: %s\n", i18n.T("cli.warning", w))
+		fmt.Fprintf(e.Stderr, "imux: %s\n", i18n.T("cli.warning", w))
 	}
 	if cfg != nil {
 		i18n.Init(cfg.Locale)

@@ -25,7 +25,7 @@ func fakeRelease(t *testing.T, bin string, corrupt bool) string {
 	if err := os.MkdirAll(rel, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	name := "ajan_9.9.9_" + runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz"
+	name := "imux_9.9.9_" + runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz"
 	f, err := os.Create(filepath.Join(rel, name))
 	if err != nil {
 		t.Fatal(err)
@@ -36,7 +36,7 @@ func fakeRelease(t *testing.T, bin string, corrupt bool) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = tw.WriteHeader(&tar.Header{Name: "ajan", Mode: 0o755, Size: int64(len(data))})
+	_ = tw.WriteHeader(&tar.Header{Name: "imux", Mode: 0o755, Size: int64(len(data))})
 	_, _ = tw.Write(data)
 	_ = tw.WriteHeader(&tar.Header{Name: "LICENSE", Mode: 0o644, Size: 3})
 	_, _ = tw.Write([]byte("MIT"))
@@ -56,7 +56,7 @@ func fakeRelease(t *testing.T, bin string, corrupt bool) string {
 func runInstall(t *testing.T, base, path string, args ...string) (string, error) {
 	t.Helper()
 	cmd := exec.Command("sh", append([]string{filepath.Join(testutil.ModuleRoot(t), "install.sh")}, args...)...)
-	cmd.Env = append(os.Environ(), "AJAN_INSTALL_BASE_URL=file://"+base, "PATH="+path)
+	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH="+path)
 	cmd.Stdin = nil
 	out, err := cmd.CombinedOutput()
 	return string(out), err
@@ -65,7 +65,7 @@ func runInstall(t *testing.T, base, path string, args ...string) (string, error)
 // TestInstallScript (T7.3): downloads, verifies the checksum, installs to
 // --prefix, and hints at PATH; a wrong checksum aborts.
 func TestInstallScript(t *testing.T) {
-	bin := ajanBin(t)
+	bin := imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")
 	}
@@ -77,13 +77,13 @@ func TestInstallScript(t *testing.T) {
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, out)
 	}
-	for _, want := range []string{"Checksum verified.", "Installed " + prefix + "/ajan", "is not on your PATH", "tmux found"} {
+	for _, want := range []string{"Checksum verified.", "Installed " + prefix + "/imux", "is not on your PATH", "tmux found"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
 	}
-	v, err := exec.Command(filepath.Join(prefix, "ajan"), "version").Output()
-	if err != nil || !strings.HasPrefix(string(v), "ajan ") {
+	v, err := exec.Command(filepath.Join(prefix, "imux"), "version").Output()
+	if err != nil || !strings.HasPrefix(string(v), "imux ") {
 		t.Fatalf("installed binary: %v %q", err, v)
 	}
 	out, err = runInstall(t, fakeRelease(t, bin, true), path, "--prefix", filepath.Join(t.TempDir(), "b2"), "--version", "v9.9.9")
@@ -95,7 +95,7 @@ func TestInstallScript(t *testing.T) {
 // TestInstallScriptWithoutTmux: without tmux and without a known package
 // manager the script only explains what to do; it never runs sudo.
 func TestInstallScriptWithoutTmux(t *testing.T) {
-	bin := ajanBin(t)
+	bin := imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")
 	}
@@ -111,7 +111,7 @@ func TestInstallScriptWithoutTmux(t *testing.T) {
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "ajan needs tmux") || !strings.Contains(out, "Install tmux with your package manager") ||
+	if !strings.Contains(out, "imux needs tmux") || !strings.Contains(out, "Install tmux with your package manager") ||
 		strings.Contains(out, "sudo") || strings.Contains(out, "is not on your PATH") {
 		t.Fatalf("output:\n%s", out)
 	}

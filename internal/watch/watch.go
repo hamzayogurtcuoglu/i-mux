@@ -1,6 +1,6 @@
 // Package watch is the limit watcher daemon (§10): a singleton process that
 // polls agent panes for usage-limit messages while a client is attached,
-// sleeps while none is, and exits when ajan's tmux server is gone.
+// sleeps while none is, and exits when imux's tmux server is gone.
 package watch
 
 import (
@@ -79,7 +79,7 @@ func Ensure(self string) error {
 	return start(self)
 }
 
-// start launches `ajan __watch run` detached (new session, stdio to
+// start launches `imux __watch run` detached (new session, stdio to
 // /dev/null, stderr to watch.log).
 func start(self string) error {
 	logf, err := openLog()
@@ -207,7 +207,7 @@ func (d *Daemon) Loop(ctx context.Context) error {
 	}
 }
 
-// Run is `ajan __watch run`: take the singleton lock (exit quietly when
+// Run is `imux __watch run`: take the singleton lock (exit quietly when
 // another watcher holds it), write the pid, tune the runtime for a small
 // footprint and loop with tick.
 func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration, time.Duration, error)) error {

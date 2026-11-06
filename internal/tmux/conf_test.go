@@ -38,12 +38,12 @@ func golden(t *testing.T, name, got string) {
 func confInput(ver string) *ConfInput {
 	v, _ := ParseVersion("tmux " + ver)
 	return &ConfInput{
-		Self:      "/opt/ajan/bin/ajan",
+		Self:      "/opt/imux/bin/imux",
 		Cfg:       config.Default(),
 		Version:   v,
 		Terminal:  "tmux-256color",
-		AgentBar:  "#[align=left] ajan #[range=user|ajan:menu]☰#[norange default]",
-		LocalConf: "/home/test/.ajan/tmux.local.conf",
+		AgentBar:  "#[align=left] imux #[range=user|imux:menu]☰#[norange default]",
+		LocalConf: "/home/test/.imux/tmux.local.conf",
 	}
 }
 
@@ -115,7 +115,7 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 	in := confInput(v.Raw)
 	in.Version = v
 	in.LocalConf = filepath.Join(dir, "tmux.local.conf")
-	if err := os.WriteFile(in.LocalConf, []byte("set -g @ajan_local_loaded yes\n"), 0o600); err != nil {
+	if err := os.WriteFile(in.LocalConf, []byte("set -g @imux_local_loaded yes\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	conf := filepath.Join(dir, "tmux.conf")
@@ -135,8 +135,8 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 	if err := c.Reload(ctx, conf); err != nil {
 		t.Fatalf("reload: %v", err)
 	}
-	out, err := c.Do(Cmd{"show-options", "-gv", "@ajan_local_loaded"}, Cmd{"show-options", "-gv", "status"},
-		Cmd{"show-options", "-gv", "@ajan_keys"})
+	out, err := c.Do(Cmd{"show-options", "-gv", "@imux_local_loaded"}, Cmd{"show-options", "-gv", "status"},
+		Cmd{"show-options", "-gv", "@imux_keys"})
 	if err != nil {
 		t.Fatal(err)
 	}

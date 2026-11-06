@@ -152,7 +152,7 @@ func runHandoff(e *Env, args []string) error {
 		return err
 	}
 	for _, w := range s.Warnings {
-		fmt.Fprintf(e.Stderr, "ajan: %s\n", i18n.T("cli.warning", w))
+		fmt.Fprintf(e.Stderr, "imux: %s\n", i18n.T("cli.warning", w))
 	}
 	reason := sources.LimitReason(s)
 	switch *reasonF {

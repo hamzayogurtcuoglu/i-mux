@@ -42,7 +42,7 @@ func TestSnippetCommandWritesNothing(t *testing.T) {
 	h := testutil.Isolate(t)
 	inProject(t, h)
 	out, errOut, code := runCLI(t, "snippet", "claude")
-	if code != 0 || !strings.Contains(out, "ajan send") || !strings.Contains(errOut, "CLAUDE.md") {
+	if code != 0 || !strings.Contains(out, "imux send") || !strings.Contains(errOut, "CLAUDE.md") {
 		t.Fatalf("snippet: %d %q %q", code, out, errOut)
 	}
 	if ents, _ := os.ReadDir(h.Project); len(ents) != 0 {

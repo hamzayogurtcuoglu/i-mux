@@ -1,8 +1,8 @@
-# `ajan limits`
+# `imux limits`
 
-`ajan limits` shows, for each agent, the usage limit ajan last saw on its screen and the usage it
+`imux limits` shows, for each agent, the usage limit i-mux last saw on its screen and the usage it
 can count from local session files. It reads local files only and makes no network calls.
-Inside the workspace the pane menu's **Limits** item opens it in a popup (`ajan limits --pager`).
+Inside the workspace the pane menu's **Limits** item opens it in a popup (`imux limits --pager`).
 
 ```
 AGENT    STATUS                 USAGE (local data)
@@ -22,7 +22,7 @@ Usage is counted from local session files. For exact plan percentages, see Codex
 | Copilot | premium requests this calendar month | the latest `session.shutdown` / `session.usage_checkpoint` total of each session |
 | Codex | the newest rate-limit percentages and reset times | `token_count` events with `rate_limits` (newer Codex versions only; otherwise "n/a") |
 
-## JSON (`ajan limits --json`)
+## JSON (`imux limits --json`)
 
 Field names are stable; new fields may be added.
 
@@ -64,7 +64,7 @@ Field names are stable; new fields may be added.
 | `agents[]` | one entry per agent, in the configured `order` |
 | `agent`, `name`, `installed` | id (`claude`, `gemini`, `copilot`, `codex`), product name, whether its CLI was found |
 | `status` | `limited` (a limit was seen and has not expired), `warn` (an "approaching" message was seen) or `ok` |
-| `limit` | present when `status` is not `ok`: the record from `~/.ajan/state.json` (`reset_at` is omitted when the message had no reset time; `expires_at` is then `at` + `limits.default_expiry`) |
+| `limit` | present when `status` is not `ok`: the record from `~/.imux/state.json` (`reset_at` is omitted when the message had no reset time; `expires_at` is then `at` + `limits.default_expiry`) |
 | `usage.window` | `5h` (Claude), `today` (Gemini), `month` (Copilot), `latest` (Codex) |
 | `usage.from` | start of the window (local midnight for `today`, the first of the month for `month`) |
 | `usage.replies` | assistant replies (Claude: unique `message.id`s; Gemini: requests) |

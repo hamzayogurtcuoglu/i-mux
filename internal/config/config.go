@@ -1,4 +1,4 @@
-// Package config loads ~/.ajan/config.toml: built-in defaults, merged user
+// Package config loads ~/.imux/config.toml: built-in defaults, merged user
 // values, and validation (regexes, enums, templates).
 package config
 
@@ -16,7 +16,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// AgentIDs are the agents ajan knows, in default order.
+// AgentIDs are the agents imux knows, in default order.
 var AgentIDs = []string{"claude", "gemini", "copilot", "codex"}
 
 // Duration is a time.Duration written as a Go duration string ("2.5s").

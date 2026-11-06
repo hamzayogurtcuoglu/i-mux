@@ -1,5 +1,5 @@
-// Package doctor checks ajan's environment: tmux, terminfo, the agent CLIs
-// (path, version, PATH for nvm installs, flags), ~/.ajan permissions, the
+// Package doctor checks imux's environment: tmux, terminfo, the agent CLIs
+// (path, version, PATH for nvm installs, flags), ~/.imux permissions, the
 // binary's permissions and the watcher. It never starts an agent with a
 // prompt: agents are only asked for --version and --help.
 package doctor
@@ -34,7 +34,7 @@ const (
 	OK   Level = iota
 	Info       // a hint
 	Warn       // works, but something should be fixed
-	Fail       // ajan cannot work
+	Fail       // imux cannot work
 )
 
 // Symbol renders a level.
@@ -77,14 +77,14 @@ func (r *Report) Failed() bool {
 type Options struct {
 	Cfg      *config.Config
 	Tmux     *tmux.Client
-	Self     string // ajan binary
+	Self     string // imux binary
 	CI       bool   // skip the agent checks (release smoke tests)
 	Watcher  func() (running bool, pid int)
 	Resolved map[session.AgentID]agent.Resolved // nil = resolve now
 	Users    func() []string                    // other human users; nil = /etc/passwd
 }
 
-// MinVersions are the oldest agent versions ajan's parsers and launch
+// MinVersions are the oldest agent versions imux's parsers and launch
 // templates were verified against; older ones get an "outdated" hint.
 var MinVersions = map[session.AgentID]string{
 	session.Claude: "2.0.0",

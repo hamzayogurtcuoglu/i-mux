@@ -50,7 +50,7 @@ func find(r *Report, sub string) *Result {
 func TestDoctor(t *testing.T) {
 	h := testutil.Isolate(t)
 	i18n.SetLocale("en")
-	if err := os.MkdirAll(h.Ajan, 0o700); err != nil {
+	if err := os.MkdirAll(h.Imux, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	bin := filepath.Join(h.Root, "bin")
@@ -104,9 +104,9 @@ func TestDoctor(t *testing.T) {
 	}
 
 	// Loose permissions are reported.
-	_ = os.Chmod(h.Ajan, 0o755)
-	testutil.WriteFile(t, filepath.Join(h.Ajan, "state.json"), []byte("{}"))
-	_ = os.Chmod(filepath.Join(h.Ajan, "state.json"), 0o644)
+	_ = os.Chmod(h.Imux, 0o755)
+	testutil.WriteFile(t, filepath.Join(h.Imux, "state.json"), []byte("{}"))
+	_ = os.Chmod(filepath.Join(h.Imux, "state.json"), 0o644)
 	r = Run(context.Background(), o)
 	if x := find(r, "should be 0700"); x == nil || x.Level != Warn {
 		t.Errorf("home perm: %+v", x)

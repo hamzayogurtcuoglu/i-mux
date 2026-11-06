@@ -42,8 +42,8 @@ func TestRunClassifiesErrors(t *testing.T) {
 		stderr string
 		want   error
 	}{
-		{"no server running on /tmp/tmux-501/ajan\n", ErrNoServer},
-		{"error connecting to /tmp/tmux-1000/ajan (No such file or directory)\n", ErrNoServer},
+		{"no server running on /tmp/tmux-501/imux\n", ErrNoServer},
+		{"error connecting to /tmp/tmux-1000/imux (No such file or directory)\n", ErrNoServer},
 		{"can't find session: proj-1a2b\n", ErrNoSession},
 		{"can't find pane: %99\n", ErrNoPane},
 		{"can't find client: /dev/pts/9\n", ErrNoClient},
@@ -155,8 +155,8 @@ func TestParseVersion(t *testing.T) {
 }
 
 func TestInside(t *testing.T) {
-	c := &Client{Socket: "ajan"}
-	if !c.Inside("/tmp/tmux-501/ajan,1234,0") {
+	c := &Client{Socket: "imux"}
+	if !c.Inside("/tmp/tmux-501/imux,1234,0") {
 		t.Fatal("should be inside")
 	}
 	if c.Inside("/tmp/tmux-501/default,1234,0") || c.Inside("") {
@@ -167,7 +167,7 @@ func TestInside(t *testing.T) {
 func TestQuote(t *testing.T) {
 	cases := map[string]string{
 		"%3":            "%3",
-		"/usr/bin/ajan": "/usr/bin/ajan",
+		"/usr/bin/imux": "/usr/bin/imux",
 		"a b":           "'a b'",
 		"it's":          `'it'\''s'`,
 		"":              "''",
@@ -178,7 +178,7 @@ func TestQuote(t *testing.T) {
 			t.Errorf("Quote(%q) = %q, want %q", in, got, want)
 		}
 	}
-	if got := ShJoin("/a b/ajan", "__menu", "it's"); got != `'/a b/ajan' __menu 'it'"'"'s'` {
+	if got := ShJoin("/a b/imux", "__menu", "it's"); got != `'/a b/imux' __menu 'it'"'"'s'` {
 		t.Fatalf("ShJoin: %s", got)
 	}
 	if EscapeFormat("a#b") != "a##b" {
@@ -193,7 +193,7 @@ func TestQuote(t *testing.T) {
 }
 
 func FuzzSectionsRows(f *testing.F) {
-	f.Add("pre\n\t\tajan:%1\na\tb\n\t\tajan:%2\n", 3)
+	f.Add("pre\n\t\timux:%1\na\tb\n\t\timux:%2\n", 3)
 	f.Add("", 1)
 	f.Fuzz(func(t *testing.T, s string, n int) {
 		if n < 1 || n > 16 {
@@ -222,7 +222,7 @@ func realClient(t *testing.T) *Client {
 	if _, err := exec.LookPath("tmux"); err != nil {
 		t.Skip("tmux not installed")
 	}
-	c := &Client{Bin: "tmux", Socket: "ajan-test-" + randHex(t), Config: "/dev/null", Runner: ExecRunner{}}
+	c := &Client{Bin: "tmux", Socket: "imux-test-" + randHex(t), Config: "/dev/null", Runner: ExecRunner{}}
 	t.Cleanup(func() { _, _ = c.Do(Cmd{"kill-server"}) })
 	return c
 }
@@ -270,9 +270,9 @@ func TestIntegrationRealTmux(t *testing.T) {
 	// One exec: set options with awkward values, then read them back with delimiters.
 	val := `[{"a":"claude"}] it's ; "q" end;`
 	out, err = c.Do(
-		Cmd{"set-option", "-p", "-t", pane, "@ajan_trail", val},
+		Cmd{"set-option", "-p", "-t", pane, "@imux_trail", val},
 		DelimCmd(pane),
-		Cmd{"display-message", "-p", "-t", pane, "#{pane_id}\t#{@ajan_trail}"},
+		Cmd{"display-message", "-p", "-t", pane, "#{pane_id}\t#{@imux_trail}"},
 		DelimCmd("panes"),
 		Cmd{"list-panes", "-a", "-F", "#{pane_id}\t#{session_name}"},
 	)

@@ -23,10 +23,10 @@ var (
 	current = "en"
 )
 
-// Resolve picks the locale: the config value first, then AJAN_LANG, then LANG
+// Resolve picks the locale: the config value first, then IMUX_LANG, then LANG
 // (e.g. "tr_TR.UTF-8" → "tr"). Unknown locales resolve to "en".
-func Resolve(configLocale, ajanLang, lang string) string {
-	for _, c := range []string{configLocale, ajanLang, lang} {
+func Resolve(configLocale, imuxLang, lang string) string {
+	for _, c := range []string{configLocale, imuxLang, lang} {
 		c = normalize(c)
 		if c == "" {
 			continue
@@ -52,7 +52,7 @@ func normalize(s string) string {
 
 // Init sets the process locale from the config value and the environment.
 func Init(configLocale string) {
-	SetLocale(Resolve(configLocale, os.Getenv("AJAN_LANG"), os.Getenv("LANG")))
+	SetLocale(Resolve(configLocale, os.Getenv("IMUX_LANG"), os.Getenv("LANG")))
 }
 
 // SetLocale sets the current locale ("en", "tr", ...).

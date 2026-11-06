@@ -20,7 +20,7 @@ func TestVersion(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit %d", code)
 	}
-	if !strings.HasPrefix(out, "ajan ") || !strings.Contains(out, "commit") {
+	if !strings.HasPrefix(out, "imux ") || !strings.Contains(out, "commit") {
 		t.Fatalf("unexpected version output %q", out)
 	}
 }
@@ -55,7 +55,7 @@ func TestUnknownCommandExit2(t *testing.T) {
 
 func TestConfigCommands(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("AJAN_HOME", home)
+	t.Setenv("IMUX_HOME", home)
 	out, _, code := runCLI(t, "config", "path")
 	if code != 0 || strings.TrimSpace(out) != home+"/config.toml" {
 		t.Fatalf("path: %q %d", out, code)

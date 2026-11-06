@@ -8,7 +8,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 )
 
-// Template is the commented default configuration written by `ajan config init`.
+// Template is the commented default configuration written by `imux config init`.
 //
 //go:embed default.toml
 var Template string

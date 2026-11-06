@@ -92,7 +92,7 @@ func runSwitch(e *Env, args []string) error {
 		return err
 	}
 	for _, wn := range res.Warnings {
-		fmt.Fprintf(e.Stderr, "ajan: %s\n", i18n.T("cli.warning", wn))
+		fmt.Fprintf(e.Stderr, "imux: %s\n", i18n.T("cli.warning", wn))
 	}
 	switch {
 	case res.Resumed && res.Delta:

@@ -2,12 +2,12 @@
 #   goreleaser release --snapshot --clean
 version: 2
 
-project_name: ajan
+project_name: imux
 
 builds:
-  - id: ajan
-    main: ./cmd/ajan
-    binary: ajan
+  - id: imux
+    main: ./cmd/imux
+    binary: imux
     env:
       - CGO_ENABLED=0
     goos: [darwin, linux]
@@ -22,7 +22,7 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
-  - id: ajan
+  - id: imux
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
@@ -51,10 +51,10 @@ release:
   prerelease: auto
 
 # Homebrew formula in hamzayogurtcuoglu/homebrew-tap:
-#   brew install hamzayogurtcuoglu/tap/ajan
+#   brew install hamzayogurtcuoglu/tap/imux
 brews:
-  - name: ajan
-    ids: [ajan]
+  - name: imux
+    ids: [imux]
     repository:
       owner: hamzayogurtcuoglu
       name: homebrew-tap
@@ -66,9 +66,9 @@ brews:
     dependencies:
       - name: tmux
     install: |
-      bin.install "ajan"
+      bin.install "imux"
     test: |
-      assert_match "ajan", shell_output("#{bin}/ajan version")
+      assert_match "imux", shell_output("#{bin}/imux version")
     commit_author:
       name: hamzayogurtcuoglu
       email: hamzayogurtcuoglu@users.noreply.github.com

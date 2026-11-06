@@ -36,7 +36,7 @@ func (w *WS) pickerAgents() []session.AgentID {
 }
 
 // PickerMenu builds page `page` (0-based) of the session picker for pane p:
-// conversations of every installed agent for @ajan_cwd, newest first. Only
+// conversations of every installed agent for @imux_cwd, newest first. Only
 // the shown rows are read for their preview. It returns nil when there is
 // nothing to show.
 func (w *WS) PickerMenu(ctx context.Context, f *sources.Finder, p *Pane, client string, page int) *Menu {

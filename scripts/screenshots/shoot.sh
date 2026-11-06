@@ -1,5 +1,5 @@
 #!/bin/sh
-# Regenerates the README screenshots in docs/images from a real ajan session
+# Regenerates the README screenshots in docs/images from a real imux session
 # with demo agents (demo-agent.sh). Needs Linux or macOS, tmux >= 3.4 and
 # python3. Nothing outside a temp dir is touched; no real agent is started.
 #
@@ -8,31 +8,31 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
 out="${1:-$root/docs/images}"
-bin="${AJAN_BIN:-$root/bin/ajan}"
+bin="${IMUX_BIN:-$root/bin/imux}"
 [ -x "$bin" ] || (cd "$root" && make build >/dev/null)
 COLS=104 ROWS=30
 # shellcheck disable=SC2088 # a literal ~: it is the window title
-title="~/code/acme-api — ajan"
+title="~/code/acme-api — imux"
 
-tmp=$(mktemp -d "${TMPDIR:-/tmp}/ajan-shot.XXXXXX")
-outer="ajan-shot-outer-$$"
-export HOME="$tmp/home" AJAN_HOME="$tmp/home/.ajan" AJAN_TMUX_SOCKET="ajan-shot-$$"
-export TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8 TERM=xterm-256color AJAN_LANG=en
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/imux-shot.XXXXXX")
+outer="imux-shot-outer-$$"
+export HOME="$tmp/home" IMUX_HOME="$tmp/home/.imux" IMUX_TMUX_SOCKET="imux-shot-$$"
+export TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8 TERM=xterm-256color IMUX_LANG=en
 cleanup() {
 	tmux -L "$outer" kill-server 2>/dev/null || true
-	tmux -L "$AJAN_TMUX_SOCKET" kill-server 2>/dev/null || true
+	tmux -L "$IMUX_TMUX_SOCKET" kill-server 2>/dev/null || true
 	"$bin" __watch stop >/dev/null 2>&1 || true
 	rm -rf "$tmp"
 }
 trap cleanup EXIT INT TERM
 
 # Demo agents and config.
-mkdir -p "$AJAN_HOME" "$tmp/bin" "$out"
+mkdir -p "$IMUX_HOME" "$tmp/bin" "$out"
 for a in claude gemini codex; do
 	cp "$here/demo-agent.sh" "$tmp/bin/$a" # its name is the agent, and the process name
 	chmod +x "$tmp/bin/$a"
 done
-cat >"$AJAN_HOME/config.toml" <<EOF
+cat >"$IMUX_HOME/config.toml" <<EOF
 [limits]
 poll_interval = "0.5s"
 grace = "1s"
@@ -76,7 +76,7 @@ shot() { # shot NAME TITLE
 	echo "wrote $out/$1.svg"
 }
 
-# The terminal: an outer tmux without a status line, running ajan.
+# The terminal: an outer tmux without a status line, running imux.
 tmux -L "$outer" -f /dev/null new-session -d -s shot -x "$COLS" -y "$ROWS" -c "$proj" \
 	"env -u TMUX -u TMUX_PANE DEMO_LIMIT_AFTER=4 '$bin' claude"
 tmux -L "$outer" set -g status off

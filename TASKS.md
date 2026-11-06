@@ -1,4 +1,4 @@
-# ajan: Task plan
+# i-mux: Task plan
 
 > Companion to [ARCHITECTURE.md](ARCHITECTURE.md). Section references (§N) point there;
 > open questions are `Q1`…`Q29` in ARCHITECTURE §20.
@@ -32,7 +32,7 @@ milestone up to v0.1 serves this.
 
 | Ref | Decision | Default if not decided |
 |---|---|---|
-| Q23 | Final name, GitHub owner / Go module path, license, Homebrew tap name | **Decided:** binary `ajan`, module `github.com/hamzayogurtcuoglu/i-mux`, MIT license, tap `hamzayogurtcuoglu/homebrew-tap` |
+| Q23 | Final name, GitHub owner / Go module path, license, Homebrew tap name | **Decided:** binary `imux`, module `github.com/hamzayogurtcuoglu/i-mux`, MIT license, tap `hamzayogurtcuoglu/homebrew-tap` |
 | Q5 | Copilot todos: optional `sqlite3` CLI vs pure-Go SQLite driver | **Decided:** optional `sqlite3` CLI (no driver in the binary) |
 
 ## Milestones at a glance
@@ -40,12 +40,12 @@ milestone up to v0.1 serves this.
 | Milestone | Outcome | Est. |
 |---|---|---|
 | M0 | Repo, CI, config/state/i18n foundations | ~4 d |
-| M1 | All four session parsers + `ajan handoff --print` / standalone handoff (F5) | ~3 wk |
+| M1 | All four session parsers + `imux handoff --print` / standalone handoff (F5) | ~3 wk |
 | M2 | tmux workspace + **switching from the UI**: clickable agent bar, pane menu, session picker (F1 manual, F3, F6) | ~3 wk |
 | **v0.1** | **= M0 + M1 + M2: the user switches a pane's conversation to another agent from the UI, with context** | |
 | M3 | Watcher, limit detection, `ask`/`auto`/`off`, limit markers in the agent bar (F1 auto, F2 part 1) | ~1.5 wk |
 | **MVP** | **= M0 + M1 + M2 + M3** | |
-| M4 | `ajan limits` panel (F2 part 2) | ~4 d |
+| M4 | `imux limits` panel (F2 part 2) | ~4 d |
 | M5 | Agent bus (F4) | ~1 wk |
 | M6 | Native resume-back with delta handoff (D4) | ~1 wk |
 | M7 | GoReleaser, install.sh, Homebrew tap | ~4 d |
@@ -56,7 +56,7 @@ T0.2 → T1.1 → T1.2 → T1.5 → T1.12 → T1.14 → T2.1 → T2.4 → T2.6 �
 
 Critical path to the MVP: the v0.1 path → T3.3 → T3.4 → T3.5.
 
-**Acceptance for v0.1:** in a running ajan workspace, the user clicks "Gemini" on the agent bar
+**Acceptance for v0.1:** in a running i-mux workspace, the user clicks "Gemini" on the agent bar
 (or presses `Ctrl+\` `g`) while Claude is running. The same pane restarts with Gemini, which
 received the handoff, and the agent bar shows "▶ Gemini". The same works from the session picker
 for an older conversation. No command is typed.
@@ -70,22 +70,22 @@ for an older conversation. No command is typed.
   - AC: `LICENSE` file added.
 - [x] **T0.2 Go toolchain and CLI skeleton** · S · deps: T0.1
   - `brew install go`, then `go mod init`. Set the `go` directive to the current stable release.
-  - Add `cmd/ajan/main.go` and the `internal/cli` dispatcher (stdlib `flag`).
+  - Add `cmd/imux/main.go` and the `internal/cli` dispatcher (stdlib `flag`).
   - AC: `go build ./...` succeeds with `CGO_ENABLED=0`.
-  - AC: `ajan version` prints version, commit and date injected via `-ldflags`.
-  - AC: `ajan help` lists the commands. Unknown command → exit code 2 with help.
+  - AC: `imux version` prints version, commit and date injected via `-ldflags`.
+  - AC: `imux help` lists the commands. Unknown command → exit code 2 with help.
   - AC: the only third-party module in `go.mod` is `github.com/BurntSushi/toml` (D13).
 - [x] **T0.3 `internal/paths`** · S · deps: T0.2
-  - AC: `AJAN_HOME` overrides `~/.ajan`.
+  - AC: `IMUX_HOME` overrides `~/.imux`.
   - AC: umask is set to 077 at startup; directories are created 0700 and files 0600. A test asserts the modes.
 - [x] **T0.4 `internal/config` (TOML)** · M · deps: T0.3
-  - Built-in defaults (§16), merging of user values, validation, plus `ajan config init|path|show`.
+  - Built-in defaults (§16), merging of user values, validation, plus `imux config init|path|show`.
   - AC: unit tests cover defaults only, partial overrides, per-agent overrides, and an unknown key (warning).
   - AC: an invalid RE2 regex is rejected with its line number. `{prompt}` may appear at most once per template.
   - AC: `config init` writes a commented file and refuses to overwrite it without `--force`.
   - AC: `config show` prints the effective merged config.
 - [x] **T0.5 `internal/i18n`** · S · deps: T0.2
-  - AC: `T(key, args...)` works with an `en` catalog. Locale comes from config `locale`, then `AJAN_LANG`, then `LANG`.
+  - AC: `T(key, args...)` works with an `en` catalog. Locale comes from config `locale`, then `IMUX_LANG`, then `LANG`.
   - AC: a test fails if code uses a key that is missing from the `en` catalog.
 - [x] **T0.6 `internal/state`** · S · deps: T0.3
   - AC: `state.json` writes go temp file → fsync → rename, under `flock(state.lock)`.
@@ -99,11 +99,11 @@ for an older conversation. No command is typed.
   - AC: an e2e job installs tmux (apt / brew) and runs `go test -tags e2e ./e2e/...`. It is a placeholder until M2.
   - AC: the job fails if the stripped binary exceeds 15 MB.
 - [x] **T0.9 Test infrastructure and fixture privacy guard** · S · deps: T0.2
-  - AC: `internal/testutil` provides a temp `AJAN_HOME`, fake agent homes and a frozen clock.
+  - AC: `internal/testutil` provides a temp `IMUX_HOME`, fake agent homes and a frozen clock.
   - AC: `scripts/check-fixtures.sh` fails if `testdata/` contains `/Users/` or a `/home/` path other than `/home/test`.
   - AC: it also fails on real-looking secrets (same regexes as T1.11) or email addresses. It runs in CI.
 
-## M1: Session parsers and `ajan handoff --print`
+## M1: Session parsers and `imux handoff --print`
 
 Earliest standalone value: works without tmux (F5).
 
@@ -195,50 +195,50 @@ Earliest standalone value: works without tmux (F5).
   - LaunchSpec → argv/env, argv-size check, `syscall.Exec`.
   - AC: argv is never passed through a shell. `PATH` is prepended correctly.
   - AC: a spec over `max_arg_bytes` is rejected before exec.
-- [x] **T1.14 `ajan handoff` and `ajan sessions` commands** · M · deps: T1.5–T1.8, T1.12, T1.13
+- [x] **T1.14 `imux handoff` and `imux sessions` commands** · M · deps: T1.5–T1.8, T1.12, T1.13
   - AC: flags as in §13.
   - AC: the file is written to `handoffs/` with mode 0600; `--print` writes to stdout and warnings to stderr.
   - AC: without `--print`, the target CLI is exec'd in the current terminal (F5); in tests it is a fake agent.
   - AC: `--from` defaults to the newest session of any agent for the cwd.
-  - AC: `ajan sessions` lists agent, id, updated time, size and a first-request preview (40 chars).
+  - AC: `imux sessions` lists agent, id, updated time, size and a first-request preview (40 chars).
   - AC: handoffs older than `keep_days` are pruned at most once a day.
 - [x] **T1.15 Large-fixture generator and benchmarks** · S · deps: T1.5, T1.12
   - AC: `scripts/gen-large-fixture` creates a synthetic 64 MB Claude session at test time; it is not committed.
-  - AC: `ajan handoff --print` on it takes < 1 s with peak RSS < 80 MB (§17).
+  - AC: `imux handoff --print` on it takes < 1 s with peak RSS < 80 MB (§17).
 - [ ] **T1.16 (USER) Quality review on real data** · S · deps: T1.14
-  - The user runs `ajan handoff --print --from claude` (and gemini/codex) on their own sessions
+  - The user runs `imux handoff --print --from claude` (and gemini/codex) on their own sessions
     and judges whether the result is usable. Nothing is committed from this.
   - AC: findings are filed as issues, and parser or budget tweaks are made.
 
 ## M2: tmux workspace and manual switch
 
 - [x] **T2.1 `internal/tmux` wrapper** · M · deps: T0.2
-  - Socket and config flags (`AJAN_TMUX_SOCKET`), command batching with `;`, delimiter-based
+  - Socket and config flags (`IMUX_TMUX_SOCKET`), command batching with `;`, delimiter-based
     output splitting, typed errors (no server / no session / no pane), version parsing.
-  - A **command recorder** (`AJAN_TMUX_RECORD=<file>`) is used by tests.
+  - A **command recorder** (`IMUX_TMUX_RECORD=<file>`) is used by tests.
   - AC: unit tests use a fake runner. An integration test runs against a real tmux on a random socket.
 - [x] **T2.2 tmux.conf generator** · M · deps: T2.1, T0.4
   - AC: the golden test matches §9.2. The file is regenerated only when its content hash changes, and the
     running server reloads via `source-file`.
   - AC: `tmux -L <test> -f <generated> start-server` loads without errors on CI tmux versions (≥ 3.2).
   - AC: the user's `tmux.local.conf` is sourced last.
-- [x] **T2.3 `ajan __exec <spec>`** · S · deps: T1.13
+- [x] **T2.3 `imux __exec <spec>`** · S · deps: T1.13
   - AC: the spec file is deleted after reading.
-  - AC: `AJAN_PANE`, `AJAN_AGENT` and `PATH` are set.
+  - AC: `IMUX_PANE`, `IMUX_AGENT` and `PATH` are set.
   - AC: e2e: the fake agent receives byte-exact argv, including quotes, newlines, `$()`, backticks and Turkish text.
-- [x] **T2.4 Start and attach** (`ajan [agent]`, `ajan attach`, `ajan ls`) · M · deps: T2.1–T2.3, T1.3
+- [x] **T2.4 Start and attach** (`imux [agent]`, `imux attach`, `imux ls`) · M · deps: T2.1–T2.3, T1.3
   - Session naming (§13), pane options (§9.4), `remain-on-exit on`, and a pre-assigned Claude `--session-id`.
   - Bin cache refresh, `__watch ensure` (a no-op until M3), exec into `tmux attach`.
   - AC: e2e shows the pane options are set and the fake claude got `--session-id <uuid>`.
-  - AC: a second `ajan` in the same cwd attaches instead of creating a new session.
-  - AC: inside ajan, `ajan gemini` opens a new window.
+  - AC: a second `imux` in the same cwd attaches instead of creating a new session.
+  - AC: inside i-mux, `imux gemini` opens a new window.
 - [x] **T2.5 Pane trail and session discovery for a pane** · M · deps: T2.4, T1.5–T1.8
   - AC: trail JSON is capped at 10 entries.
-  - AC: discovery order is pre-assigned id → newest file with mtime ≥ `@ajan_start` and matching cwd →
+  - AC: discovery order is pre-assigned id → newest file with mtime ≥ `@imux_start` and matching cwd →
     exclude files claimed by other panes' trails.
   - AC: e2e with two fake-claude panes in the same cwd resolves each correctly.
-- [x] **T2.6 `ajan switch`** · M · deps: T2.5, T1.12
-  - AC: `@ajan_lock` blocks a concurrent second switch (with a message).
+- [x] **T2.6 `imux switch`** · M · deps: T2.5, T1.12
+  - AC: `@imux_lock` blocks a concurrent second switch (with a message).
   - AC: the source is parsed and the handoff file written **before** `respawn-pane -k`. A parse or write
     failure leaves the old agent running.
   - AC: options and trail are updated, and a `display-message` reports the result.
@@ -254,25 +254,25 @@ Earliest standalone value: works without tmux (F5).
   - AC: Close pane works.
   - AC: menu latency is < 100 ms p95 (§17), measured in e2e.
 - [x] **T2.8a Agent bar (clickable second status line)** · M · deps: T2.2, T2.8
-  - Generate `status-format[1]` (§9.3) from `order` and the bin cache, with `#[range=user|ajan:<x>]` regions.
+  - Generate `status-format[1]` (§9.3) from `order` and the bin cache, with `#[range=user|imux:<x>]` regions.
     Add the `MouseDown1Status` binding that falls back to `switch-client -t =` for other ranges.
   - AC: golden test of the generated format.
   - AC: every range argument is ≤ 15 bytes (a test enforces it).
-  - AC: the active pane's agent is highlighted by tmux formats alone; changing focus runs no ajan process (recorder shows none).
-  - AC: not-installed agents are dimmed; `@ajan_lim_<agent>` markers render next to the names.
+  - AC: the active pane's agent is highlighted by tmux formats alone; changing focus runs no i-mux process (recorder shows none).
+  - AC: not-installed agents are dimmed; `@imux_lim_<agent>` markers render next to the names.
   - AC: with `tmux.agent_bar = false` there is a single status line and no binding.
   - AC: at 80 columns the overflow rule (Q29) applies.
-- [x] **T2.8b `ajan __click`** · S · deps: T2.8a, T2.6
-  - AC: `ajan:<agent>` → `switch` in-process for an installed, non-limited agent.
+- [x] **T2.8b `imux __click`** · S · deps: T2.8a, T2.6
+  - AC: `imux:<agent>` → `switch` in-process for an installed, non-limited agent.
   - AC: a limited agent → a confirm menu; a not-installed agent → an install hint.
-  - AC: `ajan:cur` / `ajan:menu` → pane menu; `ajan:sessions` → picker.
+  - AC: `imux:cur` / `imux:menu` → pane menu; `imux:sessions` → picker.
   - AC: a plain-shell pane starts the agent there, with context from the trail if available.
-- [x] **T2.8c Session picker (`__menu --sessions`, `__menu --session`, `ajan pick`, `prefix S`)** · M · deps: T2.8, T1.5–T1.8
-  - AC: shows up to 9 rows per page across installed agents for `@ajan_cwd`, newest first, with "More…" paging.
+- [x] **T2.8c Session picker (`__menu --sessions`, `__menu --session`, `imux pick`, `prefix S`)** · M · deps: T2.8, T1.5–T1.8
+  - AC: shows up to 9 rows per page across installed agents for `@imux_cwd`, newest first, with "More…" paging.
   - AC: the preview is the first user request, cleaned, one line, 40 characters.
   - AC: the second-level menu offers resume (own agent, if supported), continue in other agents
     with context, preview, and new-pane variants.
-  - AC: `ajan switch --from-session <agent>:<id>` builds the handoff from the picked conversation.
+  - AC: `imux switch --from-session <agent>:<id>` builds the handoff from the picked conversation.
   - AC: < 150 ms p95 with 50 synthetic candidate files (§17).
 - [x] **T2.8d UI e2e: real client, simulated keys and clicks** · M · deps: T2.8a–T2.8c
   - The test starts a pty-backed `tmux attach` client on the test socket at a fixed size (e.g. 120×40).
@@ -282,22 +282,22 @@ Earliest standalone value: works without tmux (F5).
   - AC: the key path does the same.
   - AC: right-click on a border opens the menu for *that* pane (Q28).
   - AC: picker → row → "Continue in Codex" launches fake-codex with a handoff built from the picked session.
-- [x] **T2.9 `ajan split`** · S · deps: T2.4
+- [x] **T2.9 `imux split`** · S · deps: T2.4
   - AC: `-h`/`-v`, same cwd, pane options set, and the label shows in the border.
 - [x] **T2.10 Pane-died handling** · M · deps: T2.4
-  - AC: an agent exit falls back to the login shell in `@ajan_cwd` with `@ajan_agent` cleared and the trail closed.
+  - AC: an agent exit falls back to the login shell in `@imux_cwd` with `@imux_agent` cleared and the trail closed.
   - AC: `on_exit = "close"` kills the pane instead.
-  - AC: `@ajan_fallback` + exit within 10 s with status ≠ 0 respawns from the fallback spec. M6 uses this; it is tested here with a fake agent.
+  - AC: `@imux_fallback` + exit within 10 s with status ≠ 0 respawns from the fallback spec. M6 uses this; it is tested here with a fake agent.
 - [x] **T2.11 Scrollback fallback transcript** · S · deps: T2.6
   - AC: when no session is found, the handoff uses `capture-pane -S -3000 -J` text, marked as
     reconstructed, and the user is notified.
   - AC: e2e with a fake agent that writes no session file.
-- [x] **T2.12 `ajan doctor`** · M · deps: T2.2, T1.3
+- [x] **T2.12 `imux doctor`** · M · deps: T2.2, T1.3
   - AC: it checks:
     - tmux presence and version (≥ 3.2), and the `tmux-256color` terminfo;
     - each agent: installed, path and version, and an "outdated" hint (e.g. Claude 1.0.x);
-    - nvm `PATH` issues and `~/.ajan` permissions;
-    - watcher status, and whether the ajan binary path is writable by others.
+    - nvm `PATH` issues and `~/.imux` permissions;
+    - watcher status, and whether the imux binary path is writable by others.
   - AC: it prints key hints (VS Code `Ctrl+\`). Exit code is non-zero on a hard failure.
   - AC: it never launches an agent with a prompt.
 - [ ] **T2.13 (USER) Manual terminal checklist** · S · deps: T2.8
@@ -327,7 +327,7 @@ Earliest standalone value: works without tmux (F5).
 - [x] **T3.3 Watcher lifecycle** · M · deps: T0.6, T2.1
   - AC: `__watch run|ensure|stop|status`.
   - AC: the singleton uses a pidfile `flock`; `ensure` either starts the daemon (`Setsid`, detached stdio) or sends SIGUSR1.
-  - AC: the watcher exits 0 when the ajan server is gone.
+  - AC: the watcher exits 0 when the i-mux server is gone.
   - AC: `watch.log` rotates at 1 MB.
   - AC: e2e: killing the server ends the watcher within one tick; a second `ensure` does not start a second watcher.
 - [x] **T3.4 Tick and detector** · M · deps: T3.1, T3.3
@@ -341,7 +341,7 @@ Earliest standalone value: works without tmux (F5).
   - AC: `off` notifies only. If every agent is limited, it notifies only.
   - AC: the `state.json` limit record follows §15.
 - [x] **T3.6 Status bar and pane flag** · S · deps: T3.4
-  - AC: `@ajan_status` and `@ajan_flag` are set only when they change. Expired limits are cleared on the next tick.
+  - AC: `@imux_status` and `@imux_flag` are set only when they change. Expired limits are cleared on the next tick.
   - AC: `warn` shows `◐`.
 - [x] **T3.7 Switch reason from the session** · S · deps: T1.5, T2.6
   - AC: a manual switch whose source's last `APIError` is limit-like reports reason "limit" in the handoff.
@@ -358,7 +358,7 @@ Earliest standalone value: works without tmux (F5).
 
 ### ── MVP cut (M0–M3) ──
 
-At this point the core story works end to end: start agents in ajan, see limits in the status bar,
+At this point the core story works end to end: start agents in i-mux, see limits in the status bar,
 get the "continue in …" prompt, and switch manually or automatically with context, in the same pane.
 
 ## M4: Limits panel
@@ -373,33 +373,33 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: per session, the latest `session.shutdown` or `session.usage_checkpoint` total, summed per calendar month.
 - [x] **T4.4 Codex rate limits** · S · deps: T1.8
   - AC: shows the newest `rate_limits` (percentages and resets) when present, otherwise "n/a (update Codex)".
-- [x] **T4.5 `ajan limits` rendering** · S · deps: T4.1–T4.4, T3.6
+- [x] **T4.5 `imux limits` rendering** · S · deps: T4.1–T4.4, T3.6
   - AC: table output, `--json` (schema documented) and `--pager`.
   - AC: the tmux popup is wired into the menu.
   - AC: the CodexBar hint appears in the footer.
 
 ## M5: Agent bus
 
-- [x] **T5.1 Target resolution and `ajan panes`** · M · deps: T2.1
+- [x] **T5.1 Target resolution and `imux panes`** · M · deps: T2.1
   - AC: `%N` or an agent name, resolved in the caller's session first, then server-wide. Ambiguity → error listing the candidates.
   - AC: idle/busy and "seconds since change" come from two captures 1 s apart, or from the watcher's
     hash timestamps when it is running.
   - AC: `--json` is supported.
-- [x] **T5.2 `ajan read`** · S · deps: T5.1
+- [x] **T5.2 `imux read`** · S · deps: T5.1
   - AC: `-n` lines, ANSI stripped, wrapped lines joined (`-J`).
-- [x] **T5.3 `ajan send`** · M · deps: T5.1
-  - AC: the sender prefix comes from `TMUX_PANE` / `AJAN_AGENT`.
+- [x] **T5.3 `imux send`** · M · deps: T5.1
+  - AC: the sender prefix comes from `TMUX_PANE` / `IMUX_AGENT`.
   - AC: a 0600 temp file → `load-buffer` → `paste-buffer -p -d` → Enter.
-  - AC: guards per §12 (enabled, size, rate, no self-send, ajan socket only); `--wait-idle`; `bus.confirm` menu.
-- [x] **T5.4 `ajan wait`** · S · deps: T5.1
+  - AC: guards per §12 (enabled, size, rate, no self-send, i-mux socket only); `--wait-idle`; `bus.confirm` menu.
+- [x] **T5.4 `imux wait`** · S · deps: T5.1
   - AC: exit 0 when idle, 124 on timeout. `--print` outputs the final screen.
-- [x] **T5.5 `ajan snippet`** · S · deps: T5.3, T5.4
+- [x] **T5.5 `imux snippet`** · S · deps: T5.3, T5.4
   - AC: prints CLAUDE.md, GEMINI.md and AGENTS.md variants.
   - AC: a test asserts that no code path writes to those files.
 - [x] **T5.6 M5 e2e and sandbox check** · M · deps: T5.1–T5.4
   - AC: two fake agents exchange messages, including a multi-line one received intact.
   - AC: the rate limit stops a ping-pong loop.
-  - AC: (USER) Q18: whether a sandboxed Codex/Gemini can call `ajan send` is recorded.
+  - AC: (USER) Q18: whether a sandboxed Codex/Gemini can call `imux send` is recorded.
   - Status (2026-11-06): the automated part is done; the Q18 sandbox check is still open (USER).
 
 ## M6: Native resume-back with delta handoff
@@ -413,7 +413,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: the delta budget applies. An empty delta means resume without a prompt.
 - [x] **T6.3 Resume launch path** · M · deps: T6.1, T6.2, T2.10
   - AC: the resume is chosen only when the trail has the agent with an id, the same cwd and an existing file.
-  - AC: the fallback spec (full handoff, new session) is written to `@ajan_fallback`.
+  - AC: the fallback spec (full handoff, new session) is written to `@imux_fallback`.
   - AC: `--no-resume` and per-agent `resume = false` disable it.
 - [x] **T6.4 Post-resume session discovery** · S · deps: T6.3
   - AC: the trail entry records the session that is actually written to, whether the CLI appends or forks.
@@ -436,9 +436,9 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - AC: never runs `sudo` without saying so first.
 - [x] **T7.4 Homebrew tap** · S · deps: T7.1
   - AC: the formula is generated by GoReleaser with `depends_on "tmux"`.
-  - AC: `brew install OWNER/tap/ajan && ajan doctor` works on macOS arm64 and amd64.
+  - AC: `brew install OWNER/tap/imux && imux doctor` works on macOS arm64 and amd64.
 - [x] **T7.5 Release smoke test** · S · deps: T7.2–T7.4
-  - AC: CI downloads the released artifacts on macOS and Linux and runs `ajan version` and `ajan doctor --ci`, which skips the agent checks.
+  - AC: CI downloads the released artifacts on macOS and Linux and runs `imux version` and `imux doctor --ci`, which skips the agent checks.
 
 ## M8: Docs and README
 
@@ -488,11 +488,11 @@ get the "continue in …" prompt, and switch manually or automatically with cont
 ### End-to-end tests (`go test -tags e2e ./e2e/...`)
 
 - **Isolation:**
-  - each test uses its own tmux socket (`AJAN_TMUX_SOCKET=ajan-test-<rand>`);
-  - its own `AJAN_HOME` and fake agent homes in a temp dir;
+  - each test uses its own tmux socket (`IMUX_TMUX_SOCKET=imux-test-<rand>`);
+  - its own `IMUX_HOME` and fake agent homes in a temp dir;
   - the server is killed in cleanup.
 - **Fake agents** (`e2e/fakeagents/fake-{claude,gemini,copilot,codex}`, POSIX sh). Each one:
-  - records its argv (NUL-separated) and selected env to `$AJAN_FAKE_LOG/<agent>-<n>.argv`;
+  - records its argv (NUL-separated) and selected env to `$IMUX_FAKE_LOG/<agent>-<n>.argv`;
   - optionally writes a synthetic session file into the fake agent home, so discovery and
     parsing run for real;
   - prints a scripted screen, e.g. `FAKE_SCRIPT="sleep 3; echo '5-hour limit reached ∙ resets 3pm'"`;
@@ -500,7 +500,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
   - exits with a configurable status after a configurable delay (pane-died tests).
 - **Wiring:** config sets `agents.<x>.bin` to the fake scripts. `PATH` in e2e contains no real agent
   binaries; the harness fails the test if resolution ever returns a path outside `e2e/fakeagents`.
-- **Assertions** use the tmux command recorder (`AJAN_TMUX_RECORD`), pane options (`show -p`),
+- **Assertions** use the tmux command recorder (`IMUX_TMUX_RECORD`), pane options (`show -p`),
   `capture-pane` output, and fake-agent argv logs.
 - **Attached client** (menus, `ask` mode, Q24): a pty-backed `tmux attach` started by the test (a
   test-only pty helper, kept out of the main binary's dependencies).
@@ -526,5 +526,5 @@ and T6.1. They are explicit tasks, and their outcomes update ARCHITECTURE §20/�
 
 - launching `claude`, `gemini`, `copilot` or `codex`;
 - network access;
-- reading the developer's real `~/.claude`, `~/.gemini`, `~/.copilot`, `~/.codex` or `~/.ajan`.
-  Every test sets `HOME`, `AJAN_HOME`, `CLAUDE_CONFIG_DIR` and `CODEX_HOME` to temp dirs.
+- reading the developer's real `~/.claude`, `~/.gemini`, `~/.copilot`, `~/.codex` or `~/.imux`.
+  Every test sets `HOME`, `IMUX_HOME`, `CLAUDE_CONFIG_DIR` and `CODEX_HOME` to temp dirs.

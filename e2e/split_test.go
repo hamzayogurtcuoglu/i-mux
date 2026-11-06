@@ -15,10 +15,10 @@ func TestSplit(t *testing.T) {
 	for i, c := range []struct {
 		flag, agent, layoutOp string
 	}{{"-h", "gemini", "left"}, {"-v", "codex", "top"}} {
-		out := h.mustAjan("split", c.agent, c.flag, "--pane", pane)
+		out := h.mustImux("split", c.agent, c.flag, "--pane", pane)
 		np := strings.TrimSpace(out)
 		h.run(c.agent, 1)
-		got := h.paneOpt(np, "#{@ajan_agent}|#{@ajan_cwd}|#{remain-on-exit}|#{pane_current_path}")
+		got := h.paneOpt(np, "#{@imux_agent}|#{@imux_cwd}|#{remain-on-exit}|#{pane_current_path}")
 		want := c.agent + "|" + h.Homes.Project + "|on|" + h.Homes.Project
 		if got != want {
 			t.Fatalf("split %d: %q, want %q", i, got, want)
@@ -29,7 +29,7 @@ func TestSplit(t *testing.T) {
 		}
 	}
 	// -h places the gemini pane beside claude, -v the codex pane below it.
-	layout := h.mustTmux("list-panes", "-t", pane, "-F", "#{pane_id} #{pane_left} #{pane_top} #{@ajan_agent}")
+	layout := h.mustTmux("list-panes", "-t", pane, "-F", "#{pane_id} #{pane_left} #{pane_top} #{@imux_agent}")
 	rows := map[string][2]string{}
 	for _, l := range strings.Split(strings.TrimSpace(layout), "\n") {
 		f := strings.Fields(l)
@@ -41,7 +41,7 @@ func TestSplit(t *testing.T) {
 	if rows["codex"][1] == rows["claude"][1] {
 		t.Errorf("-v did not split vertically: %v", rows)
 	}
-	if _, e, err := h.ajan("split", "gemini", "-h", "-v", "--pane", pane); err == nil || !strings.Contains(e, "usage") {
+	if _, e, err := h.imux("split", "gemini", "-h", "-v", "--pane", pane); err == nil || !strings.Contains(e, "usage") {
 		t.Fatalf("-h -v together: %v %q", err, e)
 	}
 }

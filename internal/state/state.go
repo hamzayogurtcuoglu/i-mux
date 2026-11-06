@@ -1,4 +1,4 @@
-// Package state reads and updates ~/.ajan/state.json: detected limits, the
+// Package state reads and updates ~/.imux/state.json: detected limits, the
 // agent binary cache and one-time notices.
 //
 // Writers serialize with flock(state.lock) and replace the file atomically

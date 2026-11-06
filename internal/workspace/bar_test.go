@@ -52,11 +52,11 @@ func TestAgentBarRanges(t *testing.T) {
 			t.Errorf("range %q is %d bytes (tmux limit %d)", m[1], len(m[1]), MaxRangeBytes)
 		}
 		if !strings.HasPrefix(m[1], RangePrefix) {
-			t.Errorf("range %q lacks the ajan: prefix", m[1])
+			t.Errorf("range %q lacks the imux: prefix", m[1])
 		}
 		seen[m[1]] = true
 	}
-	for _, want := range []string{"ajan:claude", "ajan:gemini", "ajan:copilot", "ajan:codex", RangeSessions, RangeMenu} {
+	for _, want := range []string{"imux:claude", "imux:gemini", "imux:copilot", "imux:codex", RangeSessions, RangeMenu} {
 		if !seen[want] {
 			t.Errorf("missing range %s", want)
 		}
@@ -111,7 +111,7 @@ func TestAgentBarInConf(t *testing.T) {
 	w, _, _ := testWS(t)
 	v34, _ := tmux.ParseVersion("tmux 3.4")
 	v32, _ := tmux.ParseVersion("tmux 3.2a")
-	if b := agentBar(w, v34); !strings.Contains(b, "range=user|ajan:claude") {
+	if b := agentBar(w, v34); !strings.Contains(b, "range=user|imux:claude") {
 		t.Fatalf("3.4 bar not clickable: %.100s", b)
 	}
 	if b := agentBar(w, v32); b == "" || strings.Contains(b, "range=") {

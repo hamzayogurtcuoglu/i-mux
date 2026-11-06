@@ -14,11 +14,11 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 )
 
-const helperEnv = "AJAN_STATE_TEST_HELPER"
+const helperEnv = "IMUX_STATE_TEST_HELPER"
 
 func TestMain(m *testing.M) {
 	if id := os.Getenv(helperEnv); id != "" {
-		n, _ := strconv.Atoi(os.Getenv("AJAN_STATE_TEST_N"))
+		n, _ := strconv.Atoi(os.Getenv("IMUX_STATE_TEST_N"))
 		for i := 0; i < n; i++ {
 			err := Update(func(s *State) error {
 				s.SetNotice(fmt.Sprintf("p%s-%d", id, i))
@@ -35,12 +35,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestConcurrentWritersLoseNothing(t *testing.T) {
-	t.Setenv("AJAN_HOME", t.TempDir())
+	t.Setenv("IMUX_HOME", t.TempDir())
 	const procs, n = 2, 60
 	var cmds []*exec.Cmd
 	for p := 0; p < procs; p++ {
 		cmd := exec.Command(os.Args[0], "-test.run=^$")
-		cmd.Env = append(os.Environ(), helperEnv+"="+strconv.Itoa(p), "AJAN_STATE_TEST_N="+strconv.Itoa(n))
+		cmd.Env = append(os.Environ(), helperEnv+"="+strconv.Itoa(p), "IMUX_STATE_TEST_N="+strconv.Itoa(n))
 		cmd.Stderr = os.Stderr
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
@@ -69,7 +69,7 @@ func TestConcurrentWritersLoseNothing(t *testing.T) {
 }
 
 func TestUnknownFieldsSurvive(t *testing.T) {
-	t.Setenv("AJAN_HOME", t.TempDir())
+	t.Setenv("IMUX_HOME", t.TempDir())
 	if err := paths.EnsureDir(paths.Home()); err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +104,7 @@ func TestUnknownFieldsSurvive(t *testing.T) {
 }
 
 func TestReadMissingAndCorrupt(t *testing.T) {
-	t.Setenv("AJAN_HOME", t.TempDir())
+	t.Setenv("IMUX_HOME", t.TempDir())
 	s, err := Read()
 	if err != nil || s.Version != SchemaVersion {
 		t.Fatalf("%v %+v", err, s)
@@ -134,7 +134,7 @@ func TestLimitsExpire(t *testing.T) {
 }
 
 func TestUpdateErrorWritesNothing(t *testing.T) {
-	t.Setenv("AJAN_HOME", t.TempDir())
+	t.Setenv("IMUX_HOME", t.TempDir())
 	err := Update(func(s *State) error { return fmt.Errorf("boom") })
 	if err == nil {
 		t.Fatal("want error")

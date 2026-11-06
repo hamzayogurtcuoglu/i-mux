@@ -29,10 +29,10 @@ is slightly above the 10 MB target and well under the 15 MB budget.
 | Menu open latency (process start → menu shown) | p50 3.6 ms, p95 5.3 ms (50 runs) | < 100 ms p95 | `e2e/menu_test.go` |
 | Session picker open, 50 candidate files | p50 5.3 ms, p95 8.1 ms (50 runs) | < 150 ms p95 | `e2e/picker_test.go` |
 | Switch from a 64 MB Claude session (command → new agent's exec) | 95 ms | < 1.5 s | `e2e/m2_test.go` |
-| `ajan handoff --print` on a 64 MB session | 107 ms, peak RSS 17.5 MB | < 1 s, < 80 MB | `e2e/perf_test.go` |
+| `imux handoff --print` on a 64 MB session | 107 ms, peak RSS 17.5 MB | < 1 s, < 80 MB | `e2e/perf_test.go` |
 | Claude 5-hour usage on the 64 MB fixture | 48 ms | < 300 ms | `internal/limits` |
-| Agent bar re-render on focus change | 0 ajan execs | 0 | `e2e/bar_test.go` |
-| Resident ajan processes per pane | 0 (only the watcher) | 0 | `e2e/m2_test.go` |
+| Agent bar re-render on focus change | 0 i-mux execs | 0 | `e2e/bar_test.go` |
+| Resident i-mux processes per pane | 0 (only the watcher) | 0 | `e2e/m2_test.go` |
 
 Reproduce:
 

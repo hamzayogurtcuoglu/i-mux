@@ -80,7 +80,7 @@ func (w *WS) Paste(ctx context.Context, pane, text string, enter bool) error {
 	if _, err := rand.Read(r[:]); err != nil {
 		return err
 	}
-	name := "ajan-" + hex.EncodeToString(r[:])
+	name := "imux-" + hex.EncodeToString(r[:])
 	dir := paths.Launch()
 	if err := paths.EnsureDir(dir); err != nil {
 		return err

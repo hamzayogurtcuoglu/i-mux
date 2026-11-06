@@ -20,16 +20,16 @@ func TestClassifyClick(t *testing.T) {
 		action ClickAction
 		agent  session.AgentID
 	}{
-		{"ajan:cur", p, ClickMenu, ""},
-		{"ajan:menu", p, ClickMenu, ""},
-		{"ajan:sessions", p, ClickSessions, ""},
-		{"ajan:claude", p, ClickMenu, "claude"}, // the current agent
-		{"ajan:gemini", p, ClickConfirm, "gemini"},
-		{"ajan:codex", p, ClickInstall, "codex"},
-		{"ajan:copilot", p, ClickInstall, "copilot"},
-		{"ajan:claude", &Pane{ID: "%2"}, ClickSwitch, "claude"},                              // plain shell
-		{"ajan:claude", &Pane{ID: "%3", Agent: "claude", Dead: true}, ClickSwitch, "claude"}, // exited agent
-		{"ajan:nope", p, ClickNone, ""},
+		{"imux:cur", p, ClickMenu, ""},
+		{"imux:menu", p, ClickMenu, ""},
+		{"imux:sessions", p, ClickSessions, ""},
+		{"imux:claude", p, ClickMenu, "claude"}, // the current agent
+		{"imux:gemini", p, ClickConfirm, "gemini"},
+		{"imux:codex", p, ClickInstall, "codex"},
+		{"imux:copilot", p, ClickInstall, "copilot"},
+		{"imux:claude", &Pane{ID: "%2"}, ClickSwitch, "claude"},                              // plain shell
+		{"imux:claude", &Pane{ID: "%3", Agent: "claude", Dead: true}, ClickSwitch, "claude"}, // exited agent
+		{"imux:nope", p, ClickNone, ""},
 		{"window:1", p, ClickNone, ""},
 	}
 	for _, c := range cases {

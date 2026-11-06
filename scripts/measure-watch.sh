@@ -3,22 +3,22 @@
 #
 #   scripts/measure-watch.sh [seconds per phase]   (default 600)
 #
-# Runs an isolated workspace (own HOME, AJAN_HOME and tmux socket) with four
+# Runs an isolated workspace (own HOME, IMUX_HOME and tmux socket) with four
 # fake-agent panes, two of which redraw a spinner constantly, like real
 # agents. Phase 1 has a client attached, phase 2 has none. Every INTERVAL
 # seconds (default 5) it samples the watcher's RSS; CPU comes from the
 # process's CPU time over the phase. It also counts the watcher's tmux execs
-# from the command recorder. Nothing touches your real ~/.ajan or agents.
+# from the command recorder. Nothing touches your real ~/.imux or agents.
 set -eu
 cd "$(dirname "$0")/.."
 DUR="${1:-600}"
 INT="${INTERVAL:-5}"
-BIN="${AJAN_BIN:-$PWD/bin/ajan}"
+BIN="${IMUX_BIN:-$PWD/bin/imux}"
 [ -x "$BIN" ] || make build >/dev/null
 command -v tmux >/dev/null || { echo "tmux is not installed" >&2; exit 1; }
 
-tmp=$(mktemp -d "${TMPDIR:-/tmp}/ajan-perf.XXXXXX")
-SOCK="ajan-perf-$$"
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/imux-perf.XXXXXX")
+SOCK="imux-perf-$$"
 cleanup() {
 	tmux -L "$SOCK" kill-server 2>/dev/null || true
 	if [ -n "${client:-}" ]; then kill "$client" 2>/dev/null || true; fi
@@ -27,22 +27,22 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-export HOME="$tmp/home" AJAN_HOME="$tmp/home/.ajan" AJAN_TMUX_SOCKET="$SOCK"
+export HOME="$tmp/home" IMUX_HOME="$tmp/home/.imux" IMUX_TMUX_SOCKET="$SOCK"
 export CLAUDE_CONFIG_DIR="$HOME/.claude" CODEX_HOME="$HOME/.codex" COPILOT_HOME="$HOME/.copilot"
-export AJAN_FAKE_LOG="$tmp/log" AJAN_TMUX_RECORD="$tmp/record.jsonl" TMUX='' TMUX_PANE=
-mkdir -p "$HOME/proj" "$AJAN_HOME" "$AJAN_FAKE_LOG" "$tmp/fake"
+export IMUX_FAKE_LOG="$tmp/log" IMUX_TMUX_RECORD="$tmp/record.jsonl" TMUX='' TMUX_PANE=
+mkdir -p "$HOME/proj" "$IMUX_HOME" "$IMUX_FAKE_LOG" "$tmp/fake"
 cp e2e/fakeagents/* "$tmp/fake/"
 chmod +x "$tmp/fake/"*
 {
 	for a in claude gemini copilot codex; do
 		printf '[agents.%s]\nbin = "%s/fake/fake-%s"\n\n' "$a" "$tmp" "$a"
 	done
-} >"$AJAN_HOME/config.toml"
+} >"$IMUX_HOME/config.toml"
 # Claude and Gemini redraw a spinner line five times a second.
 # shellcheck disable=SC2016 # expanded by the fake agent, not here
 spin='while :; do for c in a b c d; do printf "\r%s working %s" "$c" "$(date +%S)"; sleep 0.2; done; done'
-echo "$spin" >"$AJAN_FAKE_LOG/claude.sh"
-echo "$spin" >"$AJAN_FAKE_LOG/gemini.sh"
+echo "$spin" >"$IMUX_FAKE_LOG/claude.sh"
+echo "$spin" >"$IMUX_FAKE_LOG/gemini.sh"
 
 cd "$HOME/proj"
 "$BIN" claude -d >/dev/null
@@ -66,7 +66,7 @@ until tmux -L "$SOCK" list-clients -F x 2>/dev/null | grep -q x; do
 done
 "$BIN" __watch ensure
 sleep 1
-pid=$(cat "$AJAN_HOME/watch.pid")
+pid=$(cat "$IMUX_HOME/watch.pid")
 if [ -z "$pid" ] || ! kill -0 "$pid"; then
 	echo "watcher not running" >&2
 	exit 1
@@ -80,7 +80,7 @@ cputicks() { # utime+stime in clock ticks (Linux), or ps cputime in seconds*hz
 		ps -o time= -p "$1" 2>/dev/null | awk -v hz="$hz" '{n=split($1,a,":"); s=0; for(i=1;i<=n;i++) s=s*60+a[i]; print s*hz}'
 	fi
 }
-execs() { grep -c "\"pid\":$pid," "$AJAN_TMUX_RECORD" 2>/dev/null || echo 0; }
+execs() { grep -c "\"pid\":$pid," "$IMUX_TMUX_RECORD" 2>/dev/null || echo 0; }
 
 phase() { # phase NAME
 	maxrss=0
@@ -100,7 +100,7 @@ phase() { # phase NAME
 		printf "%-9s max RSS %.1f MB  mean CPU %.3f%%  tmux execs %d (%.2f/s)  over %ds\n", n, r/1024, 100*c/hz/w, e, e/w, w }'
 }
 
-echo "ajan watcher: $DUR s per phase, sample every $INT s, $(tmux -V), $(uname -sm)"
+echo "imux watcher: $DUR s per phase, sample every $INT s, $(tmux -V), $(uname -sm)"
 phase attached
 for c in $(tmux -L "$SOCK" list-clients -F '#{client_name}'); do
 	tmux -L "$SOCK" detach-client -t "$c"

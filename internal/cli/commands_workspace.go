@@ -33,7 +33,7 @@ func init() {
 }
 
 // handoffForPane builds the handoff of a pane's current conversation
-// (`ajan handoff --pane %N --print`, the menu's preview popup).
+// (`imux handoff --pane %N --print`, the menu's preview popup).
 func handoffForPane(e *Env, cfg *config.Config, pane string, to session.AgentID, budget int) (string, error) {
 	w, err := workspace.New(cfg)
 	if err != nil {
@@ -56,7 +56,7 @@ func handoffForPane(e *Env, cfg *config.Config, pane string, to session.AgentID,
 		return "", err
 	}
 	for _, wn := range res.Warnings {
-		fmt.Fprintf(e.Stderr, "ajan: %s\n", i18n.T("cli.warning", wn))
+		fmt.Fprintf(e.Stderr, "imux: %s\n", i18n.T("cli.warning", wn))
 	}
 	return res.Doc.Text, nil
 }
@@ -86,7 +86,7 @@ func newWorkspace(e *Env, interactive bool) (*workspace.WS, *config.Config, erro
 	return w, cfg, nil
 }
 
-// defaultAction handles `ajan [agent] [-d]`: outside tmux it attaches to this
+// defaultAction handles `imux [agent] [-d]`: outside tmux it attaches to this
 // directory's session or creates it; inside the workspace it opens a window.
 func defaultAction(e *Env, args []string) error {
 	fs := newFlags(e, "")

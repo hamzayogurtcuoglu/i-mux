@@ -19,27 +19,27 @@ func (h *H) exitAgent(pane string, status int) {
 }
 
 // TestPaneDiedFallsBackToShell (T2.10): an agent exit leaves a usable login
-// shell in @ajan_cwd with @ajan_agent cleared and the trail closed.
+// shell in @imux_cwd with @imux_agent cleared and the trail closed.
 func TestPaneDiedFallsBackToShell(t *testing.T) {
 	h := newH(t, "")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
 	h.exitAgent(pane, 0)
 	h.waitFor("shell in the pane", 5*time.Second, func() bool {
-		return h.paneOpt(pane, "#{pane_dead}|#{@ajan_agent}") == "0|"
+		return h.paneOpt(pane, "#{pane_dead}|#{@imux_agent}") == "0|"
 	})
-	if got := h.paneOpt(pane, "#{pane_current_path}|#{@ajan_cwd}|#{remain-on-exit}"); got != h.Homes.Project+"|"+h.Homes.Project+"|off" {
+	if got := h.paneOpt(pane, "#{pane_current_path}|#{@imux_cwd}|#{remain-on-exit}"); got != h.Homes.Project+"|"+h.Homes.Project+"|off" {
 		t.Fatalf("shell pane %q", got)
 	}
-	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@ajan_trail}"))
+	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@imux_trail}"))
 	if len(trail) != 1 || trail[0].End == 0 {
 		t.Fatalf("trail not closed: %+v", trail)
 	}
 	// The shell works, and the pane can start an agent again from the menu
-	// path (ajan switch on a plain-shell pane), with context from the trail.
+	// path (imux switch on a plain-shell pane), with context from the trail.
 	h.mustTmux("send-keys", "-t", pane, "echo shell-$((40+2))", "Enter")
 	h.waitFor("shell output", 5*time.Second, func() bool { return strings.Contains(h.capture(pane), "shell-42") })
-	h.mustAjan("switch", "gemini", "--pane", pane)
+	h.mustImux("switch", "gemini", "--pane", pane)
 	if argv := h.run("gemini", 1); len(argv) != 2 || !strings.Contains(argv[1], "fake claude request 1") {
 		t.Fatalf("restart from shell: %.200q", argv)
 	}
@@ -50,7 +50,7 @@ func TestPaneDiedOnExitClose(t *testing.T) {
 	h := newH(t, "on_exit = \"close\"\n")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	other := strings.TrimSpace(h.mustAjan("split", "gemini", "--pane", pane))
+	other := strings.TrimSpace(h.mustImux("split", "gemini", "--pane", pane))
 	h.run("gemini", 1)
 	h.exitAgent(pane, 0)
 	h.waitFor("pane closed", 5*time.Second, func() bool {
@@ -60,7 +60,7 @@ func TestPaneDiedOnExitClose(t *testing.T) {
 }
 
 // TestPaneDiedFallbackSpec: a run that exits non-zero within 10 s of its
-// start is replaced by @ajan_fallback; a clean exit is not.
+// start is replaced by @imux_fallback; a clean exit is not.
 func TestPaneDiedFallbackSpec(t *testing.T) {
 	h := newH(t, "")
 	pane := h.startSession("claude")
@@ -74,7 +74,7 @@ func TestPaneDiedFallbackSpec(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		h.mustTmux("set-option", "-p", "-t", pane, "@ajan_fallback", p)
+		h.mustTmux("set-option", "-p", "-t", pane, "@imux_fallback", p)
 		return p
 	}
 	spec := fallback()
@@ -84,9 +84,9 @@ func TestPaneDiedFallbackSpec(t *testing.T) {
 		t.Fatalf("fallback argv %q", argv)
 	}
 	h.waitFor("fallback options", 5*time.Second, func() bool {
-		return h.paneOpt(pane, "#{@ajan_agent}|#{@ajan_fallback}|#{pane_dead}") == "gemini||0"
+		return h.paneOpt(pane, "#{@imux_agent}|#{@imux_fallback}|#{pane_dead}") == "gemini||0"
 	})
-	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@ajan_trail}"))
+	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@imux_trail}"))
 	if len(trail) != 1 || trail[0].Agent != "gemini" {
 		t.Fatalf("the failed run should be replaced in the trail: %+v", trail)
 	}
@@ -95,8 +95,8 @@ func TestPaneDiedFallbackSpec(t *testing.T) {
 	// A clean exit (status 0) does not use the fallback.
 	fb := fallback()
 	h.exitAgent(pane, 0)
-	h.waitFor("shell", 5*time.Second, func() bool { return h.paneOpt(pane, "#{pane_dead}|#{@ajan_agent}") == "0|" })
-	if h.runs("gemini") != 1 || h.paneOpt(pane, "#{@ajan_fallback}") != "" {
+	h.waitFor("shell", 5*time.Second, func() bool { return h.paneOpt(pane, "#{pane_dead}|#{@imux_agent}") == "0|" })
+	if h.runs("gemini") != 1 || h.paneOpt(pane, "#{@imux_fallback}") != "" {
 		t.Fatal("clean exit used or kept the fallback")
 	}
 	if _, err := launch.Read(fb, false); err == nil {

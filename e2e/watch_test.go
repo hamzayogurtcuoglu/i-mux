@@ -15,20 +15,20 @@ func (h *H) watchers() []string {
 	return strings.Fields(string(out))
 }
 
-// TestWatcherLifecycle (T3.3): ajan starts one watcher; another ensure wakes
+// TestWatcherLifecycle (T3.3): imux starts one watcher; another ensure wakes
 // it instead of starting a second; killing the server ends it within a tick.
 func TestWatcherLifecycle(t *testing.T) {
 	h := newH(t, "")
 	h.startSession("claude")
 	h.waitFor("watcher running", 5*time.Second, func() bool { return len(h.watchers()) == 1 })
-	status := h.mustAjan("__watch", "status")
+	status := h.mustImux("__watch", "status")
 	pid := h.watchers()[0]
 	if !strings.Contains(status, "running (pid "+pid+")") {
 		t.Fatalf("status %q, pid %s", status, pid)
 	}
 	for i := 0; i < 3; i++ {
-		h.mustAjan("__watch", "ensure")
-		h.mustAjan("-d")
+		h.mustImux("__watch", "ensure")
+		h.mustImux("-d")
 	}
 	time.Sleep(300 * time.Millisecond)
 	if w := h.watchers(); len(w) != 1 || w[0] != pid {
@@ -39,10 +39,10 @@ func TestWatcherLifecycle(t *testing.T) {
 
 	h.mustTmux("kill-server")
 	h.waitFor("watcher exit after the server is gone", 2*time.Second, func() bool { return len(h.watchers()) == 0 })
-	if out := h.mustAjan("__watch", "status"); !strings.Contains(out, "not running") {
+	if out := h.mustImux("__watch", "status"); !strings.Contains(out, "not running") {
 		t.Fatalf("status after exit: %q", out)
 	}
-	log := h.readFile(h.Homes.Ajan + "/watch.log")
+	log := h.readFile(h.Homes.Imux + "/watch.log")
 	if !strings.Contains(log, "started") || !strings.Contains(log, "server gone") {
 		t.Fatalf("watch.log:\n%s", log)
 	}

@@ -17,7 +17,7 @@ func TestSnippetVariants(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, want := range []string{file, "ajan panes", "ajan read", "ajan send", "ajan wait", "[from <agent> <pane>]", "not from the user"} {
+		for _, want := range []string{file, "imux panes", "imux read", "imux send", "imux wait", "[from <agent> <pane>]", "not from the user"} {
 			if !strings.Contains(s, want) {
 				t.Errorf("%s snippet lacks %q", target, want)
 			}
@@ -28,7 +28,7 @@ func TestSnippetVariants(t *testing.T) {
 	}
 }
 
-// TestNothingWritesAgentInstructionFiles: ajan never edits CLAUDE.md,
+// TestNothingWritesAgentInstructionFiles: imux never edits CLAUDE.md,
 // GEMINI.md or AGENTS.md. No source file that names them does file I/O.
 func TestNothingWritesAgentInstructionFiles(t *testing.T) {
 	root := testutil.ModuleRoot(t)

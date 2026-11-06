@@ -15,9 +15,9 @@ func Doc() string {
 	var b strings.Builder
 	b.WriteString("# Configuration\n\n")
 	b.WriteString("<!-- Generated from internal/config/default.toml by `go generate ./internal/config`. Do not edit. -->\n\n")
-	b.WriteString("ajan reads `~/.ajan/config.toml` (or `$AJAN_HOME/config.toml`). Every key is optional; the\n")
-	b.WriteString("values below are the built-in defaults. `ajan config init` writes this file with comments,\n")
-	b.WriteString("`ajan config show` prints the effective configuration, and `ajan config path` its location.\n")
+	b.WriteString("i-mux reads `~/.imux/config.toml` (or `$IMUX_HOME/config.toml`). Every key is optional; the\n")
+	b.WriteString("values below are the built-in defaults. `imux config init` writes this file with comments,\n")
+	b.WriteString("`imux config show` prints the effective configuration, and `imux config path` its location.\n")
 	b.WriteString("Unknown keys produce a warning; invalid values and regular expressions are rejected with the\n")
 	b.WriteString("line number.\n\n")
 	b.WriteString("| Key | Default | Description |\n|---|---|---|\n")

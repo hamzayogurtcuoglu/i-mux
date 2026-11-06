@@ -1,6 +1,6 @@
-# ajan build tooling. See TASKS.md (T0.7).
+# imux build tooling. See TASKS.md (T0.7).
 
-BINARY    ?= ajan
+BINARY    ?= imux
 PKG       := github.com/hamzayogurtcuoglu/i-mux
 VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT    ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null)
@@ -18,11 +18,11 @@ export CGO_ENABLED = 0
 
 all: lint test build
 
-build: ## Build bin/ajan
-	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/ajan
+build: ## Build bin/imux
+	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/imux
 
-install: ## Install ajan into GOBIN
-	$(GO) install -trimpath -ldflags "$(LDFLAGS)" ./cmd/ajan
+install: ## Install imux into GOBIN
+	$(GO) install -trimpath -ldflags "$(LDFLAGS)" ./cmd/imux
 
 test: ## Unit tests
 	$(GO) test ./...
@@ -31,7 +31,7 @@ race: ## Unit tests with the race detector (needs cgo)
 	CGO_ENABLED=1 $(GO) test -race ./...
 
 e2e: build ## End-to-end tests against a real tmux on a private socket
-	AJAN_E2E_BIN=$(CURDIR)/bin/$(BINARY) $(GO) test -tags e2e -count=1 -timeout 15m ./e2e/...
+	IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) $(GO) test -tags e2e -count=1 -timeout 15m ./e2e/...
 
 lint: ## golangci-lint (vet, staticcheck, errcheck, gofumpt, misspell)
 	golangci-lint run ./...

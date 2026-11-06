@@ -1,7 +1,7 @@
 // Package bus lets agents talk to each other through tmux (§12): list
 // panes, read a pane's screen, send it a message and wait until it is idle.
 // Agents call these commands from their own shell tool; targets are always
-// panes on ajan's socket.
+// panes on imux's socket.
 package bus
 
 import (
@@ -90,7 +90,7 @@ func (b *Bus) Resolve(ctx context.Context, target, caller string) (*workspace.Pa
 	return nil, fmt.Errorf("%w: %s", ErrNoTarget, i18n.T("bus.no_agent_pane", target))
 }
 
-// Info is one pane as `ajan panes` shows it.
+// Info is one pane as `imux panes` shows it.
 type Info struct {
 	Pane    string          `json:"pane"`
 	Agent   session.AgentID `json:"agent,omitempty"`

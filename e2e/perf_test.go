@@ -16,10 +16,10 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestHandoffPrintLargeSession checks §17: `ajan handoff --print` on a 64 MB
+// TestHandoffPrintLargeSession checks §17: `imux handoff --print` on a 64 MB
 // Claude session takes < 1 s with peak RSS < 80 MB.
 func TestHandoffPrintLargeSession(t *testing.T) {
-	bin := ajanBin(t)
+	bin := imuxBin(t)
 	h := testutil.Isolate(t)
 	id := "99999999-0000-4000-8000-000000000064"
 	p := filepath.Join(h.Claude, "projects", claude.EncodeCWD(h.Project), id+".jsonl")
@@ -47,7 +47,7 @@ func TestHandoffPrintLargeSession(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
-		if !strings.HasPrefix(string(out), "[ajan handoff · Claude Code → Gemini CLI") {
+		if !strings.HasPrefix(string(out), "[i-mux handoff · Claude Code → Gemini CLI") {
 			t.Fatalf("unexpected output %.200s", out)
 		}
 		if best == 0 || d < best {

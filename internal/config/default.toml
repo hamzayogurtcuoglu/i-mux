@@ -1,4 +1,4 @@
-# ajan configuration (~/.ajan/config.toml)
+# i-mux configuration (~/.imux/config.toml)
 #
 # Every key is optional; the values below are the built-in defaults.
 # Regex patterns use TOML literal strings ('...'), so backslashes need no escaping.
@@ -6,7 +6,7 @@
 # Agent order: menu order, agent bar order and auto-switch priority.
 order         = ["claude", "gemini", "copilot", "codex"]
 
-# Agent started by a plain `ajan`. "" = first installed agent in `order`.
+# Agent started by a plain `imux`. "" = first installed agent in `order`.
 default_agent = ""
 
 # What happens when an agent hits its usage limit:
@@ -18,7 +18,7 @@ on_limit      = "ask"
 # What a pane does when its agent exits: "shell" (drop to your login shell) or "close".
 on_exit       = "shell"
 
-# UI language: "" = from AJAN_LANG / LANG; "en" or "tr".
+# UI language: "" = from IMUX_LANG / LANG; "en" or "tr".
 locale        = ""
 
 [handoff]
@@ -57,13 +57,13 @@ scan_lines     = 25
 default_expiry = "5h"
 
 [bus]
-# Allow agents to message each other with `ajan send`.
+# Allow agents to message each other with `imux send`.
 enabled           = true
 # Ask before every message is delivered.
 confirm           = false
 # A pane counts as idle once its screen did not change for this long.
 idle_after        = "5s"
-# Largest message `ajan send` delivers.
+# Largest message `imux send` delivers.
 max_message_bytes = 16384
 # Messages per minute per sending pane (stops agent ping-pong loops).
 rate_per_minute   = 20

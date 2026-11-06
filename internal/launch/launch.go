@@ -1,7 +1,7 @@
 // Package launch starts agent CLIs from launch specs.
 //
-// A spec is written to ~/.ajan/launch/<rand>.json (0600) and consumed by
-// `ajan __exec <spec>`, which deletes it, sets PATH/AJAN_PANE/AJAN_AGENT,
+// A spec is written to ~/.imux/launch/<rand>.json (0600) and consumed by
+// `imux __exec <spec>`, which deletes it, sets PATH/IMUX_PANE/IMUX_AGENT,
 // changes directory and replaces itself with the agent via execve. argv is
 // never passed through a shell, and the prompt never touches a tmux command
 // line (no quoting, no size limit there).
@@ -74,18 +74,18 @@ func (s *Spec) Validate() error {
 // Argv returns the full argument vector (argv[0] is the binary path).
 func (s *Spec) Argv() []string { return append([]string{s.Bin}, s.Args...) }
 
-// Environ returns base with the spec's overrides plus AJAN_PANE and
-// AJAN_AGENT. Later duplicates are removed so overrides win.
+// Environ returns base with the spec's overrides plus IMUX_PANE and
+// IMUX_AGENT. Later duplicates are removed so overrides win.
 func (s *Spec) Environ(base []string) []string {
 	over := map[string]string{}
 	for k, v := range s.Env {
 		over[k] = v
 	}
 	if s.Pane != "" {
-		over["AJAN_PANE"] = s.Pane
+		over["IMUX_PANE"] = s.Pane
 	}
 	if s.Agent != "" {
-		over["AJAN_AGENT"] = string(s.Agent)
+		over["IMUX_AGENT"] = string(s.Agent)
 	}
 	out := make([]string, 0, len(base)+len(over))
 	for _, kv := range base {
@@ -106,7 +106,7 @@ func (s *Spec) Environ(base []string) []string {
 	return out
 }
 
-// Write stores the spec in ~/.ajan/launch with mode 0600 and returns its path.
+// Write stores the spec in ~/.imux/launch with mode 0600 and returns its path.
 func Write(s *Spec) (string, error) {
 	if err := paths.EnsureDir(paths.Launch()); err != nil {
 		return "", err

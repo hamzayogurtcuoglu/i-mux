@@ -12,10 +12,10 @@ import (
 
 // Agent-bar ranges (§9.3). tmux limits a range argument to 15 bytes.
 const (
-	RangePrefix   = "ajan:"
-	RangeSessions = "ajan:sessions"
-	RangeMenu     = "ajan:menu"
-	RangeCur      = "ajan:cur"
+	RangePrefix   = "imux:"
+	RangeSessions = "imux:sessions"
+	RangeMenu     = "imux:menu"
+	RangeCur      = "imux:cur"
 	MaxRangeBytes = 15
 )
 
@@ -32,8 +32,8 @@ type BarAgent struct {
 }
 
 // AgentBar renders status-format[1] (§9.3): the agent bar for the active
-// pane, highlighted by tmux formats alone (no ajan process on focus
-// changes). With clickable, every region is a `range=user|ajan:<x>`.
+// pane, highlighted by tmux formats alone (no imux process on focus
+// changes). With clickable, every region is a `range=user|imux:<x>`.
 //
 // Overflow (Q29): when the client is narrower than the full bar, entries of
 // agents that are not installed are dropped; when still too narrow, short
@@ -64,7 +64,7 @@ func barVariant(agents []BarAgent, clickable, withMissing, short bool) (string, 
 		}
 	}
 	sep := func() { text("│") }
-	text(" ajan ")
+	text(" i-mux ")
 	for _, a := range agents {
 		info := agent.MustGet(a.ID)
 		name := info.Short
@@ -87,9 +87,9 @@ func barVariant(agents []BarAgent, clickable, withMissing, short bool) (string, 
 		id := string(a.ID)
 		region(RangePrefix+id, func() {
 			// Active pane's agent: reverse video with a ▶ marker.
-			b.WriteString("#{?#{==:#{@ajan_agent}," + id + "},#[reverse] ▶ " + name + " #[noreverse], " + name + " }")
+			b.WriteString("#{?#{==:#{@imux_agent}," + id + "},#[reverse] ▶ " + name + " #[noreverse], " + name + " }")
 			width += displayWidth(" " + name + " ")
-			b.WriteString("#{?@ajan_lim_" + id + ",#{@ajan_lim_" + id + "} ,}")
+			b.WriteString("#{?@imux_lim_" + id + ",#{@imux_lim_" + id + "} ,}")
 			width += limitMarkerWidth
 		})
 	}

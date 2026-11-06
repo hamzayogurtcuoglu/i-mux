@@ -75,7 +75,7 @@ type Detector struct {
 }
 
 const (
-	listFormat   = "#{pane_id}\t#{@ajan_agent}\t#{@ajan_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}"
+	listFormat   = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}"
 	clientFormat = "#{client_name}\t#{client_control_mode}\t#{client_session}\t#{client_activity}"
 )
 
@@ -83,7 +83,7 @@ const (
 // use libutempter (Debian, Ubuntu) can lose the SIGCHLD of a pane's process:
 // when the pane's pty closes, libutempter sets SIGCHLD to SIG_DFL while its
 // helper runs, and a child that exits in that window stays a zombie. The pane
-// is then dead with no exit status, and the pane-died hook (ajan __pane-died:
+// is then dead with no exit status, and the pane-died hook (imux __pane-died:
 // shell, close or fallback) never runs. Any child exit makes tmux reap them
 // all, so a run-shell job that exits at once is enough.
 var reapNudge = tmux.Cmd{"run-shell", "-b", "true"}

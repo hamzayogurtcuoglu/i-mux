@@ -52,7 +52,7 @@ func testWS(t *testing.T) (*WS, *fakeTmux, *testutil.Homes) {
 	w := &WS{
 		Cfg:  config.Default(),
 		T:    &tmux.Client{Bin: "tmux", Socket: "test", Runner: f},
-		Self: "/opt/ajan/bin/ajan",
+		Self: "/opt/imux/bin/imux",
 		Now:  testutil.Clock().Now,
 	}
 	w.SetBins(map[session.AgentID]agent.Resolved{
@@ -188,9 +188,9 @@ func TestStartBatchesOptions(t *testing.T) {
 	last := f.calls[len(f.calls)-1]
 	joined := strings.Join(last, " ")
 	for _, want := range []string{
-		"new-session -d -s " + res.Session + " -c " + h.Project, "/opt/ajan/bin/ajan __exec ",
-		"; set-option -p remain-on-exit on", "; set-option -p @ajan_agent claude", "; set-option -p @ajan_cwd " + h.Project,
-		"; set-option -p @ajan_label Claude", `; set-option -p @ajan_trail [{"a":"claude"`,
+		"new-session -d -s " + res.Session + " -c " + h.Project, "/opt/imux/bin/imux __exec ",
+		"; set-option -p remain-on-exit on", "; set-option -p @imux_agent claude", "; set-option -p @imux_cwd " + h.Project,
+		"; set-option -p @imux_label Claude", `; set-option -p @imux_trail [{"a":"claude"`,
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("batch lacks %q:\n%s", want, joined)
@@ -204,7 +204,7 @@ func TestStartBatchesOptions(t *testing.T) {
 		}
 	}
 	fi, err := os.Stat(spec)
-	if err != nil || fi.Mode().Perm() != 0o600 || filepath.Dir(spec) != filepath.Join(h.Ajan, "launch") {
+	if err != nil || fi.Mode().Perm() != 0o600 || filepath.Dir(spec) != filepath.Join(h.Imux, "launch") {
 		t.Fatalf("spec %s: %v %v", spec, fi, err)
 	}
 	// An existing session is found, not recreated.

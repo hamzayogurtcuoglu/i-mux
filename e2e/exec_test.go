@@ -12,8 +12,8 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
 )
 
-// TestExecByteExactArgv (T2.3): `ajan __exec <spec>` in a tmux pane deletes
-// the spec, sets AJAN_PANE / AJAN_AGENT / PATH and hands the fake agent its
+// TestExecByteExactArgv (T2.3): `imux __exec <spec>` in a tmux pane deletes
+// the spec, sets IMUX_PANE / IMUX_AGENT / PATH and hands the fake agent its
 // arguments byte for byte, without any shell in between.
 func TestExecByteExactArgv(t *testing.T) {
 	h := newH(t, "")
@@ -21,7 +21,7 @@ func TestExecByteExactArgv(t *testing.T) {
 		"--session-id", "11111111-2222-4333-8444-555555555555",
 		"it's \"quoted\" and 'single'",
 		"line one\nline two\n",
-		"$(touch /tmp/ajan-pwned) `id` $HOME ; | & > <",
+		"$(touch /tmp/imux-pwned) `id` $HOME ; | & > <",
 		"Türkçe: ğüşıöç ĞÜŞİÖÇ · emoji 🚀",
 		"ends with a semicolon;",
 		"",
@@ -44,16 +44,16 @@ func TestExecByteExactArgv(t *testing.T) {
 	if _, err := os.Stat(spec); !os.IsNotExist(err) {
 		t.Fatal("launch spec was not deleted")
 	}
-	if _, err := os.Stat("/tmp/ajan-pwned"); err == nil {
-		os.Remove("/tmp/ajan-pwned")
+	if _, err := os.Stat("/tmp/imux-pwned"); err == nil {
+		os.Remove("/tmp/imux-pwned")
 		t.Fatal("an argument was evaluated by a shell")
 	}
 	env := h.runEnv("claude", 1)
-	if env["AJAN_PANE"] != pane || env["TMUX_PANE"] != pane {
-		t.Errorf("AJAN_PANE=%q TMUX_PANE=%q, want %q", env["AJAN_PANE"], env["TMUX_PANE"], pane)
+	if env["IMUX_PANE"] != pane || env["TMUX_PANE"] != pane {
+		t.Errorf("IMUX_PANE=%q TMUX_PANE=%q, want %q", env["IMUX_PANE"], env["TMUX_PANE"], pane)
 	}
-	if env["AJAN_AGENT"] != "claude" {
-		t.Errorf("AJAN_AGENT=%q", env["AJAN_AGENT"])
+	if env["IMUX_AGENT"] != "claude" {
+		t.Errorf("IMUX_AGENT=%q", env["IMUX_AGENT"])
 	}
 	if env["PATH"] != specPATH {
 		t.Errorf("PATH=%q, want %q", env["PATH"], specPATH)

@@ -51,7 +51,7 @@ func newActor(t *testing.T, mode string) (*Actor, *recRunner, *spawned) {
 	cfg.OnLimit = mode
 	r := &recRunner{}
 	sp := &spawned{}
-	w := &workspace.WS{Cfg: cfg, T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: r}, Self: "/opt/ajan", Now: testutil.Clock().Now}
+	w := &workspace.WS{Cfg: cfg, T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: r}, Self: "/opt/imux", Now: testutil.Clock().Now}
 	bins := map[session.AgentID]agent.Resolved{
 		"claude": {Agent: "claude", Installed: true, Path: "/x/claude"},
 		"gemini": {Agent: "gemini", Installed: true, Path: "/x/gemini"},
@@ -133,7 +133,7 @@ func TestAskMode(t *testing.T) {
 	for _, want := range []string{
 		"-c\x00/dev/pts/2\x00-t\x00%3", // the client showing the pane's session
 		"-T\x00Claude hit its limit (resets 15:00): continue in …",
-		"Gemini (with context)\x00g\x00run-shell -b '/opt/ajan switch gemini --pane %3 --reason limit --client /dev/pts/2",
+		"Gemini (with context)\x00g\x00run-shell -b '/opt/imux switch gemini --pane %3 --reason limit --client /dev/pts/2",
 		"Dismiss\x00d\x00",
 	} {
 		if !strings.Contains(got, want) {
@@ -153,7 +153,7 @@ func TestAutoOffAndAllLimited(t *testing.T) {
 	withBins(a)
 	a.W.Cfg.Order = []string{"codex", "claude", "gemini", "copilot"}
 	a.OnEvent(context.Background(), limitEvent(), clients)
-	if len(sp.args) != 1 || strings.Join(sp.args[0], " ") != "/opt/ajan switch codex --pane %3 --reason limit --client /dev/pts/2" {
+	if len(sp.args) != 1 || strings.Join(sp.args[0], " ") != "/opt/imux switch codex --pane %3 --reason limit --client /dev/pts/2" {
 		t.Fatalf("auto spawned %q", sp.args)
 	}
 	if msg := r.find("display-message"); !strings.Contains(strings.Join(msg, " "), "switching to Codex") {

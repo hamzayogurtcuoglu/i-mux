@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install ajan: https://github.com/hamzayogurtcuoglu/i-mux
+# Install imux: https://github.com/hamzayogurtcuoglu/i-mux
 #
 #   curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
 #   sh install.sh [--prefix DIR] [--version vX.Y.Z] [--yes]
@@ -15,11 +15,11 @@ REPO="hamzayogurtcuoglu/i-mux"
 PREFIX="${HOME}/.local/bin"
 VERSION=""
 YES=0
-BASE_URL="${AJAN_INSTALL_BASE_URL:-https://github.com/${REPO}/releases/download}"
+BASE_URL="${IMUX_INSTALL_BASE_URL:-https://github.com/${REPO}/releases/download}"
 
 say() { printf '%s\n' "$*"; }
 die() {
-	printf 'ajan install: %s\n' "$*" >&2
+	printf 'imux install: %s\n' "$*" >&2
 	exit 1
 }
 
@@ -93,7 +93,7 @@ os=$(uname -s)
 case "$os" in
 Darwin) os=darwin ;;
 Linux) os=linux ;;
-*) die "unsupported OS: $os (ajan runs on macOS and Linux; on Windows use WSL)" ;;
+*) die "unsupported OS: $os (imux runs on macOS and Linux; on Windows use WSL)" ;;
 esac
 arch=$(uname -m)
 case "$arch" in
@@ -110,11 +110,11 @@ if [ -z "$VERSION" ]; then
 	[ -n "$VERSION" ] || die "could not find the latest release"
 fi
 num="${VERSION#v}"
-archive="ajan_${num}_${os}_${arch}.tar.gz"
+archive="imux_${num}_${os}_${arch}.tar.gz"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT INT TERM
-say "Downloading ajan ${VERSION} for ${os}/${arch}..."
+say "Downloading imux ${VERSION} for ${os}/${arch}..."
 fetch "${BASE_URL}/${VERSION}/${archive}" "$tmp/$archive" || die "download failed: ${BASE_URL}/${VERSION}/${archive}"
 fetch "${BASE_URL}/${VERSION}/checksums.txt" "$tmp/checksums.txt" || die "download failed: checksums.txt"
 want=$(awk -v f="$archive" '$2 == f || $2 == "*" f { print $1 }' "$tmp/checksums.txt")
@@ -123,12 +123,12 @@ got=$(sha256 "$tmp/$archive")
 [ "$want" = "$got" ] || die "checksum mismatch for $archive (expected $want, got $got)"
 say "Checksum verified."
 
-tar -xzf "$tmp/$archive" -C "$tmp" ajan || die "could not unpack $archive"
+tar -xzf "$tmp/$archive" -C "$tmp" imux || die "could not unpack $archive"
 mkdir -p "$PREFIX" || die "cannot create $PREFIX"
-if ! { cp "$tmp/ajan" "$PREFIX/ajan.tmp.$$" && chmod 755 "$PREFIX/ajan.tmp.$$" && mv -f "$PREFIX/ajan.tmp.$$" "$PREFIX/ajan"; }; then
+if ! { cp "$tmp/imux" "$PREFIX/imux.tmp.$$" && chmod 755 "$PREFIX/imux.tmp.$$" && mv -f "$PREFIX/imux.tmp.$$" "$PREFIX/imux"; }; then
 	die "cannot install to $PREFIX (use --prefix)"
 fi
-say "Installed $PREFIX/ajan"
+say "Installed $PREFIX/imux"
 
 case ":${PATH}:" in
 *":${PREFIX}:"*) ;;
@@ -139,12 +139,12 @@ case ":${PATH}:" in
 	;;
 esac
 
-# tmux is ajan's only runtime dependency.
+# tmux is imux's only runtime dependency.
 if have tmux; then
 	say "tmux found: $(tmux -V)"
 else
 	say ""
-	say "ajan needs tmux, which is not installed."
+	say "imux needs tmux, which is not installed."
 	pm=""
 	if have brew; then
 		pm="brew install tmux"
@@ -158,7 +158,7 @@ else
 		pm="apk add tmux"
 	fi
 	if [ -z "$pm" ]; then
-		say "Install tmux with your package manager, then run: ajan doctor"
+		say "Install tmux with your package manager, then run: imux doctor"
 	else
 		sudo=""
 		if [ "${pm%% *}" != "brew" ] && [ "$(id -u)" -ne 0 ]; then
@@ -173,12 +173,12 @@ else
 			# shellcheck disable=SC2086 # word splitting of the command is intended
 			if [ "${pm%% *}" = "apt-get" ]; then ${sudo}apt-get update -q; fi
 			# shellcheck disable=SC2086 # word splitting of the command is intended
-			${sudo}${pm} || die "tmux installation failed; install it yourself, then run: ajan doctor"
+			${sudo}${pm} || die "tmux installation failed; install it yourself, then run: imux doctor"
 		else
-			say "Skipped. Install tmux yourself, then run: ajan doctor"
+			say "Skipped. Install tmux yourself, then run: imux doctor"
 		fi
 	fi
 fi
 
 say ""
-say "Next: run 'ajan doctor', then 'ajan' in a project directory."
+say "Next: run 'imux doctor', then 'imux' in a project directory."

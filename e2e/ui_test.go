@@ -30,11 +30,11 @@ func TestUIKeyPath(t *testing.T) {
 	mark := c.openWith(h, keyCtrlBackslash, "Switch to Gemini (with context)")
 	c.Write("g")
 	argv := h.run("gemini", 1)
-	if len(argv) != 2 || !strings.HasPrefix(argv[1], "[ajan handoff · Claude Code → Gemini CLI") ||
+	if len(argv) != 2 || !strings.HasPrefix(argv[1], "[i-mux handoff · Claude Code → Gemini CLI") ||
 		!strings.Contains(argv[1], "fake claude request 1") {
 		t.Fatalf("gemini argv %.300q", argv)
 	}
-	h.waitFor("agent bar to show ▶ Gemini", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@ajan_agent}") == "gemini" })
+	h.waitFor("agent bar to show ▶ Gemini", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@imux_agent}") == "gemini" })
 	c.waitScreenAfter(h, mark, "▶ Gemini", 5*time.Second)
 }
 
@@ -48,7 +48,7 @@ func TestUIRightClickBorder(t *testing.T) {
 	h := newH(t, "")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	right := strings.TrimSpace(h.mustAjan("split", "gemini", "-h", "--pane", pane))
+	right := strings.TrimSpace(h.mustImux("split", "gemini", "-h", "--pane", pane))
 	h.run("gemini", 1)
 	h.mustTmux("select-pane", "-t", right) // the Gemini pane is active
 	c, _ := h.attach(uiCols, uiRows)
@@ -59,8 +59,8 @@ func TestUIRightClickBorder(t *testing.T) {
 	mark := c.Mark()
 	// 1-based column `left` is the 0-based column left-1: the border.
 	c.Click(2, left, top+5)
-	c.waitScreenAfter(h, mark, "ajan · Claude", 5*time.Second)
-	if strings.Contains(stripANSI(c.Output()[mark:]), "ajan · Gemini") {
+	c.waitScreenAfter(h, mark, "i-mux · Claude", 5*time.Second)
+	if strings.Contains(stripANSI(c.Output()[mark:]), "i-mux · Gemini") {
 		t.Fatal("menu opened for the active pane instead of the clicked border's pane")
 	}
 	c.Write("q")
@@ -82,11 +82,11 @@ func TestUIPickerToCodex(t *testing.T) {
 	c.waitScreenAfter(h, mark, "Continue in Codex (with context)", 5*time.Second)
 	c.Write("x")
 	argv := h.run("codex", 1)
-	if len(argv) != 1 || !strings.HasPrefix(argv[0], "[ajan handoff · Gemini CLI → Codex CLI") ||
+	if len(argv) != 1 || !strings.HasPrefix(argv[0], "[i-mux handoff · Gemini CLI → Codex CLI") ||
 		!strings.Contains(argv[0], "picked gemini conversation about caching") {
 		t.Fatalf("codex argv %.300q", argv)
 	}
-	h.waitFor("pane runs codex", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@ajan_agent}") == "codex" })
+	h.waitFor("pane runs codex", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@imux_agent}") == "codex" })
 }
 
 // TestUIAgentBarClick (T2.8d): a left click on "Gemini" in the agent bar

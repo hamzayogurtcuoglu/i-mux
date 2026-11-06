@@ -9,7 +9,7 @@ import (
 )
 
 func TestResolve(t *testing.T) {
-	cases := []struct{ cfg, ajan, lang, want string }{
+	cases := []struct{ cfg, imux, lang, want string }{
 		{"", "", "", "en"},
 		{"en", "tr", "tr_TR.UTF-8", "en"},
 		{"", "", "en_US.UTF-8", "en"},
@@ -21,8 +21,8 @@ func TestResolve(t *testing.T) {
 		{"tr", "", "", "tr"},
 	}
 	for _, c := range cases {
-		if got := Resolve(c.cfg, c.ajan, c.lang); got != c.want {
-			t.Errorf("Resolve(%q,%q,%q) = %q, want %q", c.cfg, c.ajan, c.lang, got, c.want)
+		if got := Resolve(c.cfg, c.imux, c.lang); got != c.want {
+			t.Errorf("Resolve(%q,%q,%q) = %q, want %q", c.cfg, c.imux, c.lang, got, c.want)
 		}
 	}
 }

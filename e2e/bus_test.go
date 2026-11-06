@@ -15,15 +15,15 @@ func TestBusReadAndPanes(t *testing.T) {
 	h := newH(t, "")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	g := strings.TrimSpace(h.mustAjan("split", "gemini", "--pane", pane))
+	g := strings.TrimSpace(h.mustImux("split", "gemini", "--pane", pane))
 	h.run("gemini", 1)
 	h.waitFor("gemini screen", 5*time.Second, func() bool { return strings.Contains(h.capture(g), "fake gemini ready") })
 	inside := h.inside(pane)
-	out, errOut, err := h.ajanEnv(inside, "read", "gemini", "-n", "5")
+	out, errOut, err := h.imuxEnv(inside, "read", "gemini", "-n", "5")
 	if err != nil || !strings.Contains(out, "fake gemini ready (run 1, pane "+g+")") {
 		t.Fatalf("read: %v %q %s", err, out, errOut)
 	}
-	out, _, err = h.ajanEnv(inside, "panes", "--json")
+	out, _, err = h.imuxEnv(inside, "panes", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestBusReadAndPanes(t *testing.T) {
 			t.Fatalf("state %q", p.State)
 		}
 	}
-	if _, e, err := h.ajanEnv(inside, "read", "codex"); err == nil || !strings.Contains(e, "no pane runs codex") {
+	if _, e, err := h.imuxEnv(inside, "read", "codex"); err == nil || !strings.Contains(e, "no pane runs codex") {
 		t.Fatalf("missing target: %v %q", err, e)
 	}
 }

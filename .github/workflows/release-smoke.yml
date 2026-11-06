@@ -1,7 +1,7 @@
 name: Release smoke test
 
 # After a release is published: install it the way users do and check that
-# it runs. `ajan doctor --ci` skips the agent checks (no agent CLIs here).
+# it runs. `imux doctor --ci` skips the agent checks (no agent CLIs here).
 on:
   release:
     types: [published]
@@ -27,12 +27,12 @@ jobs:
       - uses: actions/checkout@v5
       - name: Install with install.sh (installs tmux if missing)
         run: sh install.sh --version "$TAG" --prefix "$HOME/.local/bin" --yes
-      - name: ajan version
+      - name: imux version
         run: |
-          "$HOME/.local/bin/ajan" version
-          "$HOME/.local/bin/ajan" version | grep -q "${TAG#v}"
-      - name: ajan doctor --ci
-        run: '"$HOME/.local/bin/ajan" doctor --ci'
+          "$HOME/.local/bin/imux" version
+          "$HOME/.local/bin/imux" version | grep -q "${TAG#v}"
+      - name: imux doctor --ci
+        run: '"$HOME/.local/bin/imux" doctor --ci'
 
   homebrew:
     strategy:
@@ -42,8 +42,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: brew install
-        run: brew install hamzayogurtcuoglu/tap/ajan
-      - name: ajan version and doctor
+        run: brew install hamzayogurtcuoglu/tap/imux
+      - name: imux version and doctor
         run: |
-          ajan version
-          ajan doctor --ci
+          imux version
+          imux doctor --ci

@@ -21,7 +21,7 @@ func init() {
 			if d == "" {
 				d = "unknown"
 			}
-			fmt.Fprintf(e.Stdout, "ajan %s (commit %s, built %s)\n", v, c, d)
+			fmt.Fprintf(e.Stdout, "imux %s (commit %s, built %s)\n", v, c, d)
 			return nil
 		},
 	})
@@ -33,5 +33,5 @@ func setup() {
 	i18n.Init("")
 }
 
-// isAgentArg reports whether s names an agent (`ajan claude`).
+// isAgentArg reports whether s names an agent (`imux claude`).
 func isAgentArg(s string) bool { return session.Known(s) }

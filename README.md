@@ -1,4 +1,4 @@
-<h1 align="center">ajan</h1>
+<h1 align="center">i-mux</h1>
 
 <p align="center">
   <b>Hit your usage limit in one AI coding agent? Keep going in another, with the whole conversation.</b><br>
@@ -12,15 +12,15 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/limit.svg" alt="Claude hits its usage limit and ajan offers to continue in Gemini or Codex" width="880">
+  <img src="docs/images/limit.svg" alt="Claude hits its usage limit and i-mux offers to continue in Gemini or Codex" width="880">
 </p>
 
-ajan runs your agent CLIs in a terminal workspace. When one hits its limit, or whenever you like,
+i-mux runs your agent CLIs in a terminal workspace. When one hits its limit, or whenever you like,
 press one key and the same pane restarts with another agent. The new agent receives a condensed
 handoff: the original request, the task list, files touched, repository state and where the work
 stopped. No re-explaining, no copy-paste.
 
-It is a single binary built on [tmux](https://github.com/tmux/tmux) (on its own socket, so your
+It is a single binary, `imux`, built on [tmux](https://github.com/tmux/tmux) (on its own socket, so your
 tmux setup is untouched). Everything stays on your machine.
 
 ## Install
@@ -28,7 +28,7 @@ tmux setup is untouched). Everything stays on your machine.
 macOS, Linux, or Windows through WSL. Requires tmux 3.2+ (3.4+ for the clickable agent bar).
 
 ```sh
-brew install hamzayogurtcuoglu/tap/ajan
+brew install hamzayogurtcuoglu/tap/imux
 ```
 
 ```sh
@@ -36,21 +36,21 @@ curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/instal
 ```
 
 ```sh
-go install github.com/hamzayogurtcuoglu/i-mux/cmd/ajan@latest   # Go 1.27+
+go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest   # Go 1.27+
 ```
 
 The install script verifies the checksum, installs to `~/.local/bin` and offers to install tmux if
 it is missing. Then install at least one agent CLI and check the setup:
 
 ```sh
-ajan doctor
+imux doctor
 ```
 
 ## Usage
 
 ```sh
 cd ~/code/my-project
-ajan            # start the first installed agent (or: ajan claude)
+imux            # start the first installed agent (or: imux claude)
 ```
 
 | Key / action | What it does |
@@ -63,8 +63,8 @@ ajan            # start the first installed agent (or: ajan claude)
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/switched.svg" alt="Gemini continues the session with ajan's handoff"></td>
-    <td width="50%"><img src="docs/images/menu.svg" alt="The ajan pane menu"></td>
+    <td width="50%"><img src="docs/images/switched.svg" alt="Gemini continues the session with i-mux's handoff"></td>
+    <td width="50%"><img src="docs/images/menu.svg" alt="The i-mux pane menu"></td>
   </tr>
   <tr>
     <td align="center">Gemini picks up where Claude stopped</td>
@@ -73,13 +73,13 @@ ajan            # start the first installed agent (or: ajan claude)
 </table>
 
 Switching back to an agent that already ran in the pane resumes its own session and tells it only
-what happened in the meantime. Run `ajan help` for the command line (`switch`, `split`, `ls`,
+what happened in the meantime. Run `imux help` for the command line (`switch`, `split`, `ls`,
 `limits`, `sessions`, `handoff --print`).
 
 ## When an agent hits its limit
 
 A small watcher notices limit messages on agent screens and shows them in the status bar. Choose
-what happens next in `~/.ajan/config.toml` (`ajan config init` writes a commented one):
+what happens next in `~/.imux/config.toml` (`imux config init` writes a commented one):
 
 ```toml
 on_limit = "ask"   # ask (default) | auto: switch to the next agent in `order` | off: only show it
@@ -87,10 +87,10 @@ on_limit = "ask"   # ask (default) | auto: switch to the next agent in `order` |
 
 ## Privacy
 
-- No network calls, no telemetry, no API keys. ajan reads the agents' local session files and
+- No network calls, no telemetry, no API keys. i-mux reads the agents' local session files and
   `git status`.
 - Switching sends the handoff to the next agent's provider. Secrets are redacted on a best-effort
-  basis; check with `ajan handoff --print`.
+  basis; check with `imux handoff --print`.
 - The handoff is passed as a command-line argument, which other users on the machine can see with
   `ps`. On shared machines set `[handoff] inject = "paste"`.
 - Details in [docs/HANDOFF.md](docs/HANDOFF.md) and [docs/AGENT-BUS.md](docs/AGENT-BUS.md).

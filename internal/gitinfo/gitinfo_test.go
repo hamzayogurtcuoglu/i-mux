@@ -82,7 +82,7 @@ func TestNotRepo(t *testing.T) {
 
 func TestNoGit(t *testing.T) {
 	old := GitBinary
-	GitBinary = "definitely-not-git-ajan"
+	GitBinary = "definitely-not-git-imux"
 	defer func() { GitBinary = old }()
 	if info := Collect(context.Background(), t.TempDir()); info.State != NoGit {
 		t.Fatalf("%+v", info)

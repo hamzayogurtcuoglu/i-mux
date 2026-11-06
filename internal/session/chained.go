@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// MarkerPrefix starts every ajan handoff document.
-const MarkerPrefix = "[ajan handoff ·"
+// MarkerPrefix starts every i-mux handoff document.
+const MarkerPrefix = "[i-mux handoff ·"
 
 // MarkerTimeLayout is the time format inside the marker.
 const MarkerTimeLayout = "2006-01-02 15:04"
@@ -16,7 +16,7 @@ func Marker(from, to AgentID, at time.Time) string {
 	return MarkerPrefix + " " + DisplayName(from) + " → " + DisplayName(to) + " · " + at.Format(MarkerTimeLayout) + "]"
 }
 
-// IsHandoff reports whether text is an ajan handoff document.
+// IsHandoff reports whether text is an imux handoff document.
 func IsHandoff(text string) bool {
 	return strings.HasPrefix(strings.TrimLeft(text, " \t\r\n\uFEFF"), MarkerPrefix)
 }

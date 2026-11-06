@@ -69,7 +69,7 @@ func TestSwitchResumesWithDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(fb.Args) != 3 || fb.Args[0] != "--session-id" || !strings.HasPrefix(fb.Args[2], "[ajan handoff · Codex CLI → Claude Code") || fb.Pane != "%1" {
+	if len(fb.Args) != 3 || fb.Args[0] != "--session-id" || !strings.HasPrefix(fb.Args[2], "[i-mux handoff · Codex CLI → Claude Code") || fb.Pane != "%1" {
 		t.Fatalf("fallback argv %.200q", fb.Args)
 	}
 	if !strings.Contains(joined, `"r":true`) || !strings.Contains(joined, `"id":"`+claudeA+`"`) {

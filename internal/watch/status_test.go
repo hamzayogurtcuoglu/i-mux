@@ -40,12 +40,12 @@ func TestStatusKeeper(t *testing.T) {
 	got := join(raw)
 	until := reset.Local().Format("15:04")
 	for _, want := range []string{
-		"set-option -g @ajan_status Claude ⛔" + until + " · Gemini ◐ · Codex ●",
-		"set-option -g @ajan_lim_claude ⛔" + until,
-		"set-option -g @ajan_lim_gemini ◐",
-		"set-option -g @ajan_lim_codex ",
-		"set-option -p -t %1 @ajan_flag ⛔ " + until,
-		"set-option -p -u -t %2 @ajan_flag", // a warning does not flag the pane
+		"set-option -g @imux_status Claude ⛔" + until + " · Gemini ◐ · Codex ●",
+		"set-option -g @imux_lim_claude ⛔" + until,
+		"set-option -g @imux_lim_gemini ◐",
+		"set-option -g @imux_lim_codex ",
+		"set-option -p -t %1 @imux_flag ⛔ " + until,
+		"set-option -p -u -t %2 @imux_flag", // a warning does not flag the pane
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in\n%s", want, got)
@@ -65,7 +65,7 @@ func TestStatusKeeper(t *testing.T) {
 		raw = append(raw, c)
 	}
 	got = join(raw)
-	for _, want := range []string{"@ajan_status Claude ● · Gemini ◐ · Codex ●", "set-option -g @ajan_lim_claude ", "set-option -p -u -t %1 @ajan_flag"} {
+	for _, want := range []string{"@imux_status Claude ● · Gemini ◐ · Codex ●", "set-option -g @imux_lim_claude ", "set-option -p -u -t %1 @imux_flag"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("after expiry missing %q in\n%s", want, got)
 		}

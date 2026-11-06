@@ -208,7 +208,7 @@ func TestDetectorGraceAndNewRun(t *testing.T) {
 	if len(h.events) != 0 {
 		t.Fatalf("message within grace prompted: %+v", h.events)
 	}
-	// A new run in the same pane (new @ajan_start) has a fresh seen-set.
+	// A new run in the same pane (new @imux_start) has a fresh seen-set.
 	h.f.panes = "%1\tgemini\t" + ms(now.Add(-time.Minute)) + "\t0\t30\tproj\n"
 	h.f.screens["%1"] = "Usage limit reached for gemini-2.5-pro.\n"
 	h.act = false

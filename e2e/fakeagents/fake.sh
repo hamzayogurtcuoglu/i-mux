@@ -1,23 +1,23 @@
 #!/bin/sh
-# Fake agent CLI for ajan's end-to-end tests. It never touches the network
+# Fake agent CLI for imux's end-to-end tests. It never touches the network
 # and never runs a real agent. The wrappers fake-<agent> set FAKE_AGENT.
 #
-# Every run n (1, 2, ...) of agent A writes into $AJAN_FAKE_LOG:
+# Every run n (1, 2, ...) of agent A writes into $IMUX_FAKE_LOG:
 #   A-n.argv   arguments, NUL-separated (byte-exact)
-#   A-n.env    AJAN_PANE, AJAN_AGENT, TMUX_PANE, PATH and PWD
+#   A-n.env    IMUX_PANE, IMUX_AGENT, TMUX_PANE, PATH and PWD
 #   A-n.stdin  lines read from the terminal (paste and bus tests)
 #   A-n.session  path of the session file it wrote (if any)
 #
 # Behavior controls (all optional):
-#   $AJAN_FAKE_LOG/A.sh   sourced after start-up (print a limit line, sleep, exit 3, ...)
-#   $AJAN_FAKE_LOG/A.nosession   if present, no session file is written
+#   $IMUX_FAKE_LOG/A.sh   sourced after start-up (print a limit line, sleep, exit 3, ...)
+#   $IMUX_FAKE_LOG/A.nosession   if present, no session file is written
 #   FAKE_SCRIPT           evaluated after the control file
 set -u
 agent="${FAKE_AGENT:?FAKE_AGENT not set}"
-log="${AJAN_FAKE_LOG:-${TMPDIR:-/tmp}/ajan-fake}"
+log="${IMUX_FAKE_LOG:-${TMPDIR:-/tmp}/imux-fake}"
 mkdir -p "$log"
 
-# Version probes (ajan's bin cache) and help (ajan doctor) are not runs.
+# Version probes (imux's bin cache) and help (imux doctor) are not runs.
 if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
 	echo "$agent ${FAKE_VERSION:-9.9.9}-fake"
 	echo "$agent --version" >>"$log/version-probes"
@@ -37,8 +37,8 @@ while ! (set -C; : >"$log/$agent-$n.argv") 2>/dev/null; do
 done
 [ $# -eq 0 ] || printf '%s\0' "$@" >"$log/$agent-$n.argv"
 {
-	echo "AJAN_PANE=${AJAN_PANE:-}"
-	echo "AJAN_AGENT=${AJAN_AGENT:-}"
+	echo "IMUX_PANE=${IMUX_PANE:-}"
+	echo "IMUX_AGENT=${IMUX_AGENT:-}"
 	echo "TMUX_PANE=${TMUX_PANE:-}"
 	echo "PATH=$PATH"
 	echo "PWD=$PWD"

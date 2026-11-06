@@ -65,7 +65,7 @@ func (w *WS) Show(ctx context.Context, m *Menu, client, pane string) error {
 	return w.T.Spawn(m.Cmd(client, pane))
 }
 
-// ui returns the tmux command that runs ajan silently with args.
+// ui returns the tmux command that runs imux silently with args.
 func (w *WS) ui(args ...string) string { return tmux.RunShell(w.Self, args...) }
 
 // UICommand is ui for other packages (the watcher's prompts).
@@ -166,7 +166,7 @@ func (w *WS) previewCmd(p *Pane, from string) string {
 	return c + " " + tmux.Quote(sh)
 }
 
-// limitsPanel: `ajan limits` exists (M4); false shows "coming soon".
+// limitsPanel: `imux limits` exists (M4); false shows "coming soon".
 var limitsPanel = true
 
 // limitsCmd opens the limits panel; until M4 it says it is coming.

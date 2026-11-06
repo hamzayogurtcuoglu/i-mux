@@ -22,10 +22,10 @@ const FastFail = 10 * time.Second
 // PaneDied handles the pane-died hook (remain-on-exit keeps the dead pane):
 //
 //   - a resumed run that failed fast (non-zero status within FastFail) is
-//     replaced by its fallback spec (@ajan_fallback: a new session with the
+//     replaced by its fallback spec (@imux_fallback: a new session with the
 //     full handoff);
-//   - otherwise the trail entry is closed, @ajan_agent cleared, and the pane
-//     drops to the login shell in @ajan_cwd (or is killed with
+//   - otherwise the trail entry is closed, @imux_agent cleared, and the pane
+//     drops to the login shell in @imux_cwd (or is killed with
 //     on_exit = "close").
 //
 // status < 0 means unknown (killed by a signal).
@@ -49,7 +49,7 @@ func (w *WS) PaneDied(ctx context.Context, pane string, status int) error {
 		}
 	}
 	if p.Agent == "" && p.Trail.Last() == nil {
-		// Not an ajan run (a shell that kept remain-on-exit): close it.
+		// Not an imux run (a shell that kept remain-on-exit): close it.
 		_, err := w.T.Run(ctx, tmux.Cmd{"kill-pane", "-t", p.ID})
 		return err
 	}
@@ -66,7 +66,7 @@ func (w *WS) PaneDied(ctx context.Context, pane string, status int) error {
 		return err
 	}
 	// respawn-pane without a command would re-run the pane's original
-	// command (ajan __exec with a consumed spec): start the login shell.
+	// command (imux __exec with a consumed spec): start the login shell.
 	_, err = w.T.Run(ctx,
 		tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD, w.loginShell(ctx), "-l"},
 		tmux.Cmd{"set-option", "-p", "-t", p.ID, "remain-on-exit", "off"},

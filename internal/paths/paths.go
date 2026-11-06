@@ -1,4 +1,4 @@
-// Package paths resolves ajan's home directory (AJAN_HOME or ~/.ajan) and the
+// Package paths resolves imux's home directory (IMUX_HOME or ~/.imux) and the
 // files inside it, and creates them with private permissions.
 package paths
 
@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	// DirMode is used for every directory ajan creates.
+	// DirMode is used for every directory imux creates.
 	DirMode os.FileMode = 0o700
-	// FileMode is used for every file ajan creates.
+	// FileMode is used for every file imux creates.
 	FileMode os.FileMode = 0o600
 )
 
@@ -34,12 +34,12 @@ func UserHome() string {
 	return h
 }
 
-// Home returns ajan's state directory: $AJAN_HOME, or ~/.ajan.
+// Home returns imux's state directory: $IMUX_HOME, or ~/.imux.
 func Home() string {
-	if h := os.Getenv("AJAN_HOME"); h != "" {
+	if h := os.Getenv("IMUX_HOME"); h != "" {
 		return filepath.Clean(h)
 	}
-	return filepath.Join(UserHome(), ".ajan")
+	return filepath.Join(UserHome(), ".imux")
 }
 
 // Files inside Home.

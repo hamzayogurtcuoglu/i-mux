@@ -1,6 +1,6 @@
 // Package sources finds and loads agent sessions with the user's
 // configuration, and turns them into saved handoff documents. It is shared by
-// `ajan handoff`, `ajan switch`, the session picker and the watcher.
+// `imux handoff`, `imux switch`, the session picker and the watcher.
 package sources
 
 import (

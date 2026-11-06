@@ -22,13 +22,13 @@ func TestScrollbackFallback(t *testing.T) {
 	pane := h.startSession("claude")
 	h.run("claude", 1)
 	h.waitFor("screen output", 5*time.Second, func() bool { return strings.Contains(h.capture(pane), "step 3 of 5") })
-	h.mustAjan("switch", "gemini", "--pane", pane)
+	h.mustImux("switch", "gemini", "--pane", pane)
 	argv := h.run("gemini", 1)
 	if len(argv) != 2 {
 		t.Fatalf("argv %q", argv)
 	}
 	doc := argv[1]
-	for _, want := range []string{"[ajan handoff · Claude Code → Gemini CLI", "payment webhook retry logic", "step 3 of 5 done", workspace.ReconstructedNote} {
+	for _, want := range []string{"[i-mux handoff · Claude Code → Gemini CLI", "payment webhook retry logic", "step 3 of 5 done", workspace.ReconstructedNote} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("handoff lacks %q:\n%s", want, doc)
 		}

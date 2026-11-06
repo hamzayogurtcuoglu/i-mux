@@ -1,21 +1,21 @@
 # The handoff document
 
-When a pane switches from one agent to another, ajan condenses the conversation into a markdown
+When a pane switches from one agent to another, i-mux condenses the conversation into a markdown
 **handoff** and gives it to the new agent as its first prompt. It is model-facing, always in
 English, and built only from local files: the source agent's session file and `git` output.
 
-- Saved to `~/.ajan/handoffs/<YYYYMMDD-HHMMSS>-<from>-to-<to>.md` (mode 0600); files older than
+- Saved to `~/.imux/handoffs/<YYYYMMDD-HHMMSS>-<from>-to-<to>.md` (mode 0600); files older than
   `handoff.keep_days` (30) are deleted.
 - Passed in argv (`handoff.inject = "argv"`, the default) or pasted into the agent after it
   started (`"paste"`, which keeps it out of `ps`).
-- Preview without switching: `ajan handoff --print` (newest session in this directory), or
+- Preview without switching: `imux handoff --print` (newest session in this directory), or
   **Preview handoff** in the pane menu.
 
 ## Layout
 
 | Part | Content | Size |
 |---|---|---|
-| Marker (line 1) | `[ajan handoff · <From CLI> → <To CLI> · <YYYY-MM-DD HH:MM>]` | fixed |
+| Marker (line 1) | `[i-mux handoff · <From CLI> → <To CLI> · <YYYY-MM-DD HH:MM>]` | fixed |
 | Preamble | who the user was working with, why they switched ("hit its usage limit (resets 15:00)" or "switched manually"), how to treat the record | fixed |
 | `## Original request` | the conversation's first user request | ≤ 12 % of the budget, middle-truncated |
 | `## Earlier history` | only for a chained handoff: the previous handoff's history and conversation | ≤ 25 %, newest part kept |
@@ -46,7 +46,7 @@ Rules:
 ## Example (synthetic)
 
 ```markdown
-[ajan handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]
+[i-mux handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]
 
 You are continuing a coding session that the user was running in Claude Code (model: claude-opus-4-1).
 They switched to you because Claude Code hit its usage limit (resets 15:00).
@@ -107,6 +107,6 @@ only covers what happened in the other agents since, so nothing is repeated:
   `*(in Gemini CLI)*` markers, `## Where it stopped` and `## What to do now`;
 - with nothing new, the agent resumes without a prompt.
 
-If the resume fails within 10 seconds (for example the session was deleted), ajan starts a new
-session with the full handoff instead. `ajan switch --no-resume` or `resume = false` for an agent
+If the resume fails within 10 seconds (for example the session was deleted), i-mux starts a new
+session with the full handoff instead. `imux switch --no-resume` or `resume = false` for an agent
 always start a new session.

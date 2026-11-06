@@ -8,13 +8,13 @@ import (
 
 func TestHomeOverride(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("AJAN_HOME", filepath.Join(dir, "x"))
+	t.Setenv("IMUX_HOME", filepath.Join(dir, "x"))
 	if got := Home(); got != filepath.Join(dir, "x") {
 		t.Fatalf("Home() = %q", got)
 	}
-	t.Setenv("AJAN_HOME", "")
+	t.Setenv("IMUX_HOME", "")
 	t.Setenv("HOME", dir)
-	if got := Home(); got != filepath.Join(dir, ".ajan") {
+	if got := Home(); got != filepath.Join(dir, ".imux") {
 		t.Fatalf("Home() = %q", got)
 	}
 }
@@ -22,7 +22,7 @@ func TestHomeOverride(t *testing.T) {
 func TestModes(t *testing.T) {
 	SetUmask()
 	dir := t.TempDir()
-	t.Setenv("AJAN_HOME", filepath.Join(dir, "home"))
+	t.Setenv("IMUX_HOME", filepath.Join(dir, "home"))
 	if err := Ensure(); err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,7 @@ import (
 func TestIsolate(t *testing.T) {
 	realHome, _ := os.UserHomeDir()
 	h := Isolate(t)
-	for _, v := range []string{"HOME", "AJAN_HOME", "CLAUDE_CONFIG_DIR", "CODEX_HOME", "COPILOT_HOME"} {
+	for _, v := range []string{"HOME", "IMUX_HOME", "CLAUDE_CONFIG_DIR", "CODEX_HOME", "COPILOT_HOME"} {
 		got := os.Getenv(v)
 		if !strings.HasPrefix(got, h.Root) {
 			t.Errorf("%s=%q is not under the temp root", v, got)

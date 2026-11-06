@@ -20,7 +20,7 @@ import (
 type Actor struct {
 	W   *workspace.WS
 	Log *log.Logger
-	// Spawn starts `ajan args...` detached (auto mode); tests replace it.
+	// Spawn starts `imux args...` detached (auto mode); tests replace it.
 	Spawn func(self string, args ...string) error
 }
 

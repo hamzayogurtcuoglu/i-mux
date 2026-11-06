@@ -1,8 +1,8 @@
 #!/bin/sh
 # Demo agent CLI for README screenshots (scripts/screenshots/shoot.sh). It is
 # not a real agent: "claude" prints a short canned session, writes a matching
-# session file (so ajan builds a real handoff from it) and then reports a usage
-# limit; the others print the start of the prompt ajan gave them. shoot.sh
+# session file (so imux builds a real handoff from it) and then reports a usage
+# limit; the others print the start of the prompt imux gave them. shoot.sh
 # copies it to <dir>/claude, <dir>/gemini, ...; the agent is the file name.
 set -u
 agent="${DEMO_AGENT:-$(basename "$0")}"

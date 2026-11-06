@@ -55,7 +55,7 @@ func TestHandoffPrintNewestOfAnyAgent(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, errOut)
 	}
-	if !strings.HasPrefix(out, "[ajan handoff · Codex CLI → Gemini CLI ·") || !strings.Contains(out, "newest codex task") {
+	if !strings.HasPrefix(out, "[i-mux handoff · Codex CLI → Gemini CLI ·") || !strings.Contains(out, "newest codex task") {
 		t.Fatalf("unexpected doc:\n%s", out)
 	}
 	if ents, _ := os.ReadDir(paths.Handoffs()); len(ents) != 0 {
@@ -82,7 +82,7 @@ func TestHandoffExecsTarget(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, errOut)
 	}
-	if got == nil || got.Bin != fake || len(got.Args) != 2 || got.Args[0] != "-i" || !strings.HasPrefix(got.Args[1], "[ajan handoff · Claude Code → Gemini CLI") {
+	if got == nil || got.Bin != fake || len(got.Args) != 2 || got.Args[0] != "-i" || !strings.HasPrefix(got.Args[1], "[i-mux handoff · Claude Code → Gemini CLI") {
 		t.Fatalf("spec %+v", got)
 	}
 	if got.Dir != h.Project || !strings.HasPrefix(got.Env["PATH"], filepath.Dir(fake)) {

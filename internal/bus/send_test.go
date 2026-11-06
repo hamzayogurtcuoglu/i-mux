@@ -37,7 +37,7 @@ func TestSendGuards(t *testing.T) {
 	if err != nil || res.Pane != "%2" {
 		t.Fatalf("send: %+v %v", res, err)
 	}
-	if !f.has("paste-buffer -p -d -b ajan-") || !f.has("send-keys -t %2 Enter") {
+	if !f.has("paste-buffer -p -d -b imux-") || !f.has("send-keys -t %2 Enter") {
 		t.Fatalf("delivery commands: %q", f.calls)
 	}
 	// The pasted file carried the sender tag (it is deleted afterwards;
@@ -97,7 +97,7 @@ func TestSendConfirmAndDeliver(t *testing.T) {
 	if _, err := os.Stat(res.Pending); !os.IsNotExist(err) {
 		t.Fatal("parked file kept")
 	}
-	// Only files in ~/.ajan/bus can be delivered.
+	// Only files in ~/.imux/bus can be delivered.
 	other := filepath.Join(paths.Home(), "state.json")
 	if err := b.Deliver(ctx, other, "%2", true, false); err == nil {
 		t.Fatal("delivered a file outside the bus dir")

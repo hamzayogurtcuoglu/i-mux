@@ -88,7 +88,7 @@ func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartR
 	return &StartResult{Session: name, Pane: pane, Created: true}, nil
 }
 
-// NewWindow opens a window with agent id next to the caller's pane (ajan
+// NewWindow opens a window with agent id next to the caller's pane (imux
 // invoked inside the workspace).
 func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID, cwd string) (string, error) {
 	if id == "" {
@@ -117,7 +117,7 @@ func (w *WS) Split(ctx context.Context, pane string, id session.AgentID, cwd str
 	})
 }
 
-// SessionInfo is one ajan tmux session.
+// SessionInfo is one imux tmux session.
 type SessionInfo struct {
 	Name     string
 	Attached int

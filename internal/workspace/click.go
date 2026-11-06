@@ -54,7 +54,7 @@ func (w *WS) Classify(rng string, p *Pane) (ClickAction, session.AgentID) {
 	return ClickSwitch, id
 }
 
-// Click handles `ajan __click <range>` for pane p on client.
+// Click handles `imux __click <range>` for pane p on client.
 func (w *WS) Click(ctx context.Context, f *sources.Finder, rng string, p *Pane, client string) error {
 	action, id := w.Classify(rng, p)
 	switch action {

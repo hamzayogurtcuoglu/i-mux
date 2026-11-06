@@ -39,14 +39,14 @@ func TestLimitAuto(t *testing.T) {
 	if len(argv) != 2 || !strings.Contains(argv[1], "because Claude Code hit its usage limit (resets ") {
 		t.Fatalf("auto switch handoff: %.400q", argv)
 	}
-	h.waitFor("pane runs gemini", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@ajan_agent}") == "gemini" })
+	h.waitFor("pane runs gemini", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@imux_agent}") == "gemini" })
 	st, _ := state.Read()
 	l := st.Limits["claude"]
 	if l == nil || l.Source != "screen" || l.Pane != pane || l.ResetAt.IsZero() || !strings.Contains(l.Text, "5-hour limit reached") {
 		t.Fatalf("state record %+v", l)
 	}
 	h.waitFor("status bar shows the limit", 5*time.Second, func() bool {
-		return strings.Contains(h.mustTmux("show-options", "-gv", "@ajan_status"), "Claude ⛔")
+		return strings.Contains(h.mustTmux("show-options", "-gv", "@imux_status"), "Claude ⛔")
 	})
 }
 
@@ -106,9 +106,9 @@ func TestLimitStatusExpires(t *testing.T) {
 	c, _ := h.attach(120, 40)
 	h.run("codex", 1)
 	h.waitFor("limit in the status bar", 6*time.Second, func() bool {
-		return strings.Contains(h.mustTmux("show-options", "-gv", "@ajan_status"), "Codex ⛔")
+		return strings.Contains(h.mustTmux("show-options", "-gv", "@imux_status"), "Codex ⛔")
 	})
-	if f := h.paneOpt(pane, "#{@ajan_flag}"); !strings.HasPrefix(f, "⛔ ") {
+	if f := h.paneOpt(pane, "#{@imux_flag}"); !strings.HasPrefix(f, "⛔ ") {
 		t.Fatalf("pane flag %q", f)
 	}
 	c.waitScreen(h, "Codex hit its limit", 3*time.Second) // on_limit = off: a message only
@@ -116,7 +116,7 @@ func TestLimitStatusExpires(t *testing.T) {
 		t.Fatal("off mode prompted or switched")
 	}
 	h.waitFor("limit cleared after expiry", 8*time.Second, func() bool {
-		return !strings.Contains(h.mustTmux("show-options", "-gv", "@ajan_status"), "⛔") && h.paneOpt(pane, "#{@ajan_flag}") == ""
+		return !strings.Contains(h.mustTmux("show-options", "-gv", "@imux_status"), "⛔") && h.paneOpt(pane, "#{@imux_flag}") == ""
 	})
 	if st, _ := state.Read(); st.Limits["codex"] != nil {
 		t.Fatal("expired limit kept in state.json")

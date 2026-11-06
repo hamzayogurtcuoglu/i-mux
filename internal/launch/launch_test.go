@@ -14,7 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-const helperEnv = "AJAN_LAUNCH_TEST_SPEC"
+const helperEnv = "IMUX_LAUNCH_TEST_SPEC"
 
 func TestMain(m *testing.M) {
 	if p := os.Getenv(helperEnv); p != "" {
@@ -47,14 +47,14 @@ func TestValidate(t *testing.T) {
 
 func TestEnviron(t *testing.T) {
 	s := &Spec{Agent: "gemini", Pane: "%3", Env: map[string]string{"PATH": "/nvm/bin:/usr/bin"}}
-	env := s.Environ([]string{"HOME=/home/test", "PATH=/usr/bin", "AJAN_PANE=%1"})
+	env := s.Environ([]string{"HOME=/home/test", "PATH=/usr/bin", "IMUX_PANE=%1"})
 	joined := strings.Join(env, "\n")
-	for _, want := range []string{"HOME=/home/test", "PATH=/nvm/bin:/usr/bin", "AJAN_PANE=%3", "AJAN_AGENT=gemini"} {
+	for _, want := range []string{"HOME=/home/test", "PATH=/nvm/bin:/usr/bin", "IMUX_PANE=%3", "IMUX_AGENT=gemini"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing %s in %q", want, env)
 		}
 	}
-	if strings.Count(joined, "PATH=") != 1 || strings.Count(joined, "AJAN_PANE=") != 1 {
+	if strings.Count(joined, "PATH=") != 1 || strings.Count(joined, "IMUX_PANE=") != 1 {
 		t.Fatalf("duplicates: %q", env)
 	}
 }
@@ -97,7 +97,7 @@ func TestExecByteExactArgv(t *testing.T) {
 	h := testutil.Isolate(t)
 	fake := filepath.Join(h.Home, "bin", "fake-agent")
 	out := filepath.Join(h.Home, "argv.bin")
-	testutil.WriteFile(t, fake, []byte("#!/bin/sh\nfor a in \"$@\"; do printf '%s\\0' \"$a\"; done > \""+out+"\"\nprintf '%s|%s|%s' \"$AJAN_PANE\" \"$AJAN_AGENT\" \"$(pwd)\" > \""+out+".env\"\n"))
+	testutil.WriteFile(t, fake, []byte("#!/bin/sh\nfor a in \"$@\"; do printf '%s\\0' \"$a\"; done > \""+out+"\"\nprintf '%s|%s|%s' \"$IMUX_PANE\" \"$IMUX_AGENT\" \"$(pwd)\" > \""+out+".env\"\n"))
 	if err := os.Chmod(fake, 0o755); err != nil {
 		t.Fatal(err)
 	}

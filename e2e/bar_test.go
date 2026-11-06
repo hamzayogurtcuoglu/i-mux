@@ -26,7 +26,7 @@ func TestAgentBar(t *testing.T) {
 	h := newH(t, "[agents.copilot]\nbin = \"/nonexistent/copilot\"\n")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	second := strings.TrimSpace(h.mustAjan("split", "gemini", "-h", "--pane", pane))
+	second := strings.TrimSpace(h.mustImux("split", "gemini", "-h", "--pane", pane))
 	h.run("gemini", 1)
 	h.mustTmux("select-pane", "-t", pane)
 	if got := strings.TrimSpace(h.mustTmux("show-options", "-gv", "status")); got != "2" {
@@ -40,26 +40,26 @@ func TestAgentBar(t *testing.T) {
 
 	c, _ := h.attach(160, 40)
 	c.waitScreen(h, "▶ Claude", 5*time.Second)
-	for _, want := range []string{" ajan ", " Gemini ", " Codex ", "Copilot (not installed)", "⧉ Sessions", "☰"} {
+	for _, want := range []string{" i-mux ", " Gemini ", " Codex ", "Copilot (not installed)", "⧉ Sessions", "☰"} {
 		c.waitScreen(h, want, 2*time.Second)
 	}
 
-	// Focus change: the bar follows, and no ajan process runs.
+	// Focus change: the bar follows, and no imux process runs.
 	before := h.uiRecords()
 	mark := c.Mark()
 	h.mustTmux("select-pane", "-t", second)
 	c.waitScreenAfter(h, mark, "▶ Gemini", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 	if after := h.uiRecords(); after != before {
-		t.Fatalf("focus change ran ajan (%d new tmux invocations)", after-before)
+		t.Fatalf("focus change ran imux (%d new tmux invocations)", after-before)
 	}
 
 	// Limit markers from the watcher's global options.
 	mark = c.Mark()
-	h.mustTmux("set-option", "-g", "@ajan_lim_codex", "⛔15:00")
+	h.mustTmux("set-option", "-g", "@imux_lim_codex", "⛔15:00")
 	h.mustTmux("refresh-client", "-S")
 	c.waitScreenAfter(h, mark, "Codex ⛔15:00", 5*time.Second)
-	h.mustTmux("set-option", "-gu", "@ajan_lim_codex")
+	h.mustTmux("set-option", "-gu", "@imux_lim_codex")
 
 	// 80 columns: entries of missing agents are dropped (Q29).
 	c.Close()

@@ -1,4 +1,4 @@
-// Package panel gathers the data of the limits panel (`ajan limits`, §11)
+// Package panel gathers the data of the limits panel (`imux limits`, §11)
 // from local files only: limits detected on screen (state.json) and usage
 // read from the agents' session stores.
 package panel

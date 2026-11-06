@@ -14,15 +14,15 @@ import (
 )
 
 // TestNoResidentProcesses (§17): __exec replaces itself with the agent; no
-// ajan process stays per pane.
+// imux process stays per pane.
 func TestNoResidentProcesses(t *testing.T) {
 	h := newH(t, "")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	h.mustAjan("split", "gemini", "--pane", pane)
+	h.mustImux("split", "gemini", "--pane", pane)
 	h.run("gemini", 1)
 	time.Sleep(300 * time.Millisecond)
-	// The watcher is the only resident ajan process (§2); no __exec stays.
+	// The watcher is the only resident imux process (§2); no __exec stays.
 	// ps, not pgrep -a: on macOS -a means "include ancestors".
 	out, err := exec.Command("ps", "-A", "-o", "args=").Output()
 	if err != nil {
@@ -31,7 +31,7 @@ func TestNoResidentProcesses(t *testing.T) {
 	for _, l := range strings.Split(string(out), "\n") {
 		l = strings.TrimSpace(l)
 		if strings.HasPrefix(l, h.Bin+" ") && !strings.HasSuffix(l, " __watch run") {
-			t.Fatalf("resident ajan process: %s", l)
+			t.Fatalf("resident imux process: %s", l)
 		}
 	}
 }
@@ -42,7 +42,7 @@ func TestSwitchLatencyLargeSession(t *testing.T) {
 	h := newH(t, "")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@ajan_trail}"))
+	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@imux_trail}"))
 	f, err := os.Create(h.sessionPath("claude", 1))
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +52,7 @@ func TestSwitchLatencyLargeSession(t *testing.T) {
 	}
 	f.Close()
 	start := time.Now()
-	h.mustAjan("switch", "gemini", "--pane", pane)
+	h.mustImux("switch", "gemini", "--pane", pane)
 	argv := h.run("gemini", 1)
 	d := time.Since(start)
 	t.Logf("switch from a 64 MB session: %v, handoff %d bytes", d, len(argv[len(argv)-1]))
@@ -71,7 +71,7 @@ func TestMenuItemsByKey(t *testing.T) {
 	c.waitScreen(h, "fake claude ready", 5*time.Second)
 	open := func() int {
 		t.Helper()
-		c.openWith(h, keyCtrlBackslash, "ajan · ")
+		c.openWith(h, keyCtrlBackslash, "i-mux · ")
 		return c.Mark()
 	}
 
@@ -95,7 +95,7 @@ func TestMenuItemsByKey(t *testing.T) {
 	// Preview handoff: a popup with the document.
 	mark = open()
 	c.Write("v")
-	c.waitScreenAfter(h, mark, "[ajan handoff · Claude Code →", 5*time.Second)
+	c.waitScreenAfter(h, mark, "[i-mux handoff · Claude Code →", 5*time.Second)
 	c.Write("q") // quit less; the popup closes
 	time.Sleep(200 * time.Millisecond)
 

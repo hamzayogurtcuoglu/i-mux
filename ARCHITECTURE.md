@@ -1,14 +1,14 @@
-# ajan: Architecture
+# i-mux: Architecture
 
 > Status: implemented (M0–M8); the open questions in §20 are being closed by manual checks. Last updated 2026-11-06.
 > Companion document: [TASKS.md](TASKS.md) (milestones and task plan).
-> "ajan" is Turkish for "agent" and is a working name.
+> Naming: the product is i-mux; its command, config directory and environment prefix are `imux`, `~/.imux` and `IMUX_`.
 
 ---
 
 ## 1. Overview
 
-ajan is a very lightweight, tmux-based terminal workspace for AI coding CLIs:
+i-mux is a very lightweight, tmux-based terminal workspace for AI coding CLIs:
 **Claude Code**, **Gemini CLI**, **GitHub Copilot CLI** and, as a bonus, **OpenAI Codex CLI**.
 
 Core user story:
@@ -25,8 +25,8 @@ Core user story:
   picker. No command typing is needed for any of this.
 - The CLI commands exist too, but the UI is the primary interface.
 
-ajan is a single static Go binary. All terminal work (PTYs, rendering, scrollback, keys) is
-done by tmux on a dedicated socket. ajan only:
+i-mux is a single static Go binary. All terminal work (PTYs, rendering, scrollback, keys) is
+done by tmux on a dedicated socket. i-mux only:
 
 1. starts and arranges agent CLIs in tmux panes,
 2. reads the agents' on-disk session files when a switch happens and condenses them into a
@@ -40,10 +40,10 @@ done by tmux on a dedicated socket. ajan only:
 | ID | Feature | Summary |
 |----|---------|---------|
 | F1 | Context handoff | **From the UI:** click an agent in the agent bar, or pick it in the menu (`Ctrl+\`, `prefix a`, right-click on a pane border). **Automatic:** when a limit is detected (modes `ask` / `auto` / `off`, default `ask`). |
-| F2 | Limits visibility | Per-agent OK / limited (with reset time) shown in the agent bar, plus an `ajan limits` panel. |
+| F2 | Limits visibility | Per-agent OK / limited (with reset time) shown in the agent bar, plus an `imux limits` panel. |
 | F3 | Multi-pane workspace | Several agents side by side, each pane labeled with its agent. |
 | F4 | Agent-to-agent bus | Agents can list panes, read another pane, send it a message, and wait until it is idle. |
-| F5 | Standalone handoff | `ajan handoff --from claude --to gemini` in a plain terminal, or `--print` to output the document only. |
+| F5 | Standalone handoff | `imux handoff --from claude --to gemini` in a plain terminal, or `--print` to output the document only. |
 | F6 | Session picker | A menu listing recent conversations of all agents for this project. Pick one, then continue it natively or in another agent with context. |
 
 ## 2. Goals and non-goals
@@ -54,9 +54,9 @@ done by tmux on a dedicated socket. ajan only:
   same pane. No commands need to be typed.
 - **Lightness is a hard requirement.**
   - Our code is never in the keystroke or render path; tmux (C) is.
-  - The only long-running ajan process is the watcher: under 15 MB RSS and about 0% CPU when idle.
-  - ajan adds no per-pane resident processes.
-- **Zero runtime dependencies besides tmux.** Users never need Go, Node or Python for ajan itself.
+  - The only long-running i-mux process is the watcher: under 15 MB RSS and about 0% CPU when idle.
+  - i-mux adds no per-pane resident processes.
+- **Zero runtime dependencies besides tmux.** Users never need Go, Node or Python for i-mux itself.
 - **Never touch the user's own tmux setup** (separate socket, generated config).
 - **Robust against format changes.** Parsers degrade to partial output with warnings and never crash.
 - **Privacy by default.** Everything stays local. Handoff files are 0600. Nothing is logged from screens or transcripts.
@@ -78,17 +78,17 @@ done by tmux on a dedicated socket. ajan only:
 | # | Decision | Rationale |
 |---|----------|-----------|
 | D1 | **Go + tmux, one static binary** (`CGO_ENABLED=0`) | Small idle footprint, trivial cross-compilation, same proven architecture as claude-squad and agent-deck. Writing our own multiplexer is avoided. |
-| D2 | **Dedicated socket `tmux -L ajan`** with a generated `~/.ajan/tmux.conf` | Isolation from the user's tmux. The user's own overrides go in `~/.ajan/tmux.local.conf`, which is sourced last. |
+| D2 | **Dedicated socket `tmux -L imux`** with a generated `~/.imux/tmux.conf` | Isolation from the user's tmux. The user's own overrides go in `~/.imux/tmux.local.conf`, which is sourced last. |
 | D3 | **Handoff = condensed markdown passed as the target CLI's initial prompt** | Works with every CLI that accepts an initial prompt. No dependency on internal session formats of the *target*. |
 | D4 | **Returning to an agent that already has a native session in this pane resumes it natively** (`claude --resume <id> "<delta>"`), plus a *delta* handoff | Full fidelity on the way back; only what happened elsewhere is summarized. |
 | D5 | **Limit detection by polling the screen** (every ~2.5 s, the last 25 non-blank lines of the visible screen, agent panes only) | Agents redraw spinners constantly, so streaming output (`pipe-pane`) would cost CPU around the clock. |
 | D6 | **One `tmux` exec per tick, batched** (`cmd1 \; cmd2 \; …`), and **skip unchanged screens by hash** | Keeps the watcher's CPU near zero regardless of pane count. A control-mode client (`tmux -C`) is a later optimization, used only if measurements require it (§17). |
-| D7 | **The watcher sleeps when no client is attached and exits when the ajan tmux server is gone** | No work when nobody can see a prompt anyway. A `client-attached` hook wakes it. |
+| D7 | **The watcher sleeps when no client is attached and exits when the i-mux tmux server is gone** | No work when nobody can see a prompt anyway. A `client-attached` hook wakes it. |
 | D8 | **Session files are parsed only at switch time**, reading a bounded head and tail window | Long Claude sessions are tens of MB (the largest local file is about 64 MB). |
-| D9 | **Agents are launched through `ajan __exec <spec-file>`**, which replaces itself (`execve`) with the agent | No shell quoting at all (tmux runs multi-argument commands without `sh -c`, verified in the tmux 3.8 man page). No tmux command-size limit, because the prompt lives in a 0600 file. Correct `PATH` for nvm-installed CLIs. Zero resident cost. This replaces the brief's `exec <bin> "$(cat file)"` idea. |
+| D9 | **Agents are launched through `imux __exec <spec-file>`**, which replaces itself (`execve`) with the agent | No shell quoting at all (tmux runs multi-argument commands without `sh -c`, verified in the tmux 3.8 man page). No tmux command-size limit, because the prompt lives in a 0600 file. Correct `PATH` for nvm-installed CLIs. Zero resident cost. This replaces the brief's `exec <bin> "$(cat file)"` idea. |
 | D10 | **Pane lifecycle via `remain-on-exit on` + a `pane-died` hook** instead of a wrapper shell or supervisor | Fallback when a resume fails fast, and a drop back to a shell when an agent exits. No process stays resident per pane. |
 | D11 | **Pre-assign Claude session IDs** with `claude --session-id <uuid>` (verified in 1.0.110 `--help`) | Deterministic mapping from pane to session file for Claude, the most common source. Other agents use time + cwd discovery. |
-| D12 | **Config in TOML** (`~/.ajan/config.toml`); machine state in JSON (`state.json`) | Regex patterns are hand-edited: TOML literal strings (`'…'`) need no backslash escaping, while JSON would need `"\\d"`. TOML also allows comments (self-documenting defaults) and is familiar from Codex's `config.toml`. Cost: one small pure-Go dependency, `github.com/BurntSushi/toml`. |
+| D12 | **Config in TOML** (`~/.imux/config.toml`); machine state in JSON (`state.json`) | Regex patterns are hand-edited: TOML literal strings (`'…'`) need no backslash escaping, while JSON would need `"\\d"`. TOML also allows comments (self-documenting defaults) and is familiar from Codex's `config.toml`. Cost: one small pure-Go dependency, `github.com/BurntSushi/toml`. |
 | D13 | **Dependencies: stdlib + BurntSushi/toml only.** No CLI framework, no YAML library, no SQLite driver | Small binary and less supply-chain surface. `workspace.yaml` (Copilot) needs only top-level scalars, so a 30-line reader suffices. SQLite is avoided (see Q5). |
 | D14 | **All UI strings in one catalog** (`internal/i18n`), English first | The primary user is Turkish; a `tr` catalog can be added without touching call sites. The handoff preamble is model-facing and always English. |
 | D15 | **Distribution:** GoReleaser (darwin/linux × arm64/amd64), `install.sh` (installs tmux if missing), Homebrew tap with `depends_on "tmux"` | Users never need Go. |
@@ -101,44 +101,44 @@ flowchart LR
   subgraph term["User's terminal (iTerm2, Terminal.app, VS Code, ...)"]
     TC["tmux client"]
   end
-  TC <-->|keys / render| TS[("tmux server<br/>socket: -L ajan")]
+  TC <-->|keys / render| TS[("tmux server<br/>socket: -L imux")]
   TS --- P1["pane %1<br/>claude"]
   TS --- P2["pane %2<br/>gemini"]
   TS --- P3["pane %3<br/>codex"]
 
-  CLI["ajan CLI<br/>(short-lived)"] -->|tmux commands| TS
+  CLI["imux CLI<br/>(short-lived)"] -->|tmux commands| TS
   TS -->|"key / mouse binding / hook<br/>run-shell -b"| CLI
-  CLI -->|"respawn-pane → ajan __exec → execve(agent)"| P1
+  CLI -->|"respawn-pane → imux __exec → execve(agent)"| P1
 
-  W["ajan watcher<br/>(daemon, singleton)"] -->|"list-panes, capture-pane<br/>(1 batched exec / tick)"| TS
-  W -->|"display-menu, set @ajan_status"| TS
-  W -->|"spawn: ajan switch (auto mode)"| CLI
+  W["imux watcher<br/>(daemon, singleton)"] -->|"list-panes, capture-pane<br/>(1 batched exec / tick)"| TS
+  W -->|"display-menu, set @imux_status"| TS
+  W -->|"spawn: imux switch (auto mode)"| CLI
 
   CLI -->|read at switch time| SF[("agent session files<br/>~/.claude ~/.gemini<br/>~/.copilot ~/.codex")]
-  CLI <-->|"config, state, handoffs"| AH[("~/.ajan")]
+  CLI <-->|"config, state, handoffs"| AH[("~/.imux")]
   W <-->|"state.json"| AH
 
-  P1 -.->|"agent's shell tool:<br/>ajan panes/read/send/wait"| CLI
+  P1 -.->|"agent's shell tool:<br/>imux panes/read/send/wait"| CLI
 ```
 
 | Component | Lifetime | Responsibility |
 |-----------|----------|----------------|
-| tmux server (`-L ajan`) | while sessions exist | PTYs, rendering, scrollback, key bindings, menus, popups, pane options. |
-| `ajan` CLI | per command | Start/attach, switch, split, handoff, limits, bus, doctor. Also invoked by tmux key bindings and hooks via `run-shell -b`. |
-| `ajan __exec` | milliseconds | Reads a launch spec, sets env/cwd, `execve`s the agent. Gone afterwards. |
-| `ajan __watch run` | while the ajan server lives | Limit detection, status bar, `ask` / `auto` actions. |
+| tmux server (`-L imux`) | while sessions exist | PTYs, rendering, scrollback, key bindings, menus, popups, pane options. |
+| `imux` CLI | per command | Start/attach, switch, split, handoff, limits, bus, doctor. Also invoked by tmux key bindings and hooks via `run-shell -b`. |
+| `imux __exec` | milliseconds | Reads a launch spec, sets env/cwd, `execve`s the agent. Gone afterwards. |
+| `imux __watch run` | while the i-mux server lives | Limit detection, status bar, `ask` / `auto` actions. |
 | Session providers | in-process | Find and parse the four agents' session stores into a common model. |
 | Handoff builder | in-process | Budgeted markdown rendering from the common model plus repository state. |
 
 ## 5. Go package layout
 
 ```
-ajan/
-├── cmd/ajan/main.go              # tiny: calls internal/cli.Main(os.Args)
+imux/
+├── cmd/imux/main.go              # tiny: calls internal/cli.Main(os.Args)
 ├── internal/
 │   ├── cli/                      # subcommand dispatch (stdlib flag), help text, exit codes
 │   ├── config/                   # TOML load, defaults, merge, validation (regex compile)
-│   ├── paths/                    # AJAN_HOME, dir creation with perms, umask
+│   ├── paths/                    # IMUX_HOME, dir creation with perms, umask
 │   ├── state/                    # state.json: flock + atomic write; limits, bin cache, notices
 │   ├── i18n/                     # message catalog (en; tr later), T(key, args...)
 │   ├── agent/                    # agent registry: IDs, display names, default launch templates,
@@ -175,7 +175,7 @@ ajan/
 Dependency rules:
 
 - `session/*` must not import `tmux`, `workspace` or `watch`. Parsers are pure.
-  `ajan handoff --print` therefore works without tmux.
+  `imux handoff --print` therefore works without tmux.
 - `handoff` depends only on `session`, `gitinfo` and `i18n`.
 - Only `workspace`, `watch` and `bus` talk to tmux.
 
@@ -216,7 +216,7 @@ type Session struct {
 	Files      FileActivity
 	Usage      Usage
 	Errors     []APIError      // never in Entries; used for the switch reason and limits
-	Chained    *ChainedHandoff // set when the first user message is an ajan handoff
+	Chained    *ChainedHandoff // set when the first user message is an imux handoff
 	Warnings   []string        // non-fatal parse problems ("312 unknown lines skipped", ...)
 }
 
@@ -234,7 +234,7 @@ const (
 	KindMessage EntryKind = iota
 	KindSlashCommand   // "/name args"
 	KindCompactSummary // text of a compaction summary
-	KindHandoff        // an ajan handoff document (excluded from Conversation, parsed into Chained)
+	KindHandoff        // an imux handoff document (excluded from Conversation, parsed into Chained)
 )
 
 type Entry struct {
@@ -340,7 +340,7 @@ type TrailEntry struct {
 	Resumed   bool            `json:"r,omitempty"`
 }
 
-// LaunchSpec is written to ~/.ajan/launch/<rand>.json (0600) and consumed by `ajan __exec`.
+// LaunchSpec is written to ~/.imux/launch/<rand>.json (0600) and consumed by `imux __exec`.
 type LaunchSpec struct {
 	Agent    session.AgentID
 	Bin      string            // absolute path
@@ -375,8 +375,8 @@ means a known unknown, tracked in §20.
   - Long-path behavior is [unverified] (Q7). Fallback: scan project folders for recent files
     whose first lines contain a matching `"cwd"`.
   - Project folders may also contain `memory/` and `<uuid>/` subdirectories. Ignore them.
-- **Locating a pane's session:** ajan launches Claude with `--session-id <uuid>`, so the path is
-  known exactly. For sessions not started by ajan (standalone handoff), take the newest
+- **Locating a pane's session:** i-mux launches Claude with `--session-id <uuid>`, so the path is
+  known exactly. For sessions not started by i-mux (standalone handoff), take the newest
   `*.jsonl` in the encoded folder.
 - **Lines** [verified on files written by Claude Code 2.1.x]:
   - `type ∈ {user, assistant, system, attachment, last-prompt, mode, queue-operation,
@@ -421,7 +421,7 @@ means a known unknown, tracked in §20.
   - new: `claude --session-id {uuid} {prompt}`
   - resume: `claude --resume {id} {prompt}`
   - The installed CLI (1.0.110) is outdated, while the local session files come from 2.1.x apps.
-    `ajan doctor` recommends updating it.
+    `imux doctor` recommends updating it.
 
 ### 7.2 Gemini CLI
 
@@ -530,13 +530,13 @@ after the binary, before the template.
 
 ### 8.1 Storage
 
-- Path: `~/.ajan/handoffs/<YYYYMMDD-HHMMSS>-<from>-to-<to>.md`, mode **0600**, directory 0700.
-- Pruned after `handoff.keep_days` (default 30) by any ajan command, at most once a day.
+- Path: `~/.imux/handoffs/<YYYYMMDD-HHMMSS>-<from>-to-<to>.md`, mode **0600**, directory 0700.
+- Pruned after `handoff.keep_days` (default 30) by any i-mux command, at most once a day.
 
 ### 8.2 Layout
 
 ```markdown
-[ajan handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]
+[i-mux handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]
 
 You are continuing a coding session that the user was running in Claude Code (model: <model>).
 They switched to you because Claude Code hit its usage limit (resets 15:00).
@@ -588,8 +588,8 @@ Full transcript of the previous session (read only if needed): <path>
 
 Details:
 
-- **Marker** (first line): `[ajan handoff · <From CLI> → <To CLI> · <YYYY-MM-DD HH:MM>]`.
-- **Chained handoff:** if the source session's first user message starts with `[ajan handoff ·`:
+- **Marker** (first line): `[i-mux handoff · <From CLI> → <To CLI> · <YYYY-MM-DD HH:MM>]`.
+- **Chained handoff:** if the source session's first user message starts with `[i-mux handoff ·`:
   - parse it by `## ` headings;
   - its "Original request" becomes this document's "Original request";
   - its "Earlier history" + "Conversation" become this document's "Earlier history"
@@ -666,7 +666,7 @@ Failed calls get a ` (failed)` suffix.
 
 - The pane's trail lists runs, for example `claude(A, t0–t1) → gemini(G, t1–t2) → codex(X, t2–now)`.
 - When switching back to an agent that has an earlier entry in the trail with a session id,
-  the same cwd, and an existing session file, ajan resumes that session natively.
+  the same cwd, and an existing session file, i-mux resumes that session natively.
 - The delta covers every run *after* the agent's last run, concatenated in order
   (here G and X, each loaded with `Since = t1`).
 - If the delta is empty, the resume runs without a prompt.
@@ -675,13 +675,13 @@ Failed calls get a ` (failed)` suffix.
 
 ### 9.1 Socket, config, environment
 
-- All tmux calls use `tmux -L ajan -f ~/.ajan/tmux.conf …`. The socket name can be overridden
-  with `AJAN_TMUX_SOCKET` (used by tests).
-- The **minimum tmux version is 3.2** (popups, extended keys); 3.4+ is recommended. `ajan doctor`
+- All tmux calls use `tmux -L imux -f ~/.imux/tmux.conf …`. The socket name can be overridden
+  with `IMUX_TMUX_SOCKET` (used by tests).
+- The **minimum tmux version is 3.2** (popups, extended keys); 3.4+ is recommended. `imux doctor`
   checks it. The dev machine has 3.8.
 - **Environment:** the tmux server inherits the environment of the client that starts it. Agent
   CLIs installed under nvm need `node` on `PATH` (their bins are `#!/usr/bin/env node` scripts).
-  ajan therefore:
+  i-mux therefore:
   1. resolves each agent's absolute path with `exec.LookPath` in the *invoking* process (an
      interactive shell, which has nvm's PATH);
   2. caches `{path, PATH, version}` per agent in `state.json → bins` whenever the CLI runs
@@ -693,7 +693,7 @@ Failed calls get a ` (failed)` suffix.
 ### 9.2 Generated `tmux.conf` (sketch)
 
 ```tmux
-# Generated by ajan. Do not edit; put overrides in ~/.ajan/tmux.local.conf
+# Generated by imux. Do not edit; put overrides in ~/.imux/tmux.local.conf
 set -g  default-terminal "tmux-256color"          # present on the dev machine; doctor checks
 set -as terminal-features ",*:RGB"                # truecolor
 set -g  extended-keys on                          # Shift+Enter etc. in agents (verify, Q20)
@@ -703,32 +703,32 @@ set -g  history-limit 50000
 set -g  mouse on
 set -g  focus-events on
 set -g  pane-border-status top
-set -g  pane-border-format " #{?@ajan_label,#{@ajan_label},#{pane_current_command}} #{?@ajan_flag,#{@ajan_flag},} "
-set -g  status 2                                  # line 0: window list, line 1: ajan agent bar
+set -g  pane-border-format " #{?@imux_label,#{@imux_label},#{pane_current_command}} #{?@imux_flag,#{@imux_flag},} "
+set -g  status 2                                  # line 0: window list, line 1: imux agent bar
 set -g  status-format[1] "…generated agent bar, see §9.3…"
-set -g  status-right "#{@ajan_status} "
-set -g  @ajan_status ""
-bind -n 'C-\' run-shell -b "/abs/ajan __menu --pane '#{pane_id}' --client '#{client_name}'"
-bind    a     run-shell -b "/abs/ajan __menu --pane '#{pane_id}' --client '#{client_name}'"
-bind    S     run-shell -b "/abs/ajan __menu --sessions --pane '#{pane_id}' --client '#{client_name}'"
-# Clicks on agent-bar regions (range=user|ajan:<x>) go to ajan; other status clicks keep tmux's default.
-bind -n MouseDown1Status if -F '#{m:ajan:*,#{mouse_status_range}}' \
-  "run-shell -b \"/abs/ajan __click '#{mouse_status_range}' --pane '#{pane_id}' --client '#{client_name}'\"" \
+set -g  status-right "#{@imux_status} "
+set -g  @imux_status ""
+bind -n 'C-\' run-shell -b "/abs/imux __menu --pane '#{pane_id}' --client '#{client_name}'"
+bind    a     run-shell -b "/abs/imux __menu --pane '#{pane_id}' --client '#{client_name}'"
+bind    S     run-shell -b "/abs/imux __menu --sessions --pane '#{pane_id}' --client '#{client_name}'"
+# Clicks on agent-bar regions (range=user|imux:<x>) go to imux; other status clicks keep tmux's default.
+bind -n MouseDown1Status if -F '#{m:imux:*,#{mouse_status_range}}' \
+  "run-shell -b \"/abs/imux __click '#{mouse_status_range}' --pane '#{pane_id}' --client '#{client_name}'\"" \
   "switch-client -t ="
 # Right-click on a pane border opens that pane's menu ("-t =" targets the pane under the mouse).
-bind -n MouseDown3Border run-shell -t = -b "/abs/ajan __menu --pane '#{pane_id}' --client '#{client_name}'"
-set-hook -g pane-died       "run-shell -b \"/abs/ajan __pane-died '#{pane_id}' '#{pane_dead_status}'\""
-set-hook -g client-attached "run-shell -b '/abs/ajan __watch ensure'"
-source-file -q ~/.ajan/tmux.local.conf
+bind -n MouseDown3Border run-shell -t = -b "/abs/imux __menu --pane '#{pane_id}' --client '#{client_name}'"
+set-hook -g pane-died       "run-shell -b \"/abs/imux __pane-died '#{pane_id}' '#{pane_dead_status}'\""
+set-hook -g client-attached "run-shell -b '/abs/imux __watch ensure'"
+source-file -q ~/.imux/tmux.local.conf
 ```
 
 - The config is regenerated when the binary path or config changes, compared by content hash.
   The running server reloads it with `source-file`.
-- The ajan binary's absolute path comes from `os.Executable()` (symlinks resolved).
+- The i-mux binary's absolute path comes from `os.Executable()` (symlinks resolved).
 
 ### 9.3 UI: agent bar, menus, session picker, keys
 
-**Switching from the UI is the primary interface.** tmux draws everything below; ajan only
+**Switching from the UI is the primary interface.** tmux draws everything below; i-mux only
 generates format strings and menu items, then exits (D16).
 
 #### Screen layout
@@ -739,37 +739,37 @@ generates format strings and menu items, then exits (D16).
 │ ● Reading src/auth.ts …                │ ✦ Looking at the handler …             │
 │                                        │                                        │
 └────────────────────────────────────────┴────────────────────────────────────────┘
- 0:proj*                                                               14:32 · ajan
- ajan │ ▶ Claude │ Gemini │ Codex ⛔15:00 │ Copilot (not installed) │ ⧉ Sessions │ ☰
+ 0:proj*                                                               14:32 · imux
+ i-mux │ ▶ Claude │ Gemini │ Codex ⛔15:00 │ Copilot (not installed) │ ⧉ Sessions │ ☰
 ```
 
-- **Status line 0:** tmux's normal window list, plus `@ajan_status` on the right.
+- **Status line 0:** tmux's normal window list, plus `@imux_status` on the right.
 - **Status line 1, the agent bar:** always refers to the **active pane**. Focusing another pane
-  (click or keys) updates it immediately, with no ajan process involved.
+  (click or keys) updates it immediately, with no i-mux process involved.
 - **Pane border labels** (`pane-border-status top`): ` Claude · opus `, plus `⛔15:00` when limited.
   - Right-click on a border (`MouseDown3Border`) opens that pane's menu.
   - Left click keeps tmux's default behavior (focus and resize).
 
 #### Agent bar
 
-Each region is marked with `#[range=user|ajan:<x>]`. A left click fires `MouseDown1Status`, and
-the binding (§9.2) passes `#{mouse_status_range}` to `ajan __click`.
+Each region is marked with `#[range=user|imux:<x>]`. A left click fires `MouseDown1Status`, and
+the binding (§9.2) passes `#{mouse_status_range}` to `imux __click`.
 
 | Region | Range | Click does |
 |---|---|---|
-| `▶ Claude` (current agent of the active pane, reverse video) | `ajan:cur` | opens the pane menu |
-| `Gemini`, `Codex`, … (installed agents) | `ajan:<agent>` | **switches the active pane to that agent with context**, same as the menu item |
-| a limited agent, e.g. `Codex ⛔15:00` | `ajan:<agent>` | asks first in a one-line menu: "Codex is limited until 15:00. Switch anyway?" |
-| `Copilot (not installed)`, dimmed | `ajan:<agent>` | shows the install hint (`display-message`) |
-| `⧉ Sessions` | `ajan:sessions` | opens the session picker |
-| `☰` | `ajan:menu` | opens the pane menu |
+| `▶ Claude` (current agent of the active pane, reverse video) | `imux:cur` | opens the pane menu |
+| `Gemini`, `Codex`, … (installed agents) | `imux:<agent>` | **switches the active pane to that agent with context**, same as the menu item |
+| a limited agent, e.g. `Codex ⛔15:00` | `imux:<agent>` | asks first in a one-line menu: "Codex is limited until 15:00. Switch anyway?" |
+| `Copilot (not installed)`, dimmed | `imux:<agent>` | shows the install hint (`display-message`) |
+| `⧉ Sessions` | `imux:sessions` | opens the session picker |
+| `☰` | `imux:menu` | opens the pane menu |
 
-- Range arguments must be ≤ 15 bytes (tmux limit, verified). The longest, `ajan:sessions`, is 13.
+- Range arguments must be ≤ 15 bytes (tmux limit, verified). The longest, `imux:sessions`, is 13.
 - `status-format[1]` is generated from the config `order` and the bin cache.
-  - Highlighting uses conditional formats (`#{?#{==:#{@ajan_agent},gemini},#[reverse],}`) on the
+  - Highlighting uses conditional formats (`#{?#{==:#{@imux_agent},gemini},#[reverse],}`) on the
     active pane's options.
-  - Limit markers read global options `@ajan_lim_<agent>`, which the watcher sets.
-  - ajan regenerates the format only when the installed agents or the config change.
+  - Limit markers read global options `@imux_lim_<agent>`, which the watcher sets.
+  - i-mux regenerates the format only when the installed agents or the config change.
 - In a plain-shell pane (no agent running), clicking an agent starts it there. It carries context
   from the pane's last trail entry if one exists, and starts fresh otherwise.
 - With `tmux.mouse = false` the bar is just an indicator; everything stays reachable by keyboard.
@@ -778,8 +778,8 @@ the binding (§9.2) passes `#{mouse_status_range}` to `ajan __click`.
 #### Pane menu (`display-menu`, mouse or keyboard)
 
 Opened by `Ctrl+\` (root table), `prefix a`, a click on `☰` or on the current agent, or a
-right-click on a pane border. `ajan __menu` builds the items from state and runs
-`display-menu -c <client> -t <pane> -T "ajan · <Agent>" -x C -y C …`:
+right-click on a pane border. `imux __menu` builds the items from state and runs
+`display-menu -c <client> -t <pane> -T "i-mux · <Agent>" -x C -y C …`:
 
 1. If the current agent is limited: a disabled title line "Claude: limited until 15:00".
 2. `Switch to <Agent> (with context)` for each other agent.
@@ -788,16 +788,16 @@ right-click on a pane border. `ajan __menu` builds the items from state and runs
    - Mnemonic keys `c` / `g` / `p` / `x`: **`Ctrl+\` `g` = switch to Gemini**.
 3. `Sessions…` (key `s`) opens the session picker.
 4. `New pane → <Agent>`, one per installed agent.
-5. `Preview handoff` (`display-popup -E -w 90% -h 90% "ajan handoff --pane %N --print | less -R"`).
-6. `Limits` (`display-popup -E "ajan limits --pager"`).
+5. `Preview handoff` (`display-popup -E -w 90% -h 90% "imux handoff --pane %N --print | less -R"`).
+6. `Limits` (`display-popup -E "imux limits --pager"`).
 7. `Close pane`.
 
-Each item runs `run-shell -b "<ajan> <subcommand> --pane %N …"`. Inside menus you can use the
+Each item runs `run-shell -b "<imux> <subcommand> --pane %N …"`. Inside menus you can use the
 arrow keys and Enter, the mnemonic keys, Esc to close, or click an item.
 
 #### Session picker
 
-Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `ajan pick`. It is a `display-menu`:
+Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It is a `display-menu`:
 
 ```
  Sessions · ~/proj
@@ -810,7 +810,7 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `ajan pick`. It 
  More…                                           (m)
 ```
 
-- Rows show conversations of all installed agents for the pane's project dir (`@ajan_cwd`),
+- Rows show conversations of all installed agents for the pane's project dir (`@imux_cwd`),
   newest first, up to 9 per page.
 - The preview is the conversation's first user request: cleaned, one line, 40 characters.
   It is shown only on the user's own screen and never logged.
@@ -832,30 +832,30 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `ajan pick`. It 
 | left click on an agent-bar entry | switch the active pane to that agent with context |
 | right click on a pane border | that pane's menu |
 
-- `Ctrl+\` is SIGQUIT in cooked mode. Binding it means shells inside ajan panes lose that key; acceptable.
+- `Ctrl+\` is SIGQUIT in cooked mode. Binding it means shells inside imux panes lose that key; acceptable.
 - Pass-through in VS Code's terminal is Q1.
-- Menu latency target: < 100 ms from key press or click (one ajan exec plus one tmux exec).
+- Menu latency target: < 100 ms from key press or click (one i-mux exec plus one tmux exec).
 
 ### 9.4 Pane options
 
 | Option | Example | Written by | Meaning |
 |---|---|---|---|
-| `@ajan_agent` | `claude` | start/switch, cleared by pane-died | agent currently running in the pane |
-| `@ajan_start` | `1762352000123` | start/switch | unix ms when the current agent was launched |
-| `@ajan_cwd` | `/Users/x/proj` | start | project directory (stable even if the agent cd's) |
-| `@ajan_label` | `Claude · opus` | start/switch | border label |
-| `@ajan_flag` | `⛔ 15:00` | watcher | per-pane limit marker in the border |
-| `@ajan_trail` | JSON `[TrailEntry…]` | start/switch | history of runs in this pane (max 10) |
-| `@ajan_fallback` | path to spec | switch (resume) | fallback LaunchSpec if a resume dies within 10 s |
-| `@ajan_lock` | pid | switch | guards against concurrent switches on one pane |
+| `@imux_agent` | `claude` | start/switch, cleared by pane-died | agent currently running in the pane |
+| `@imux_start` | `1762352000123` | start/switch | unix ms when the current agent was launched |
+| `@imux_cwd` | `/Users/x/proj` | start | project directory (stable even if the agent cd's) |
+| `@imux_label` | `Claude · opus` | start/switch | border label |
+| `@imux_flag` | `⛔ 15:00` | watcher | per-pane limit marker in the border |
+| `@imux_trail` | JSON `[TrailEntry…]` | start/switch | history of runs in this pane (max 10) |
+| `@imux_fallback` | path to spec | switch (resume) | fallback LaunchSpec if a resume dies within 10 s |
+| `@imux_lock` | pid | switch | guards against concurrent switches on one pane |
 
 ### 9.5 Launch, switch and exit mechanics
 
-- **Launch:** `respawn-pane -k -t %N -c <cwd> <ajan> __exec <spec>` (or `new-session` / `split-window`
+- **Launch:** `respawn-pane -k -t %N -c <cwd> <imux> __exec <spec>` (or `new-session` / `split-window`
   with the same command). `__exec`:
   1. reads the spec and deletes it;
   2. checks the argv size;
-  3. sets `PATH`, `AJAN_PANE=%N` and `AJAN_AGENT=<id>`, plus any extra env;
+  3. sets `PATH`, `IMUX_PANE=%N` and `IMUX_AGENT=<id>`, plus any extra env;
   4. `chdir`s, then `syscall.Exec`s the agent.
 - **Prompt injection:** `handoff.inject`:
   - `argv` (default): the prompt is in argv.
@@ -868,31 +868,31 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `ajan pick`. It 
   - **The source session is parsed and the handoff file written *before* the kill.** Any error
     aborts the switch with the old agent still running.
 - **Exit:**
-  - ajan panes set `remain-on-exit on` (pane option).
-  - The `pane-died` hook runs `ajan __pane-died %N <status>`, which:
-    - if `@ajan_fallback` is set and the agent died < 10 s after `@ajan_start` with a non-zero
+  - imux panes set `remain-on-exit on` (pane option).
+  - The `pane-died` hook runs `imux __pane-died %N <status>`, which:
+    - if `@imux_fallback` is set and the agent died < 10 s after `@imux_start` with a non-zero
       status: respawns with the fallback spec (full handoff, new session) and notifies;
-    - otherwise: closes the trail entry, clears `@ajan_agent`, and respawns the pane with the
-      user's login shell in `@ajan_cwd`, so the user keeps a usable pane. The `on_exit = "close"`
+    - otherwise: closes the trail entry, clears `@imux_agent`, and respawns the pane with the
+      user's login shell in `@imux_cwd`, so the user keeps a usable pane. The `on_exit = "close"`
       config value kills the pane instead.
 
 ## 10. Watcher daemon (limit detection)
 
-- **Singleton:** `~/.ajan/watch.pid` held with `flock(LOCK_EX|LOCK_NB)` for the process lifetime.
+- **Singleton:** `~/.imux/watch.pid` held with `flock(LOCK_EX|LOCK_NB)` for the process lifetime.
   A stale file is harmless because the lock dies with the process.
-- **Start:** `ajan __watch ensure` (called by every interactive `ajan` command and by the
+- **Start:** `imux __watch ensure` (called by every interactive `imux` command and by the
   `client-attached` hook) takes the lock or, if it is held, sends `SIGUSR1` (wake).
   The daemon is the same binary started with `Setsid`, stdio to `/dev/null`, stderr to
-  `~/.ajan/watch.log`.
+  `~/.imux/watch.log`.
 - **Runtime knobs:** `GOMAXPROCS=1`, `debug.SetGCPercent(50)`, `debug.SetMemoryLimit(12 MiB)`,
   regexes compiled once, buffers reused.
 - **Loop:**
-  1. `tmux list-clients -F … \; list-panes -a -F '#{pane_id}\t#{@ajan_agent}\t#{@ajan_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}'`
+  1. `tmux list-clients -F … \; list-panes -a -F '#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}'`
      (one exec).
   2. Server gone (`no server running`) → exit 0.
   3. No non-control clients → sleep `limits.idle_interval` (15 s) or until `SIGUSR1`.
-  4. For live panes with `@ajan_agent`, one batched exec of
-     `display -p '\t\tajan:%N' \; capture-pane -p -J -t %N \; …` (the visible screen; its last
+  4. For live panes with `@imux_agent`, one batched exec of
+     `display -p '\t\timux:%N' \; capture-pane -p -J -t %N \; …` (the visible screen; its last
      `limits.scan_lines` non-blank lines are scanned, because inline CLIs write from the top and a
      short session's message is not on the bottom rows). The delimiter line splits the output.
   5. Per pane, skip if the FNV-64 hash of the capture equals last tick's.
@@ -903,27 +903,27 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `ajan pick`. It 
   - `warn`: "approaching", shown in the status bar only;
   - `ignore`: e.g. Claude's "Opus limit reached, now using Sonnet" model fallback.
 - **False-positive guards:**
-  - **Grace:** matches within 20 s of `@ajan_start` go into the seen-set and never prompt.
+  - **Grace:** matches within 20 s of `@imux_start` go into the seen-set and never prompt.
     This covers resumed sessions that re-render an old limit message.
-  - **Seen-set:** normalized matched lines per pane instance (pane id + `@ajan_start`).
+  - **Seen-set:** normalized matched lines per pane instance (pane id + `@imux_start`).
   - **Cooldown:** 10 minutes per pane after a prompt or action.
   - **Confirmation** in `ask` mode.
 - **On a `limit` hit:**
   1. `state.json → limits[agent] = {at, text, reset_at, expires_at, source:"screen", pane}`.
      - `reset_at` is parsed from the text (§10.1).
      - `expires_at` is `reset_at`, or `at + limits.default_expiry` (5 h).
-  2. Update `@ajan_status` (global) and `@ajan_flag` (pane), only when they change.
+  2. Update `@imux_status` (global) and `@imux_flag` (pane), only when they change.
   3. Act by mode:
      - `ask`: `display-menu` on the client showing that pane's session (else the most recently
        active client), titled "<Agent> hit its limit (resets 15:00): continue in …", with one item
        per installed, non-limited agent in config order, plus "Dismiss".
-     - `auto`: spawn `ajan switch <first installed, non-limited agent in order> --pane %N
+     - `auto`: spawn `imux switch <first installed, non-limited agent in order> --pane %N
        --reason limit`, then `display-message`.
      - `off`: record and `display-message` only.
   - If every other agent is limited too: notify only.
-- **Status bar:** `@ajan_status` is rendered from state, e.g.
+- **Status bar:** `@imux_status` is rendered from state, e.g.
   `Claude ⛔15:00 · Gemini ● · Codex ●` (installed agents only; `◐` for `warn`).
-  The watcher also sets the global options `@ajan_lim_<agent>` (e.g. `⛔15:00`, or empty).
+  The watcher also sets the global options `@imux_lim_<agent>` (e.g. `⛔15:00`, or empty).
   The agent bar (§9.3) shows these next to each agent's name.
   Expired limits are dropped on the next tick.
 - **Logging:** pane id, agent, pattern id and timestamps only. **Never screen text**, except the
@@ -960,7 +960,7 @@ Reset-time parser (`limits.ParseReset(text, now, loc)`), first match wins:
 - `try again in (\d+)\s*(seconds?|minutes?|hours?|days?)` (+ combos like `2 days 3 hours`).
 - Otherwise there is no reset time and the limit expires after `limits.default_expiry`.
 
-## 11. Limits panel (`ajan limits`)
+## 11. Limits panel (`imux limits`)
 
 v1 uses local data only. Output is a table (or `--json`); in tmux it opens as a popup.
 
@@ -977,43 +977,43 @@ Provider-API reading is a possible later, opt-in milestone.
 
 ## 12. Agent-to-agent bus
 
-Agents use their own shell tool to call ajan. Inside a pane, `TMUX`, `TMUX_PANE` and `AJAN_PANE` are set.
+Agents use their own shell tool to call i-mux. Inside a pane, `TMUX`, `TMUX_PANE` and `IMUX_PANE` are set.
 
 | Command | Behavior |
 |---|---|
-| `ajan panes [--json]` | id, agent, label, cwd, idle/busy, seconds since the screen last changed |
-| `ajan read <target> [-n 60]` | `capture-pane -p -J`, last *n* lines, ANSI stripped |
-| `ajan send <target> "<msg>" [--wait-idle] [--no-enter]` | prefix `[from <agent> <pane>] `, write a 0600 temp file, `load-buffer -b ajan-<rand>`, `paste-buffer -p -d -t <target>` (bracketed paste only if the app enabled it, [verified] in the man page), wait 150 ms, `send-keys Enter` |
-| `ajan wait <target> [--timeout 600] [--idle 5s] [--print]` | poll the capture hash every 1 s; idle once unchanged for `bus.idle_after`. Exit 0 = idle, 124 = timeout. Spinners and elapsed timers change the screen, so a stable screen means idle. |
-| `ajan snippet [claude\|gemini\|agents]` | prints a block the user may paste into CLAUDE.md / GEMINI.md / AGENTS.md. **ajan never edits these files.** |
+| `imux panes [--json]` | id, agent, label, cwd, idle/busy, seconds since the screen last changed |
+| `imux read <target> [-n 60]` | `capture-pane -p -J`, last *n* lines, ANSI stripped |
+| `imux send <target> "<msg>" [--wait-idle] [--no-enter]` | prefix `[from <agent> <pane>] `, write a 0600 temp file, `load-buffer -b imux-<rand>`, `paste-buffer -p -d -t <target>` (bracketed paste only if the app enabled it, [verified] in the man page), wait 150 ms, `send-keys Enter` |
+| `imux wait <target> [--timeout 600] [--idle 5s] [--print]` | poll the capture hash every 1 s; idle once unchanged for `bus.idle_after`. Exit 0 = idle, 124 = timeout. Spinners and elapsed timers change the screen, so a stable screen means idle. |
+| `imux snippet [claude\|gemini\|agents]` | prints a block the user may paste into CLAUDE.md / GEMINI.md / AGENTS.md. **i-mux never edits these files.** |
 
 - **Target syntax:** `%N`, or an agent name. An agent name resolves to the unique pane with
-  that `@ajan_agent` in the caller's session, then server-wide. If ambiguous, the command fails
+  that `@imux_agent` in the caller's session, then server-wide. If ambiguous, the command fails
   and lists the candidates.
 - **Guards:**
   - `bus.enabled`;
   - `bus.max_message_bytes` (16 KB);
   - `bus.rate_per_minute` per sender pane (20), which stops agent ping-pong loops;
-  - the target must be on the ajan socket and must not be the sender;
+  - the target must be on the i-mux socket and must not be the sender;
   - `bus.confirm = true` makes every send show a confirm menu to the user first.
 
 ## 13. CLI surface
 
 | Command | Description |
 |---|---|
-| `ajan [agent]` | Outside tmux: attach to this directory's ajan session, or create it with `agent` (default: first in `order`). Inside ajan: open a new window with `agent`. |
-| `ajan attach [session]` | Attach to an existing ajan session (most recent by default). |
-| `ajan ls` | Sessions and panes with agent, cwd, state. |
-| `ajan switch <agent> [--pane %N] [--reason manual\|limit] [--no-resume] [--from-session <agent>:<id>]` | Switch the pane (default: the caller's `TMUX_PANE`) with context. `--from-session` takes the context from a conversation picked in the session picker instead of the pane's current one. |
-| `ajan split <agent> [-h\|-v]` | New pane with `agent` in the same cwd. |
-| `ajan handoff [--from A] [--to B] [--cwd DIR] [--session ID\|PATH] [--pane %N] [--print] [--budget N] [--delta-since T]` | Build a handoff. Without `--print`, exec `B` in the current terminal (F5). `--from` defaults to the newest session of any agent for the cwd. |
-| `ajan sessions [--agent A] [--cwd DIR] [--all]` | List sessions found for the cwd (agent, id, updated, size, first request). |
-| `ajan pick [--pane %N]` | Open the session picker (§9.3) on the attached client. This is the same menu as `⧉ Sessions` / `prefix S`. |
-| `ajan limits [--json] [--pager]` | Limits panel. |
-| `ajan panes`, `read`, `send`, `wait`, `snippet` | Agent bus (§12). |
-| `ajan doctor` | tmux presence/version and terminfo, agents installed (paths, versions, nvm PATH), `~/.ajan` perms, socket, watcher status, key hints (VS Code), CLI flag sanity checks via `--help` parsing (never with a prompt). |
-| `ajan config [init\|path\|show]` | Write a commented default config / print the path / print the effective config. |
-| `ajan version` | Version, commit, build date. |
+| `imux [agent]` | Outside tmux: attach to this directory's i-mux session, or create it with `agent` (default: first in `order`). Inside i-mux: open a new window with `agent`. |
+| `imux attach [session]` | Attach to an existing i-mux session (most recent by default). |
+| `imux ls` | Sessions and panes with agent, cwd, state. |
+| `imux switch <agent> [--pane %N] [--reason manual\|limit] [--no-resume] [--from-session <agent>:<id>]` | Switch the pane (default: the caller's `TMUX_PANE`) with context. `--from-session` takes the context from a conversation picked in the session picker instead of the pane's current one. |
+| `imux split <agent> [-h\|-v]` | New pane with `agent` in the same cwd. |
+| `imux handoff [--from A] [--to B] [--cwd DIR] [--session ID\|PATH] [--pane %N] [--print] [--budget N] [--delta-since T]` | Build a handoff. Without `--print`, exec `B` in the current terminal (F5). `--from` defaults to the newest session of any agent for the cwd. |
+| `imux sessions [--agent A] [--cwd DIR] [--all]` | List sessions found for the cwd (agent, id, updated, size, first request). |
+| `imux pick [--pane %N]` | Open the session picker (§9.3) on the attached client. This is the same menu as `⧉ Sessions` / `prefix S`. |
+| `imux limits [--json] [--pager]` | Limits panel. |
+| `imux panes`, `read`, `send`, `wait`, `snippet` | Agent bus (§12). |
+| `imux doctor` | tmux presence/version and terminfo, agents installed (paths, versions, nvm PATH), `~/.imux` perms, socket, watcher status, key hints (VS Code), CLI flag sanity checks via `--help` parsing (never with a prompt). |
+| `imux config [init\|path\|show]` | Write a commented default config / print the path / print the effective config. |
+| `imux version` | Version, commit, build date. |
 | internal | `__exec <spec>`, `__menu [--sessions\|--session <agent>:<id>]`, `__click <range-arg>`, `__pane-died`, `__watch run\|ensure\|stop\|status`, `__status` |
 
 Session naming: `<sanitized basename(cwd)>-<first 4 hex of sha256(cwd)>`. tmux forbids `.` and `:`
@@ -1026,49 +1026,49 @@ in session names.
 ```mermaid
 sequenceDiagram
   actor U as User
-  participant A as ajan (CLI)
-  participant T as tmux server (-L ajan)
-  participant X as ajan __exec
+  participant A as imux (CLI)
+  participant T as tmux server (-L imux)
+  participant X as imux __exec
   participant C as claude
   participant W as watcher
-  U->>A: ajan claude (in project dir, interactive shell)
+  U->>A: imux claude (in project dir, interactive shell)
   A->>A: load config, resolve abs bin + PATH, update bin cache, (re)write tmux.conf
   A->>A: uuid := new v4; write launch spec (0600)
-  A->>T: new-session -d -s proj-1a2b -c CWD -P -F '#{pane_id}' AJAN __exec SPEC
+  A->>T: new-session -d -s proj-1a2b -c CWD -P -F '#{pane_id}' IMUX __exec SPEC
   T->>X: spawn in pane %1
   X->>C: execve(claude --session-id uuid)
-  A->>T: set -p -t %1 @ajan_agent/@ajan_start/@ajan_cwd/@ajan_label/@ajan_trail, remain-on-exit on
+  A->>T: set -p -t %1 @imux_agent/@imux_start/@imux_cwd/@imux_label/@imux_trail, remain-on-exit on
   A->>W: __watch ensure (start, or SIGUSR1 if running)
-  A->>T: execve(tmux -L ajan attach -t proj-1a2b)
+  A->>T: execve(tmux -L imux attach -t proj-1a2b)
 ```
 
 ### 14.2 Manual switch
 
 The flow below starts from the keyboard. A click on the agent bar (§14.7) or on a session in the
-picker (§14.8) enters the same `ajan switch` path.
+picker (§14.8) enters the same `imux switch` path.
 
 ```mermaid
 sequenceDiagram
   actor U as User
   participant T as tmux
-  participant M as ajan __menu
-  participant S as ajan switch
+  participant M as imux __menu
+  participant S as imux switch
   participant P as claude provider
   participant H as handoff builder
   participant G as gemini
   U->>T: Ctrl+\
-  T->>M: run-shell -b "ajan __menu --pane %1 --client C"
+  T->>M: run-shell -b "imux __menu --pane %1 --client C"
   M->>T: display-menu -c C -t %1 (items from state + installed agents)
   U->>T: "Switch to Gemini (with context)"
-  T->>S: run-shell -b "ajan switch gemini --pane %1 --reason manual"
-  S->>T: take @ajan_lock, read @ajan_* options
+  T->>S: run-shell -b "imux switch gemini --pane %1 --reason manual"
+  S->>T: take @imux_lock, read @imux_* options
   S->>P: Find(ID from trail) + Load(head 1 MiB, tail 8 MiB)
   P-->>S: Session
   S->>H: Build(full, budget, gitinfo(cwd))
-  H-->>S: markdown → ~/.ajan/handoffs/…-claude-to-gemini.md (0600)
-  S->>T: respawn-pane -k -t %1 -c CWD AJAN __exec SPEC
+  H-->>S: markdown → ~/.imux/handoffs/…-claude-to-gemini.md (0600)
+  S->>T: respawn-pane -k -t %1 -c CWD IMUX __exec SPEC
   T->>G: (via __exec) execve(gemini -i "<handoff>")
-  S->>T: set @ajan_agent=gemini, push trail, release lock
+  S->>T: set @imux_agent=gemini, push trail, release lock
   S->>T: display-message "Switched to Gemini · 21.4K chars of context"
 ```
 
@@ -1080,7 +1080,7 @@ sequenceDiagram
   participant T as tmux
   participant C as claude (pane %1)
   actor U as User
-  participant S as ajan switch
+  participant S as imux switch
   loop every 2.5 s while a client is attached
     W->>T: list-clients ; list-panes -a  (1 exec)
     W->>T: capture-pane ×N, bottom 25 lines  (1 exec)
@@ -1088,13 +1088,13 @@ sequenceDiagram
   C-->>T: renders "5-hour limit reached ∙ resets 3pm"
   W->>W: match (severity=limit), past grace, not seen, no cooldown
   W->>W: state.json limits.claude = {at, text, reset_at 15:00}
-  W->>T: set -g @ajan_status "Claude ⛔15:00 · Gemini ● · Codex ●"
+  W->>T: set -g @imux_status "Claude ⛔15:00 · Gemini ● · Codex ●"
   alt on_limit = ask (default)
     W->>T: display-menu -c C -t %1 "Claude hit its limit (resets 15:00): continue in …"
     U->>T: picks Gemini
-    T->>S: run-shell -b "ajan switch gemini --pane %1 --reason limit"
+    T->>S: run-shell -b "imux switch gemini --pane %1 --reason limit"
   else on_limit = auto
-    W->>S: spawn "ajan switch <first available> --pane %1 --reason limit"
+    W->>S: spawn "imux switch <first available> --pane %1 --reason limit"
   else on_limit = off
     W->>T: display-message only
   end
@@ -1106,7 +1106,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   actor U as User
-  participant S as ajan switch
+  participant S as imux switch
   participant T as tmux
   participant P as providers
   participant C as claude
@@ -1115,11 +1115,11 @@ sequenceDiagram
   S->>S: trail has claude A, same cwd, file exists → resume path
   S->>P: Load gemini G with Since = t1
   S->>S: Build delta handoff ("Welcome back. While you were away …")
-  S->>S: write full-handoff fallback spec → @ajan_fallback
-  S->>T: respawn-pane -k … AJAN __exec SPEC(claude --resume A "<delta>")
+  S->>S: write full-handoff fallback spec → @imux_fallback
+  S->>T: respawn-pane -k … IMUX __exec SPEC(claude --resume A "<delta>")
   T->>C: execve
   alt claude exits non-zero within 10 s
-    T->>S: pane-died hook → ajan __pane-died %1 STATUS
+    T->>S: pane-died hook → imux __pane-died %1 STATUS
     S->>T: respawn with fallback spec (new session + full handoff), notify
   end
 ```
@@ -1129,10 +1129,10 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   actor U as User
-  participant A as ajan handoff
+  participant A as imux handoff
   participant P as claude provider
   participant G as gemini
-  U->>A: ajan handoff --from claude --to gemini
+  U->>A: imux handoff --from claude --to gemini
   A->>P: Find(cwd) → newest session; Load
   A->>A: Build handoff (+ gitinfo), write file (0600)
   alt --print
@@ -1147,17 +1147,17 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant C as claude (pane %1)
-  participant A as ajan send / wait / read
+  participant A as imux send / wait / read
   participant T as tmux
   participant G as gemini (pane %2)
-  C->>A: (shell tool) ajan send gemini "please review src/a.ts"
-  A->>T: list-panes → @ajan_agent=gemini → %2 ; rate-limit + size checks
-  A->>T: load-buffer -b ajan-r1 TMPFILE ; paste-buffer -p -d -b ajan-r1 -t %2
+  C->>A: (shell tool) imux send gemini "please review src/a.ts"
+  A->>T: list-panes → @imux_agent=gemini → %2 ; rate-limit + size checks
+  A->>T: load-buffer -b imux-r1 TMPFILE ; paste-buffer -p -d -b imux-r1 -t %2
   A->>T: (150 ms) send-keys -t %2 Enter
   T->>G: "[from claude %1] please review src/a.ts"
-  C->>A: ajan wait %2 --timeout 600
+  C->>A: imux wait %2 --timeout 600
   A->>T: capture-pane every 1 s until unchanged for 5 s
-  C->>A: ajan read %2 -n 80
+  C->>A: imux read %2 -n 80
   A-->>C: last 80 lines of gemini's screen
 ```
 
@@ -1167,19 +1167,19 @@ sequenceDiagram
 sequenceDiagram
   actor U as User
   participant T as tmux
-  participant K as ajan __click
-  participant S as ajan switch
+  participant K as imux __click
+  participant S as imux switch
   participant G as gemini
   Note over T: agent bar: ▶ Claude │ Gemini │ Codex │ ⧉ Sessions │ ☰
   U->>T: left click on "Gemini"
-  T->>T: MouseDown1Status, mouse_status_range = "ajan:gemini"
-  T->>K: run-shell -b "ajan __click ajan:gemini --pane %1 --client C"
+  T->>T: MouseDown1Status, mouse_status_range = "imux:gemini"
+  T->>K: run-shell -b "imux __click imux:gemini --pane %1 --client C"
   K->>K: gemini installed? limited? (state.json)
   alt installed, not limited
     K->>S: in-process call: switch gemini --pane %1 --reason manual
     S->>T: (as in 14.2) parse → handoff → respawn-pane -k … __exec
     T->>G: execve(gemini -i "<handoff>")
-    S->>T: set @ajan_agent=gemini → the agent bar re-renders "▶ Gemini"
+    S->>T: set @imux_agent=gemini → the agent bar re-renders "▶ Gemini"
   else limited
     K->>T: display-menu "Gemini is limited until 15:00. Switch anyway?" (y / n)
   else not installed
@@ -1193,18 +1193,18 @@ sequenceDiagram
 sequenceDiagram
   actor U as User
   participant T as tmux
-  participant M as ajan __menu
+  participant M as imux __menu
   participant P as providers
-  participant S as ajan switch
+  participant S as imux switch
   U->>T: click "⧉ Sessions" (or prefix S)
-  T->>M: run-shell -b "ajan __menu --sessions --pane %1 --client C"
+  T->>M: run-shell -b "imux __menu --sessions --pane %1 --client C"
   M->>P: Find(cwd) for each installed agent; head-read first user message (≤ 50 files)
   M->>T: display-menu: "Claude 12 min ago fix the login…" (1) …
   U->>T: picks row 2 (a Gemini conversation)
-  T->>M: run-shell -b "ajan __menu --session gemini:<id> --pane %1 --client C"
+  T->>M: run-shell -b "imux __menu --session gemini:<id> --pane %1 --client C"
   M->>T: display-menu: Continue in Gemini (resume) / Continue in Claude (with context) / …
   U->>T: "Continue in Claude (with context)"
-  T->>S: run-shell -b "ajan switch claude --pane %1 --from-session gemini:<id>"
+  T->>S: run-shell -b "imux switch claude --pane %1 --from-session gemini:<id>"
   S->>S: handoff built from the PICKED conversation (not the pane's current one)
   S->>T: respawn-pane -k … __exec (claude --session-id <uuid> "<handoff>")
 ```
@@ -1213,16 +1213,16 @@ sequenceDiagram
 
 | Path | Mode | Writer | Content |
 |---|---|---|---|
-| `~/.ajan/` (or `$AJAN_HOME`) | 0700 | ajan | root; process umask is set to 077 at startup |
-| `config.toml` | 0600 | user / `ajan config init` | configuration (§16) |
-| `tmux.conf` | 0600 | ajan (generated) | tmux config for the `ajan` socket |
+| `~/.imux/` (or `$IMUX_HOME`) | 0700 | i-mux | root; process umask is set to 077 at startup |
+| `config.toml` | 0600 | user / `imux config init` | configuration (§16) |
+| `tmux.conf` | 0600 | i-mux (generated) | tmux config for the `imux` socket |
 | `tmux.local.conf` | user's choice | user | optional overrides, sourced last |
 | `state.json` (+ `state.lock`) | 0600 | CLI and watcher (flock + atomic rename) | limits, bin cache, one-time notices, schema version |
 | `watch.pid` | 0600 | watcher | pid; the flock is the real singleton |
 | `watch.log` | 0600 | watcher | lifecycle and errors only; rotated at 1 MB (one `.1` kept) |
-| `handoffs/` | 0700 | ajan | `*.md` handoffs, 0600, pruned after `keep_days` |
-| `launch/` | 0700 | ajan | launch specs, 0600, deleted by `__exec` on read; leftovers older than 1 h are swept |
-| tmux socket | tmux-managed | tmux | `$TMUX_TMPDIR/tmux-<uid>/ajan` (dir 0700) |
+| `handoffs/` | 0700 | i-mux | `*.md` handoffs, 0600, pruned after `keep_days` |
+| `launch/` | 0700 | i-mux | launch specs, 0600, deleted by `__exec` on read; leftovers older than 1 h are swept |
+| tmux socket | tmux-managed | tmux | `$TMUX_TMPDIR/tmux-<uid>/imux` (dir 0700) |
 
 Read-only access (never written): `~/.claude/projects`, `~/.gemini/{projects.json,tmp}`,
 `~/.copilot/session-state`, `~/.codex/sessions`.
@@ -1249,7 +1249,7 @@ credentials, `~/.copilot/config.json`). Each provider has an explicit path allow
 
 ## 16. Configuration
 
-`~/.ajan/config.toml`. Every key is optional; defaults are built in. `ajan config init` writes
+`~/.imux/config.toml`. Every key is optional; defaults are built in. `imux config init` writes
 this file with comments.
 
 ```toml
@@ -1257,7 +1257,7 @@ order         = ["claude", "gemini", "copilot", "codex"]  # menu order and auto-
 default_agent = ""          # "" = first installed in order
 on_limit      = "ask"       # ask | auto | off
 on_exit       = "shell"     # shell | close   (what a pane does when its agent exits)
-locale        = ""          # "" = from AJAN_LANG/LANG; "en" (tr later)
+locale        = ""          # "" = from IMUX_LANG/LANG; "en" (tr later)
 
 [handoff]
 budget_chars   = 30000
@@ -1326,16 +1326,16 @@ Validation at load:
 
 | Metric | Budget | How it is measured |
 |---|---|---|
-| Watcher RSS | < 15 MB (target < 10 MB) | `scripts/measure-watch.sh`: `ps -o rss=,%cpu= -p $(cat ~/.ajan/watch.pid)` every 5 s for 10 min with 4 fake-agent panes and one attached client; report max RSS and mean CPU. On macOS also `footprint <pid>`. |
+| Watcher RSS | < 15 MB (target < 10 MB) | `scripts/measure-watch.sh`: `ps -o rss=,%cpu= -p $(cat ~/.imux/watch.pid)` every 5 s for 10 min with 4 fake-agent panes and one attached client; report max RSS and mean CPU. On macOS also `footprint <pid>`. |
 | Watcher CPU, attached, 4 agent panes | < 0.5% mean of one core | same script |
 | Watcher CPU, detached | ~0% (≤ 1 tmux exec / 15 s) | same script with no client attached |
 | tmux execs per tick | ≤ 2 | unit test on the tmux wrapper (counts invocations) |
-| Per-pane resident ajan processes | 0 | e2e: `pgrep -f "ajan __exec"` is empty after launch |
+| Per-pane resident i-mux processes | 0 | e2e: `pgrep -f "imux __exec"` is empty after launch |
 | Menu open latency (key or click) | < 100 ms p95 | e2e: timestamp `__menu` / `__click` start → `display-menu` exec, 50 runs |
 | Session picker open latency | < 150 ms p95 with 50 candidate files | e2e with synthetic sessions for all four agents |
-| Agent bar re-render on focus change | 0 ajan execs | e2e: change the active pane; the recorder shows no ajan invocation |
+| Agent bar re-render on focus change | 0 i-mux execs | e2e: change the active pane; the recorder shows no i-mux invocation |
 | Switch latency (key → new agent exec), 64 MB Claude session | < 1.5 s | e2e with a generated synthetic 64 MB fixture |
-| `ajan handoff --print`, 64 MB session | < 1 s, peak RSS < 80 MB | `go test -bench` + `/usr/bin/time -l` |
+| `imux handoff --print`, 64 MB session | < 1 s, peak RSS < 80 MB | `go test -bench` + `/usr/bin/time -l` |
 | Parser throughput | ≥ 100 MB/s on JSONL tail scan | `go test -bench ./internal/session/...` |
 | Binary size | < 15 MB (stripped, `-trimpath -s -w`) | CI artifact size check |
 
@@ -1349,30 +1349,30 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
 | Failure | Detection | Behavior |
 |---|---|---|
 | Source session not found | provider `Find` returns nothing | Fallback transcript from the pane's own scrollback (`capture-pane -S -3000 -J`, ANSI stripped, marked "reconstructed from terminal scrollback"). If that is empty too, the handoff carries only the repo state + "no transcript found". Notify. Never block the switch. |
-| Format changed / partial parse | warnings count, zero entries, unknown `version` | Use what parsed. If < 2 entries, add the scrollback fallback. Warnings go in the `display-message` and `ajan handoff --print` stderr, never in the handoff body. |
+| Format changed / partial parse | warnings count, zero entries, unknown `version` | Use what parsed. If < 2 entries, add the scrollback fallback. Warnings go in the `display-message` and `imux handoff --print` stderr, never in the handoff body. |
 | Target agent not installed | bin cache / LookPath | Menu item disabled. CLI error with an install hint (`npm i -g @google/gemini-cli`, `npm i -g @github/copilot`, …). |
 | Target agent also limited | `state.json` | Menu shows "(limited until HH:MM)" but stays selectable. `auto` skips it. If all are limited: notify only. |
 | Handoff too large for argv | byte guard | Shrink the Conversation until it fits; `inject=paste` has no limit. |
-| Target exits immediately (bad flag, auth, trust dialog) | `pane-died` with status ≠ 0 within 10 s | Resume attempt: run the fallback spec (new session + full handoff). Otherwise: drop to a shell with a message pointing to `~/.ajan/handoffs/<file>` and `ajan doctor`. |
-| Double key press / concurrent switch | `@ajan_lock` (pid, checked for liveness) | Second invocation exits with "switch already in progress". |
+| Target exits immediately (bad flag, auth, trust dialog) | `pane-died` with status ≠ 0 within 10 s | Resume attempt: run the fallback spec (new session + full handoff). Otherwise: drop to a shell with a message pointing to `~/.imux/handoffs/<file>` and `imux doctor`. |
+| Double key press / concurrent switch | `@imux_lock` (pid, checked for liveness) | Second invocation exits with "switch already in progress". |
 | Two panes, same agent, same cwd | discovery ambiguity | Claude: pre-assigned ids. Others: exclude files claimed by other panes' trails and pick the newest. If still ambiguous, show a warning in the menu. |
 | Git missing, not a repo, or slow | exec error / 2 s timeout | Section says "not a git repository" / "git status timed out". |
 | Unparseable reset time | parser returns zero | `expires_at = at + 5h`. |
 | Handoff write fails (disk full) | error | Abort before killing the source agent. |
-| tmux server killed | exec error | Watcher exits. The next `ajan` invocation starts a new server and watcher. |
-| Watcher crashed | flock free | Restarted by the next `ajan` command or `client-attached` hook. |
-| nvm PATH missing in the server env | bin cache empty / exec fails | Use the cache. `ajan doctor` explains how to run `ajan` once from an interactive shell. |
+| tmux server killed | exec error | Watcher exits. The next `imux` invocation starts a new server and watcher. |
+| Watcher crashed | flock free | Restarted by the next `imux` command or `client-attached` hook. |
+| nvm PATH missing in the server env | bin cache empty / exec fails | Use the cache. `imux doctor` explains how to run `imux` once from an interactive shell. |
 | `Ctrl+\` swallowed by the host terminal (VS Code) | user report / doctor hint | `prefix a` always works. Key configurable. |
 | tmux < 3.2 | `tmux -V` | doctor fails. Popups degrade to `new-window`. |
 | Gemini / Copilot use the alternate screen | empty scrollback | The scrollback fallback only gets the visible screen. Documented limitation. |
 
 ## 19. Security and privacy
 
-- **Local only.** ajan makes no network calls and has no telemetry. (install.sh and Homebrew download
+- **Local only.** i-mux makes no network calls and has no telemetry. (install.sh and Homebrew download
   the binary; that is all.)
 - **No credential access.** Providers read session stores via an explicit path allowlist; credential
-  files are never opened. ajan never calls model APIs or reuses OAuth tokens.
-- **File permissions.** umask 077; `~/.ajan` 0700; handoffs, specs, state and logs 0600. Handoffs
+  files are never opened. i-mux never calls model APIs or reuses OAuth tokens.
+- **File permissions.** umask 077; `~/.imux` 0700; handoffs, specs, state and logs 0600. Handoffs
   can contain code and secrets.
 - **Cross-provider disclosure.** A switch sends excerpts of one provider's conversation, plus
   repository state, to another provider. Mitigations:
@@ -1388,10 +1388,10 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
   - a sender tag on every message;
   - `bus.enabled` and `bus.confirm`;
   - rate and size limits;
-  - targets restricted to the ajan socket.
+  - targets restricted to the i-mux socket.
 - **Watcher** keeps only hashes and normalized limit lines in memory. Logs contain no screen content.
 - **tmux socket** lives in the per-uid 0700 directory, the same trust boundary as the user's shell.
-- **Generated tmux.conf** embeds the absolute ajan path. The doctor warns if that path or its
+- **Generated tmux.conf** embeds the absolute i-mux path. The doctor warns if that path or its
   directory is writable by others.
 - **Tests and fixtures** are synthetic only. CI greps `testdata/` for home-directory paths
   (`/Users/`, `/home/`) other than the fake `/home/test`, and for real-looking secrets.
@@ -1419,15 +1419,15 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
 | Q15 | Codex `shell` call `arguments.command` is an argv array. | Tool summaries | Inspect a session's `function_call.arguments` keys and types. |
 | Q16 | Gemini `.jsonl` `$set.messages`: full replacement or incremental? Do bare message lines exist? | Gemini parser | Read `chatRecordingService` in a newer gemini-cli release. The parser is designed to handle both. |
 | Q17 | Argument shapes of Gemini `write_todos` and Codex `update_plan`. | Task list | Read the CLIs' tool schemas (Gemini source, Codex binary strings), or a real session. |
-| Q18 | Agents' sandboxes (Codex seatbelt `workspace-write`, Gemini `--sandbox`) allow `ajan` to reach the tmux socket. | Agent bus from sandboxed agents | M5 e2e with a sandboxed fake, then a manual check. If blocked, document it. |
+| Q18 | Agents' sandboxes (Codex seatbelt `workspace-write`, Gemini `--sandbox`) allow `imux` to reach the tmux socket. | Agent bus from sandboxed agents | M5 e2e with a sandboxed fake, then a manual check. If blocked, document it. |
 | Q19 | First-run dialogs (Claude folder trust, Gemini auth, Codex login) keep the initial prompt and submit it afterwards. | First switch into a new folder | Manual test per CLI in a fresh scratch directory. If the prompt is lost, use `inject=paste` after the dialog. |
-| Q20 | `extended-keys on` + `terminal-features *:extkeys` makes Shift+Enter work in Claude and Gemini inside ajan's tmux. | Usability | Manual test in iTerm2, Ghostty and VS Code (T2.13). |
+| Q20 | `extended-keys on` + `terminal-features *:extkeys` makes Shift+Enter work in Claude and Gemini inside i-mux's tmux. | Usability | Manual test in iTerm2, Ghostty and VS Code (T2.13). |
 | Q21 | Watcher CPU with 4–8 panes on exec-per-tick is within budget. | Lightness | M3 measurement (§17). |
 | Q22 | Agents write transcripts incrementally, so SIGHUP from `respawn-pane -k` loses nothing that was already shown. | Data loss on switch | e2e can't prove it for real CLIs; manual: switch mid-session and compare file vs screen. |
-| Q23 | ~~Final name, GitHub owner/module path, license, Homebrew tap name.~~ **Closed (2026-11-05):** binary `ajan`; repository `github.com/hamzayogurtcuoglu/i-mux`, Go module `github.com/hamzayogurtcuoglu/i-mux`; license MIT; Homebrew tap `hamzayogurtcuoglu/homebrew-tap` (`brew install hamzayogurtcuoglu/tap/ajan`). | M0, M7 | Decided. |
-| Q24 | A `display-menu -c <client>` issued from a detached process (watcher) shows on that client. | `ask` mode | **Answered (2026-11-06, tmux 3.2a, e2e T3.8):** yes. The menu appears on the pty-attached client. Note: `display-menu` keeps its own tmux client waiting until the menu closes, so ajan spawns that client and does not wait. |
+| Q23 | ~~Final name, GitHub owner/module path, license, Homebrew tap name.~~ **Closed (2026-11-05):** binary `imux`; repository `github.com/hamzayogurtcuoglu/i-mux`, Go module `github.com/hamzayogurtcuoglu/i-mux`; license MIT; Homebrew tap `hamzayogurtcuoglu/homebrew-tap` (`brew install hamzayogurtcuoglu/tap/imux`). | M0, M7 | Decided. |
+| Q24 | A `display-menu -c <client>` issued from a detached process (watcher) shows on that client. | `ask` mode | **Answered (2026-11-06, tmux 3.2a, e2e T3.8):** yes. The menu appears on the pty-attached client. Note: `display-menu` keeps its own tmux client waiting until the menu closes, so i-mux spawns that client and does not wait. |
 | Q25 | Copilot `session.resume.data.sessionLimits` carries limit data when it is non-null. | Copilot limits | Inspect after a Copilot limit occurs. |
-| Q26 | Lowest tmux version supporting `#[range=user\|X]` + `mouse_status_range` (present in 3.8). | Clickable agent bar on older tmux (Ubuntu 22.04 ships 3.2a) | **Partly answered (2026-11-06):** absent from tmux 3.2a (its man page lists only `range=left\|right\|window`). ajan assumes 3.4 (`tmux.ClickMinVersion`); below it the bar is an indicator and the menus carry the switching. The e2e click test runs on CI tmux ≥ 3.4. |
+| Q26 | Lowest tmux version supporting `#[range=user\|X]` + `mouse_status_range` (present in 3.8). | Clickable agent bar on older tmux (Ubuntu 22.04 ships 3.2a) | **Partly answered (2026-11-06):** absent from tmux 3.2a (its man page lists only `range=left\|right\|window`). i-mux assumes 3.4 (`tmux.ClickMinVersion`); below it the bar is an indicator and the menus carry the switching. The e2e click test runs on CI tmux ≥ 3.4. |
 | Q27 | Mouse clicks on the status line reach tmux in VS Code's integrated terminal, iTerm2, Terminal.app and Ghostty (mouse reporting on). | Click-to-switch | Manual test (T2.13). Terminal.app needs no setting; VS Code forwards mouse events to TUI apps when mouse mode is requested. |
 | Q28 | `run-shell` and `if -F` in a `MouseDown1Status` binding expand `#{pane_id}` to the active pane, and `run-shell -t =` in `MouseDown3Border` expands it to the pane under the mouse. | Correct target pane on click | **Answered (2026-11-06, tmux 3.2a, e2e T2.8d):** `run-shell -t =` targets the pane that owns the clicked border. A "Border" is a pane's right or bottom edge, so the vertical border between side-by-side panes opens the left pane's menu. Clicks on the `pane-border-status` line itself are ignored by 3.2a. |
 | Q29 | A two-line status bar fits small terminals; the agent bar text does not overflow when 4 agents and limit markers are shown. | Layout | Visual check at 80 columns. Overflow rule: drop "(not installed)" entries first, then use short names (`Cl Ge Cx Cp`). |

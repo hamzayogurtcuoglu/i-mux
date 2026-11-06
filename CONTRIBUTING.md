@@ -1,6 +1,6 @@
-# Contributing to ajan
+# Contributing to i-mux
 
-Thanks for helping. ajan is small on purpose: one static Go binary, tmux for everything on screen,
+Thanks for helping. i-mux is small on purpose: one static Go binary, tmux for everything on screen,
 and no runtime dependencies besides tmux. Read [ARCHITECTURE.md](ARCHITECTURE.md) for the design
 and [TASKS.md](TASKS.md) for the plan.
 
@@ -9,7 +9,7 @@ and [TASKS.md](TASKS.md) for the plan.
 You need Go (see `go.mod`), tmux ≥ 3.2 and, for the full check, golangci-lint and shellcheck.
 
 ```sh
-make build         # bin/ajan
+make build         # bin/imux
 make test          # unit tests
 make race          # unit tests with the race detector
 make e2e           # end-to-end tests against a real tmux on a private socket
@@ -37,7 +37,7 @@ document is model-facing and always English.
   real-looking API keys and tokens, and email addresses in any `testdata/` directory.
 - **Tests never launch a real agent CLI** (`claude`, `gemini`, `copilot`, `codex`), never use the
   network, and never read the developer's real `~/.claude`, `~/.gemini`, `~/.copilot`, `~/.codex`
-  or `~/.ajan`. Unit tests call `testutil.Isolate(t)`, which points `HOME`, `AJAN_HOME` and every
+  or `~/.imux`. Unit tests call `testutil.Isolate(t)`, which points `HOME`, `IMUX_HOME` and every
   agent home at temp directories. End-to-end tests use the POSIX sh fake agents in
   `e2e/fakeagents` (configured as the agents' `bin`) with a `PATH` that holds no real agent; the
   harness fails a test if an agent ever resolves elsewhere.
@@ -47,7 +47,7 @@ document is model-facing and always English.
 
 ## Screenshots
 
-The images in `docs/images` are real ajan screens with demo agents (`scripts/screenshots`), not
+The images in `docs/images` are real i-mux screens with demo agents (`scripts/screenshots`), not
 mock-ups. After a UI change, regenerate them on Linux or macOS with tmux 3.4+ and python3:
 
 ```sh

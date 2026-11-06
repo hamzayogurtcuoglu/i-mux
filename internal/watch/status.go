@@ -19,7 +19,7 @@ const (
 	MarkOK      = "●"
 )
 
-// StatusKeeper keeps @ajan_status, @ajan_lim_<agent> and @ajan_flag in
+// StatusKeeper keeps @imux_status, @imux_lim_<agent> and @imux_flag in
 // line with state.json, setting an option only when its value changes.
 type StatusKeeper struct {
 	W    *workspace.WS
@@ -52,7 +52,7 @@ func (s *StatusKeeper) Commands(panes []PaneRow) []tmux.Cmd {
 		default:
 			mark = MarkWarn
 		}
-		want["g:@ajan_lim_"+string(a.ID)] = mark
+		want["g:@imux_lim_"+string(a.ID)] = mark
 		if !w.Installed(a.ID) {
 			continue
 		}
@@ -61,7 +61,7 @@ func (s *StatusKeeper) Commands(panes []PaneRow) []tmux.Cmd {
 		}
 		parts = append(parts, a.Short+" "+mark)
 	}
-	want["g:@ajan_status"] = strings.Join(parts, " · ")
+	want["g:@imux_status"] = strings.Join(parts, " · ")
 	for _, p := range panes {
 		if p.Agent == "" {
 			continue

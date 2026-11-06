@@ -10,7 +10,7 @@ import (
 func TestMarkerRoundTrip(t *testing.T) {
 	at := time.Date(2026, 11, 5, 14, 32, 0, 0, time.Local)
 	m := Marker(Claude, Gemini, at)
-	if m != "[ajan handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]" {
+	if m != "[i-mux handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]" {
 		t.Fatalf("marker %q", m)
 	}
 	doc := m + "\n\nYou are continuing...\n\n## Original request\nfix the bug\nplease\n\n" +

@@ -1,4 +1,4 @@
-// Package workspace runs agents in ajan's tmux workspace: starting and
+// Package workspace runs agents in imux's tmux workspace: starting and
 // attaching sessions, launching agents into panes through launch specs, the
 // per-pane options and trail (§9.4), switching, menus and pane lifecycle.
 //
@@ -30,14 +30,14 @@ import (
 
 // Pane options (§9.4).
 const (
-	OptAgent    = "@ajan_agent"
-	OptStart    = "@ajan_start"
-	OptCWD      = "@ajan_cwd"
-	OptLabel    = "@ajan_label"
-	OptFlag     = "@ajan_flag"
-	OptTrail    = "@ajan_trail"
-	OptFallback = "@ajan_fallback"
-	OptLock     = "@ajan_lock"
+	OptAgent    = "@imux_agent"
+	OptStart    = "@imux_start"
+	OptCWD      = "@imux_cwd"
+	OptLabel    = "@imux_label"
+	OptFlag     = "@imux_flag"
+	OptTrail    = "@imux_trail"
+	OptFallback = "@imux_fallback"
+	OptLock     = "@imux_lock"
 )
 
 // MaxTrail is the number of runs kept in a pane's trail.
@@ -68,7 +68,7 @@ func (e TrailEntry) EndTime() time.Time {
 // Trail is a pane's run history, oldest first.
 type Trail []TrailEntry
 
-// ParseTrail decodes @ajan_trail; garbage yields an empty trail.
+// ParseTrail decodes @imux_trail; garbage yields an empty trail.
 func ParseTrail(s string) Trail {
 	var t Trail
 	if s == "" || json.Unmarshal([]byte(s), &t) != nil {
@@ -120,14 +120,14 @@ func (t Trail) Close(end time.Time) Trail {
 type WS struct {
 	Cfg  *config.Config
 	T    *tmux.Client
-	Self string // absolute path of the ajan binary (symlinks resolved)
+	Self string // absolute path of the imux binary (symlinks resolved)
 	Now  func() time.Time
 
 	st   *state.State
 	bins map[session.AgentID]agent.Resolved
 }
 
-// New returns a workspace for cfg on ajan's socket.
+// New returns a workspace for cfg on imux's socket.
 func New(cfg *config.Config) (*WS, error) {
 	self, err := Self()
 	if err != nil {
@@ -190,7 +190,7 @@ func (e *NotInstalledError) Error() string {
 	return i18n.T("agent.not_installed", a.Name, a.InstallHint)
 }
 
-// DefaultAgent picks the agent for a plain `ajan`: config default_agent,
+// DefaultAgent picks the agent for a plain `imux`: config default_agent,
 // else the first installed agent in order.
 func (w *WS) DefaultAgent() (session.AgentID, error) {
 	if d := w.Cfg.DefaultAgent; d != "" {
@@ -324,12 +324,12 @@ func optCmds(target string, te TrailEntry, trail Trail, cwd, label string) []tmu
 	}
 }
 
-// Pane is the ajan state of one pane.
+// Pane is the imux state of one pane.
 type Pane struct {
 	ID       string
 	Agent    session.AgentID // "" in a plain shell
 	Start    time.Time
-	CWD      string // @ajan_cwd, else the pane's current path
+	CWD      string // @imux_cwd, else the pane's current path
 	Label    string
 	Trail    Trail
 	Fallback string
@@ -341,8 +341,8 @@ type Pane struct {
 }
 
 // paneFormat reads every pane field in one display-message.
-const paneFormat = "#{pane_id}\t#{@ajan_agent}\t#{@ajan_start}\t#{@ajan_cwd}\t#{pane_current_path}\t#{@ajan_label}\t" +
-	"#{pane_dead}\t#{session_name}\t#{window_id}\t#{pane_current_command}\t#{@ajan_fallback}\t#{@ajan_lock}\t#{@ajan_trail}"
+const paneFormat = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{@imux_cwd}\t#{pane_current_path}\t#{@imux_label}\t" +
+	"#{pane_dead}\t#{session_name}\t#{window_id}\t#{pane_current_command}\t#{@imux_fallback}\t#{@imux_lock}\t#{@imux_trail}"
 
 const paneFields = 13
 
@@ -412,7 +412,7 @@ func (w *WS) TmuxVersion(ctx context.Context) (tmux.Version, error) {
 	return v, nil
 }
 
-// EnsureConf (re)writes ~/.ajan/tmux.conf when its content changed and makes
+// EnsureConf (re)writes ~/.imux/tmux.conf when its content changed and makes
 // a running server reload it.
 func (w *WS) EnsureConf(ctx context.Context) error {
 	v, err := w.TmuxVersion(ctx)

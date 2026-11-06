@@ -38,7 +38,7 @@ func TestDiscoverTwoPanesSameCWD(t *testing.T) {
 		{g2, "fake gemini request 2 from pane " + g2, "from pane " + g1},
 	}
 	for _, c := range cases {
-		out, errOut, err := h.ajan("handoff", "--pane", c.pane, "--print", "--to", "codex")
+		out, errOut, err := h.imux("handoff", "--pane", c.pane, "--print", "--to", "codex")
 		if err != nil {
 			t.Fatalf("handoff --pane %s: %v\n%s", c.pane, err, errOut)
 		}

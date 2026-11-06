@@ -32,7 +32,7 @@ func TestSessionPicker(t *testing.T) {
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
 
-	h.mustAjan("pick", "--pane", pane)
+	h.mustImux("pick", "--pane", pane)
 	c.waitScreen(h, "Sessions · ", 5*time.Second)
 	c.waitScreen(h, "synthetic claude task 00", 2*time.Second)
 	c.waitScreen(h, "synthetic gemini task 01", 2*time.Second)
@@ -47,25 +47,25 @@ func TestSessionPicker(t *testing.T) {
 	c.Write("q")
 
 	// Continue a picked Codex conversation in Gemini, with context from it.
-	h.mustAjan("switch", "gemini", "--pane", pane, "--from-session", "codex:"+ids["codex"])
+	h.mustImux("switch", "gemini", "--pane", pane, "--from-session", "codex:"+ids["codex"])
 	argv := h.run("gemini", 1)
-	if len(argv) != 2 || !strings.HasPrefix(argv[1], "[ajan handoff · Codex CLI → Gemini CLI") ||
+	if len(argv) != 2 || !strings.HasPrefix(argv[1], "[i-mux handoff · Codex CLI → Gemini CLI") ||
 		!strings.Contains(argv[1], "synthetic codex task 03") || strings.Contains(argv[1], "fake claude request") {
 		t.Fatalf("handoff not built from the picked conversation:\n%.600s", strings.Join(argv, " "))
 	}
 	// Continue a picked Codex conversation natively.
-	h.mustAjan("switch", "codex", "--pane", pane, "--from-session", "codex:"+ids["codex"])
+	h.mustImux("switch", "codex", "--pane", pane, "--from-session", "codex:"+ids["codex"])
 	if argv := h.run("codex", 1); len(argv) != 2 || argv[0] != "resume" || argv[1] != ids["codex"] {
 		t.Fatalf("native resume argv %q", argv)
 	}
-	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@ajan_trail}"))
+	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@imux_trail}"))
 	if l := trail.Last(); l.Agent != "codex" || !l.Resumed || l.SessionID != ids["codex"] {
 		t.Fatalf("trail after resume %+v", l)
 	}
 	// "… in a new pane": a split continues the picked Claude conversation.
-	np := strings.TrimSpace(h.mustAjan("split", "gemini", "-h", "--pane", pane, "--from-session", "claude:"+ids["claude"]))
+	np := strings.TrimSpace(h.mustImux("split", "gemini", "-h", "--pane", pane, "--from-session", "claude:"+ids["claude"]))
 	argv = h.run("gemini", 2)
-	if !strings.Contains(strings.Join(argv, " "), "synthetic claude task 00") || h.paneOpt(np, "#{@ajan_agent}") != "gemini" {
+	if !strings.Contains(strings.Join(argv, " "), "synthetic claude task 00") || h.paneOpt(np, "#{@imux_agent}") != "gemini" {
 		t.Fatalf("split from session: pane %s argv %.300q", np, argv)
 	}
 
@@ -73,7 +73,7 @@ func TestSessionPicker(t *testing.T) {
 	var ds []time.Duration
 	for i := 0; i < 50; i++ {
 		start := time.Now()
-		h.mustAjan("__menu", "--sessions", "--pane", pane, "--client", client)
+		h.mustImux("__menu", "--sessions", "--pane", pane, "--client", client)
 		ds = append(ds, time.Since(start))
 		c.Write("q")
 		time.Sleep(20 * time.Millisecond)

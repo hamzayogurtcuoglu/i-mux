@@ -94,7 +94,7 @@ type Session struct {
 	Files      FileActivity    // filled by the handoff builder when empty
 	Usage      Usage           // token and request counts
 	Errors     []APIError      // never in Entries; used for the switch reason and limits
-	Chained    *ChainedHandoff // set when the first user message is an ajan handoff
+	Chained    *ChainedHandoff // set when the first user message is an imux handoff
 	Warnings   []string        // non-fatal parse problems ("312 unknown lines skipped", ...)
 	// Reconstructed is set when the transcript comes from terminal
 	// scrollback instead of a session file.
@@ -119,7 +119,7 @@ const (
 	KindMessage        EntryKind = iota
 	KindSlashCommand             // "/name args"
 	KindCompactSummary           // text of a compaction summary
-	KindHandoff                  // an ajan handoff document (excluded from Conversation, parsed into Chained)
+	KindHandoff                  // an imux handoff document (excluded from Conversation, parsed into Chained)
 )
 
 // Entry is one turn in the conversation.

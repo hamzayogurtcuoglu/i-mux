@@ -104,7 +104,7 @@ func runMenu(e *Env, args []string) error {
 	return nil
 }
 
-// runClick handles a click on an agent-bar region (range=user|ajan:<x>).
+// runClick handles a click on an agent-bar region (range=user|imux:<x>).
 func runClick(e *Env, args []string) error {
 	fs := newFlags(e, "__click")
 	paneF := fs.String("pane", "", "active pane of the clicked client")
@@ -151,7 +151,7 @@ func runPaneDied(e *Env, args []string) error {
 }
 
 // runPick opens the session picker on the client attached to the pane's
-// session (`ajan pick`, the same menu as ⧉ Sessions and prefix S).
+// session (`imux pick`, the same menu as ⧉ Sessions and prefix S).
 func runPick(e *Env, args []string) error {
 	fs := newFlags(e, "pick")
 	paneF := fs.String("pane", "", "pane to continue a conversation in (default: this pane)")

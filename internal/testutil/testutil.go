@@ -1,6 +1,6 @@
 // Package testutil provides isolated homes, fake agent stores and a frozen
 // clock for tests. Tests must never read the developer's real ~/.claude,
-// ~/.gemini, ~/.copilot, ~/.codex or ~/.ajan.
+// ~/.gemini, ~/.copilot, ~/.codex or ~/.imux.
 package testutil
 
 import (
@@ -19,7 +19,7 @@ var FrozenTime = time.Date(2026, 11, 5, 14, 32, 0, 0, time.UTC)
 type Homes struct {
 	Root    string // temp root
 	Home    string // $HOME
-	Ajan    string // $AJAN_HOME
+	Imux    string // $IMUX_HOME
 	Claude  string // $CLAUDE_CONFIG_DIR
 	Gemini  string // ~/.gemini
 	Copilot string // $COPILOT_HOME
@@ -27,7 +27,7 @@ type Homes struct {
 	Project string // a project directory to use as cwd
 }
 
-// Isolate points HOME, AJAN_HOME and every agent home at fresh temp dirs and
+// Isolate points HOME, IMUX_HOME and every agent home at fresh temp dirs and
 // returns them. Agent store directories are created empty.
 func Isolate(t testing.TB) *Homes {
 	t.Helper()
@@ -42,7 +42,7 @@ func Isolate(t testing.TB) *Homes {
 		Home:    filepath.Join(root, "home"),
 		Project: filepath.Join(root, "home", "proj"),
 	}
-	h.Ajan = filepath.Join(h.Home, ".ajan")
+	h.Imux = filepath.Join(h.Home, ".imux")
 	h.Claude = filepath.Join(h.Home, ".claude")
 	h.Gemini = filepath.Join(h.Home, ".gemini")
 	h.Copilot = filepath.Join(h.Home, ".copilot")
@@ -59,12 +59,12 @@ func Isolate(t testing.TB) *Homes {
 		}
 	}
 	t.Setenv("HOME", h.Home)
-	t.Setenv("AJAN_HOME", h.Ajan)
+	t.Setenv("IMUX_HOME", h.Imux)
 	t.Setenv("CLAUDE_CONFIG_DIR", h.Claude)
 	t.Setenv("CODEX_HOME", h.Codex)
 	t.Setenv("COPILOT_HOME", h.Copilot)
 	t.Setenv("GEMINI_CLI_HOME", "")
-	t.Setenv("AJAN_LANG", "en")
+	t.Setenv("IMUX_LANG", "en")
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(h.Home, ".config"))
 	return h
 }

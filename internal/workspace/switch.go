@@ -23,7 +23,7 @@ import (
 var ErrBusy = errors.New("switch in progress")
 
 // paneLock serializes switches of one pane: an flock (atomic, released when
-// the process dies) plus @ajan_lock with our pid, which other invocations
+// the process dies) plus @imux_lock with our pid, which other invocations
 // check for liveness.
 type paneLock struct {
 	f    *os.File
@@ -68,7 +68,7 @@ func alive(pid int) bool {
 	return err == nil || errors.Is(err, syscall.EPERM)
 }
 
-// SwitchReq is one `ajan switch`.
+// SwitchReq is one `imux switch`.
 type SwitchReq struct {
 	Pane     string
 	To       session.AgentID
@@ -266,7 +266,7 @@ func recordSource(t Trail, ref session.Ref) Trail {
 }
 
 // respawn replaces the pane's process with run l and updates its options.
-// fallback (a spec file) becomes @ajan_fallback in the same exec, so a run
+// fallback (a spec file) becomes @imux_fallback in the same exec, so a run
 // that dies at once cannot race it; "" clears it.
 func (w *WS) respawn(ctx context.Context, p *Pane, l Launch, trail Trail, fallback string) error {
 	spec, te, err := w.Spec(l)
