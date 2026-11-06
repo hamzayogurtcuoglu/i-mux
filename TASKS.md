@@ -446,7 +446,7 @@ get the "continue in …" prompt, and switch manually or automatically with cont
     (brew / curl), quick start, keys, `on_limit` modes, privacy section (cross-provider disclosure, redaction, argv).
 - [x] **T8.2 `docs/CONFIG.md`** · S · deps: T0.4
   - AC: generated from the built-in defaults by `go generate`; CI fails if it is stale.
-- [ ] **T8.3 `docs/HANDOFF.md`** · S · deps: T1.12
+- [x] **T8.3 `docs/HANDOFF.md`** · S · deps: T1.12
   - AC: the format spec plus a synthetic example document.
 - [ ] **T8.4 `docs/AGENT-BUS.md`** · S · deps: T5.5
   - AC: commands, target syntax, the snippet, and security notes (prompt injection, `bus.confirm`).
