@@ -55,7 +55,6 @@ uuid() {
 			sed 's/^\(........\)\(....\)\(....\)\(....\)\(............\).*/\1-\2-\3-\4-\5/'
 	fi
 }
-sha256() { { sha256sum 2>/dev/null || shasum -a 256; } | cut -c1-64; }
 
 # Option values from argv.
 opt() { # opt NAME ARGS... → value after NAME
@@ -109,30 +108,21 @@ EOF
 {"timestamp":"$ts","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"$reply"}]}}
 EOF
 		;;
-	gemini)
-		id=$(opt --resume "$@") || id=$(uuid)
-		hash=$(printf %s "$PWD" | sha256)
-		dir="$HOME/.gemini/tmp/$hash/chats"
-		mkdir -p "$dir"
-		session=$(grep -l "\"sessionId\":\"$id\"" "$dir"/session-*.json 2>/dev/null | head -n 1)
-		[ -n "$session" ] || session="$dir/session-$(date -u +%Y-%m-%dT%H-%M)-$(printf %s "$id" | cut -c1-8).json"
-		# Earlier messages of a resumed chat are kept in a side file.
-		msgs="$log/gemini-$id.msgs"
-		[ -s "$msgs" ] && printf ',' >>"$msgs"
-		printf '{"id":"u%s","timestamp":"%s","type":"user","content":"%s"},{"id":"g%s","timestamp":"%s","type":"gemini","content":"%s"}' \
-			"$n" "$ts" "$req" "$n" "$ts" "$reply" >>"$msgs"
-		printf '{"sessionId":"%s","projectHash":"%s","startTime":"%s","lastUpdated":"%s","messages":[%s]}\n' \
-			"$id" "$hash" "$ts" "$ts" "$(cat "$msgs")" >"$session.tmp"
-		mv "$session.tmp" "$session"
-		;;
 	antigravity)
-		# Like agy: no readable conversation file (imux uses the scrollback),
-		# only the plan as a markdown checklist in brain/<id>/task.md.
+		# Like agy: brain/<id>/.system_generated/logs/transcript_full.jsonl,
+		# a history.jsonl line naming the directory, and the plan in task.md.
 		id=$(opt --conversation "$@") || id=$(uuid)
-		dir="$HOME/.gemini/antigravity-cli/brain/$id"
-		mkdir -p "$dir"
+		root="$HOME/.gemini/antigravity-cli"
+		dir="$root/brain/$id"
+		mkdir -p "$dir/.system_generated/logs"
+		session="$dir/.system_generated/logs/transcript_full.jsonl"
+		step=0
+		[ -f "$session" ] && step=$(wc -l <"$session" | tr -d ' ')
+		printf '{"step_index":%d,"source":"USER_EXPLICIT","type":"USER_INPUT","status":"DONE","created_at":"%s","content":"<USER_REQUEST>\\n%s\\n</USER_REQUEST>\\n<ADDITIONAL_METADATA>\\nThe current local time is: %s.\\n</ADDITIONAL_METADATA>"}\n' "$step" "$ts" "$req" "$ts" >>"$session"
+		printf '{"step_index":%d,"source":"MODEL","type":"PLANNER_RESPONSE","status":"DONE","created_at":"%s","content":"%s","tool_calls":[{"name":"run_command","args":{"CommandLine":"fake test %s","WaitMsBeforeAsync":0}}],"input_tokens":100,"output_tokens":10}\n' "$((step + 1))" "$ts" "$reply" "$n" >>"$session"
+		printf '{"step_index":%d,"source":"MODEL","type":"GENERIC","status":"DONE","created_at":"%s","content":"ok"}\n' "$((step + 2))" "$ts" >>"$session"
+		printf '{"display":"%s","timestamp":%s000,"workspace":"%s"}\n' "$req" "$(date -u +%s)" "$PWD" >>"$root/history.jsonl"
 		printf '# Task\n\n- [x] fake antigravity step done %s\n- [/] fake antigravity step in progress %s\n' "$n" "$n" >"$dir/task.md"
-		printf '%s\n' "$dir/task.md" >"$log/$agent-$n.task"
 		;;
 	copilot)
 		id=$(opt --resume "$@") || id=$(uuid)
@@ -152,11 +142,6 @@ EOF
 write_session "$@"
 
 echo "fake $agent ready (run $n, pane $pane)"
-if [ "$agent" = antigravity ]; then
-	# The conversation is only on screen, as with the real agy.
-	echo "> $req"
-	echo "$reply"
-fi
 last=""
 for a in "$@"; do last="$a"; done
 echo "argc $# · last argument $(printf %s "$last" | wc -c | tr -d ' ') bytes"

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session/claude"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/session/gemini"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
@@ -33,10 +32,9 @@ func (h *H) synthetic(agent string, n int, text string, mtime time.Time) string 
 		body = fmt.Sprintf(`{"timestamp":%q,"type":"session_meta","payload":{"id":%q,"cwd":%q}}`+"\n"+
 			`{"timestamp":%q,"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":%q}]}}`+"\n",
 			ts, id, cwd, ts, text)
-	case "gemini":
-		p = filepath.Join(h.Homes.Gemini, "tmp", gemini.ProjectHash(cwd), "chats", "session-"+mtime.UTC().Format("2006-01-02T15-04")+"-"+id[:8]+".json")
-		body = fmt.Sprintf(`{"sessionId":%q,"startTime":%q,"lastUpdated":%q,"messages":[{"id":"u","timestamp":%q,"type":"user","content":%q}]}`,
-			id, ts, ts, ts, text)
+	case "antigravity":
+		testutil.WriteAntigravity(h.t, h.Homes, id, cwd, mtime, testutil.AgyTurn{At: mtime, User: text, Reply: "ok"})
+		return id
 	case "copilot":
 		dir := filepath.Join(h.Homes.Copilot, "session-state", id)
 		testutil.WriteFile(h.t, filepath.Join(dir, "workspace.yaml"), []byte(fmt.Sprintf("id: %s\ncwd: %s\ncreated_at: %s\n", id, cwd, ts)))

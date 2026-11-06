@@ -18,8 +18,8 @@ func TestPaneMenuDisplayMenuArgs(t *testing.T) {
 		reset = now.Add(30 * time.Minute)
 	}
 	w.st = &state.State{Limits: map[string]*state.Limit{
-		"gemini": {At: now, ResetAt: reset, ExpiresAt: reset, Severity: "limit"},
-		"claude": {At: now.Add(-6 * time.Hour), ExpiresAt: now.Add(-time.Hour)}, // expired
+		"antigravity": {At: now, ResetAt: reset, ExpiresAt: reset, Severity: "limit"},
+		"claude":      {At: now.Add(-6 * time.Hour), ExpiresAt: now.Add(-time.Hour)}, // expired
 	}}
 	p := &Pane{ID: "%3", Agent: "claude", CWD: "/home/test/proj", Trail: Trail{{Agent: "claude"}}}
 	if err := w.Show(context.Background(), w.PaneMenu(p, "/dev/pts/4"), "/dev/pts/4", "%3"); err != nil {
@@ -33,12 +33,12 @@ func TestPaneMenuDisplayMenuArgs(t *testing.T) {
 	until := reset.Local().Format("15:04")
 	wantSeq := []string{
 		"-c\x00/dev/pts/4\x00-t\x00%3\x00-T\x00i-mux · Claude\x00-x\x00C\x00-y\x00C",
-		"Switch to Gemini (with context) (limited until " + until + ")\x00g\x00run-shell -b '/opt/imux/bin/imux switch gemini --pane %3 --client /dev/pts/4 >/dev/null 2>&1 || true'",
+		"Switch to Antigravity (with context) (limited until " + until + ")\x00a\x00run-shell -b '/opt/imux/bin/imux switch antigravity --pane %3 --client /dev/pts/4 >/dev/null 2>&1 || true'",
 		"-Switch to Copilot (with context) (not installed)\x00p\x00",
 		"-Switch to Codex (with context) (not installed)\x00x\x00",
 		"Sessions…\x00s\x00run-shell -b '/opt/imux/bin/imux __menu --sessions --pane %3 --client /dev/pts/4",
 		"New pane → Claude\x00C\x00run-shell -b '/opt/imux/bin/imux split claude -h --pane %3",
-		"New pane → Gemini\x00G\x00",
+		"New pane → Antigravity\x00A\x00",
 		"Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/imux/bin/imux handoff --pane %3 --print 2>&1 | less -R'",
 		"Limits\x00l\x00display-popup -E -w 80% -h 60% '/opt/imux/bin/imux limits --pager'",
 		"Close pane\x00k\x00kill-pane -t %3",

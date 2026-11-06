@@ -203,10 +203,10 @@ func TestCompaction(t *testing.T) {
 func TestChainedHandoff(t *testing.T) {
 	h := testutil.Isolate(t)
 	b := newLB(h.Project)
-	b.user(session.Marker(session.Gemini, session.Claude, testutil.FrozenTime) + "\n\nYou are continuing...\n\n## Original request\nbuild a CLI\n\n## Conversation (condensed)\n**User:** hi\n")
+	b.user(session.Marker(session.Antigravity, session.Claude, testutil.FrozenTime) + "\n\nYou are continuing...\n\n## Original request\nbuild a CLI\n\n## Conversation (condensed)\n**User:** hi\n")
 	b.asst("m1", text("Continuing."))
 	s := load(t, b.write(t, h))
-	if s.Chained == nil || s.Chained.From != session.Gemini || s.Chained.OriginalRequest != "build a CLI" {
+	if s.Chained == nil || s.Chained.From != session.Antigravity || s.Chained.OriginalRequest != "build a CLI" {
 		t.Fatalf("chained %+v", s.Chained)
 	}
 	if s.Entries[0].Kind != session.KindHandoff {

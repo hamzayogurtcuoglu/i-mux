@@ -83,8 +83,8 @@ func newBus(t *testing.T, f *fakeTmux) (*Bus, *clock.Fixed) {
 
 func TestResolve(t *testing.T) {
 	now := testutil.FrozenTime
-	f := &fakeTmux{panes: row("%1", "claude", "proj", false, now) + row("%2", "gemini", "proj", false, now) +
-		row("%3", "gemini", "other", false, now) + row("%4", "codex", "other", false, now) + row("%5", "codex", "other", false, now) +
+	f := &fakeTmux{panes: row("%1", "claude", "proj", false, now) + row("%2", "antigravity", "proj", false, now) +
+		row("%3", "antigravity", "other", false, now) + row("%4", "codex", "other", false, now) + row("%5", "codex", "other", false, now) +
 		row("%6", "copilot", "proj", true, now)}
 	b, _ := newBus(t, f)
 	ctx := context.Background()
@@ -94,8 +94,8 @@ func TestResolve(t *testing.T) {
 	}{
 		{"%3", "%1", "%3", nil},
 		{"%9", "%1", "", ErrNoTarget},
-		{"gemini", "%1", "%2", nil}, // the caller's session first
-		{"gemini", "%4", "%3", nil},
+		{"antigravity", "%1", "%2", nil}, // the caller's session first
+		{"antigravity", "%4", "%3", nil},
 		{"claude", "%4", "%1", nil}, // none locally: server-wide
 		{"codex", "%1", "", ErrAmbiguous},
 		{"copilot", "%1", "", ErrNoTarget}, // exited panes do not count
@@ -119,7 +119,7 @@ func TestResolve(t *testing.T) {
 func TestPanesBySampling(t *testing.T) {
 	now := testutil.FrozenTime
 	f := &fakeTmux{
-		panes:   row("%1", "claude", "proj", false, now) + row("%2", "gemini", "proj", false, now) + row("%3", "", "proj", true, time.Time{}),
+		panes:   row("%1", "claude", "proj", false, now) + row("%2", "antigravity", "proj", false, now) + row("%3", "", "proj", true, time.Time{}),
 		screens: map[string]string{"%1": "spinner ⠋\n", "%2": "done.\n"},
 	}
 	f.onCap = func() { f.screens["%1"] += "⠙\n" } // %1 keeps redrawing
@@ -139,7 +139,7 @@ func TestPanesBySampling(t *testing.T) {
 
 func TestPanesFromWatcherActivity(t *testing.T) {
 	now := testutil.FrozenTime
-	f := &fakeTmux{panes: row("%1", "claude", "proj", false, now.Add(-time.Hour)) + row("%2", "gemini", "proj", false, now.Add(-time.Hour))}
+	f := &fakeTmux{panes: row("%1", "claude", "proj", false, now.Add(-time.Hour)) + row("%2", "antigravity", "proj", false, now.Add(-time.Hour))}
 	b, _ := newBus(t, f)
 	if err := WriteActivity(&Activity{At: now.UnixMilli(), Changed: map[string]int64{"%1": now.Add(-time.Second).UnixMilli(), "%2": now.Add(-42 * time.Second).UnixMilli()}}); err != nil {
 		t.Fatal(err)

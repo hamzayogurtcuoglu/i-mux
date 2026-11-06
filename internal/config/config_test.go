@@ -91,8 +91,8 @@ bin = "/opt/codex"
 	if x.Bin != "/opt/codex" || !reflect.DeepEqual(x.ResumeArgs, []string{"resume", "{id}", "{prompt}"}) {
 		t.Fatalf("codex %+v", x)
 	}
-	if cfg.Agent("gemini").NewArgs[0] != "-i" {
-		t.Fatal("gemini defaults lost")
+	if cfg.Agent("antigravity").NewArgs[0] != "-i" {
+		t.Fatal("antigravity defaults lost")
 	}
 }
 
@@ -110,7 +110,7 @@ func TestUnknownKeyWarns(t *testing.T) {
 }
 
 func TestInvalidRegexHasLine(t *testing.T) {
-	_, _, err := Parse([]byte("on_limit = \"ask\"\n\n[agents.gemini]\npatterns = [{ re = 'a(b', severity = \"limit\" }]\n"))
+	_, _, err := Parse([]byte("on_limit = \"ask\"\n\n[agents.antigravity]\npatterns = [{ re = 'a(b', severity = \"limit\" }]\n"))
 	var ce *Error
 	if !errors.As(err, &ce) {
 		t.Fatalf("want *Error, got %v", err)
@@ -187,5 +187,31 @@ func TestEncodeRoundTrip(t *testing.T) {
 	}
 	if !reflect.DeepEqual(cfg, Default()) {
 		t.Fatal("encode/parse round trip changed the config")
+	}
+}
+
+// A config written for a version that still had Gemini CLI loads: the removed
+// agent is dropped from order and default_agent, and its table is ignored,
+// each with a warning (never an error that would stop imux from starting).
+func TestRemovedAgentTolerated(t *testing.T) {
+	cfg, warns, err := Parse([]byte(`order = ["claude", "gemini", "codex"]
+default_agent = "gemini"
+
+[agents.gemini]
+bin = "/usr/local/bin/gemini"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(cfg.Order, ",") != "claude,codex" || cfg.DefaultAgent != "" {
+		t.Fatalf("order %v default %q", cfg.Order, cfg.DefaultAgent)
+	}
+	if len(warns) != 3 {
+		t.Fatalf("want 3 warnings, got %q", warns)
+	}
+	for _, w := range warns {
+		if !strings.Contains(w, "gemini") || !strings.Contains(w, "antigravity") {
+			t.Errorf("warning %q should name gemini and point to antigravity", w)
+		}
 	}
 }

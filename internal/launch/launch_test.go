@@ -46,10 +46,10 @@ func TestValidate(t *testing.T) {
 }
 
 func TestEnviron(t *testing.T) {
-	s := &Spec{Agent: "gemini", Pane: "%3", Env: map[string]string{"PATH": "/nvm/bin:/usr/bin"}}
+	s := &Spec{Agent: "antigravity", Pane: "%3", Env: map[string]string{"PATH": "/nvm/bin:/usr/bin"}}
 	env := s.Environ([]string{"HOME=/home/test", "PATH=/usr/bin", "IMUX_PANE=%1"})
 	joined := strings.Join(env, "\n")
-	for _, want := range []string{"HOME=/home/test", "PATH=/nvm/bin:/usr/bin", "IMUX_PANE=%3", "IMUX_AGENT=gemini"} {
+	for _, want := range []string{"HOME=/home/test", "PATH=/nvm/bin:/usr/bin", "IMUX_PANE=%3", "IMUX_AGENT=antigravity"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing %s in %q", want, env)
 		}

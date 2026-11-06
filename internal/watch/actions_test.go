@@ -53,9 +53,9 @@ func newActor(t *testing.T, mode string) (*Actor, *recRunner, *spawned) {
 	sp := &spawned{}
 	w := &workspace.WS{Cfg: cfg, T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: r}, Self: "/opt/imux", Now: testutil.Clock().Now}
 	bins := map[session.AgentID]agent.Resolved{
-		"claude": {Agent: "claude", Installed: true, Path: "/x/claude"},
-		"gemini": {Agent: "gemini", Installed: true, Path: "/x/gemini"},
-		"codex":  {Agent: "codex", Installed: true, Path: "/x/codex"},
+		"claude":      {Agent: "claude", Installed: true, Path: "/x/claude"},
+		"antigravity": {Agent: "antigravity", Installed: true, Path: "/x/agy"},
+		"codex":       {Agent: "codex", Installed: true, Path: "/x/codex"},
 	}
 	a := &Actor{W: w, Spawn: func(self string, args ...string) error {
 		sp.args = append(sp.args, append([]string{self}, args...))
@@ -109,10 +109,10 @@ func TestRecordState(t *testing.T) {
 	if st.Limits["claude"].Severity != "limit" {
 		t.Fatal("warn replaced a limit")
 	}
-	ev.Agent = "gemini"
+	ev.Agent = "antigravity"
 	_, _ = a.Record(ev)
 	st, _ = state.Read()
-	if st.ActiveLimit("gemini", ev.At) != nil || st.ActiveRecord("gemini", ev.At) == nil {
+	if st.ActiveLimit("antigravity", ev.At) != nil || st.ActiveRecord("antigravity", ev.At) == nil {
 		t.Fatal("warn must be recorded but not blocking")
 	}
 }
@@ -133,7 +133,7 @@ func TestAskMode(t *testing.T) {
 	for _, want := range []string{
 		"-c\x00/dev/pts/2\x00-t\x00%3", // the client showing the pane's session
 		"-T\x00Claude hit its limit (resets 15:00): continue in …",
-		"Gemini (with context)\x00g\x00run-shell -b '/opt/imux switch gemini --pane %3 --reason limit --client /dev/pts/2",
+		"Antigravity (with context)\x00a\x00run-shell -b '/opt/imux switch antigravity --pane %3 --reason limit --client /dev/pts/2",
 		"Dismiss\x00d\x00",
 	} {
 		if !strings.Contains(got, want) {
@@ -151,7 +151,7 @@ func TestAskMode(t *testing.T) {
 func TestAutoOffAndAllLimited(t *testing.T) {
 	a, r, sp := newActor(t, "auto")
 	withBins(a)
-	a.W.Cfg.Order = []string{"codex", "claude", "gemini", "copilot"}
+	a.W.Cfg.Order = []string{"codex", "claude", "antigravity", "copilot"}
 	a.OnEvent(context.Background(), limitEvent(), clients)
 	if len(sp.args) != 1 || strings.Join(sp.args[0], " ") != "/opt/imux switch codex --pane %3 --reason limit --client /dev/pts/2" {
 		t.Fatalf("auto spawned %q", sp.args)
@@ -170,7 +170,7 @@ func TestAutoOffAndAllLimited(t *testing.T) {
 	a, r, sp = newActor(t, "auto")
 	withBins(a)
 	_ = state.Update(func(s *state.State) error {
-		for _, id := range []string{"gemini", "codex"} {
+		for _, id := range []string{"antigravity", "codex"} {
 			s.SetLimit(id, &state.Limit{At: testutil.FrozenTime, ExpiresAt: testutil.FrozenTime.Add(time.Hour), Severity: "limit"})
 		}
 		return nil

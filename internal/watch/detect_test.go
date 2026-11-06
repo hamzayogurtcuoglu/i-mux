@@ -94,7 +94,7 @@ func ms(t time.Time) string { return strconv.FormatInt(t.UnixMilli(), 10) }
 func TestDetectorExecBudget(t *testing.T) {
 	h := newHarness(t)
 	start := ms(testutil.FrozenTime.Add(-time.Hour))
-	h.f.panes = "%1\tclaude\t" + start + "\t0\t40\ts\n%2\t\t\t0\t40\ts\n%3\tgemini\t" + start + "\t1\t40\ts\t0\n%4\tcodex\t" + start + "\t0\t10\ts\n"
+	h.f.panes = "%1\tclaude\t" + start + "\t0\t40\ts\n%2\t\t\t0\t40\ts\n%3\tantigravity\t" + start + "\t1\t40\ts\t0\n%4\tcodex\t" + start + "\t0\t10\ts\n"
 	// No client attached: one exec, no captures.
 	attached, n := h.tick(t)
 	if attached || n != 1 || h.f.captures() != 0 {
@@ -209,11 +209,11 @@ func TestDetectorGraceAndNewRun(t *testing.T) {
 		t.Fatalf("message within grace prompted: %+v", h.events)
 	}
 	// A new run in the same pane (new @imux_start) has a fresh seen-set.
-	h.f.panes = "%1\tgemini\t" + ms(now.Add(-time.Minute)) + "\t0\t30\tproj\n"
+	h.f.panes = "%1\tantigravity\t" + ms(now.Add(-time.Minute)) + "\t0\t30\tproj\n"
 	h.f.screens["%1"] = "Usage limit reached for gemini-2.5-pro.\n"
 	h.act = false
 	h.tick(t)
-	if len(h.events) != 1 || h.events[0].Agent != "gemini" {
+	if len(h.events) != 1 || h.events[0].Agent != "antigravity" {
 		t.Fatalf("new run: %+v", h.events)
 	}
 	// The pane closes: its state is dropped.

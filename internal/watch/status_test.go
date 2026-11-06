@@ -28,10 +28,10 @@ func TestStatusKeeper(t *testing.T) {
 	reset := now.Add(30 * time.Minute)
 	_ = state.Update(func(s *state.State) error {
 		s.SetLimit("claude", &state.Limit{At: now, ResetAt: reset, ExpiresAt: reset, Severity: "limit"})
-		s.SetLimit("gemini", &state.Limit{At: now, ExpiresAt: now.Add(time.Hour), Severity: "warn"})
+		s.SetLimit("antigravity", &state.Limit{At: now, ExpiresAt: now.Add(time.Hour), Severity: "warn"})
 		return nil
 	})
-	panes := []PaneRow{{ID: "%1", Agent: "claude"}, {ID: "%2", Agent: "gemini"}, {ID: "%3"}}
+	panes := []PaneRow{{ID: "%1", Agent: "claude"}, {ID: "%2", Agent: "antigravity"}, {ID: "%3"}}
 	cmds := k.Commands(panes)
 	var raw [][]string
 	for _, c := range cmds {
@@ -40,9 +40,9 @@ func TestStatusKeeper(t *testing.T) {
 	got := join(raw)
 	until := reset.Local().Format("15:04")
 	for _, want := range []string{
-		"set-option -g @imux_status Claude ⛔" + until + " · Gemini ◐ · Codex ●",
+		"set-option -g @imux_status Claude ⛔" + until + " · Antigravity ◐ · Codex ●",
 		"set-option -g @imux_lim_claude ⛔" + until,
-		"set-option -g @imux_lim_gemini ◐",
+		"set-option -g @imux_lim_antigravity ◐",
 		"set-option -g @imux_lim_codex ",
 		"set-option -p -t %1 @imux_flag ⛔ " + until,
 		"set-option -p -u -t %2 @imux_flag", // a warning does not flag the pane
@@ -65,7 +65,7 @@ func TestStatusKeeper(t *testing.T) {
 		raw = append(raw, c)
 	}
 	got = join(raw)
-	for _, want := range []string{"@imux_status Claude ● · Gemini ◐ · Codex ●", "set-option -g @imux_lim_claude ", "set-option -p -u -t %1 @imux_flag"} {
+	for _, want := range []string{"@imux_status Claude ● · Antigravity ◐ · Codex ●", "set-option -g @imux_lim_claude ", "set-option -p -u -t %1 @imux_flag"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("after expiry missing %q in\n%s", want, got)
 		}

@@ -20,11 +20,11 @@ func TestSwitchPasteMode(t *testing.T) {
 	pane := h.startSession("claude")
 	h.run("claude", 1)
 	start := time.Now()
-	h.mustImux("switch", "gemini", "--pane", pane)
+	h.mustImux("switch", "antigravity", "--pane", pane)
 	if d := time.Since(start); d < workspace.StableFor {
 		t.Fatalf("pasted after %v, before the screen was stable for %v", d, workspace.StableFor)
 	}
-	if argv := h.run("gemini", 1); len(argv) != 0 {
+	if argv := h.run("antigravity", 1); len(argv) != 0 {
 		t.Fatalf("prompt leaked into argv: %.200q", argv)
 	}
 	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@imux_trail}"))
@@ -32,7 +32,7 @@ func TestSwitchPasteMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stdin := filepath.Join(h.Log, "gemini-1.stdin")
+	stdin := filepath.Join(h.Log, "antigravity-1.stdin")
 	want := strings.TrimRight(string(doc), "\n")
 	var got string
 	h.waitFor("pasted handoff on stdin", 5*time.Second, func() bool {
@@ -40,7 +40,7 @@ func TestSwitchPasteMode(t *testing.T) {
 		got = strings.TrimRight(string(b), "\n")
 		return got == want
 	})
-	if !strings.HasPrefix(got, "[i-mux handoff · Claude Code → Gemini CLI") {
+	if !strings.HasPrefix(got, "[i-mux handoff · Claude Code → Antigravity CLI") {
 		t.Fatalf("stdin %.200q", got)
 	}
 	// The paste file and the tmux buffer are gone.

@@ -20,13 +20,12 @@ type AgentID string
 const (
 	Claude      AgentID = "claude"
 	Antigravity AgentID = "antigravity" // Antigravity CLI (agy), Google's successor to Gemini CLI for personal accounts
-	Gemini      AgentID = "gemini"
 	Copilot     AgentID = "copilot"
 	Codex       AgentID = "codex"
 )
 
 // AllAgents lists the known agents in default order.
-var AllAgents = []AgentID{Claude, Antigravity, Gemini, Copilot, Codex}
+var AllAgents = []AgentID{Claude, Antigravity, Copilot, Codex}
 
 // Known reports whether id is a known agent.
 func Known(id string) bool {
@@ -45,8 +44,6 @@ func DisplayName(id AgentID) string {
 		return "Claude Code"
 	case Antigravity:
 		return "Antigravity CLI"
-	case Gemini:
-		return "Gemini CLI"
 	case Copilot:
 		return "GitHub Copilot CLI"
 	case Codex:
@@ -62,8 +59,6 @@ func ShortName(id AgentID) string {
 		return "Claude"
 	case Antigravity:
 		return "Antigravity"
-	case Gemini:
-		return "Gemini"
 	case Copilot:
 		return "Copilot"
 	case Codex:
@@ -76,7 +71,7 @@ func ShortName(id AgentID) string {
 type Ref struct {
 	Agent     AgentID
 	ID        string    // native session id (a UUID for all four agents)
-	Path      string    // file (Claude, Gemini, Codex) or directory (Copilot)
+	Path      string    // file (Claude, Antigravity, Codex) or directory (Copilot)
 	CWD       string    // may be "" until parsed
 	StartedAt time.Time // zero if unknown
 	UpdatedAt time.Time // file mtime

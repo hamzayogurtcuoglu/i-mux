@@ -12,20 +12,19 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session/claude"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/session/gemini"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 const (
 	claudeA = "aaaaaaaa-6666-4000-8000-000000000001"
-	geminiG = "bbbbbbbb-6666-4000-8000-000000000002"
+	agyG    = "bbbbbbbb-6666-4000-8000-000000000002"
 	codexX  = "cccccccc-6666-4000-8000-000000000003"
 )
 
 func ts(t time.Time) string { return t.UTC().Format(time.RFC3339) }
 
-// multiHop writes claude(A, t0–t1) → gemini(G, t1–t2) → codex(X, t2–now).
+// multiHop writes claude(A, t0–t1) → antigravity(G, t1–t2) → codex(X, t2–now).
 func multiHop(t *testing.T, h *testutil.Homes) (Trail, [3]time.Time) {
 	t.Helper()
 	now := testutil.FrozenTime
@@ -35,10 +34,8 @@ func multiHop(t *testing.T, h *testutil.Homes) (Trail, [3]time.Time) {
 {"type":"assistant","sessionId":%q,"timestamp":%q,"uuid":"a","message":{"id":"m1","role":"assistant","model":"m","content":[{"type":"text","text":"claude did part one"}]}}
 `, claudeA, h.Project, ts(t0), claudeA, ts(t0.Add(time.Minute)))))
 	testutil.Touch(t, cp, t1)
-	gp := filepath.Join(h.Gemini, "tmp", gemini.ProjectHash(h.Project), "chats", "session-x-"+geminiG[:8]+".json")
-	testutil.WriteFile(t, gp, []byte(fmt.Sprintf(`{"sessionId":%q,"startTime":%q,"lastUpdated":%q,"messages":[{"id":"1","timestamp":%q,"type":"user","content":"gemini side quest"},{"id":"2","timestamp":%q,"type":"gemini","content":"gemini fixed the parser"}]}`,
-		geminiG, ts(t1), ts(t2), ts(t1.Add(time.Minute)), ts(t1.Add(2*time.Minute)))))
-	testutil.Touch(t, gp, t2)
+	gp := testutil.WriteAntigravity(t, h, agyG, h.Project, t2,
+		testutil.AgyTurn{At: t1.Add(time.Minute), User: "antigravity side quest", Reply: "antigravity fixed the parser"})
 	xp := filepath.Join(h.Codex, "sessions", "2026", "11", "05", "rollout-2026-11-05T13-32-00-"+codexX+".jsonl")
 	testutil.WriteFile(t, xp, []byte(fmt.Sprintf(`{"timestamp":%q,"type":"session_meta","payload":{"id":%q,"cwd":%q}}
 {"timestamp":%q,"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"codex wrote the tests"}]}}
@@ -46,7 +43,7 @@ func multiHop(t *testing.T, h *testutil.Homes) (Trail, [3]time.Time) {
 	testutil.Touch(t, xp, now)
 	tr := Trail{
 		{Agent: "claude", Start: t0.UnixMilli(), End: t1.UnixMilli(), SessionID: claudeA, File: cp},
-		{Agent: "gemini", Start: t1.UnixMilli(), End: t2.UnixMilli(), File: gp},
+		{Agent: "antigravity", Start: t1.UnixMilli(), End: t2.UnixMilli(), File: gp},
 		{Agent: "codex", Start: t2.UnixMilli()},
 	}
 	return tr, [3]time.Time{t0, t1, t2}
@@ -70,7 +67,7 @@ func TestDeltaOverMultiHopTrail(t *testing.T) {
 	if err != nil || doc == nil || len(srcs) != 2 {
 		t.Fatalf("delta: %v %v", doc, err)
 	}
-	for _, want := range []string{"Welcome back", "gemini side quest", "gemini fixed the parser", "codex wrote the tests"} {
+	for _, want := range []string{"Welcome back", "antigravity side quest", "antigravity fixed the parser", "codex wrote the tests"} {
 		if !strings.Contains(doc.Text, want) {
 			t.Errorf("delta lacks %q:\n%s", want, doc.Text)
 		}
@@ -104,11 +101,11 @@ func TestDeltaEmpty(t *testing.T) {
 	w, _, h := testWS(t)
 	f := sources.New(config.Default())
 	tr, times := multiHop(t, h)
-	// Claude → Gemini, but Gemini wrote nothing after Claude's run ended.
+	// Claude → Antigravity, but Antigravity wrote nothing after Claude's run ended.
 	g := tr[1]
 	g.File, g.End = "", 0
 	g.Start = times[2].Add(30 * time.Minute).UnixMilli()
-	p := &Pane{ID: "%1", Agent: "gemini", CWD: h.Project, Trail: Trail{tr[0], g}}
+	p := &Pane{ID: "%1", Agent: "antigravity", CWD: h.Project, Trail: Trail{tr[0], g}}
 	r, ok := w.FindResumable(context.Background(), f, p, "claude")
 	if !ok {
 		t.Fatal("not resumable")

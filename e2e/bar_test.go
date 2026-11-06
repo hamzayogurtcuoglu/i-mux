@@ -26,8 +26,8 @@ func TestAgentBar(t *testing.T) {
 	h := newH(t, "[agents.copilot]\nbin = \"/nonexistent/copilot\"\n")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	second := strings.TrimSpace(h.mustImux("split", "gemini", "-h", "--pane", pane))
-	h.run("gemini", 1)
+	second := strings.TrimSpace(h.mustImux("split", "antigravity", "-h", "--pane", pane))
+	h.run("antigravity", 1)
 	h.mustTmux("select-pane", "-t", pane)
 	if got := strings.TrimSpace(h.mustTmux("show-options", "-gv", "status")); got != "2" {
 		t.Fatalf("status = %q, want 2", got)
@@ -40,7 +40,7 @@ func TestAgentBar(t *testing.T) {
 
 	c, _ := h.attach(160, 40)
 	c.waitScreen(h, "▶ Claude", 5*time.Second)
-	for _, want := range []string{" i-mux ", " Gemini ", " Codex ", "Copilot (not installed)", "⧉ Sessions", "☰"} {
+	for _, want := range []string{" i-mux ", " Antigravity ", " Codex ", "Copilot (not installed)", "⧉ Sessions", "☰"} {
 		c.waitScreen(h, want, 2*time.Second)
 	}
 
@@ -48,7 +48,7 @@ func TestAgentBar(t *testing.T) {
 	before := h.uiRecords()
 	mark := c.Mark()
 	h.mustTmux("select-pane", "-t", second)
-	c.waitScreenAfter(h, mark, "▶ Gemini", 5*time.Second)
+	c.waitScreenAfter(h, mark, "▶ Antigravity", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 	if after := h.uiRecords(); after != before {
 		t.Fatalf("focus change ran imux (%d new tmux invocations)", after-before)
@@ -64,7 +64,7 @@ func TestAgentBar(t *testing.T) {
 	// 80 columns: entries of missing agents are dropped (Q29).
 	c.Close()
 	narrow, _ := h.attach(80, 24)
-	narrow.waitScreen(h, " Gemini ", 5*time.Second)
+	narrow.waitScreen(h, " Antigravity ", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 	if strings.Contains(narrow.Text(), "not installed") {
 		t.Fatal("80 columns still shows the missing agent")

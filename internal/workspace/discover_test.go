@@ -3,33 +3,27 @@ package workspace
 import (
 	"context"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session/claude"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/session/gemini"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-func writeGemini(t *testing.T, h *testutil.Homes, id string, started, mtime time.Time) string {
+// writeAgy writes an Antigravity conversation of the project that started
+// at started (its first step) and was last written at mtime.
+func writeAgy(t *testing.T, h *testutil.Homes, id string, started, mtime time.Time) string {
 	t.Helper()
-	p := filepath.Join(h.Gemini, "tmp", gemini.ProjectHash(h.Project), "chats",
-		"session-"+started.UTC().Format("2006-01-02T15-04")+"-"+id[:8]+".json")
-	ts := started.UTC().Format(time.RFC3339)
-	testutil.WriteFile(t, p, []byte(fmt.Sprintf(`{"sessionId":%q,"startTime":%q,"lastUpdated":%q,"messages":[{"id":"u","timestamp":%q,"type":"user","content":"task of %s"}]}`,
-		id, ts, ts, ts, id)))
-	testutil.Touch(t, p, mtime)
-	return p
+	return testutil.WriteAntigravity(t, h, id, h.Project, mtime, testutil.AgyTurn{At: started, User: "task of " + id, Reply: "ok"})
 }
 
-func geminiPane(id string, start time.Time, cwd string, extra ...TrailEntry) *Pane {
+func agyPane(id string, start time.Time, cwd string, extra ...TrailEntry) *Pane {
 	tr := append(Trail{}, extra...)
-	tr = append(tr, TrailEntry{Agent: "gemini", Start: start.UnixMilli()})
-	return &Pane{ID: id, Agent: "gemini", CWD: cwd, Trail: tr}
+	tr = append(tr, TrailEntry{Agent: "antigravity", Start: start.UnixMilli()})
+	return &Pane{ID: id, Agent: "antigravity", CWD: cwd, Trail: tr}
 }
 
 func TestDiscoverMatchesRunsByStartTime(t *testing.T) {
@@ -39,10 +33,10 @@ func TestDiscoverMatchesRunsByStartTime(t *testing.T) {
 	t1 := t0.Add(10 * time.Minute)
 	// Both chats were written recently: the newest-by-mtime rule alone would
 	// give pane A the chat of pane B.
-	a := writeGemini(t, h, "aaaaaaaa-0000-4000-8000-000000000001", t0.Add(5*time.Second), t1.Add(21*time.Minute))
-	b := writeGemini(t, h, "bbbbbbbb-0000-4000-8000-000000000002", t1.Add(5*time.Second), t1.Add(20*time.Minute))
-	pa := geminiPane("%1", t0, h.Project)
-	pb := geminiPane("%2", t1, h.Project)
+	a := writeAgy(t, h, "aaaaaaaa-0000-4000-8000-000000000001", t0.Add(5*time.Second), t1.Add(21*time.Minute))
+	b := writeAgy(t, h, "bbbbbbbb-0000-4000-8000-000000000002", t1.Add(5*time.Second), t1.Add(20*time.Minute))
+	pa := agyPane("%1", t0, h.Project)
+	pb := agyPane("%2", t1, h.Project)
 	all := []*Pane{pa, pb}
 	ctx := context.Background()
 	if r, err := w.Discover(ctx, f, pa, all); err != nil || r.Path != a {
@@ -52,7 +46,7 @@ func TestDiscoverMatchesRunsByStartTime(t *testing.T) {
 		t.Fatalf("pane B: %v %v, want %s", r.Path, err, b)
 	}
 	// A pane in another directory does not compete.
-	other := geminiPane("%3", t1.Add(time.Minute), "/home/test/elsewhere")
+	other := agyPane("%3", t1.Add(time.Minute), "/home/test/elsewhere")
 	if r, err := w.Discover(ctx, f, pa, append(all, other)); err != nil || r.Path != a {
 		t.Fatalf("with an unrelated pane: %v %v", r.Path, err)
 	}
@@ -62,14 +56,14 @@ func TestDiscoverExcludesClaimedAndHonorsIDs(t *testing.T) {
 	w, _, h := testWS(t)
 	f := sources.New(config.Default())
 	t0 := testutil.FrozenTime
-	old := writeGemini(t, h, "cccccccc-0000-4000-8000-000000000003", t0.Add(time.Second), t0.Add(time.Hour))
-	mine := writeGemini(t, h, "dddddddd-0000-4000-8000-000000000004", t0.Add(2*time.Second), t0.Add(30*time.Minute))
+	old := writeAgy(t, h, "cccccccc-0000-4000-8000-000000000003", t0.Add(time.Second), t0.Add(time.Hour))
+	mine := writeAgy(t, h, "dddddddd-0000-4000-8000-000000000004", t0.Add(2*time.Second), t0.Add(30*time.Minute))
 	// Another pane's closed run claims the newer file.
 	z := &Pane{ID: "%9", Agent: "claude", CWD: h.Project, Trail: Trail{
-		{Agent: "gemini", Start: t0.UnixMilli(), End: t0.Add(time.Hour).UnixMilli(), File: old},
+		{Agent: "antigravity", Start: t0.UnixMilli(), End: t0.Add(time.Hour).UnixMilli(), File: old},
 		{Agent: "claude", Start: t0.Add(time.Hour).UnixMilli()},
 	}}
-	pa := geminiPane("%1", t0, h.Project)
+	pa := agyPane("%1", t0, h.Project)
 	ctx := context.Background()
 	if r, err := w.Discover(ctx, f, pa, []*Pane{pa, z}); err != nil || r.Path != mine {
 		t.Fatalf("claimed file not excluded: %v %v", r.Path, err)
@@ -84,7 +78,7 @@ func TestDiscoverExcludesClaimedAndHonorsIDs(t *testing.T) {
 		t.Fatalf("pre-assigned id: %+v %v", r, err)
 	}
 	// Nothing written since the run started.
-	late := geminiPane("%5", t0.Add(2*time.Hour), h.Project)
+	late := agyPane("%5", t0.Add(2*time.Hour), h.Project)
 	if _, err := w.Discover(ctx, f, late, []*Pane{late}); !errors.Is(err, sources.ErrNotFound) {
 		t.Fatalf("want ErrNotFound, got %v", err)
 	}

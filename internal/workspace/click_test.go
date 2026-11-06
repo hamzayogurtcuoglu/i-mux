@@ -12,7 +12,7 @@ import (
 func TestClassifyClick(t *testing.T) {
 	w, _, _ := testWS(t)
 	now := testutil.FrozenTime
-	w.st = &state.State{Limits: map[string]*state.Limit{"gemini": {At: now, ExpiresAt: now.Add(time.Hour)}}}
+	w.st = &state.State{Limits: map[string]*state.Limit{"antigravity": {At: now, ExpiresAt: now.Add(time.Hour)}}}
 	p := &Pane{ID: "%1", Agent: "claude"}
 	cases := []struct {
 		rng    string
@@ -24,7 +24,7 @@ func TestClassifyClick(t *testing.T) {
 		{"imux:menu", p, ClickMenu, ""},
 		{"imux:sessions", p, ClickSessions, ""},
 		{"imux:claude", p, ClickMenu, "claude"}, // the current agent
-		{"imux:gemini", p, ClickConfirm, "gemini"},
+		{"imux:agy", p, ClickConfirm, "antigravity"},
 		{"imux:codex", p, ClickInstall, "codex"},
 		{"imux:copilot", p, ClickInstall, "copilot"},
 		{"imux:claude", &Pane{ID: "%2"}, ClickSwitch, "claude"},                              // plain shell
@@ -38,7 +38,7 @@ func TestClassifyClick(t *testing.T) {
 			t.Errorf("%s on %+v: got %v %q, want %v %q", c.rng, c.pane, a, id, c.action, c.agent)
 		}
 	}
-	m := w.ConfirmMenu("gemini", p, "c")
+	m := w.ConfirmMenu("antigravity", p, "c")
 	if m.Items[0].Key != "y" || m.Items[1].Cmd != "" || m.Title == "" {
 		t.Fatalf("confirm menu %+v", m)
 	}

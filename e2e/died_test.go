@@ -39,8 +39,8 @@ func TestPaneDiedFallsBackToShell(t *testing.T) {
 	// path (imux switch on a plain-shell pane), with context from the trail.
 	h.mustTmux("send-keys", "-t", pane, "echo shell-$((40+2))", "Enter")
 	h.waitFor("shell output", 5*time.Second, func() bool { return strings.Contains(h.capture(pane), "shell-42") })
-	h.mustImux("switch", "gemini", "--pane", pane)
-	if argv := h.run("gemini", 1); len(argv) != 2 || !strings.Contains(argv[1], "fake claude request 1") {
+	h.mustImux("switch", "antigravity", "--pane", pane)
+	if argv := h.run("antigravity", 1); len(argv) != 2 || !strings.Contains(argv[1], "fake claude request 1") {
 		t.Fatalf("restart from shell: %.200q", argv)
 	}
 }
@@ -50,8 +50,8 @@ func TestPaneDiedOnExitClose(t *testing.T) {
 	h := newH(t, "on_exit = \"close\"\n")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	other := strings.TrimSpace(h.mustImux("split", "gemini", "--pane", pane))
-	h.run("gemini", 1)
+	other := strings.TrimSpace(h.mustImux("split", "antigravity", "--pane", pane))
+	h.run("antigravity", 1)
 	h.exitAgent(pane, 0)
 	h.waitFor("pane closed", 5*time.Second, func() bool {
 		out, _ := h.tmux("list-panes", "-a", "-F", "#{pane_id}")
@@ -68,7 +68,7 @@ func TestPaneDiedFallbackSpec(t *testing.T) {
 	fallback := func() string {
 		t.Helper()
 		p, err := launch.Write(&launch.Spec{
-			Agent: "gemini", Bin: filepath.Join(h.Fakes, "fake-gemini"), Args: []string{"-i", "full handoff from the fallback"},
+			Agent: "antigravity", Bin: filepath.Join(h.Fakes, "fake-antigravity"), Args: []string{"-i", "full handoff from the fallback"},
 			Dir: h.Homes.Project, Env: map[string]string{"PATH": h.Fakes + ":/usr/bin:/bin"},
 		})
 		if err != nil {
@@ -79,15 +79,15 @@ func TestPaneDiedFallbackSpec(t *testing.T) {
 	}
 	spec := fallback()
 	h.exitAgent(pane, 1)
-	argv := h.run("gemini", 1)
+	argv := h.run("antigravity", 1)
 	if len(argv) != 2 || argv[1] != "full handoff from the fallback" {
 		t.Fatalf("fallback argv %q", argv)
 	}
 	h.waitFor("fallback options", 5*time.Second, func() bool {
-		return h.paneOpt(pane, "#{@imux_agent}|#{@imux_fallback}|#{pane_dead}") == "gemini||0"
+		return h.paneOpt(pane, "#{@imux_agent}|#{@imux_fallback}|#{pane_dead}") == "antigravity||0"
 	})
 	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@imux_trail}"))
-	if len(trail) != 1 || trail[0].Agent != "gemini" {
+	if len(trail) != 1 || trail[0].Agent != "antigravity" {
 		t.Fatalf("the failed run should be replaced in the trail: %+v", trail)
 	}
 	_ = spec
@@ -96,7 +96,7 @@ func TestPaneDiedFallbackSpec(t *testing.T) {
 	fb := fallback()
 	h.exitAgent(pane, 0)
 	h.waitFor("shell", 5*time.Second, func() bool { return h.paneOpt(pane, "#{pane_dead}|#{@imux_agent}") == "0|" })
-	if h.runs("gemini") != 1 || h.paneOpt(pane, "#{@imux_fallback}") != "" {
+	if h.runs("antigravity") != 1 || h.paneOpt(pane, "#{@imux_fallback}") != "" {
 		t.Fatal("clean exit used or kept the fallback")
 	}
 	if _, err := launch.Read(fb, false); err == nil {

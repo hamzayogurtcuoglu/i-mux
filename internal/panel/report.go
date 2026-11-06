@@ -39,7 +39,7 @@ type Row struct {
 }
 
 // Usage is the agent's local usage. Window says what it covers: "5h"
-// (Claude), "today" (Gemini), "month" (Copilot) or "latest" (Codex).
+// (Claude), "today" (Antigravity), "month" (Copilot) or "latest" (Codex).
 type Usage struct {
 	Window          string                     `json:"window"`
 	From            time.Time                  `json:"from,omitzero"`
@@ -73,8 +73,8 @@ func Collect(ctx context.Context, cfg *config.Config, st *state.State, installed
 				Window: "5h", From: w.From, Replies: w.Replies, InputTokens: w.Input, OutputTokens: w.Output,
 				CacheReadTokens: w.CacheRead, CacheWrite: w.CacheWrite, Sessions: w.Files,
 			}
-		case session.Gemini:
-			d := GeminiToday(ctx, f, now)
+		case session.Antigravity:
+			d := AntigravityToday(ctx, f, now)
 			row.Usage = &Usage{
 				Window: "today", From: d.Date, Replies: d.Requests, InputTokens: d.Input, OutputTokens: d.Output,
 				CacheReadTokens: d.CacheRead, Sessions: d.Chats,
@@ -84,9 +84,6 @@ func Collect(ctx context.Context, cfg *config.Config, st *state.State, installed
 			row.Usage = &Usage{Window: "month", From: m.Start, PremiumRequests: m.PremiumRequests, Sessions: m.Sessions}
 		case session.Codex:
 			row.Usage = &Usage{Window: "latest", RateLimits: CodexLimits(ctx, f)}
-		case session.Antigravity:
-			// No readable local usage data; agy shows it with /usage.
-			row.Usage = &Usage{Window: "in-cli"}
 		}
 		r.Agents = append(r.Agents, row)
 	}
@@ -152,11 +149,9 @@ func usageText(row Row, now time.Time) string {
 	case "5h":
 		return i18n.T("limits.claude", u.Replies) + " · " + tokens()
 	case "today":
-		return i18n.T("limits.gemini", u.Replies) + " · " + tokens()
+		return i18n.T("limits.today", u.Replies) + " · " + tokens()
 	case "month":
 		return i18n.T("limits.copilot", strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", u.PremiumRequests), "0"), "."))
-	case "in-cli":
-		return i18n.T("limits.antigravity")
 	case "latest":
 		rl := u.RateLimits
 		if rl == nil {

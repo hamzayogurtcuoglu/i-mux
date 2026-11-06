@@ -73,7 +73,24 @@ func ParseChained(text string) *ChainedHandoff {
 
 type section struct{ heading, body string }
 
-// splitSections splits markdown by "## " headings.
+// handoffHeadings are the section titles a handoff document uses (see
+// internal/handoff). Only these start a section: a "## " line inside a
+// section is the user's own markdown (a pasted brief) and stays in the body.
+var handoffHeadings = []string{
+	"Original request", "Earlier history", "Current task list", "Files touched",
+	"Repository state", "Conversation", "While you were away", "Where it stopped", "What to do now",
+}
+
+func isHandoffHeading(h string) bool {
+	for _, p := range handoffHeadings {
+		if strings.HasPrefix(h, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// splitSections splits a handoff document at its own "## " section headings.
 func splitSections(s string) []section {
 	var out []section
 	var cur *section
@@ -87,7 +104,7 @@ func splitSections(s string) []section {
 	}
 	for _, line := range strings.SplitAfter(s, "\n") {
 		trimmed := strings.TrimRight(line, "\r\n")
-		if strings.HasPrefix(trimmed, "## ") {
+		if strings.HasPrefix(trimmed, "## ") && isHandoffHeading(strings.TrimSpace(trimmed[3:])) {
 			flush()
 			cur = &section{heading: strings.TrimSpace(trimmed[3:])}
 			continue

@@ -23,17 +23,17 @@ func TestClick(t *testing.T) {
 	}
 
 	// Installed, not limited: switch in-process with context.
-	click("imux:gemini", pane)
-	if argv := h.run("gemini", 1); len(argv) != 2 || !strings.HasPrefix(argv[1], "[i-mux handoff · Claude Code → Gemini CLI") {
+	click("imux:agy", pane)
+	if argv := h.run("antigravity", 1); len(argv) != 2 || !strings.HasPrefix(argv[1], "[i-mux handoff · Claude Code → Antigravity CLI") {
 		t.Fatalf("click switch argv %.200q", argv)
 	}
-	h.waitFor("pane agent gemini", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@imux_agent}") == "gemini" })
+	h.waitFor("pane agent antigravity", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@imux_agent}") == "antigravity" })
 
 	// The current agent, imux:menu and imux:cur open the pane menu.
-	for _, rng := range []string{"imux:gemini", "imux:menu", "imux:cur"} {
+	for _, rng := range []string{"imux:agy", "imux:menu", "imux:cur"} {
 		mark := c.Mark()
 		click(rng, pane)
-		c.waitScreenAfter(h, mark, "i-mux · Gemini", 5*time.Second)
+		c.waitScreenAfter(h, mark, "i-mux · Antigravity", 5*time.Second)
 		c.Write("q")
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -77,8 +77,8 @@ func TestClick(t *testing.T) {
 	trail := workspace.Trail{claudeTrail}
 	shell := strings.TrimSpace(h.mustTmux("split-window", "-v", "-t", pane, "-c", h.Homes.Project, "-P", "-F", "#{pane_id}", "sh"))
 	h.mustTmux("set-option", "-p", "-t", shell, "@imux_trail", trail.String(), ";", "set-option", "-p", "-t", shell, "@imux_cwd", h.Homes.Project)
-	click("imux:gemini", shell)
-	argv := h.run("gemini", 2)
+	click("imux:agy", shell)
+	argv := h.run("antigravity", 2)
 	if len(argv) != 2 || !strings.Contains(argv[1], "fake claude request 1") {
 		t.Fatalf("shell pane with trail: %.300q", argv)
 	}

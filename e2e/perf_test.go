@@ -38,7 +38,7 @@ func TestHandoffPrintLargeSession(t *testing.T) {
 	var best time.Duration
 	var rss int64
 	for i := 0; i < 3; i++ {
-		cmd := exec.Command(bin, "handoff", "--print", "--from", "claude", "--to", "gemini")
+		cmd := exec.Command(bin, "handoff", "--print", "--from", "claude", "--to", "antigravity")
 		cmd.Dir = h.Project
 		cmd.Env = os.Environ()
 		start := time.Now()
@@ -47,7 +47,7 @@ func TestHandoffPrintLargeSession(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
-		if !strings.HasPrefix(string(out), "[i-mux handoff · Claude Code → Gemini CLI") {
+		if !strings.HasPrefix(string(out), "[i-mux handoff · Claude Code → Antigravity CLI") {
 			t.Fatalf("unexpected output %.200s", out)
 		}
 		if best == 0 || d < best {

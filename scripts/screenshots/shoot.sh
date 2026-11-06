@@ -28,7 +28,7 @@ trap cleanup EXIT INT TERM
 
 # Demo agents and config.
 mkdir -p "$IMUX_HOME" "$tmp/bin" "$out"
-for a in claude gemini codex; do
+for a in claude agy codex; do
 	cp "$here/demo-agent.sh" "$tmp/bin/$a" # its name is the agent, and the process name
 	chmod +x "$tmp/bin/$a"
 done
@@ -38,8 +38,8 @@ poll_interval = "0.5s"
 grace = "1s"
 [agents.claude]
 bin = "$tmp/bin/claude"
-[agents.gemini]
-bin = "$tmp/bin/gemini"
+[agents.antigravity]
+bin = "$tmp/bin/agy"
 [agents.codex]
 bin = "$tmp/bin/codex"
 [agents.copilot]
@@ -86,8 +86,8 @@ tmux -L "$outer" set -g default-terminal tmux-256color 2>/dev/null || true
 waitfor "hit its limit"
 shot limit "$title"
 
-# 2. Press g: the pane continues in Gemini, which gets the handoff.
-tmux -L "$outer" send-keys -t shot g
+# 2. Press a: the pane continues in Antigravity, which gets the handoff.
+tmux -L "$outer" send-keys -t shot a
 waitfor "Picking up from Claude"
 shot switched "$title"
 

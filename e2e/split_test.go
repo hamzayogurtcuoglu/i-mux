@@ -14,7 +14,7 @@ func TestSplit(t *testing.T) {
 	h.run("claude", 1)
 	for i, c := range []struct {
 		flag, agent, layoutOp string
-	}{{"-h", "gemini", "left"}, {"-v", "codex", "top"}} {
+	}{{"-h", "antigravity", "left"}, {"-v", "codex", "top"}} {
 		out := h.mustImux("split", c.agent, c.flag, "--pane", pane)
 		np := strings.TrimSpace(out)
 		h.run(c.agent, 1)
@@ -24,24 +24,24 @@ func TestSplit(t *testing.T) {
 			t.Fatalf("split %d: %q, want %q", i, got, want)
 		}
 		border := h.paneOpt(np, "#{E:pane-border-format}")
-		if label := map[string]string{"gemini": "Gemini", "codex": "Codex"}[c.agent]; !strings.Contains(border, " "+label+" ") {
+		if label := map[string]string{"antigravity": "Antigravity", "codex": "Codex"}[c.agent]; !strings.Contains(border, " "+label+" ") {
 			t.Fatalf("border %q lacks label %q", border, label)
 		}
 	}
-	// -h places the gemini pane beside claude, -v the codex pane below it.
+	// -h places the antigravity pane beside claude, -v the codex pane below it.
 	layout := h.mustTmux("list-panes", "-t", pane, "-F", "#{pane_id} #{pane_left} #{pane_top} #{@imux_agent}")
 	rows := map[string][2]string{}
 	for _, l := range strings.Split(strings.TrimSpace(layout), "\n") {
 		f := strings.Fields(l)
 		rows[f[3]] = [2]string{f[1], f[2]}
 	}
-	if rows["gemini"][0] == rows["claude"][0] || rows["gemini"][1] != rows["claude"][1] {
+	if rows["antigravity"][0] == rows["claude"][0] || rows["antigravity"][1] != rows["claude"][1] {
 		t.Errorf("-h did not split side by side: %v", rows)
 	}
 	if rows["codex"][1] == rows["claude"][1] {
 		t.Errorf("-v did not split vertically: %v", rows)
 	}
-	if _, e, err := h.imux("split", "gemini", "-h", "-v", "--pane", pane); err == nil || !strings.Contains(e, "usage") {
+	if _, e, err := h.imux("split", "antigravity", "-h", "-v", "--pane", pane); err == nil || !strings.Contains(e, "usage") {
 		t.Fatalf("-h -v together: %v %q", err, e)
 	}
 }

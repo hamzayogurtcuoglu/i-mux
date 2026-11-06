@@ -9,8 +9,8 @@ import (
 
 func TestMarkerRoundTrip(t *testing.T) {
 	at := time.Date(2026, 11, 5, 14, 32, 0, 0, time.Local)
-	m := Marker(Claude, Gemini, at)
-	if m != "[i-mux handoff · Claude Code → Gemini CLI · 2026-11-05 14:32]" {
+	m := Marker(Claude, Antigravity, at)
+	if m != "[i-mux handoff · Claude Code → Antigravity CLI · 2026-11-05 14:32]" {
 		t.Fatalf("marker %q", m)
 	}
 	doc := m + "\n\nYou are continuing...\n\n## Original request\nfix the bug\nplease\n\n" +
@@ -22,7 +22,7 @@ func TestMarkerRoundTrip(t *testing.T) {
 		t.Fatal("IsHandoff false")
 	}
 	c := ParseChained(doc)
-	if c == nil || c.From != Claude || c.To != Gemini || !c.At.Equal(at) {
+	if c == nil || c.From != Claude || c.To != Antigravity || !c.At.Equal(at) {
 		t.Fatalf("parsed %+v", c)
 	}
 	if c.OriginalRequest != "fix the bug\nplease" {
@@ -82,10 +82,9 @@ func TestEnvResolve(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
 	t.Setenv("CODEX_HOME", "/x/codex")
 	t.Setenv("COPILOT_HOME", "")
-	t.Setenv("GEMINI_CLI_HOME", "")
 	e := Env{}
 	if e.Resolve(Claude) != "/home/test/.claude" || e.Resolve(Codex) != "/x/codex" ||
-		e.Resolve(Gemini) != "/home/test/.gemini" || e.Resolve(Copilot) != "/home/test/.copilot" {
+		e.Resolve(Antigravity) != "/home/test/.gemini/antigravity-cli" || e.Resolve(Copilot) != "/home/test/.copilot" {
 		t.Fatal("resolve wrong")
 	}
 	if (Env{ClaudeHome: "/c"}).Resolve(Claude) != "/c" {
@@ -105,5 +104,27 @@ func TestFilterSince(t *testing.T) {
 func TestLimitLike(t *testing.T) {
 	if !(APIError{Code: "rate_limit"}).LimitLike() || (APIError{Code: "authentication_failed"}).LimitLike() {
 		t.Fatal("LimitLike")
+	}
+}
+
+// A user's request may contain its own markdown headings ("## 1. Product
+// vision"). Read back as a chained handoff, the original request must stay
+// whole: only the handoff's own section headings split the document.
+func TestParseChainedKeepsHeadingsInsideSections(t *testing.T) {
+	req := "Write the plan.\n\n## 1. Product vision\n\nA tmux workspace.\n\n## 2. Key decisions\n\n- Go + tmux"
+	doc := Marker(Claude, Antigravity, time.Date(2026, 11, 5, 14, 32, 0, 0, time.Local)) + "\n\nYou are continuing...\n\n" +
+		"## Original request\n" + req + "\n\n" +
+		"## Files touched\nEdited: a.go\n\n" +
+		"## Conversation (condensed, oldest first; 3 earlier entries omitted)\n**User:** see ## 3. Open questions below\n## 3. Open questions\n- none\n\n" +
+		"## Where it stopped\nLast user request: x\n\n## What to do now\ncontinue\n"
+	c := ParseChained(doc)
+	if c == nil {
+		t.Fatal("not recognized")
+	}
+	if c.OriginalRequest != req {
+		t.Fatalf("original request cut at a heading of its own:\n%q", c.OriginalRequest)
+	}
+	if !strings.Contains(c.History, "## 3. Open questions\n- none") || strings.Contains(c.History, "Edited: a.go") {
+		t.Fatalf("history %q", c.History)
 	}
 }

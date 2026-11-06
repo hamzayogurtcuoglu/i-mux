@@ -51,11 +51,11 @@ func TestHandoffPrintNewestOfAnyAgent(t *testing.T) {
 	inProject(t, h)
 	writeClaude(t, h, "11111111-0000-4000-8000-000000000001", "older claude task", testutil.FrozenTime.Add(-time.Hour))
 	writeCodex(t, h, "newest codex task", testutil.FrozenTime)
-	out, errOut, code := runCLI(t, "handoff", "--print", "--to", "gemini")
+	out, errOut, code := runCLI(t, "handoff", "--print", "--to", "antigravity")
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, errOut)
 	}
-	if !strings.HasPrefix(out, "[i-mux handoff · Codex CLI → Gemini CLI ·") || !strings.Contains(out, "newest codex task") {
+	if !strings.HasPrefix(out, "[i-mux handoff · Codex CLI → Antigravity CLI ·") || !strings.Contains(out, "newest codex task") {
 		t.Fatalf("unexpected doc:\n%s", out)
 	}
 	if ents, _ := os.ReadDir(paths.Handoffs()); len(ents) != 0 {
@@ -71,25 +71,25 @@ func TestHandoffExecsTarget(t *testing.T) {
 	h := testutil.Isolate(t)
 	inProject(t, h)
 	writeClaude(t, h, "11111111-0000-4000-8000-000000000001", "fix the bug", testutil.FrozenTime)
-	fake := filepath.Join(h.Home, "fakebin", "gemini")
+	fake := filepath.Join(h.Home, "fakebin", "agy")
 	testutil.WriteFile(t, fake, []byte("#!/bin/sh\nexit 0\n"))
 	_ = os.Chmod(fake, 0o755)
 	t.Setenv("PATH", filepath.Dir(fake)+":/usr/bin:/bin")
 	var got *launch.Spec
 	launchExec = func(s *launch.Spec) error { got = s; return nil }
 	defer func() { launchExec = launch.Exec }()
-	_, errOut, code := runCLI(t, "handoff", "--from", "claude", "--to", "gemini")
+	_, errOut, code := runCLI(t, "handoff", "--from", "claude", "--to", "antigravity")
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, errOut)
 	}
-	if got == nil || got.Bin != fake || len(got.Args) != 2 || got.Args[0] != "-i" || !strings.HasPrefix(got.Args[1], "[i-mux handoff · Claude Code → Gemini CLI") {
+	if got == nil || got.Bin != fake || len(got.Args) != 2 || got.Args[0] != "-i" || !strings.HasPrefix(got.Args[1], "[i-mux handoff · Claude Code → Antigravity CLI") {
 		t.Fatalf("spec %+v", got)
 	}
 	if got.Dir != h.Project || !strings.HasPrefix(got.Env["PATH"], filepath.Dir(fake)) {
 		t.Fatalf("dir/env %+v", got)
 	}
 	ents, _ := os.ReadDir(paths.Handoffs())
-	if len(ents) != 1 || !strings.HasSuffix(ents[0].Name(), "-claude-to-gemini.md") {
+	if len(ents) != 1 || !strings.HasSuffix(ents[0].Name(), "-claude-to-antigravity.md") {
 		t.Fatalf("handoff files %v", ents)
 	}
 	fi, _ := ents[0].Info()
@@ -99,7 +99,7 @@ func TestHandoffExecsTarget(t *testing.T) {
 	if !strings.Contains(errOut, "switching sends excerpts") {
 		t.Fatalf("cross-provider notice missing: %s", errOut)
 	}
-	_, errOut, _ = runCLI(t, "handoff", "--from", "claude", "--to", "gemini")
+	_, errOut, _ = runCLI(t, "handoff", "--from", "claude", "--to", "antigravity")
 	if strings.Contains(errOut, "switching sends excerpts") {
 		t.Fatal("notice shown twice")
 	}
@@ -153,7 +153,7 @@ func TestSessionsList(t *testing.T) {
 func TestPruneOncePerDay(t *testing.T) {
 	testutil.Isolate(t)
 	_ = paths.Ensure()
-	old := filepath.Join(paths.Handoffs(), "20261001-000000-claude-to-gemini.md")
+	old := filepath.Join(paths.Handoffs(), "20261001-000000-claude-to-antigravity.md")
 	testutil.WriteFile(t, old, []byte("x"))
 	testutil.Touch(t, old, testutil.FrozenTime.Add(-40*24*time.Hour))
 	if !handoff.Prune(30, testutil.FrozenTime) {

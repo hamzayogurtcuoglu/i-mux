@@ -52,7 +52,7 @@ func TestLimitAuto(t *testing.T) {
 }
 
 // TestLimitAsk (T3.8, Q24): on_limit = ask shows the prompt on the attached
-// client; a repeated line does not prompt again; picking Gemini switches.
+// client; a repeated line does not prompt again; picking Antigravity switches.
 func TestLimitAsk(t *testing.T) {
 	h := newH(t, fastLimits+"grace = \"1s\"\n")
 	line := "5-hour limit reached ∙ resets 3pm"
@@ -61,7 +61,7 @@ func TestLimitAsk(t *testing.T) {
 	c, client := h.attach(120, 40)
 	h.run("claude", 1)
 	c.waitScreen(h, "Claude hit its limit (resets ", 8*time.Second)
-	c.waitScreen(h, "Gemini (with context)", 2*time.Second)
+	c.waitScreen(h, "Antigravity (with context)", 2*time.Second)
 	var found bool
 	for _, r := range h.records() {
 		a := strings.Join(r.Args, " ")
@@ -77,8 +77,8 @@ func TestLimitAsk(t *testing.T) {
 	if n := h.watcherMenus(); n != 1 {
 		t.Fatalf("%d prompts, want 1", n)
 	}
-	c.Write("g")
-	argv := h.run("gemini", 1)
+	c.Write("a")
+	argv := h.run("antigravity", 1)
 	if !strings.Contains(argv[len(argv)-1], "hit its usage limit") {
 		t.Fatalf("handoff reason: %.300q", argv)
 	}
@@ -92,7 +92,7 @@ func TestLimitGrace(t *testing.T) {
 	h.startSession("claude")
 	h.attach(120, 40)
 	h.run("claude", 1)
-	h.noRun("gemini", 1, 3*time.Second)
+	h.noRun("antigravity", 1, 3*time.Second)
 	if st, _ := state.Read(); st.Limits["claude"] != nil {
 		t.Fatal("limit recorded within grace")
 	}

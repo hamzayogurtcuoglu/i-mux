@@ -1,6 +1,6 @@
-[i-mux handoff · Gemini CLI → Codex CLI · 2026-11-05 14:32]
+[i-mux handoff · Antigravity CLI → Codex CLI · 2026-11-05 14:32]
 
-You are continuing a coding session that the user was running in Gemini CLI.
+You are continuing a coding session that the user was running in Antigravity CLI.
 The user switched to you manually.
 - Treat the record below as your own memory of this session.
 - Do not redo finished work. Files may have changed since; re-read a file before editing it.
@@ -40,4 +40,4 @@ Last assistant message: Continuing: I added the test in src/auth.test.ts.
 If the last request is not finished, continue it. Otherwise give a 2–3 sentence status
 and wait for the user.
 
-Full transcript of the previous session (read only if needed): /home/test/.gemini/tmp/proj/chats/session-x.json
+Full transcript of the previous session (read only if needed): /home/test/.gemini/antigravity-cli/brain/g1/.system_generated/logs/transcript_full.jsonl

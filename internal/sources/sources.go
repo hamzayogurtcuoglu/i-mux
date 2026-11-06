@@ -26,10 +26,10 @@ var ErrNotFound = errors.New("no session found")
 // Env returns the provider environment with per-agent home overrides from cfg.
 func Env(cfg *config.Config) session.Env {
 	return session.Env{
-		ClaudeHome:  cfg.Agent("claude").Home,
-		GeminiHome:  cfg.Agent("gemini").Home,
-		CopilotHome: cfg.Agent("copilot").Home,
-		CodexHome:   cfg.Agent("codex").Home,
+		ClaudeHome:      cfg.Agent("claude").Home,
+		AntigravityHome: cfg.Agent("antigravity").Home,
+		CopilotHome:     cfg.Agent("copilot").Home,
+		CodexHome:       cfg.Agent("codex").Home,
 	}
 }
 
@@ -131,8 +131,8 @@ func guessAgent(path string) session.AgentID {
 	switch {
 	case strings.Contains(p, "/.claude/") || strings.Contains(p, "/projects/") && strings.HasSuffix(p, ".jsonl"):
 		return session.Claude
-	case strings.Contains(p, "/.gemini/") || strings.Contains(filepath.Base(p), "session-") && strings.Contains(p, "/chats/"):
-		return session.Gemini
+	case strings.Contains(p, "/.gemini/antigravity") || strings.Contains(p, "/brain/") && strings.Contains(p, "/.system_generated/"):
+		return session.Antigravity
 	case strings.Contains(p, "/session-state/"):
 		return session.Copilot
 	case strings.Contains(p, "/.codex/") || strings.HasPrefix(filepath.Base(p), "rollout-"):

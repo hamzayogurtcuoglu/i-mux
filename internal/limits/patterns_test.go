@@ -31,10 +31,10 @@ func TestDefaultPatterns(t *testing.T) {
 		{"claude", "Claude Opus limit reached, now using Sonnet 4", SevIgnore},
 		{"claude", "I'll check the rate limit middleware", ""},
 		{"claude", "> fix the usage limit counter in billing.go", ""},
-		{"gemini", "Usage limit reached for gemini-2.5-pro.", SevLimit},
-		{"gemini", "You have exhausted your daily quota on this model.", SevLimit},
-		{"gemini", "[API Error: RESOURCE_EXHAUSTED]", SevLimit},
-		{"gemini", "Quota exceeded for quota metric", SevLimit},
+		{"antigravity", "Usage limit reached for gemini-2.5-pro.", SevLimit},
+		{"antigravity", "You have exhausted your daily quota on this model.", SevLimit},
+		{"antigravity", "[API Error: RESOURCE_EXHAUSTED]", SevLimit},
+		{"antigravity", "Quota exceeded for quota metric", SevLimit},
 		{"copilot", "You have exceeded your premium request allowance.", SevLimit},
 		{"copilot", "Weekly limit reached", SevLimit},
 		{"codex", "■ You've hit your usage limit. Upgrade to Pro or try again in 2 days 3 hours.", SevLimit},
@@ -57,26 +57,26 @@ func TestDefaultPatterns(t *testing.T) {
 
 func TestConfigPatterns(t *testing.T) {
 	cfg := config.Default()
-	cfg.Agents["gemini"].Patterns = []config.Pattern{{Re: `my custom stop`, Severity: "limit"}, {Re: `almost out`, Severity: "warn"}}
+	cfg.Agents["antigravity"].Patterns = []config.Pattern{{Re: `my custom stop`, Severity: "limit"}, {Re: `almost out`, Severity: "warn"}}
 	set, err := Compile(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p, ok := set.Match("gemini", "MY CUSTOM STOP here"); !ok || p.Severity != SevLimit {
+	if p, ok := set.Match("antigravity", "MY CUSTOM STOP here"); !ok || p.Severity != SevLimit {
 		t.Fatal("added pattern")
 	}
-	if _, ok := set.Match("gemini", "Quota exceeded"); !ok {
+	if _, ok := set.Match("antigravity", "Quota exceeded"); !ok {
 		t.Fatal("defaults kept when adding")
 	}
-	cfg.Agents["gemini"].ReplaceDefaultPatterns = true
+	cfg.Agents["antigravity"].ReplaceDefaultPatterns = true
 	set, _ = Compile(cfg)
-	if _, ok := set.Match("gemini", "Quota exceeded"); ok {
+	if _, ok := set.Match("antigravity", "Quota exceeded"); ok {
 		t.Fatal("defaults should be replaced")
 	}
-	if p, ok := set.Match("gemini", "almost out of requests"); !ok || p.Severity != SevWarn {
+	if p, ok := set.Match("antigravity", "almost out of requests"); !ok || p.Severity != SevWarn {
 		t.Fatal("replacement warn pattern")
 	}
-	cfg.Agents["gemini"].Patterns = []config.Pattern{{Re: `(`, Severity: "limit"}}
+	cfg.Agents["antigravity"].Patterns = []config.Pattern{{Re: `(`, Severity: "limit"}}
 	if _, err := Compile(cfg); err == nil {
 		t.Fatal("invalid regex accepted")
 	}

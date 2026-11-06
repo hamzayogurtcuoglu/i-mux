@@ -4,7 +4,6 @@ package session
 // the shapes used by the agents' todo/plan tools:
 //
 //	Claude TodoWrite:  {todos: [{content, status}]}
-//	Gemini write_todos: {todos: [{description, status}]}
 //	Codex update_plan:  {plan: [{step, status}]}
 //
 // It returns nil when no list is present.

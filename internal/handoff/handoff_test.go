@@ -24,7 +24,7 @@ var (
 
 func opts() Options {
 	return Options{
-		From: session.Claude, To: session.Gemini,
+		From: session.Claude, To: session.Antigravity,
 		Now: time.Date(2026, 11, 5, 14, 32, 0, 0, time.UTC), Location: time.UTC,
 		IncludeSourcePath: true, Redact: true,
 		Git: &gitinfo.Info{
@@ -143,7 +143,7 @@ func TestGoldenCompacted(t *testing.T) {
 func TestGoldenChained(t *testing.T) {
 	first := build(t, []*session.Session{shortSession()}, opts()).Text
 	s := &session.Session{
-		Ref: session.Ref{Agent: session.Gemini, ID: "g1", Path: "/home/test/.gemini/tmp/proj/chats/session-x.json", CWD: cwd},
+		Ref: session.Ref{Agent: session.Antigravity, ID: "g1", Path: "/home/test/.gemini/antigravity-cli/brain/g1/.system_generated/logs/transcript_full.jsonl", CWD: cwd},
 		Entries: []session.Entry{
 			{Role: session.RoleUser, Kind: session.KindHandoff, At: at(10), Text: first},
 			asst(11, "Continuing: I added the test in src/auth.test.ts."),
@@ -152,7 +152,7 @@ func TestGoldenChained(t *testing.T) {
 		Chained: session.ParseChained(first),
 	}
 	o := opts()
-	o.From, o.To = session.Gemini, session.Codex
+	o.From, o.To = session.Antigravity, session.Codex
 	second := build(t, []*session.Session{s}, o).Text
 	golden(t, "chained", second)
 	if !strings.Contains(second, "## Original request\nfix the login redirect bug") {
@@ -176,7 +176,7 @@ func TestGoldenChained(t *testing.T) {
 }
 
 func TestGoldenDelta(t *testing.T) {
-	g := &session.Session{Ref: session.Ref{Agent: session.Gemini, ID: "g", CWD: cwd}, Entries: []session.Entry{
+	g := &session.Session{Ref: session.Ref{Agent: session.Antigravity, ID: "g", CWD: cwd}, Entries: []session.Entry{
 		user(30, "rename the helper"), asst(31, "Renamed to parseNext.", tc("replace", map[string]any{"file_path": cwd + "/src/auth.ts"})),
 	}}
 	x := &session.Session{Ref: session.Ref{Agent: session.Codex, ID: "x", CWD: cwd}, Entries: []session.Entry{

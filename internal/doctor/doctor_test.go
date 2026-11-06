@@ -64,14 +64,14 @@ func TestDoctor(t *testing.T) {
 	}
 	bin := filepath.Join(h.Root, "bin")
 	log := filepath.Join(h.Root, "calls")
-	// A claude that is too old and lacks --session-id in its help; a gemini
+	// A claude that is too old and lacks --session-id in its help; a copilot
 	// node script without node anywhere.
 	claudeBin := script(t, bin, "claude", "#!/bin/sh\necho \"$@\" >> "+log+"\ncase \"$1\" in --version) echo 1.0.110;; --help) echo 'usage: claude --resume';; esac\n")
-	geminiBin := script(t, bin, "gemini", "#!/usr/bin/env node\nconsole.log('x')\n")
+	copilotBin := script(t, bin, "copilot", "#!/usr/bin/env node\nconsole.log('x')\n")
 	cfg := config.Default()
 	res := map[session.AgentID]agent.Resolved{
-		"claude": {Agent: "claude", Installed: true, Path: claudeBin, PathEnv: bin, Version: "1.0.110"},
-		"gemini": {Agent: "gemini", Installed: true, Path: geminiBin, PathEnv: bin, Version: "0.31.0"},
+		"claude":  {Agent: "claude", Installed: true, Path: claudeBin, PathEnv: bin, Version: "1.0.110"},
+		"copilot": {Agent: "copilot", Installed: true, Path: copilotBin, PathEnv: bin, Version: "1.0.0"},
 	}
 	o := Options{
 		Cfg: cfg, Tmux: &tmux.Client{Bin: "tmux", Socket: "x", Runner: fakeTmux{"3.2a"}}, Self: claudeBin,
@@ -92,8 +92,9 @@ func TestDoctor(t *testing.T) {
 		{"Claude Code 1.0.110", OK},
 		{"Claude Code 1.0.110 is older than 2.0.0", Warn},
 		{"does not mention --session-id", Warn},
-		{"Gemini CLI needs node", Warn},
-		{"Copilot CLI: not installed (npm i -g @github/copilot)", Info},
+		{"GitHub Copilot CLI needs node", Warn},
+		{"Antigravity CLI: not installed (curl -fsSL https://antigravity.google/cli/install.sh | bash)", Info},
+		{"Codex CLI: not installed (npm i -g @openai/codex)", Info},
 		{"watcher running (pid 4242)", OK},
 		{"other users on this machine (alice)", Warn},
 		{"VS Code", Info},
@@ -158,41 +159,6 @@ func TestCompareVersions(t *testing.T) {
 	for _, c := range cases {
 		if got := compareVersions(c.a, c.b); got != c.want {
 			t.Errorf("compare(%s, %s) = %d, want %d", c.a, c.b, got, c.want)
-		}
-	}
-}
-
-// Gemini CLI set to sign in with a personal Google account gets a warning
-// pointing to Antigravity CLI; an API key setup does not.
-func TestDoctorGeminiPersonalSignIn(t *testing.T) {
-	h := testutil.Isolate(t)
-	i18n.SetLocale("en")
-	if err := os.MkdirAll(h.Imux, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	bin := filepath.Join(h.Root, "bin")
-	gem := script(t, bin, "gemini", "#!/bin/sh\necho 0.67.0\n")
-	o := Options{
-		Cfg: config.Default(), Tmux: &tmux.Client{Bin: "tmux", Socket: "x", Runner: fakeTmux{"3.8"}}, Self: gem,
-		Resolved: map[session.AgentID]agent.Resolved{
-			"gemini": {Agent: "gemini", Installed: true, Path: gem, PathEnv: bin + ":/usr/bin:/bin", Version: "0.67.0"},
-		},
-		Users: func() []string { return nil },
-	}
-	settings := filepath.Join(h.Gemini, "settings.json")
-	for _, c := range []struct {
-		body string
-		warn bool
-	}{
-		{`{"security":{"auth":{"selectedType":"oauth-personal"}}}`, true},
-		{`{"selectedAuthType":"oauth-personal"}`, true},
-		{`{"security":{"auth":{"selectedType":"gemini-api-key"}}}`, false},
-		{`not json`, false},
-	} {
-		testutil.WriteFile(t, settings, []byte(c.body))
-		x := find(Run(context.Background(), o), "Google stopped serving")
-		if (x != nil) != c.warn || (x != nil && (x.Level != Warn || !strings.Contains(x.Msg, "antigravity.google/cli/install.sh"))) {
-			t.Errorf("%s: got %+v", c.body, x)
 		}
 	}
 }

@@ -7,7 +7,6 @@ package doctor
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -87,7 +86,6 @@ type Options struct {
 // templates were verified against; older ones get an "outdated" hint.
 var MinVersions = map[session.AgentID]string{
 	session.Claude: "2.0.0",
-	session.Gemini: "0.30.0",
 	session.Codex:  "0.38.0",
 }
 
@@ -241,39 +239,9 @@ func checkAgents(ctx context.Context, r *Report, o Options) {
 			r.add(Warn, "doctor.agent_node", a.Name, filepath.Dir(x.Path))
 		}
 		checkFlags(ctx, r, o.Cfg, a, x)
-		if a.ID == session.Gemini {
-			checkGeminiAuth(r, o.Cfg)
-		}
 	}
 	if installed == 0 {
 		r.add(Fail, "doctor.no_agents")
-	}
-}
-
-// checkGeminiAuth warns when Gemini CLI is set to sign in with a personal
-// Google account: Google stopped serving those accounts in Gemini CLI on
-// 2026-06-18 ("This client is no longer supported for Gemini Code Assist for
-// individuals"). API keys, Vertex AI and Code Assist Standard/Enterprise
-// still work.
-func checkGeminiAuth(r *Report, cfg *config.Config) {
-	home := session.Env{GeminiHome: cfg.Agent(string(session.Gemini)).Home}.Resolve(session.Gemini)
-	b, err := os.ReadFile(filepath.Join(home, "settings.json"))
-	if err != nil {
-		return
-	}
-	var s struct {
-		Security struct {
-			Auth struct {
-				SelectedType string `json:"selectedType"`
-			} `json:"auth"`
-		} `json:"security"`
-		SelectedAuthType string `json:"selectedAuthType"` // older layout
-	}
-	if json.Unmarshal(b, &s) != nil {
-		return
-	}
-	if s.Security.Auth.SelectedType == "oauth-personal" || s.SelectedAuthType == "oauth-personal" {
-		r.add(Warn, "doctor.gemini_personal", agent.MustGet(session.Antigravity).InstallHint)
 	}
 }
 

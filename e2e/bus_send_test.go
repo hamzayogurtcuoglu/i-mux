@@ -26,19 +26,19 @@ func TestBusExchange(t *testing.T) {
 	h.control("codex", "while :; do printf '\\r%s' \"$(date +%N)\"; sleep 0.1; done\n") // a busy pane
 	a := h.startSession("claude")
 	h.run("claude", 1)
-	b := strings.TrimSpace(h.mustImux("split", "gemini", "-h", "--pane", a))
-	h.run("gemini", 1)
+	b := strings.TrimSpace(h.mustImux("split", "antigravity", "-h", "--pane", a))
+	h.run("antigravity", 1)
 	busy := strings.TrimSpace(h.mustImux("split", "codex", "-v", "--pane", a))
 	h.run("codex", 1)
 	fromA := append(h.inside(a), "IMUX_AGENT=claude")
-	fromB := append(h.inside(b), "IMUX_AGENT=gemini")
+	fromB := append(h.inside(b), "IMUX_AGENT=antigravity")
 
 	msg := "please review src/a.ts\nfocus on the error paths\nthanks"
-	if out, e, err := h.imuxEnv(fromA, "send", "gemini", msg); err != nil || !strings.Contains(out, "sent to "+b) {
+	if out, e, err := h.imuxEnv(fromA, "send", "antigravity", msg); err != nil || !strings.Contains(out, "sent to "+b) {
 		t.Fatalf("send: %v %q %q", err, out, e)
 	}
 	want := "[from claude " + a + "] please review src/a.ts\nfocus on the error paths\nthanks\n"
-	h.waitFor("message at gemini", 5*time.Second, func() bool { return strings.HasPrefix(h.stdinOf("gemini", 1), want) })
+	h.waitFor("message at antigravity", 5*time.Second, func() bool { return strings.HasPrefix(h.stdinOf("antigravity", 1), want) })
 
 	if _, e, err := h.imuxEnv(fromB, "send", "claude", "-"); err == nil {
 		t.Fatalf("empty stdin message accepted: %q", e)
@@ -51,12 +51,12 @@ func TestBusExchange(t *testing.T) {
 		t.Fatalf("send from stdin: %v %s", err, out)
 	}
 	h.waitFor("reply at claude", 5*time.Second, func() bool {
-		return strings.Contains(h.stdinOf("claude", 1), "[from gemini "+b+"] ack: looking at it")
+		return strings.Contains(h.stdinOf("claude", 1), "[from antigravity "+b+"] ack: looking at it")
 	})
 
 	// wait: idle → 0 (with --print), busy → 124.
-	out, _, err := h.imuxEnv(fromA, "wait", "gemini", "--timeout", "10", "--print")
-	if err != nil || !strings.Contains(out, "fake gemini ready") {
+	out, _, err := h.imuxEnv(fromA, "wait", "antigravity", "--timeout", "10", "--print")
+	if err != nil || !strings.Contains(out, "fake antigravity ready") {
 		t.Fatalf("wait idle: %v %q", err, out)
 	}
 	_, _, err = h.imuxEnv(fromA, "wait", busy, "--timeout", "2")
@@ -92,21 +92,21 @@ func TestBusConfirm(t *testing.T) {
 	h := newH(t, "[bus]\nconfirm = true\n")
 	a := h.startSession("claude")
 	h.run("claude", 1)
-	b := strings.TrimSpace(h.mustImux("split", "gemini", "-h", "--pane", a))
-	h.run("gemini", 1)
+	b := strings.TrimSpace(h.mustImux("split", "antigravity", "-h", "--pane", a))
+	h.run("antigravity", 1)
 	c, _ := h.attach(120, 40)
-	out, _, err := h.imuxEnv(append(h.inside(a), "IMUX_AGENT=claude"), "send", "gemini", "run the tests")
+	out, _, err := h.imuxEnv(append(h.inside(a), "IMUX_AGENT=claude"), "send", "antigravity", "run the tests")
 	if err != nil || !strings.Contains(out, "waiting for the user") {
 		t.Fatalf("send: %v %q", err, out)
 	}
-	c.waitScreen(h, "From claude "+a+" to gemini "+b+":", 5*time.Second)
+	c.waitScreen(h, "From claude "+a+" to antigravity "+b+":", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
-	if h.stdinOf("gemini", 1) != "" {
+	if h.stdinOf("antigravity", 1) != "" {
 		t.Fatal("delivered before confirmation")
 	}
 	c.Write("y")
 	h.waitFor("delivery after confirmation", 5*time.Second, func() bool {
-		return strings.Contains(h.stdinOf("gemini", 1), "[from claude "+a+"] run the tests")
+		return strings.Contains(h.stdinOf("antigravity", 1), "[from claude "+a+"] run the tests")
 	})
 	if m, _ := filepath.Glob(filepath.Join(h.Homes.Imux, "bus", "*.txt")); len(m) != 0 {
 		t.Fatalf("parked messages left: %v", m)

@@ -3,7 +3,7 @@
 # not a real agent: "claude" prints a short canned session, writes a matching
 # session file (so imux builds a real handoff from it) and then reports a usage
 # limit; the others print the start of the prompt imux gave them. shoot.sh
-# copies it to <dir>/claude, <dir>/gemini, ...; the agent is the file name.
+# copies it to <dir>/claude, <dir>/agy, ...; the agent is the file name.
 set -u
 agent="${DEMO_AGENT:-$(basename "$0")}"
 

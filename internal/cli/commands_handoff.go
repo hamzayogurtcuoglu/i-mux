@@ -51,7 +51,7 @@ func parseAgentFlag(name, v string) (session.AgentID, error) {
 		return "", nil
 	}
 	if !session.Known(v) {
-		return "", &UsageError{Msg: i18n.T("cli.unknown_agent", name, v, "claude, gemini, copilot, codex")}
+		return "", &UsageError{Msg: i18n.T("cli.unknown_agent", name, v, strings.Join(config.AgentIDs, ", "))}
 	}
 	return session.AgentID(v), nil
 }

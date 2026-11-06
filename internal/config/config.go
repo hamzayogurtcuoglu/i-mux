@@ -17,7 +17,13 @@ import (
 )
 
 // AgentIDs are the agents imux knows, in default order.
-var AgentIDs = []string{"claude", "antigravity", "gemini", "copilot", "codex"}
+var AgentIDs = []string{"claude", "antigravity", "copilot", "codex"}
+
+// RemovedAgents were supported once. A config that still names one loads
+// with a warning instead of an error.
+var RemovedAgents = map[string]string{
+	"gemini": "Gemini CLI support was removed (Google stopped serving personal accounts in it on 2026-06-18); use \"antigravity\"",
+}
 
 // Duration is a time.Duration written as a Go duration string ("2.5s").
 type Duration struct{ time.Duration }
@@ -148,11 +154,6 @@ func defaultAgents() map[string]*Agent {
 			ResumeArgs: []string{"--conversation", "{id}", "-i", "{prompt}"},
 			Resume:     true,
 		},
-		"gemini": {
-			NewArgs:    []string{"-i", "{prompt}"},
-			ResumeArgs: []string{"--resume", "{id}", "-i", "{prompt}"},
-			Resume:     true,
-		},
 		"copilot": {
 			NewArgs:    []string{"-i", "{prompt}"},
 			ResumeArgs: []string{"--resume", "{id}"},
@@ -264,7 +265,11 @@ func Parse(data []byte) (*Config, []string, error) {
 	for _, id := range agentKeys {
 		a, ok := cfg.Agents[id]
 		if !ok {
-			warnings = append(warnings, fmt.Sprintf("unknown agent [agents.%s] ignored", id))
+			if why, removed := RemovedAgents[id]; removed {
+				warnings = append(warnings, fmt.Sprintf("[agents.%s] ignored: %s", id, why))
+			} else {
+				warnings = append(warnings, fmt.Sprintf("unknown agent [agents.%s] ignored", id))
+			}
 			continue
 		}
 		if err := md.PrimitiveDecode(raw.Agents[id], a); err != nil {
@@ -279,6 +284,20 @@ func Parse(data []byte) (*Config, []string, error) {
 	}
 	for _, a := range cfg.Agents {
 		a.normalize()
+	}
+	// Drop removed agents from order and default_agent, with a warning.
+	order := cfg.Order[:0:0]
+	for _, id := range cfg.Order {
+		if why, removed := RemovedAgents[id]; removed {
+			warnings = append(warnings, fmt.Sprintf("order: %q ignored: %s", id, why))
+			continue
+		}
+		order = append(order, id)
+	}
+	cfg.Order = order
+	if why, removed := RemovedAgents[cfg.DefaultAgent]; removed {
+		warnings = append(warnings, fmt.Sprintf("default_agent: %q ignored: %s", cfg.DefaultAgent, why))
+		cfg.DefaultAgent = ""
 	}
 	if err := cfg.validate(data); err != nil {
 		return nil, warnings, err

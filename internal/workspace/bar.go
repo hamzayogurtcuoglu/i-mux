@@ -20,7 +20,7 @@ const (
 )
 
 // shortNames are used when the bar would not fit (Q29).
-var shortNames = map[session.AgentID]string{"claude": "Cl", "antigravity": "Ag", "gemini": "Ge", "copilot": "Cp", "codex": "Cx"}
+var shortNames = map[session.AgentID]string{"claude": "Cl", "antigravity": "Ag", "copilot": "Cp", "codex": "Cx"}
 
 // limitMarkerWidth is the room kept for a "⛔15:00 " marker per agent.
 const limitMarkerWidth = 8
@@ -29,6 +29,31 @@ const limitMarkerWidth = 8
 type BarAgent struct {
 	ID        session.AgentID
 	Installed bool
+}
+
+// AgentRange is the agent-bar range argument of agent id: "imux:<id>", or
+// "imux:<binary>" when that would exceed tmux's 15-byte limit (tmux drops a
+// longer range, so the entry could not be clicked): "imux:agy" for
+// Antigravity. AgentOfRange maps both forms back.
+func AgentRange(id session.AgentID) string {
+	if r := RangePrefix + string(id); len(r) <= MaxRangeBytes {
+		return r
+	}
+	return RangePrefix + agent.MustGet(id).Bin
+}
+
+// AgentOfRange returns the agent an "imux:<x>" range argument names, by id
+// or by binary name.
+func AgentOfRange(x string) (session.AgentID, bool) {
+	if session.Known(x) {
+		return session.AgentID(x), true
+	}
+	for _, a := range agent.All() {
+		if a.Bin == x {
+			return a.ID, true
+		}
+	}
+	return "", false
 }
 
 // AgentBar renders status-format[1] (§9.3): the agent bar for the active
@@ -76,7 +101,7 @@ func barVariant(agents []BarAgent, clickable, withMissing, short bool) (string, 
 				continue
 			}
 			sep()
-			region(RangePrefix+string(a.ID), func() {
+			region(AgentRange(a.ID), func() {
 				b.WriteString("#[dim]")
 				text(" " + name + " " + i18n.T("menu.not_installed") + " ")
 				b.WriteString("#[nodim]")
@@ -85,7 +110,7 @@ func barVariant(agents []BarAgent, clickable, withMissing, short bool) (string, 
 		}
 		sep()
 		id := string(a.ID)
-		region(RangePrefix+id, func() {
+		region(AgentRange(a.ID), func() {
 			// Active pane's agent: reverse video with a ▶ marker.
 			b.WriteString("#{?#{==:#{@imux_agent}," + id + "},#[reverse] ▶ " + name + " #[noreverse], " + name + " }")
 			width += displayWidth(" " + name + " ")

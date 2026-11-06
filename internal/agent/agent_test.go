@@ -70,7 +70,7 @@ func TestRegistry(t *testing.T) {
 	for _, a := range Ordered(cfg) {
 		ids = append(ids, a.ID)
 	}
-	if !reflect.DeepEqual(ids, []session.AgentID{"codex", "claude", "antigravity", "gemini", "copilot"}) {
+	if !reflect.DeepEqual(ids, []session.AgentID{"codex", "claude", "antigravity", "copilot"}) {
 		t.Fatalf("ordered %v", ids)
 	}
 }
@@ -118,19 +118,19 @@ func TestResolveSymlinkKeepsUnresolvedDir(t *testing.T) {
 
 func TestResolveConfigBinWins(t *testing.T) {
 	h := testutil.Isolate(t)
-	onPath := filepath.Join(h.Home, "bin", "gemini")
-	custom := filepath.Join(h.Home, "custom", "my-gemini")
+	onPath := filepath.Join(h.Home, "bin", "agy")
+	custom := filepath.Join(h.Home, "custom", "my-agy")
 	writeExe(t, onPath, "true")
 	writeExe(t, custom, "true")
 	t.Setenv("PATH", filepath.Dir(onPath))
 	cfg := config.Default()
-	cfg.Agent("gemini").Bin = custom
-	r := Resolve(cfg, session.Gemini, nil)
+	cfg.Agent("antigravity").Bin = custom
+	r := Resolve(cfg, session.Antigravity, nil)
 	if r.Path != custom {
 		t.Fatalf("config bin should win: %+v", r)
 	}
-	cfg.Agent("gemini").Bin = filepath.Join(h.Home, "nope")
-	if r := Resolve(cfg, session.Gemini, nil); r.Installed {
+	cfg.Agent("antigravity").Bin = filepath.Join(h.Home, "nope")
+	if r := Resolve(cfg, session.Antigravity, nil); r.Installed {
 		t.Fatal("missing configured bin must not fall back to PATH")
 	}
 }

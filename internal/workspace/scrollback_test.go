@@ -46,7 +46,7 @@ func TestScrollbackSession(t *testing.T) {
 	if !strings.HasSuffix(s.Entries[n-2].Text, "last line on screen") {
 		t.Fatalf("newest chunk %q", s.Entries[n-2].Text)
 	}
-	if empty := ScrollbackSession("gemini", "/x", "\n  \n", testutil.FrozenTime); len(empty.Entries) != 0 {
+	if empty := ScrollbackSession("antigravity", "/x", "\n  \n", testutil.FrozenTime); len(empty.Entries) != 0 {
 		t.Fatalf("blank screen gave entries: %+v", empty.Entries)
 	}
 }

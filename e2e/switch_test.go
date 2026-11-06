@@ -13,22 +13,22 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
-// TestSwitchClaudeToGemini (T2.6): the pane restarts with the target, whose
+// TestSwitchClaudeToAntigravity (T2.6): the pane restarts with the target, whose
 // argv carries the handoff; options and trail follow; the result is shown.
-func TestSwitchClaudeToGemini(t *testing.T) {
+func TestSwitchClaudeToAntigravity(t *testing.T) {
 	h := newH(t, "")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	out := h.mustImux("switch", "gemini", "--pane", pane)
-	if !strings.Contains(out, "Switched to Gemini") {
+	out := h.mustImux("switch", "antigravity", "--pane", pane)
+	if !strings.Contains(out, "Switched to Antigravity") {
 		t.Fatalf("switch output %q", out)
 	}
-	argv := h.run("gemini", 1)
+	argv := h.run("antigravity", 1)
 	if len(argv) != 2 || argv[0] != "-i" {
-		t.Fatalf("gemini argv %q", argv)
+		t.Fatalf("antigravity argv %q", argv)
 	}
 	doc := argv[1]
-	if !strings.HasPrefix(doc, "[i-mux handoff · Claude Code → Gemini CLI · ") {
+	if !strings.HasPrefix(doc, "[i-mux handoff · Claude Code → Antigravity CLI · ") {
 		t.Fatalf("no marker:\n%.300s", doc)
 	}
 	for _, want := range []string{
@@ -42,12 +42,12 @@ func TestSwitchClaudeToGemini(t *testing.T) {
 			t.Errorf("handoff lacks %q", want)
 		}
 	}
-	if got := h.paneOpt(pane, "#{@imux_agent}|#{@imux_label}|#{pane_dead}|#{@imux_lock}"); got != "gemini|Gemini|0|" {
+	if got := h.paneOpt(pane, "#{@imux_agent}|#{@imux_label}|#{pane_dead}|#{@imux_lock}"); got != "antigravity|Antigravity|0|" {
 		t.Fatalf("pane after switch: %q", got)
 	}
 	trail := workspace.ParseTrail(h.paneOpt(pane, "#{@imux_trail}"))
 	if len(trail) != 2 || trail[0].Agent != "claude" || trail[0].End == 0 || trail[0].File == "" ||
-		trail[1].Agent != "gemini" || trail[1].End != 0 || trail[1].Handoff == "" {
+		trail[1].Agent != "antigravity" || trail[1].End != 0 || trail[1].Handoff == "" {
 		t.Fatalf("trail %+v", trail)
 	}
 	fi, err := os.Stat(trail[1].Handoff)
@@ -64,7 +64,7 @@ func TestSwitchClaudeToGemini(t *testing.T) {
 	// The result was shown with display-message.
 	shown := false
 	for _, r := range h.records() {
-		if strings.Contains(strings.Join(r.Args, " "), "display-message -t "+pane+" Switched to Gemini") {
+		if strings.Contains(strings.Join(r.Args, " "), "display-message -t "+pane+" Switched to Antigravity") {
 			shown = true
 		}
 	}
@@ -93,7 +93,7 @@ func TestSwitchClaudeToGemini(t *testing.T) {
 		t.Fatal("switch should fail when the handoff cannot be written")
 	}
 	time.Sleep(200 * time.Millisecond)
-	if got := h.paneOpt(pane, "#{@imux_agent}|#{pane_dead}"); got != "gemini|0" || h.runs("codex") != 0 {
+	if got := h.paneOpt(pane, "#{@imux_agent}|#{pane_dead}"); got != "antigravity|0" || h.runs("codex") != 0 {
 		t.Fatalf("old agent not kept after a failed switch (%q): %s", got, e)
 	}
 }

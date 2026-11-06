@@ -56,9 +56,9 @@ func testWS(t *testing.T) (*WS, *fakeTmux, *testutil.Homes) {
 		Now:  testutil.Clock().Now,
 	}
 	w.SetBins(map[session.AgentID]agent.Resolved{
-		"claude": {Agent: "claude", Installed: true, Path: "/opt/bin/claude", PathEnv: "/opt/bin:/usr/bin"},
-		"gemini": {Agent: "gemini", Installed: true, Path: "/opt/bin/gemini", PathEnv: "/opt/bin:/usr/bin"},
-		"codex":  {Agent: "codex"},
+		"claude":      {Agent: "claude", Installed: true, Path: "/opt/bin/claude", PathEnv: "/opt/bin:/usr/bin"},
+		"antigravity": {Agent: "antigravity", Installed: true, Path: "/opt/bin/agy", PathEnv: "/opt/bin:/usr/bin"},
+		"codex":       {Agent: "codex"},
 	})
 	return w, f, h
 }
@@ -131,16 +131,16 @@ func TestSpecNewResumeAndMissing(t *testing.T) {
 	if !reflect.DeepEqual(s.Args, []string{"--resume", "abc", "delta"}) || te.SessionID != "abc" || !te.Resumed {
 		t.Fatalf("resume: %q %+v", s.Args, te)
 	}
-	s, te, _ = w.Spec(Launch{Agent: "gemini", CWD: h.Project, Prompt: "hand\noff", Handoff: "/h.md"})
+	s, te, _ = w.Spec(Launch{Agent: "antigravity", CWD: h.Project, Prompt: "hand\noff", Handoff: "/h.md"})
 	if !reflect.DeepEqual(s.Args, []string{"-i", "hand\noff"}) || te.SessionID != "" || te.Handoff != "/h.md" {
-		t.Fatalf("gemini: %q %+v", s.Args, te)
+		t.Fatalf("antigravity: %q %+v", s.Args, te)
 	}
 	var ni *NotInstalledError
 	if _, _, err := w.Spec(Launch{Agent: "codex"}); !errors.As(err, &ni) || !strings.Contains(err.Error(), "npm i -g @openai/codex") {
 		t.Fatalf("missing: %v", err)
 	}
 	w.Cfg.Handoff.MaxArgBytes = 10
-	if _, _, err := w.Spec(Launch{Agent: "gemini", Prompt: strings.Repeat("x", 11)}); !errors.Is(err, launch.ErrTooLarge) {
+	if _, _, err := w.Spec(Launch{Agent: "antigravity", Prompt: strings.Repeat("x", 11)}); !errors.Is(err, launch.ErrTooLarge) {
 		t.Fatalf("argv guard: %v", err)
 	}
 }
@@ -157,8 +157,8 @@ func TestLabelAndDefaultAgent(t *testing.T) {
 	if a, err := w.DefaultAgent(); err != nil || a != "claude" {
 		t.Fatalf("default %v %v", a, err)
 	}
-	w.Cfg.Order = []string{"codex", "gemini", "claude", "copilot"}
-	if a, _ := w.DefaultAgent(); a != "gemini" {
+	w.Cfg.Order = []string{"codex", "antigravity", "claude", "copilot"}
+	if a, _ := w.DefaultAgent(); a != "antigravity" {
 		t.Fatalf("first installed in order: %v", a)
 	}
 	w.Cfg.DefaultAgent = "codex"
@@ -218,12 +218,12 @@ func TestStartBatchesOptions(t *testing.T) {
 
 func TestPaneParsing(t *testing.T) {
 	w, f, _ := testWS(t)
-	f.replies["display-message"] = "%3\tgemini\t1762352000123\t/home/test/proj\t/elsewhere\tGemini\t0\tproj-1a2b\t@1\tnode\t\t\t[{\"a\":\"claude\",\"s\":1,\"e\":2},{\"a\":\"gemini\",\"s\":2}]\n"
+	f.replies["display-message"] = "%3\tantigravity\t1762352000123\t/home/test/proj\t/elsewhere\tAntigravity\t0\tproj-1a2b\t@1\tnode\t\t\t[{\"a\":\"claude\",\"s\":1,\"e\":2},{\"a\":\"antigravity\",\"s\":2}]\n"
 	p, err := w.Pane(context.Background(), "%3")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Agent != "gemini" || p.CWD != "/home/test/proj" || p.Start.UnixMilli() != 1762352000123 || len(p.Trail) != 2 || p.Dead {
+	if p.Agent != "antigravity" || p.CWD != "/home/test/proj" || p.Start.UnixMilli() != 1762352000123 || len(p.Trail) != 2 || p.Dead {
 		t.Fatalf("pane %+v", p)
 	}
 	f.replies["display-message"] = "%4\t\t\t\t/elsewhere\t\t1\ts\t@1\tzsh\t\t\t\n"
@@ -239,20 +239,20 @@ func TestPaneParsing(t *testing.T) {
 func TestPasteModeKeepsPromptOutOfArgv(t *testing.T) {
 	w, _, h := testWS(t)
 	w.Cfg.Handoff.Inject = "paste"
-	s, _, err := w.Spec(Launch{Agent: "gemini", CWD: h.Project, Prompt: "the handoff"})
+	s, _, err := w.Spec(Launch{Agent: "antigravity", CWD: h.Project, Prompt: "the handoff"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(s.Args) != 0 {
 		t.Fatalf("paste mode argv %q", s.Args)
 	}
-	if !w.pasteMode(Launch{Agent: "gemini", Prompt: "x"}) || w.pasteMode(Launch{Agent: "gemini"}) {
+	if !w.pasteMode(Launch{Agent: "antigravity", Prompt: "x"}) || w.pasteMode(Launch{Agent: "antigravity"}) {
 		t.Fatal("pasteMode")
 	}
 	// An agent whose template has no {prompt} slot always gets a paste.
 	w.Cfg.Handoff.Inject = "argv"
-	w.Cfg.Agents["gemini"].NewArgs = []string{"--interactive"}
-	if !w.pasteMode(Launch{Agent: "gemini", Prompt: "x"}) {
+	w.Cfg.Agents["antigravity"].NewArgs = []string{"--interactive"}
+	if !w.pasteMode(Launch{Agent: "antigravity", Prompt: "x"}) {
 		t.Fatal("no prompt slot should paste")
 	}
 }

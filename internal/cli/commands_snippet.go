@@ -10,7 +10,7 @@ import (
 func init() {
 	register(&command{
 		Name:    "snippet",
-		Args:    "[claude|gemini|agents]",
+		Args:    "[claude|antigravity|agents]",
 		Summary: "cmd.snippet",
 		Run:     runSnippet,
 	})
@@ -21,7 +21,7 @@ func init() {
 func runSnippet(e *Env, args []string) error {
 	target := "agents"
 	if len(args) > 1 {
-		return &UsageError{Msg: i18n.T("cli.usage", "snippet [claude|gemini|agents]")}
+		return &UsageError{Msg: i18n.T("cli.usage", "snippet [claude|antigravity|agents]")}
 	}
 	if len(args) == 1 {
 		target = args[0]

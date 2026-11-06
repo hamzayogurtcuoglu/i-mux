@@ -9,11 +9,11 @@ import (
 // Env tells providers where the agents keep their stores. Empty fields use
 // each agent's default resolution (environment variables, then ~/.<agent>).
 type Env struct {
-	Home        string // user home; "" = $HOME
-	ClaudeHome  string // "" = $CLAUDE_CONFIG_DIR or ~/.claude
-	GeminiHome  string // "" = $GEMINI_CLI_HOME/.gemini or ~/.gemini
-	CopilotHome string // "" = $COPILOT_HOME or ~/.copilot
-	CodexHome   string // "" = $CODEX_HOME or ~/.codex
+	Home            string // user home; "" = $HOME
+	ClaudeHome      string // "" = $CLAUDE_CONFIG_DIR or ~/.claude
+	AntigravityHome string // "" = ~/.gemini/antigravity-cli
+	CopilotHome     string // "" = $COPILOT_HOME or ~/.copilot
+	CodexHome       string // "" = $CODEX_HOME or ~/.codex
 }
 
 // UserHome returns Env.Home or $HOME.
@@ -40,14 +40,11 @@ func (e Env) Resolve(id AgentID) string {
 			return v
 		}
 		return filepath.Join(home, ".claude")
-	case Gemini:
-		if e.GeminiHome != "" {
-			return e.GeminiHome
+	case Antigravity:
+		if e.AntigravityHome != "" {
+			return e.AntigravityHome
 		}
-		if v := os.Getenv("GEMINI_CLI_HOME"); v != "" {
-			return filepath.Join(v, ".gemini")
-		}
-		return filepath.Join(home, ".gemini")
+		return filepath.Join(home, ".gemini", "antigravity-cli")
 	case Copilot:
 		if e.CopilotHome != "" {
 			return e.CopilotHome

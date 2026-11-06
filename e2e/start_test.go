@@ -13,7 +13,7 @@ import (
 
 // TestStartAttachLs (T2.4): `imux claude` creates the project's session with
 // the pane options set and a pre-assigned Claude session id; a second `imux`
-// attaches to it; inside the workspace `imux gemini` opens a new window.
+// attaches to it; inside the workspace `imux antigravity` opens a new window.
 func TestStartAttachLs(t *testing.T) {
 	h := newH(t, "")
 	before := time.Now().UnixMilli()
@@ -65,25 +65,25 @@ func TestStartAttachLs(t *testing.T) {
 	}
 	_ = c
 
-	// Inside imux: `imux gemini` opens a new window with gemini.
+	// Inside imux: `imux antigravity` opens a new window with antigravity.
 	sock := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", pane, "#{socket_path}"))
 	inside := []string{"TMUX=" + sock + ",1,0", "TMUX_PANE=" + pane}
-	if o, e, err := h.imuxEnv(inside, "gemini"); err != nil {
-		t.Fatalf("imux gemini inside: %v\n%s%s", err, o, e)
+	if o, e, err := h.imuxEnv(inside, "antigravity"); err != nil {
+		t.Fatalf("imux antigravity inside: %v\n%s%s", err, o, e)
 	}
-	h.run("gemini", 1)
+	h.run("antigravity", 1)
 	wins := strings.Fields(h.mustTmux("list-windows", "-t", "="+name, "-F", "#{window_index}:#{pane_id}"))
 	if len(wins) != 2 {
 		t.Fatalf("windows %q, want 2", wins)
 	}
 	gp := strings.SplitN(wins[1], ":", 2)[1]
-	if got := h.paneOpt(gp, "#{@imux_agent}|#{@imux_label}"); got != "gemini|Gemini" {
+	if got := h.paneOpt(gp, "#{@imux_agent}|#{@imux_label}"); got != "antigravity|Antigravity" {
 		t.Fatalf("new window pane: %q", got)
 	}
 
 	// imux ls shows both panes.
 	ls := h.mustImux("ls")
-	for _, want := range []string{name, pane, gp, "claude", "gemini", "attached"} {
+	for _, want := range []string{name, pane, gp, "claude", "antigravity", "attached"} {
 		if !strings.Contains(ls, want) {
 			t.Errorf("ls lacks %q:\n%s", want, ls)
 		}

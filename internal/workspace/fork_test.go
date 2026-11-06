@@ -29,7 +29,7 @@ func TestPostResumeDiscovery(t *testing.T) {
 	orig := "aaaaaaaa-4444-4000-8000-000000000001"
 	origPath := write(orig, now) // appended to during the run
 	run := TrailEntry{Agent: "claude", Start: start.UnixMilli(), SessionID: orig, Resumed: true}
-	p := &Pane{ID: "%1", Agent: "claude", CWD: h.Project, Trail: Trail{{Agent: "gemini", Start: start.Add(-time.Hour).UnixMilli(), End: start.UnixMilli()}, run}}
+	p := &Pane{ID: "%1", Agent: "claude", CWD: h.Project, Trail: Trail{{Agent: "antigravity", Start: start.Add(-time.Hour).UnixMilli(), End: start.UnixMilli()}, run}}
 	ctx := context.Background()
 
 	// Appended: the resumed session itself.

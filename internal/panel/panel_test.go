@@ -11,38 +11,32 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/session/gemini"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-func geminiChat(t *testing.T, h *testutil.Homes, project, id string, mtime time.Time, msgs int) {
+// agyChat writes an Antigravity conversation of project with msgs replies of
+// 100 in / 10 out / 5 cache-read tokens each, last written at mtime.
+func agyChat(t *testing.T, h *testutil.Homes, project, id string, mtime time.Time, msgs int) {
 	t.Helper()
-	ts := mtime.UTC().Format(time.RFC3339)
-	body := fmt.Sprintf(`{"sessionId":%q,"startTime":%q,"lastUpdated":%q,"messages":[`, id, ts, ts)
+	var turns []testutil.AgyTurn
 	for i := 0; i < msgs; i++ {
-		if i > 0 {
-			body += ","
-		}
-		body += fmt.Sprintf(`{"id":"u%d","timestamp":%q,"type":"user","content":"q"},{"id":"g%d","timestamp":%q,"type":"gemini","content":"a","tokens":{"input":100,"output":10,"cached":5}}`, i, ts, i, ts)
+		turns = append(turns, testutil.AgyTurn{At: mtime, User: fmt.Sprintf("q%d", i), Reply: "a", Input: 100, Output: 10, Cache: 5})
 	}
-	body += "]}"
-	p := filepath.Join(h.Gemini, "tmp", gemini.ProjectHash(project), "chats", "session-"+mtime.UTC().Format("2006-01-02T15-04")+"-"+id[:8]+".json")
-	testutil.WriteFile(t, p, []byte(body))
-	testutil.Touch(t, p, mtime)
+	testutil.WriteAntigravity(t, h, id, project, mtime, turns...)
 }
 
-func TestGeminiToday(t *testing.T) {
+func TestAntigravityToday(t *testing.T) {
 	h := testutil.Isolate(t)
 	loc := time.Local
 	time.Local = time.UTC
 	t.Cleanup(func() { time.Local = loc })
 	now := testutil.FrozenTime // 14:32 UTC
-	geminiChat(t, h, h.Project, "aaaaaaaa-1", now.Add(-time.Hour), 2)
-	geminiChat(t, h, "/home/test/other", "bbbbbbbb-2", now.Add(-10*time.Hour), 3) // today, other project
-	geminiChat(t, h, h.Project, "cccccccc-3", now.Add(-20*time.Hour), 7)          // yesterday
-	d := GeminiToday(context.Background(), sources.New(config.Default()), now)
+	agyChat(t, h, h.Project, "aaaaaaaa-1", now.Add(-time.Hour), 2)
+	agyChat(t, h, "/home/test/other", "bbbbbbbb-2", now.Add(-10*time.Hour), 3) // today, other project
+	agyChat(t, h, h.Project, "cccccccc-3", now.Add(-20*time.Hour), 7)          // yesterday
+	d := AntigravityToday(context.Background(), sources.New(config.Default()), now)
 	if d.Chats != 2 || d.Requests != 5 || d.Input != 500 || d.Output != 50 || d.CacheRead != 25 {
 		t.Fatalf("today %+v", d)
 	}
@@ -108,7 +102,7 @@ func TestReportTableAndJSON(t *testing.T) {
 	time.Local = time.UTC
 	t.Cleanup(func() { time.Local = loc })
 	now := testutil.FrozenTime
-	geminiChat(t, h, h.Project, "aaaaaaaa-1", now.Add(-time.Hour), 2)
+	agyChat(t, h, h.Project, "aaaaaaaa-1", now.Add(-time.Hour), 2)
 	reset := now.Add(28 * time.Minute)
 	st := &state.State{Limits: map[string]*state.Limit{
 		"claude": {At: now.Add(-12 * time.Minute), Text: "5-hour limit reached ∙ resets 3pm", ResetAt: reset, ExpiresAt: reset, Source: "screen", Pane: "%1", Severity: "limit"},
@@ -123,10 +117,9 @@ func TestReportTableAndJSON(t *testing.T) {
 	out := b.String()
 	for _, want := range []string{
 		"AGENT", "Claude", "⛔ limited until 15:00", `"5-hour limit reached ∙ resets 3pm" (seen 12 min ago)`,
-		"Gemini", "● ok", "today: 2 requests · 200 in / 20 out · 10 cache read",
+		"Antigravity", "● ok", "today: 2 requests · 200 in / 20 out · 10 cache read",
 		"Copilot", "not installed", "this month: 0 premium requests",
 		"Codex", "◐ approaching a limit", "rate limits: n/a (update Codex)",
-		"Antigravity", "quota: run /usage in agy",
 		"CodexBar (brew install --cask codexbar)",
 	} {
 		if !strings.Contains(out, want) {
@@ -153,9 +146,9 @@ func TestReportTableAndJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(b.String()), &back); err != nil {
 		t.Fatal(err)
 	}
-	if len(back.Agents) != 5 || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
-		back.Agents[1].Agent != "antigravity" || back.Agents[1].Usage.Window != "in-cli" ||
-		back.Agents[2].Usage.Window != "today" || back.Agents[2].Usage.Replies != 2 || back.Agents[4].Status != "warn" {
+	if len(back.Agents) != 4 || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
+		back.Agents[1].Agent != "antigravity" || back.Agents[1].Usage.Window != "today" || back.Agents[1].Usage.Replies != 2 ||
+		back.Agents[3].Status != "warn" {
 		t.Fatalf("json %+v\n%s", back, b.String())
 	}
 	if short(812) != "812" || short(34500) != "34.5K" || short(2_000_000) != "2M" {

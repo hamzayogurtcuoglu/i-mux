@@ -19,7 +19,7 @@ import (
 func TestSessionPicker(t *testing.T) {
 	h := newH(t, "")
 	now := time.Now()
-	agents := []string{"claude", "gemini", "copilot", "codex"}
+	agents := []string{"claude", "antigravity", "copilot", "codex"}
 	ids := map[string]string{}
 	for i := 0; i < 50; i++ {
 		a := agents[i%4]
@@ -35,7 +35,7 @@ func TestSessionPicker(t *testing.T) {
 	h.mustImux("pick", "--pane", pane)
 	c.waitScreen(h, "Sessions · ", 5*time.Second)
 	c.waitScreen(h, "synthetic claude task 00", 2*time.Second)
-	c.waitScreen(h, "synthetic gemini task 01", 2*time.Second)
+	c.waitScreen(h, "synthetic antigravity task 01", 2*time.Second)
 	c.waitScreen(h, "More…", 2*time.Second)
 	mark := c.Mark()
 	c.Write("m")
@@ -46,10 +46,10 @@ func TestSessionPicker(t *testing.T) {
 	c.waitScreenAfter(h, mark, "(with context)", 5*time.Second)
 	c.Write("q")
 
-	// Continue a picked Codex conversation in Gemini, with context from it.
-	h.mustImux("switch", "gemini", "--pane", pane, "--from-session", "codex:"+ids["codex"])
-	argv := h.run("gemini", 1)
-	if len(argv) != 2 || !strings.HasPrefix(argv[1], "[i-mux handoff · Codex CLI → Gemini CLI") ||
+	// Continue a picked Codex conversation in Antigravity, with context from it.
+	h.mustImux("switch", "antigravity", "--pane", pane, "--from-session", "codex:"+ids["codex"])
+	argv := h.run("antigravity", 1)
+	if len(argv) != 2 || !strings.HasPrefix(argv[1], "[i-mux handoff · Codex CLI → Antigravity CLI") ||
 		!strings.Contains(argv[1], "synthetic codex task 03") || strings.Contains(argv[1], "fake claude request") {
 		t.Fatalf("handoff not built from the picked conversation:\n%.600s", strings.Join(argv, " "))
 	}
@@ -63,9 +63,9 @@ func TestSessionPicker(t *testing.T) {
 		t.Fatalf("trail after resume %+v", l)
 	}
 	// "… in a new pane": a split continues the picked Claude conversation.
-	np := strings.TrimSpace(h.mustImux("split", "gemini", "-h", "--pane", pane, "--from-session", "claude:"+ids["claude"]))
-	argv = h.run("gemini", 2)
-	if !strings.Contains(strings.Join(argv, " "), "synthetic claude task 00") || h.paneOpt(np, "#{@imux_agent}") != "gemini" {
+	np := strings.TrimSpace(h.mustImux("split", "antigravity", "-h", "--pane", pane, "--from-session", "claude:"+ids["claude"]))
+	argv = h.run("antigravity", 2)
+	if !strings.Contains(strings.Join(argv, " "), "synthetic claude task 00") || h.paneOpt(np, "#{@imux_agent}") != "antigravity" {
 		t.Fatalf("split from session: pane %s argv %.300q", np, argv)
 	}
 

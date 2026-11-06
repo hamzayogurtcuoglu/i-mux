@@ -19,8 +19,8 @@ func TestNoResidentProcesses(t *testing.T) {
 	h := newH(t, "")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	h.mustImux("split", "gemini", "--pane", pane)
-	h.run("gemini", 1)
+	h.mustImux("split", "antigravity", "--pane", pane)
+	h.run("antigravity", 1)
 	time.Sleep(300 * time.Millisecond)
 	// The watcher is the only resident imux process (§2); no __exec stays.
 	// ps, not pgrep -a: on macOS -a means "include ancestors".
@@ -52,8 +52,8 @@ func TestSwitchLatencyLargeSession(t *testing.T) {
 	}
 	f.Close()
 	start := time.Now()
-	h.mustImux("switch", "gemini", "--pane", pane)
-	argv := h.run("gemini", 1)
+	h.mustImux("switch", "antigravity", "--pane", pane)
+	argv := h.run("antigravity", 1)
 	d := time.Since(start)
 	t.Logf("switch from a 64 MB session: %v, handoff %d bytes", d, len(argv[len(argv)-1]))
 	if d > 1500*time.Millisecond {
@@ -82,10 +82,10 @@ func TestMenuItemsByKey(t *testing.T) {
 	c.Write("q")
 	time.Sleep(100 * time.Millisecond)
 
-	// New pane → Gemini (uppercase mnemonic).
+	// New pane → Antigravity (uppercase mnemonic).
 	open()
-	c.Write("G")
-	h.run("gemini", 1)
+	c.Write("A")
+	h.run("antigravity", 1)
 	h.waitFor("two panes", 5*time.Second, func() bool {
 		return strings.Count(h.mustTmux("list-panes", "-t", pane, "-F", "#{pane_id}"), "%") == 2
 	})

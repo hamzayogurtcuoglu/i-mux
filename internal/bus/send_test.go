@@ -28,11 +28,11 @@ func (f *fakeTmux) has(sub string) bool {
 
 func TestSendGuards(t *testing.T) {
 	now := testutil.FrozenTime
-	f := &fakeTmux{panes: row("%1", "claude", "proj", false, now) + row("%2", "gemini", "proj", false, now)}
+	f := &fakeTmux{panes: row("%1", "claude", "proj", false, now) + row("%2", "antigravity", "proj", false, now)}
 	b, _ := newBus(t, f)
 	b.W.Cfg.Bus.RatePerMinute = 2
 	ctx := context.Background()
-	req := SendReq{From: "%1", FromAgent: "claude", Target: "gemini", Msg: "please review\nsrc/a.ts"}
+	req := SendReq{From: "%1", FromAgent: "claude", Target: "antigravity", Msg: "please review\nsrc/a.ts"}
 	res, err := b.Send(ctx, req)
 	if err != nil || res.Pane != "%2" {
 		t.Fatalf("send: %+v %v", res, err)
@@ -70,7 +70,7 @@ func TestSendGuards(t *testing.T) {
 
 func TestSendConfirmAndDeliver(t *testing.T) {
 	now := testutil.FrozenTime
-	f := &fakeTmux{panes: row("%1", "claude", "proj", false, now) + row("%2", "gemini", "proj", false, now)}
+	f := &fakeTmux{panes: row("%1", "claude", "proj", false, now) + row("%2", "antigravity", "proj", false, now)}
 	b, _ := newBus(t, f)
 	b.W.Cfg.Bus.Confirm = true
 	ctx := context.Background()
@@ -78,7 +78,7 @@ func TestSendConfirmAndDeliver(t *testing.T) {
 	if err != nil || res.Pending == "" {
 		t.Fatalf("confirm: %+v %v", res, err)
 	}
-	if f.has("paste-buffer") || !f.has("display-menu") || !f.has("From claude %1 to gemini %2:") {
+	if f.has("paste-buffer") || !f.has("display-menu") || !f.has("From claude %1 to antigravity %2:") {
 		t.Fatalf("confirm should ask, not paste: %q", f.calls)
 	}
 	b2, err := os.ReadFile(res.Pending)

@@ -17,12 +17,12 @@ func TestDoctor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("doctor: %v\n%s%s", err, out, errOut)
 	}
-	for _, want := range []string{"✓ tmux ", "Claude Code 9.9.9-fake", "Gemini CLI 9.9.9-fake", "VS Code", "menu: prefix a"} {
+	for _, want := range []string{"✓ tmux ", "Claude Code 9.9.9-fake", "Antigravity CLI 9.9.9-fake", "VS Code", "menu: prefix a"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("doctor output lacks %q:\n%s", want, out)
 		}
 	}
-	for _, a := range []string{"claude", "gemini", "copilot", "codex"} {
+	for _, a := range []string{"claude", "antigravity", "copilot", "codex"} {
 		if h.runs(a) != 0 {
 			t.Fatalf("doctor started %s", a)
 		}

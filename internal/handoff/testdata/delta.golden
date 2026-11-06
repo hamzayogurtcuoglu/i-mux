@@ -1,6 +1,6 @@
 [i-mux handoff · Codex CLI → Claude Code · 2026-11-05 14:32]
 
-Welcome back. While you were away the user continued in Gemini CLI, then Codex CLI; here is what happened there.
+Welcome back. While you were away the user continued in Antigravity CLI, then Codex CLI; here is what happened there.
 - Files may have changed since; re-read a file before editing it.
 - Tool names in the record belong to the other agent. Use your own tools.
 - Reply in the language the user writes in.
@@ -18,7 +18,7 @@ git diff --stat:
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 ## Conversation (while you were away, oldest first)
-*(in Gemini CLI)*
+*(in Antigravity CLI)*
 **User:** rename the helper
 **Assistant:** Renamed to parseNext.
   · edited src/auth.ts

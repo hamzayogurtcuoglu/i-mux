@@ -16,20 +16,20 @@ func TestPaneMenu(t *testing.T) {
 	h := newH(t, "[agents.copilot]\nbin = \"/nonexistent/copilot\"\n")
 	pane := h.startSession("claude")
 	h.run("claude", 1)
-	second := strings.TrimSpace(h.mustImux("split", "gemini", "-h", "--pane", pane))
-	h.run("gemini", 1)
+	second := strings.TrimSpace(h.mustImux("split", "antigravity", "-h", "--pane", pane))
+	h.run("antigravity", 1)
 	c, client := h.attach(120, 40)
 
 	h.mustImux("__menu", "--pane", second, "--client", client)
 	c.waitScreen(h, "Switch to Claude (with context)", 5*time.Second)
-	for _, want := range []string{"i-mux · Gemini", "Switch to Codex (with context)", "Copilot (with context) (not installed)", "Sessions…", "Close pane"} {
+	for _, want := range []string{"i-mux · Antigravity", "Switch to Codex (with context)", "Copilot (with context) (not installed)", "Sessions…", "Close pane"} {
 		c.waitScreen(h, want, 2*time.Second)
 	}
 	var menus int
 	for _, r := range h.records() {
 		if slices.Contains(r.Args, "display-menu") {
 			menus++
-			if !strings.Contains(strings.Join(r.Args, " "), "-c "+client+" -t "+second+" -T i-mux · Gemini -x C -y C") {
+			if !strings.Contains(strings.Join(r.Args, " "), "-c "+client+" -t "+second+" -T i-mux · Antigravity -x C -y C") {
 				t.Errorf("display-menu args %q", r.Args)
 			}
 		}

@@ -29,11 +29,12 @@ func StartOfDay(t time.Time) time.Time {
 	return time.Date(l.Year(), l.Month(), l.Day(), 0, 0, 0, 0, time.Local)
 }
 
-// GeminiToday sums requests (Gemini messages) and tokens of every chat, in
-// any project, modified today in the local time zone.
-func GeminiToday(ctx context.Context, f *sources.Finder, now time.Time) Day {
+// AntigravityToday sums requests (model replies) and tokens of every
+// Antigravity conversation, in any project, modified today in the local time
+// zone.
+func AntigravityToday(ctx context.Context, f *sources.Finder, now time.Time) Day {
 	d := Day{Date: StartOfDay(now)}
-	refs := f.Find(ctx, []session.AgentID{session.Gemini}, session.Query{Since: d.Date, Limit: maxSessions})
+	refs := f.Find(ctx, []session.AgentID{session.Antigravity}, session.Query{Since: d.Date, Limit: maxSessions})
 	for _, r := range refs {
 		if r.UpdatedAt.Before(d.Date) {
 			continue

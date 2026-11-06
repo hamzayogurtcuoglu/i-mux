@@ -1,3 +1,0 @@
-#!/bin/sh
-# Fake gemini CLI for e2e tests (see fake.sh).
-FAKE_AGENT=gemini exec /bin/sh "$(dirname "$0")/fake.sh" "$@"

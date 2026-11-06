@@ -1,9 +1,10 @@
 // Package testutil provides isolated homes, fake agent stores and a frozen
 // clock for tests. Tests must never read the developer's real ~/.claude,
-// ~/.gemini, ~/.copilot, ~/.codex or ~/.imux.
+// ~/.gemini/antigravity-cli, ~/.copilot, ~/.codex or ~/.imux.
 package testutil
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,14 +18,14 @@ var FrozenTime = time.Date(2026, 11, 5, 14, 32, 0, 0, time.UTC)
 
 // Homes are the temp directories a test runs with.
 type Homes struct {
-	Root    string // temp root
-	Home    string // $HOME
-	Imux    string // $IMUX_HOME
-	Claude  string // $CLAUDE_CONFIG_DIR
-	Gemini  string // ~/.gemini
-	Copilot string // $COPILOT_HOME
-	Codex   string // $CODEX_HOME
-	Project string // a project directory to use as cwd
+	Root        string // temp root
+	Home        string // $HOME
+	Imux        string // $IMUX_HOME
+	Claude      string // $CLAUDE_CONFIG_DIR
+	Antigravity string // ~/.gemini/antigravity-cli
+	Copilot     string // $COPILOT_HOME
+	Codex       string // $CODEX_HOME
+	Project     string // a project directory to use as cwd
 }
 
 // Isolate points HOME, IMUX_HOME and every agent home at fresh temp dirs and
@@ -44,13 +45,13 @@ func Isolate(t testing.TB) *Homes {
 	}
 	h.Imux = filepath.Join(h.Home, ".imux")
 	h.Claude = filepath.Join(h.Home, ".claude")
-	h.Gemini = filepath.Join(h.Home, ".gemini")
+	h.Antigravity = filepath.Join(h.Home, ".gemini", "antigravity-cli")
 	h.Copilot = filepath.Join(h.Home, ".copilot")
 	h.Codex = filepath.Join(h.Home, ".codex")
 	for _, d := range []string{
 		h.Home, h.Project,
 		filepath.Join(h.Claude, "projects"),
-		filepath.Join(h.Gemini, "tmp"),
+		filepath.Join(h.Antigravity, "brain"),
 		filepath.Join(h.Copilot, "session-state"),
 		filepath.Join(h.Codex, "sessions"),
 	} {
@@ -108,4 +109,48 @@ func ModuleRoot(t testing.TB) string {
 		}
 		dir = parent
 	}
+}
+
+// AgyTurn is one request and reply of a synthetic Antigravity conversation.
+type AgyTurn struct {
+	At           time.Time
+	User, Reply  string
+	Input, Cache int64 // tokens of the reply
+	Output       int64
+}
+
+// WriteAntigravity writes a synthetic Antigravity CLI conversation in its
+// real layout: brain/<id>/.system_generated/logs/transcript_full.jsonl, plus
+// one history.jsonl line per request naming cwd (how imux finds the
+// directory). The transcript's mtime is set to mtime. It returns the path.
+func WriteAntigravity(t testing.TB, h *Homes, id, cwd string, mtime time.Time, turns ...AgyTurn) string {
+	t.Helper()
+	var tr, hist []byte
+	for i, turn := range turns {
+		at := turn.At.UTC().Format(time.RFC3339)
+		user, _ := json.Marshal(map[string]any{
+			"step_index": 2 * i, "source": "USER_EXPLICIT", "type": "USER_INPUT", "status": "DONE", "created_at": at,
+			"content": "<USER_REQUEST>\n" + turn.User + "\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: " + at + ".\n</ADDITIONAL_METADATA>",
+		})
+		reply, _ := json.Marshal(map[string]any{
+			"step_index": 2*i + 1, "source": "MODEL", "type": "PLANNER_RESPONSE", "status": "DONE", "created_at": at,
+			"content": turn.Reply, "input_tokens": turn.Input, "cache_read_tokens": turn.Cache, "output_tokens": turn.Output,
+		})
+		tr = append(append(append(append(tr, user...), '\n'), reply...), '\n')
+		h, _ := json.Marshal(map[string]any{"display": turn.User, "timestamp": turn.At.UnixMilli(), "workspace": cwd})
+		hist = append(append(hist, h...), '\n')
+	}
+	p := filepath.Join(h.Antigravity, "brain", id, ".system_generated", "logs", "transcript_full.jsonl")
+	WriteFile(t, p, tr)
+	Touch(t, p, mtime)
+	hp := filepath.Join(h.Antigravity, "history.jsonl")
+	f, err := os.OpenFile(hp, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if _, err := f.Write(hist); err != nil {
+		t.Fatal(err)
+	}
+	return p
 }

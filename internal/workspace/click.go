@@ -35,10 +35,10 @@ func (w *WS) Classify(rng string, p *Pane) (ClickAction, session.AgentID) {
 	case "sessions":
 		return ClickSessions, ""
 	}
-	if !session.Known(x) {
+	id, ok := AgentOfRange(x)
+	if !ok {
 		return ClickNone, ""
 	}
-	id := session.AgentID(x)
 	cur := p.Agent
 	if p.Dead {
 		cur = ""

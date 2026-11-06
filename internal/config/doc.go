@@ -63,7 +63,7 @@ func Doc() string {
 			comment = nil
 		}
 	}
-	b.WriteString("\nAgent ids are `claude`, `gemini`, `copilot` and `codex`. Launch templates use the placeholders\n")
+	b.WriteString("\nAgent ids are `claude`, `antigravity`, `copilot` and `codex`. Launch templates use the placeholders\n")
 	b.WriteString("`{prompt}` (the handoff, at most once), `{id}` (the session to resume) and `{uuid}` (a new id).\n")
 	b.WriteString("A placeholder with an empty value is dropped together with the flag before it.\n\n")
 	b.WriteString("## The default file\n\n```toml\n")

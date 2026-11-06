@@ -32,7 +32,7 @@ func TestReasonFromSessionError(t *testing.T) {
 `
 	testutil.WriteFile(t, p, []byte(lines))
 	pane := &Pane{ID: "%1", Agent: "claude", CWD: h.Project, Trail: Trail{{Agent: "claude", Start: testutil.FrozenTime.Add(-time.Hour).UnixMilli(), SessionID: id}}}
-	res, err := w.BuildHandoff(context.Background(), f, HandoffReq{Pane: pane, All: []*Pane{pane}, To: "gemini"})
+	res, err := w.BuildHandoff(context.Background(), f, HandoffReq{Pane: pane, All: []*Pane{pane}, To: "antigravity"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestReasonFromSessionError(t *testing.T) {
 		t.Fatalf("reason line missing:\n%.600s", res.Doc.Text)
 	}
 	// An explicit manual reason wins.
-	res, _ = w.BuildHandoff(context.Background(), f, HandoffReq{Pane: pane, All: []*Pane{pane}, To: "gemini", Reason: &handoff.Reason{}})
+	res, _ = w.BuildHandoff(context.Background(), f, HandoffReq{Pane: pane, All: []*Pane{pane}, To: "antigravity", Reason: &handoff.Reason{}})
 	if !strings.Contains(res.Doc.Text, "switched to you manually") {
 		t.Fatal("explicit manual reason ignored")
 	}
@@ -48,7 +48,7 @@ func TestReasonFromSessionError(t *testing.T) {
 	lines = strings.Replace(lines, "Claude AI usage limit reached|"+itoa(int(reset.Unix())), "Rate limit reached", 1)
 	testutil.WriteFile(t, p, []byte(lines))
 	w.st = &state.State{Limits: map[string]*state.Limit{"claude": {At: testutil.FrozenTime, ResetAt: reset.Add(time.Hour), ExpiresAt: reset.Add(time.Hour), Severity: "limit"}}}
-	res, _ = w.BuildHandoff(context.Background(), f, HandoffReq{Pane: pane, All: []*Pane{pane}, To: "gemini"})
+	res, _ = w.BuildHandoff(context.Background(), f, HandoffReq{Pane: pane, All: []*Pane{pane}, To: "antigravity"})
 	if !strings.Contains(res.Doc.Text, "hit its usage limit (resets 18:00)") {
 		t.Fatalf("reset from state missing:\n%.600s", res.Doc.Text)
 	}
