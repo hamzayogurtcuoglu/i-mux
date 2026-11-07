@@ -648,6 +648,15 @@ projects", agent menu).
   - AC: real-client tests: right-click → Rename names the pane; right-click → Close removes it;
     README.
 
+## M18: Plain terminals (added 2026-11-07)
+
+User request: the + menus should offer a plain shell too (ARCHITECTURE §9.3, plain terminals).
+
+- [ ] **T18.1 Terminal in the menus** · S
+  - AC: split and tab menus end with Terminal (shell); `imux split shell [-h|-v]` and
+    `imux tab shell` open the shell in the project folder with a sidebar for a new tab; unit
+    tests for the menus; an e2e test opens a shell tab and a shell split from the menus.
+
 ---
 
 ## Testing strategy

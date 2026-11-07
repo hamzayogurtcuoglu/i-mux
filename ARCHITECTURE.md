@@ -1095,6 +1095,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   project, right-click any) → "Close project…" → confirm ("stops its N agents; their
   conversations stay in History"). A client showing it is switched to the most recent other
   project first; without one it detaches.
+- **Plain terminals** (v0.12): every "which agent?" menu (the Agents **+**, `prefix v` / `prefix -`,
+  the tab bar's **+**, `prefix c`) ends with **Terminal (shell)**: a pane or tab with the user's
+  shell in the project folder, no agent (`imux split shell`, `imux tab shell`). The sidebar lists it
+  as "Terminal". Shell panes are not part of snapshots.
 - **Agent menu** (v0.11): a right-click on an agent row, or a click on the agent already selected,
   opens its menu: Go to it, Rename… (a `command-prompt` filled with the current name; empty
   clears it, the agent's own name shows again), Close agent… (confirm: "its conversation stays in
