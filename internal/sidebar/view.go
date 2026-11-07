@@ -22,9 +22,9 @@ const (
 	OptView      = "@imux_view"
 )
 
-// railW is the activity rail's width: an emoji (2 columns) with room
-// around it, and a short label under it.
-const railW = 6
+// railW is the activity rail's width: an icon with room around it and a
+// short label under it (6 columns), then the separator line.
+const railW = 7
 
 // railTall is the height from which the rail shows labels.
 const railTall = 26
@@ -321,17 +321,35 @@ type railItem struct {
 	action Action
 }
 
+// Icon themes of the rail.
+const (
+	IconsNerd  = "nerd"  // the editor's icons (codicons) from a Nerd Font
+	IconsEmoji = "emoji" // colored emoji: every font has them
+)
+
+// railIcons are the rail's icons per theme: agents, files, search, git,
+// limits, help. Nerd Font codicons (v3): hubot, files, search,
+// source_control, dashboard, question.
+var railIcons = map[string][6]string{
+	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32"},
+	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓"},
+}
+
 // railItems are the rail's icons: the views at the top, then the bottom
 // buttons.
-func railItems() (top, bottom []railItem) {
+func railItems(theme string) (top, bottom []railItem) {
+	ic, ok := railIcons[theme]
+	if !ok {
+		ic = railIcons[IconsEmoji]
+	}
 	return []railItem{
-		{icon: "🤖", label: "rail.agents", view: ViewAgents},
-		{icon: "📁", label: "rail.files", view: ViewExplorer},
-		{icon: "🔍", label: "rail.search", action: Action{Kind: ActSearch}},
-		{icon: "🔀", label: "rail.git", view: ViewChanges},
+		{icon: ic[0], label: "rail.agents", view: ViewAgents},
+		{icon: ic[1], label: "rail.files", view: ViewExplorer},
+		{icon: ic[2], label: "rail.search", action: Action{Kind: ActSearch}},
+		{icon: ic[3], label: "rail.git", view: ViewChanges},
 	}, []railItem{
-		{icon: "📊", label: "rail.limits", action: Action{Kind: ActLimits}},
-		{icon: "❓", label: "rail.help", action: Action{Kind: ActKeys}},
+		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
+		{icon: ic[5], label: "rail.help", action: Action{Kind: ActKeys}},
 	}
 }
 
@@ -352,26 +370,36 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 		text += " " + strconv.Itoa(min(m.Changed, 99))
 		color = yellow
 	}
+	const iw = railW - 1 // the item's columns; the last one is the line
 	r := []rune(text)
-	if len(r) > railW {
-		r = r[:railW]
+	if len(r) > iw {
+		r = r[:iw]
 	}
-	pad := railW - len(r)
+	pad := iw - len(r)
 	lt := strings.Repeat(" ", pad/2) + string(r) + strings.Repeat(" ", pad-pad/2)
-	// "  🤖  ": the emoji takes 2 of the 6 columns.
-	if active {
-		return Cell{X: 0, W: railW, Text: selBg + cyan + "▌" + reset + selBg + " " + it.icon + "  " + reset, Action: a},
-			Cell{X: 0, W: railW, Text: selBg + bold + lt + reset, Action: a}
+	// "  X   ": an emoji takes 2 columns, a Nerd Font icon 1 (drawn wider).
+	gap := "  "
+	if DisplayWidth(it.icon) == 1 {
+		gap = "   "
 	}
-	return Cell{X: 0, W: railW, Text: "  " + it.icon + "  ", Action: a},
-		Cell{X: 0, W: railW, Text: color + lt + reset, Action: a}
+	iconColor := ""
+	if !active {
+		iconColor = muted
+	}
+	line := faint + "│" + reset
+	if active {
+		return Cell{X: 0, W: railW, Text: selBg + cyan + "▌" + reset + selBg + " " + bold + it.icon + reset + selBg + gap + reset + line, Action: a},
+			Cell{X: 0, W: railW, Text: selBg + bold + lt + reset + line, Action: a}
+	}
+	return Cell{X: 0, W: railW, Text: "  " + iconColor + it.icon + reset + gap + line, Action: a},
+		Cell{X: 0, W: railW, Text: color + lt + reset + line, Action: a}
 }
 
 // withRail puts the activity rail on the left of the view's lines: the views
 // at the top, Limits and Help at the bottom; labels under the icons when the
 // sidebar is tall enough.
 func withRail(content []Line, m Model, w, h int) []Line {
-	top, bottom := railItems()
+	top, bottom := railItems(m.Icons)
 	tall := h == 0 || h >= railTall
 	step := 2
 	if tall {
@@ -419,7 +447,7 @@ func withRail(content []Line, m Model, w, h int) []Line {
 		}
 		cell, ok := at[i]
 		if !ok {
-			cell = Cell{X: 0, W: railW, Text: strings.Repeat(" ", railW)}
+			cell = Cell{X: 0, W: railW, Text: strings.Repeat(" ", railW-1) + faint + "│" + reset}
 		}
 		cells := []Cell{cell}
 		if len(c.Cells) == 0 {

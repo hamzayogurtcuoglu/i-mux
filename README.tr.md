@@ -56,6 +56,10 @@ cd ~/code/projem
 imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
+Terminalin bir [Nerd Font](https://www.nerdfonts.com) kullanıyorsa şerit editördeki simgeleri
+gösterir (`brew install --cask font-jetbrains-mono-nerd-font`, sonra terminalin ayarlarından seç);
+yoksa emojileri.
+
 Dosyalar editöründe açılır: config'teki `editor`, yoksa micro (terminalde en kolayı: `brew install
 micro`), `$VISUAL`, `$EDITOR`, nano, vim. Fare tekerleği her yerde kaydırır.
 

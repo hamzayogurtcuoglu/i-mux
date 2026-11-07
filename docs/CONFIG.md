@@ -43,10 +43,11 @@ line number.
 | `tmux.menu_key_prefix` | `"a"` | prefix + key opens the pane menu. |
 | `tmux.picker_key_prefix` | `"S"` | prefix + key opens the session picker. |
 | `tmux.sidebar` | `true` | Sidebar on the left of each window: panes, agents to continue in, split buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3). |
-| `tmux.sidebar_width` | `40` |  |
+| `tmux.sidebar_width` | `41` |  |
 | `tmux.sidebar_key_prefix` | `"b"` | prefix + key shows or hides the sidebar. |
 | `tmux.split_right_key_prefix` | `"v"` | prefix + key splits the active pane (asks which agent to start). |
 | `tmux.split_down_key_prefix` | `"-"` |  |
+| `tmux.icons` | `"auto"` | Icons of the sidebar's rail: "nerd" = the editor's icons (needs a Nerd Font in the terminal), "emoji", or "auto" = nerd when a Nerd Font is installed or the terminal brings its symbols (Ghostty, WezTerm, kitty), else emoji. |
 | `tmux.tabs` | `true` | Tab bar at the top: each tab (tmux window) with its name and state, and a + that opens a new tab with the agent you pick. |
 | `tmux.new_tab_key_prefix` | `"c"` | prefix + key opens a new tab (asks which agent); prefix + key names the tab. |
 | `tmux.rename_tab_key_prefix` | `","` |  |
@@ -175,12 +176,16 @@ picker_key_prefix = "S"
 # Sidebar on the left of each window: panes, agents to continue in, split
 # buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3).
 sidebar           = true
-sidebar_width     = 40
+sidebar_width     = 41
 # prefix + key shows or hides the sidebar.
 sidebar_key_prefix = "b"
 # prefix + key splits the active pane (asks which agent to start).
 split_right_key_prefix = "v"
 split_down_key_prefix  = "-"
+# Icons of the sidebar's rail: "nerd" = the editor's icons (needs a Nerd Font in
+# the terminal), "emoji", or "auto" = nerd when a Nerd Font is installed or the
+# terminal brings its symbols (Ghostty, WezTerm, kitty), else emoji.
+icons             = "auto"
 # Tab bar at the top: each tab (tmux window) with its name and state, and a
 # + that opens a new tab with the agent you pick.
 tabs              = true

@@ -90,7 +90,7 @@ func model() Model {
 
 func TestRender(t *testing.T) {
 	i18n.SetLocale("en")
-	for _, w := range []int{28, 40, 50} {
+	for _, w := range []int{29, 41, 51} {
 		for _, h := range []int{0, 12, 20, 50} {
 			sc := Render(model(), w, h, NoItem)
 			if h > 0 && len(sc.Lines) != h {
@@ -103,7 +103,7 @@ func TestRender(t *testing.T) {
 			}
 		}
 	}
-	sc := Render(model(), 40, 0, NoItem)
+	sc := Render(model(), 41, 0, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
@@ -153,16 +153,16 @@ func TestRender(t *testing.T) {
 		}
 	}
 	// The "+" of the headers.
-	if l, _ := find(sc, "PROJECTS"); l.ActionAt(39) != (Action{Kind: ActOpen}) || l.ActionAt(9) != (Action{Kind: ActFold, Section: SecProjects}) {
+	if l, _ := find(sc, "PROJECTS"); l.ActionAt(40) != (Action{Kind: ActOpen}) || l.ActionAt(10) != (Action{Kind: ActFold, Section: SecProjects}) {
 		t.Error("Projects +")
 	}
-	if l, _ := find(sc, "AGENTS"); l.ActionAt(38) != (Action{Kind: ActNewAgent}) {
+	if l, _ := find(sc, "AGENTS"); l.ActionAt(39) != (Action{Kind: ActNewAgent}) {
 		t.Error("Agents +")
 	}
-	if l, _ := find(sc, " A  acme-api"); l.ActionAt(9) != (Action{Kind: ActProjectMenu, Session: "acme-api-1a2b"}) || !strings.Contains(l.Text, selBg) {
+	if l, _ := find(sc, " A  acme-api"); l.ActionAt(10) != (Action{Kind: ActProjectMenu, Session: "acme-api-1a2b"}) || !strings.Contains(l.Text, selBg) {
 		t.Error("the current project is highlighted and opens its menu")
 	}
-	if l, _ := find(sc, "backend fix"); !strings.Contains(l.Text, selBg) || l.ActionAt(9) != (Action{Kind: ActAgentMenu, Pane: "%1"}) {
+	if l, _ := find(sc, "backend fix"); !strings.Contains(l.Text, selBg) || l.ActionAt(10) != (Action{Kind: ActAgentMenu, Pane: "%1"}) {
 		t.Error("the target agent is highlighted and opens its menu")
 	}
 	// The rail: views and the bottom buttons.
@@ -172,12 +172,12 @@ func TestRender(t *testing.T) {
 	// The spinner turns.
 	m := model()
 	m.Tick = 3
-	if !m.Animated() || !strings.Contains(screenText(Render(m, 40, 0, NoItem)), "<1m ⠸") {
+	if !m.Animated() || !strings.Contains(screenText(Render(m, 41, 0, NoItem)), "<1m ⠸") {
 		t.Error("spinner frame")
 	}
 
 	// Short: blank rows go, then other projects fold; the bottom blocks stay.
-	short := Render(model(), 40, 16, NoItem)
+	short := Render(model(), 41, 16, NoItem)
 	stext := screenText(short)
 	t.Logf("\n%s", stext)
 	for _, want := range []string{"AGENTS", "backend fix", "Continue this chat in", "✎ Rename"} {
@@ -189,9 +189,9 @@ func TestRender(t *testing.T) {
 		t.Errorf("the other project should be folded:\n%s", stext)
 	}
 	// Tall: the toolbar and the rail's Help are on the last row.
-	tall := Render(model(), 40, 50, NoItem)
-	if last := Plain(tall.Lines[49].Text); !strings.Contains(last, "⧉ History") || !strings.HasPrefix(last, " Help") ||
-		strings.TrimSpace(Plain(tall.Lines[30].Text)) != "" {
+	tall := Render(model(), 41, 50, NoItem)
+	if last := Plain(tall.Lines[49].Text); !strings.Contains(last, "⧉ History") || !strings.HasPrefix(last, " Help │") ||
+		strings.Trim(Plain(tall.Lines[30].Text), " │") != "" {
 		t.Errorf("toolbar not at the bottom:\n%s", screenText(tall))
 	}
 	// Narrow: pills become "!".
@@ -212,8 +212,8 @@ func TestRender(t *testing.T) {
 			break
 		}
 	}
-	sel := Render(model(), 40, 0, focus)
-	if lt := sel.Lines[focus.Row].Text; !strings.Contains(lt, rev) || DisplayWidth(Plain(lt)) != 40 {
+	sel := Render(model(), 41, 0, focus)
+	if lt := sel.Lines[focus.Row].Text; !strings.Contains(lt, rev) || DisplayWidth(Plain(lt)) != 41 {
 		t.Errorf("selection %q", lt)
 	}
 	last := items[len(items)-1]
@@ -259,7 +259,7 @@ func TestExplorer(t *testing.T) {
 			}
 		}
 	}
-	sc := Render(m, 40, 12, NoItem)
+	sc := Render(m, 41, 12, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{"EXPLORER · acme-api", "⌕", "▸ docs", "▾ src", "▸ auth", "main.ts", "README.md", "▌ 📁"} {
@@ -292,7 +292,7 @@ func TestExplorer(t *testing.T) {
 	}
 	// Scrolling keeps the title and moves the list.
 	m.Scroll = 2
-	if text := screenText(Render(m, 40, 3, NoItem)); !strings.Contains(text, "EXPLORER") || !strings.Contains(text, "auth") || strings.Contains(text, "docs") {
+	if text := screenText(Render(m, 41, 3, NoItem)); !strings.Contains(text, "EXPLORER") || !strings.Contains(text, "auth") || strings.Contains(text, "docs") {
 		t.Errorf("scrolled:\n%s", text)
 	}
 }
@@ -309,12 +309,12 @@ func TestChangesView(t *testing.T) {
 		Changes: []gitops.Change{{Status: "M", Path: "b.go", Added: 1}, {Status: "?", Path: "c.txt", Untracked: true}},
 		History: []gitops.LogEntry{{Hash: "a1b2c3d", Subject: "feat: login", When: m.Now.Add(-2 * time.Hour)}},
 	}
-	for _, l := range Render(m, 40, 30, NoItem).Lines {
-		if n := DisplayWidth(Plain(l.Text)); n != 40 {
+	for _, l := range Render(m, 41, 30, NoItem).Lines {
+		if n := DisplayWidth(Plain(l.Text)); n != 41 {
 			t.Errorf("%d columns: %q", n, Plain(l.Text))
 		}
 	}
-	sc := Render(m, 40, 0, NoItem)
+	sc := Render(m, 41, 0, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
@@ -348,16 +348,16 @@ func TestChangesView(t *testing.T) {
 	if a := at("a.go", 0); a != (Action{Kind: ActDiff, Path: "a.go", Status: "M", Section: "staged"}) {
 		t.Errorf("staged row %+v", a)
 	}
-	if a := lineEnd("a.go").ActionAt(38); a != (Action{Kind: ActGit, Section: "unstage", Path: "a.go"}) {
+	if a := lineEnd("a.go").ActionAt(39); a != (Action{Kind: ActGit, Section: "unstage", Path: "a.go"}) {
 		t.Errorf("unstage button %+v", a)
 	}
-	if a := lineEnd("b.go").ActionAt(38); a != (Action{Kind: ActGit, Section: "stage", Path: "b.go"}) {
+	if a := lineEnd("b.go").ActionAt(39); a != (Action{Kind: ActGit, Section: "stage", Path: "b.go"}) {
 		t.Errorf("stage button %+v", a)
 	}
-	if a := lineEnd("c.txt").ActionAt(36); a != (Action{Kind: ActGitConfirm, Section: "discard", Path: "c.txt", Status: "?"}) {
+	if a := lineEnd("c.txt").ActionAt(37); a != (Action{Kind: ActGitConfirm, Section: "discard", Path: "c.txt", Status: "?"}) {
 		t.Errorf("discard button %+v", a)
 	}
-	if a := lineEnd("CHANGES  2").ActionAt(38); a != (Action{Kind: ActGit, Section: "stage-all"}) {
+	if a := lineEnd("CHANGES  2").ActionAt(39); a != (Action{Kind: ActGit, Section: "stage-all"}) {
 		t.Errorf("stage all %+v", a)
 	}
 	if a := at("Commit…", 0); a.Kind != ActCommit {
@@ -374,11 +374,11 @@ func TestChangesView(t *testing.T) {
 	}
 	// Folding a section hides its rows.
 	m.Fold = map[string]bool{SecUnstaged: true}
-	if text := screenText(Render(m, 40, 0, NoItem)); strings.Contains(text, "b.go") || !strings.Contains(text, "▸ CHANGES  2") {
+	if text := screenText(Render(m, 41, 0, NoItem)); strings.Contains(text, "b.go") || !strings.Contains(text, "▸ CHANGES  2") {
 		t.Errorf("folded:\n%s", text)
 	}
 	m.SCM = nil
-	if text := screenText(Render(m, 40, 0, NoItem)); !strings.Contains(text, "Not a git repository") {
+	if text := screenText(Render(m, 41, 0, NoItem)); !strings.Contains(text, "Not a git repository") {
 		t.Errorf("no git:\n%s", text)
 	}
 }
@@ -424,7 +424,7 @@ func TestParseStatus(t *testing.T) {
 
 func TestMoveWraps(t *testing.T) {
 	i18n.SetLocale("en")
-	s := &sidebar{screen: Render(model(), 40, 0, NoItem), sel: NoItem}
+	s := &sidebar{screen: Render(model(), 41, 0, NoItem), sel: NoItem}
 	rows := s.screen.Items()
 	s.move(1)
 	if s.sel != rows[0] {
@@ -582,7 +582,7 @@ func TestFold(t *testing.T) {
 	i18n.SetLocale("en")
 	m := model()
 	m.Fold = map[string]bool{SecProjects: true, SecChanges: true}
-	text := screenText(Render(m, 40, 0, NoItem))
+	text := screenText(Render(m, 41, 0, NoItem))
 	t.Logf("\n%s", text)
 	lineWith := func(sub string) string {
 		for _, l := range strings.Split(text, "\n") {
@@ -610,5 +610,55 @@ func TestParseNumstat(t *testing.T) {
 	want := map[string][2]int{"src/a.go": {12, 3}, "img.png": {0, 0}, "new.go": {4, 0}, "src/y/z.go": {1, 1}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("%v", got)
+	}
+}
+
+// The rail: a line between it and the view on every row; the editor's
+// icons with a Nerd Font.
+func TestRailThemes(t *testing.T) {
+	i18n.SetLocale("en")
+	m := model()
+	for _, l := range Render(m, 41, 30, NoItem).Lines {
+		if p := Plain(l.Text); !strings.Contains(p, "│") {
+			t.Errorf("no line between the rail and the view: %q", p)
+		}
+	}
+	m.Icons = IconsNerd
+	text := screenText(Render(m, 41, 30, NoItem))
+	for _, ic := range railIcons[IconsNerd] {
+		if !strings.Contains(text, ic) {
+			t.Errorf("nerd icon %U missing", []rune(ic)[0])
+		}
+	}
+	if strings.Contains(text, "🤖") {
+		t.Error("emoji with the nerd theme")
+	}
+	for _, l := range Render(m, 41, 30, NoItem).Lines {
+		if n := DisplayWidth(Plain(l.Text)); n != 41 {
+			t.Errorf("nerd: %d columns: %q", n, Plain(l.Text))
+		}
+	}
+
+	dir := t.TempDir()
+	if HasNerdFont([]string{dir}) {
+		t.Fatal("empty dir")
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "JetBrainsMono"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "JetBrainsMono", "JetBrainsMonoNerdFontMono-Regular.ttf"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !HasNerdFont([]string{dir}) {
+		t.Fatal("nerd font in a subfolder")
+	}
+	s := &Source{Cfg: config.Default()}
+	s.Cfg.Tmux.Icons = "emoji"
+	if s.iconTheme("xterm-ghostty") != IconsEmoji {
+		t.Error("configured emoji wins")
+	}
+	s.Cfg.Tmux.Icons = "auto"
+	if s.iconTheme("xterm-ghostty") != IconsNerd || s.iconTheme("xterm-kitty") != IconsNerd {
+		t.Error("terminals with Nerd Font symbols")
 	}
 }

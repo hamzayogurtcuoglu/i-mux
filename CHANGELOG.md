@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-08
+
+### Added
+
+- **The editor's icons on the rail** when the terminal has a Nerd Font (`[tmux] icons = "nerd"`,
+  or `"auto"`, the default, which picks them when a Nerd Font is installed or the terminal brings
+  its symbols: Ghostty, WezTerm, kitty); emoji otherwise.
+
+### Changed
+
+- A line separates the rail from the view. The default sidebar width is 41.
+
 ## [0.16.0] - 2026-11-08
 
 ### Added

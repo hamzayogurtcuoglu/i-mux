@@ -156,6 +156,7 @@ type Model struct {
 	View     string          // the view on the activity rail (@imux_view)
 	Tree     []TreeRow       // the explorer's rows (Explorer view)
 	SCM      *gitops.Status  // the Source Control view's repository (nil outside git)
+	Icons    string          // the rail's icon theme (IconsNerd, IconsEmoji)
 	Scroll   int             // first row of the view's list
 }
 
@@ -285,7 +286,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
 		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}"},
-		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}"},
+		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}\t#{client_termname}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
 		return Model{}, Window{}, err
@@ -312,13 +313,14 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		win.WinW, _ = strconv.Atoi(r[5])
 	}
 	var best int64 = -1
-	for _, r := range tmux.Rows(sec["clients"], 4) {
+	term := ""
+	for _, r := range tmux.Rows(sec["clients"], 5) {
 		if r[1] != win.Session || r[3] == "1" {
 			continue
 		}
 		act, _ := strconv.ParseInt(r[2], 10, 64)
 		if act > best {
-			best, win.Client = act, r[0]
+			best, win.Client, term = act, r[0], r[4]
 		}
 	}
 
@@ -408,7 +410,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view}
+	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view, Icons: s.iconTheme(term)}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target
@@ -642,4 +644,80 @@ func ParseNumstat(out string) map[string][2]int {
 		m[path] = [2]int{a, r}
 	}
 	return m
+}
+
+// iconTheme is the rail's icon theme: the configured one, or for "auto" the
+// editor's icons when a Nerd Font is installed or the terminal brings Nerd
+// Font symbols itself (Ghostty, WezTerm, kitty), else emoji.
+func (s *Source) iconTheme(term string) string {
+	cfg := ""
+	if s.Cfg != nil {
+		cfg = s.Cfg.Tmux.Icons
+	}
+	switch cfg {
+	case IconsNerd, IconsEmoji:
+		return cfg
+	}
+	t := strings.ToLower(term)
+	if strings.Contains(t, "ghostty") || strings.Contains(t, "wezterm") || strings.Contains(t, "kitty") {
+		return IconsNerd
+	}
+	if nerdFontInstalled() {
+		return IconsNerd
+	}
+	return IconsEmoji
+}
+
+var (
+	nerdOnce  sync.Once
+	nerdFound bool
+)
+
+// FontDirs are where installed fonts are looked for.
+var FontDirs = func() []string {
+	home, _ := os.UserHomeDir()
+	return []string{
+		filepath.Join(home, "Library", "Fonts"), "/Library/Fonts",
+		filepath.Join(home, ".local", "share", "fonts"), filepath.Join(home, ".fonts"),
+		"/usr/share/fonts", "/usr/local/share/fonts",
+	}
+}
+
+// nerdFontInstalled reports whether a Nerd Font file is installed (looked up
+// once per process).
+func nerdFontInstalled() bool {
+	nerdOnce.Do(func() { nerdFound = HasNerdFont(FontDirs()) })
+	return nerdFound
+}
+
+// HasNerdFont reports whether a font file with "Nerd" (or the "NF" suffix of
+// Nerd Fonts) in its name is in dirs (two levels deep).
+func HasNerdFont(dirs []string) bool {
+	match := func(n string) bool {
+		l := strings.ToLower(n)
+		if !strings.HasSuffix(l, ".ttf") && !strings.HasSuffix(l, ".otf") {
+			return false
+		}
+		return strings.Contains(l, "nerd") || strings.Contains(n, "NF-") || strings.Contains(n, "NFM-") || strings.Contains(n, "NerdFont")
+	}
+	for _, d := range dirs {
+		ents, err := os.ReadDir(d)
+		if err != nil {
+			continue
+		}
+		for _, e := range ents {
+			if match(e.Name()) {
+				return true
+			}
+			if e.IsDir() {
+				sub, _ := os.ReadDir(filepath.Join(d, e.Name()))
+				for _, f := range sub {
+					if match(f.Name()) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }

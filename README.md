@@ -62,6 +62,10 @@ cd ~/code/my-project
 imux            # start the first installed agent (or: imux claude)
 ```
 
+The rail shows the editor's icons when your terminal uses a [Nerd Font](https://www.nerdfonts.com)
+(`brew install --cask font-jetbrains-mono-nerd-font`, then pick it in the terminal's settings),
+emoji otherwise.
+
 Files open in your editor: `editor` in the config, else micro (the easiest in a terminal: `brew
 install micro`), `$VISUAL`, `$EDITOR`, nano, vim. The mouse wheel scrolls everywhere.
 

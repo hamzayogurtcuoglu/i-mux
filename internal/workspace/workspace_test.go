@@ -206,7 +206,7 @@ func TestStartBatchesOptions(t *testing.T) {
 	var bar string
 	for _, c := range f.calls {
 		j := strings.Join(c, " ")
-		if strings.Contains(j, "split-window -h -b -f -d -l 40 -t %5") && strings.HasSuffix(j, "/opt/imux/bin/imux __sidebar") {
+		if strings.Contains(j, "split-window -h -b -f -d -l 41 -t %5") && strings.HasSuffix(j, "/opt/imux/bin/imux __sidebar") {
 			bar = "split"
 		}
 		if bar == "split" && strings.Contains(j, "@imux_role sidebar") && strings.Contains(j, "@imux_last %5") {

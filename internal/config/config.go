@@ -121,6 +121,7 @@ type Tmux struct {
 	SplitRightKey   string `toml:"split_right_key_prefix"`
 	SplitDownKey    string `toml:"split_down_key_prefix"`
 	Tabs            bool   `toml:"tabs"`
+	Icons           string `toml:"icons"` // auto | nerd | emoji
 	NewTabKey       string `toml:"new_tab_key_prefix"`
 	RenameTabKey    string `toml:"rename_tab_key_prefix"`
 	Mouse           bool   `toml:"mouse"`
@@ -221,11 +222,12 @@ func Default() *Config {
 			PickerKeyPrefix: "S",
 			AgentBar:        false,
 			Sidebar:         true,
-			SidebarWidth:    40,
+			SidebarWidth:    41,
 			SidebarKey:      "b",
 			SplitRightKey:   "v",
 			SplitDownKey:    "-",
 			Tabs:            true,
+			Icons:           "auto",
 			NewTabKey:       "c",
 			RenameTabKey:    ",",
 			Mouse:           true,
@@ -354,6 +356,7 @@ func (c *Config) validate(src []byte) error {
 		{"on_limit", c.OnLimit, []string{"ask", "auto", "off"}},
 		{"on_arrival", c.Handoff.OnArrival, []string{"wait", "continue"}},
 		{"deliver", c.Handoff.Deliver, []string{"file", "inline"}},
+		{"icons", c.Tmux.Icons, []string{"auto", "nerd", "emoji"}},
 		{"on_exit", c.OnExit, []string{"shell", "close"}},
 		{"inject", c.Handoff.Inject, []string{"argv", "paste"}},
 		{"locale", c.Locale, []string{"", "en", "tr"}},
