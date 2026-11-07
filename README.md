@@ -62,6 +62,8 @@ cd ~/code/my-project
 imux            # start the first installed agent (or: imux claude)
 ```
 
+Run `imux` in your home folder and it asks which project to open: type a few letters of its name.
+
 The **sidebar** on the left shows your projects (branch, uncommitted changes) and every agent
 working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks
 you something, a green dot when it finished while you were elsewhere, a ring when idle, and how
@@ -69,13 +71,13 @@ long ago that changed. Everything is clickable:
 
 | Sidebar / key | What it does |
 |---|---|
-| click a project · **+** next to **Projects** (or `o`) | switch to it · open another folder next to this one |
+| click a project · **+** next to **Projects** (or `o`) | switch to it (click the current one, or right-click any, to **close** it) · open another project: type a few letters of its name, Enter |
 | click an agent · **+** next to **Agents** | go to it (in any project) · open a new agent in a pane (`prefix v` / `prefix -` for right / down) |
 | click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation |
 | **✎ Rename** (or `n`) | give the agent a name of your own, like "backend fix" (agents that title their terminal name themselves) |
 | **± Changes** (or `f`) | the changed files; pick one to see its diff |
 | **⧉ History** (or `prefix S`) · **◔ Limits** · **? Help** | earlier conversations · usage limits · every key |
-| the **tab bar** at the top · its **+** (or `prefix c`) | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) |
+| the **tab bar** at the top · its **+** (or `prefix c`) · **×** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab |
 | `prefix b` | hide or show the sidebar |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` | the pane menu; continue in Claude / Antigravity / Copilot / Codex |
 

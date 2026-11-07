@@ -22,7 +22,7 @@ set -gq @imux_status ''
 # Tab bar at the top: the session's windows, and + for a new tab.
 set -g  status-position top
 set -g  status-style bg=default,fg=colour245
-set -g  status-format[0] '#[align=left] #{W:#[range=window|#{window_index}]#[fg=colour245] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}}#{?@imux_tab_state, #{@imux_tab_state},} #[norange default] ,#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}}#{?@imux_tab_state, #{@imux_tab_state},} #[norange default] }#[range=user|imux:tab]#[fg=colour245] + #[norange default]#[align=right]#{T:status-right}'
+set -g  status-format[0] '#[align=left] #{W:#[range=window|#{window_index}]#[fg=colour245] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, } #[norange default] ,#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, } #[norange]#[range=user|imux:close]#[bg=colour236 fg=colour245 nobold]× #[norange default] }#[range=user|imux:tab]#[fg=colour245] + #[norange default]#[align=right]#{T:status-right}'
 set -g  status 2
 set -g  status-format[1] '#[align=left] imux #[range=user|imux:menu]☰#[norange default]'
 

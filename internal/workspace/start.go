@@ -13,6 +13,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -71,6 +72,7 @@ func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartR
 	}
 	if ok {
 		EnsureWatcher(w)
+		_ = state.Update(func(s *state.State) error { s.AddRecent(cwd, w.Now()); return nil })
 		return &StartResult{Session: name}, nil
 	}
 	if id == "" {
@@ -86,6 +88,7 @@ func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartR
 	}
 	w.maybeSidebar(ctx, pane)
 	EnsureWatcher(w)
+	_ = state.Update(func(s *state.State) error { s.AddRecent(cwd, w.Now()); return nil })
 	return &StartResult{Session: name, Pane: pane, Created: true}, nil
 }
 

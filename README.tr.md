@@ -56,6 +56,8 @@ cd ~/code/projem
 imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
+`imux`'u ana klasöründe çalıştırırsan hangi projeyi açacağını sorar: adının birkaç harfini yaz.
+
 Soldaki **kenar panel** projelerini (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan
 bütün agent'ları, her birinin ne yaptığıyla gösterir: çalışırken dönen bir işaret, sana bir şey
 sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve
@@ -63,13 +65,13 @@ bunun ne kadar önce olduğu. Hepsi tıklanabilir:
 
 | Kenar panel / tuş | Ne yapar |
 |---|---|
-| bir projeye tıkla · **Projeler** yanındaki **+** (ya da `o`) | o projeye geç · başka bir klasörü yanına aç |
+| bir projeye tıkla · **Projeler** yanındaki **+** (ya da `o`) | o projeye geç (projeyi **kapatmak** için mevcut projeye tıkla ya da herhangi birine sağ tıkla) · başka proje aç: adının birkaç harfini yaz, Enter |
 | bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni bir pane'de yeni agent aç (sağa / aşağı için `prefix v` / `prefix -`) |
 | **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder |
 | **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver (terminal başlığı koyan agent'lar kendini adlandırır) |
 | **± Değişiklik** (ya da `f`) | değişen dosyalar; birini seçince farkını (diff) gösterir |
 | **⧉ Geçmiş** (ya da `prefix S`) · **◔ Limitler** · **? Yardım** | eski konuşmalar · kullanım limitleri · bütün tuşlar |
-| en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) |
+| en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat |
 | `prefix b` | kenar paneli gizle ya da göster |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` | pane menüsü; Claude / Antigravity / Copilot / Codex'te sürdür |
 

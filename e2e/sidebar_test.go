@@ -207,7 +207,7 @@ func TestSidebarDoubleClick(t *testing.T) {
 
 // TestSidebarProjectsNamesChanges (T11.6): the sidebar's CHANGES row opens
 // the file's diff, "Name this pane" names the pane (quotes are safe), and
-// "Open a project…" opens another folder as a project and switches to it;
+// the Projects + opens another folder as a project and switches to it;
 // clicking the first project in PROJECTS switches back.
 func TestSidebarProjectsNamesChanges(t *testing.T) {
 	h := newH(t, sidebarConfig)
@@ -256,7 +256,8 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 		t.Errorf("border %q", b)
 	}
 
-	// Open a project: a new session for the folder, and the client moves there.
+	// Open a project (the folder picker): a new session for the folder, and the
+	// client moves there.
 	other := filepath.Join(h.Homes.Home, "blog")
 	if err := os.MkdirAll(other, 0o755); err != nil {
 		t.Fatal(err)
@@ -265,8 +266,11 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	x, y = h.plusOf(bar, "Projects")
 	mark = c.Mark()
 	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "Open project folder:", 5*time.Second)
-	c.Write("\x15" + other + "\r") // Ctrl+U clears the suggested "~/"
+	c.waitScreenAfter(h, mark, "Open a project", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	c.Write("~/blo") // a typed path is browsed: ~/blog is listed
+	c.waitScreenAfter(h, mark, "▸ ~/blog", 5*time.Second)
+	c.Write("\r")
 	h.run("claude", 2)
 	session := func() string {
 		for _, l := range strings.Split(h.mustTmux("list-clients", "-F", "#{client_name} #{client_session}"), "\n") {

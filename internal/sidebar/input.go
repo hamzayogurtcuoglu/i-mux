@@ -3,6 +3,7 @@ package sidebar
 import (
 	"bytes"
 	"strconv"
+	"unicode/utf8"
 )
 
 // EventKind is the kind of an input event.
@@ -10,14 +11,15 @@ type EventKind int
 
 // Input events.
 const (
-	EvKey   EventKind = iota // Key holds the key
-	EvClick                  // left button press at X, Y (1-based)
+	EvKey        EventKind = iota // Key holds the key
+	EvClick                       // left button press at X, Y (1-based)
+	EvRightClick                  // right button press at X, Y
 )
 
 // Event is one key press or mouse click.
 type Event struct {
 	Kind EventKind
-	Key  string // "up", "down", "enter", "esc", "tab", or the character
+	Key  string // "up", "down", "enter", "esc", "tab", "backtab", "backspace", "ctrl-u", "ctrl-c", or the character
 	X, Y int
 }
 
@@ -98,8 +100,28 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 			key("enter")
 		case c == '\t':
 			key("tab")
+		case c == 0x7f || c == 0x08:
+			key("backspace")
+		case c == 0x15:
+			key("ctrl-u")
+		case c == 0x03:
+			key("ctrl-c")
 		case c >= 0x20 && c < 0x7f:
 			key(string(c))
+		case c >= 0xc0:
+			// A UTF-8 character (folder names: "Masaüstü").
+			if !utf8.FullRune(in[i:]) {
+				if final {
+					return evs, nil
+				}
+				return evs, in[i:]
+			}
+			r, size := utf8.DecodeRune(in[i:])
+			if r != utf8.RuneError {
+				key(string(r))
+			}
+			i += size
+			continue
 		}
 		i++
 	}
@@ -126,8 +148,14 @@ func mouse(body string, final byte) (Event, bool) {
 			start = k + 1
 		}
 	}
-	if n != 3 || final != 'M' || f[0] != 0 {
+	if n != 3 || final != 'M' {
 		return Event{}, false
 	}
-	return Event{Kind: EvClick, X: f[1], Y: f[2]}, true
+	switch f[0] {
+	case 0:
+		return Event{Kind: EvClick, X: f[1], Y: f[2]}, true
+	case 2:
+		return Event{Kind: EvRightClick, X: f[1], Y: f[2]}, true
+	}
+	return Event{}, false
 }

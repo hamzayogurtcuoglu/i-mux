@@ -53,12 +53,14 @@ type State struct {
 	// BusSends holds recent send timestamps (unix ms) per sender pane, for
 	// the bus rate limit.
 	BusSends map[string][]int64 `json:"bus_sends,omitempty"`
+	// Recent holds the project folders started most recently, newest first.
+	Recent []Recent `json:"recent,omitempty"`
 
 	extra map[string]json.RawMessage
 }
 
 // known lists the JSON keys of typed fields.
-var known = []string{"version", "limits", "bins", "notices", "bus_sends"}
+var known = []string{"version", "limits", "bins", "notices", "bus_sends", "recent"}
 
 type plain State // no methods: avoids recursion
 
@@ -227,4 +229,24 @@ func (s *State) SetNotice(key string) {
 		s.Notices = map[string]bool{}
 	}
 	s.Notices[key] = true
+}
+
+// Recent is a project folder and when it was last started.
+type Recent struct {
+	Path string `json:"path"`
+	At   int64  `json:"at"` // unix seconds
+}
+
+// MaxRecent bounds the recent folders kept.
+const MaxRecent = 30
+
+// AddRecent puts dir first in the recent folders.
+func (s *State) AddRecent(dir string, at time.Time) {
+	out := []Recent{{Path: dir, At: at.Unix()}}
+	for _, r := range s.Recent {
+		if r.Path != dir && len(out) < MaxRecent {
+			out = append(out, r)
+		}
+	}
+	s.Recent = out
 }

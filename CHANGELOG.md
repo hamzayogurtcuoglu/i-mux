@@ -6,6 +6,24 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-07
+
+### Added
+
+- **Folder picker:** opening a project (the **+** next to Projects, `o`, `imux open`) shows a list
+  that narrows as you type: open and recent projects first, then the git repositories in your
+  home folder. Type a path starting with `~/` or `/` to browse folders; Tab goes into one.
+- `imux` in the home folder asks which project to open instead of making the home folder one.
+- **Close projects and tabs:** click the current project (or right-click any) for its menu with
+  **Close project…**; the current tab has a **×**; both ask first. `imux close` from the command
+  line. The client moves to another open project.
+
+### Fixed
+
+- Clicks on the tab bar's **+** and **×** (and the agent bar) could open a menu that closed at once
+  when the mouse button was released after it appeared; they now act on release.
+- The tabs after an agent no longer shift when it starts or stops working.
+
 ## [0.8.0] - 2026-11-07
 
 ### Added

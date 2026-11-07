@@ -30,3 +30,16 @@ func rawMode(fd int) (func(), error) {
 
 // signalRedraw asks the sidebar process pid to redraw.
 func signalRedraw(pid int) { _ = syscall.Kill(pid, syscall.SIGUSR1) }
+
+// RawMode puts the terminal on fd into raw mode and returns a func that
+// restores it (the folder picker uses it too).
+func RawMode(fd int) (func(), error) { return rawMode(fd) }
+
+// Size returns the terminal size of fd.
+func Size(fd int) (w, h int) {
+	var ws struct{ Row, Col, X, Y uint16 }
+	if _, _, e := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&ws))); e != 0 {
+		return 80, 24
+	}
+	return int(ws.Col), int(ws.Row)
+}

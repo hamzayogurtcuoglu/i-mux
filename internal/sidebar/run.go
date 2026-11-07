@@ -207,6 +207,17 @@ func (s *sidebar) keepWidth(ctx context.Context) {
 
 // handle reacts to one key or click.
 func (s *sidebar) handle(ctx context.Context, ev Event) {
+	if ev.Kind == EvRightClick {
+		// A right-click on a project opens its menu (go to it, close it).
+		row := ev.Y - 1
+		if row < 0 || row >= len(s.screen.Lines) {
+			return
+		}
+		if a := s.screen.Lines[row].ActionAt(ev.X - 1); a.Kind == ActProject || a.Kind == ActProjectMenu {
+			s.do(ctx, Action{Kind: ActProjectMenu, Session: a.Session})
+		}
+		return
+	}
 	if ev.Kind == EvClick {
 		row := ev.Y - 1
 		if row < 0 || row >= len(s.screen.Lines) {
@@ -310,8 +321,26 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		}
 		return
 	case ActOpen:
-		s.prompt(ctx, client, i18n.T("prompt.open"), "~/",
-			"set-option -g @imux_open \"%%%\" ; "+tmux.RunShell(s.o.Self, "open", "--from-option", "--client", client))
+		// The folder picker in a popup (D22).
+		c := tmux.Cmd{"display-popup"}
+		if client != "" {
+			c = append(c, "-c", client)
+		}
+		args := []string{s.o.Self, "__open-picker"}
+		if client != "" {
+			args = append(args, "--client", client)
+		}
+		_ = s.t.Spawn(append(c, "-E", "-w", "80%", "-h", "70%", tmux.ShJoin(args...)))
+		return
+	case ActProjectMenu:
+		args := []string{"__menu", "--project", a.Session}
+		if target != "" {
+			args = append(args, "--pane", target)
+		}
+		if client != "" {
+			args = append(args, "--client", client)
+		}
+		s.spawn(args)
 		return
 	}
 	if target == "" {

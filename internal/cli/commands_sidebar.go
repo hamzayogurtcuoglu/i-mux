@@ -9,9 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/picker"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
@@ -109,6 +112,24 @@ func init() {
 		Args:    "<name> [--pane %N]",
 		Summary: "cmd.rename",
 		Run:     runRename,
+	})
+	register(&command{
+		Name:    "close",
+		Args:    "[--session S | --pane %N] [--client C]",
+		Summary: "cmd.close",
+		Run:     runClose,
+	})
+	register(&command{
+		Name:   "__close-tab",
+		Args:   "--pane %N [--client C]",
+		Hidden: true,
+		Run:    runCloseTab,
+	})
+	register(&command{
+		Name:   "__open-picker",
+		Args:   "[--client C]",
+		Hidden: true,
+		Run:    runOpenPicker,
 	})
 	register(&command{
 		Name:    "tab",
@@ -229,20 +250,169 @@ func runOpen(e *Env, args []string) error {
 		_, _ = w.T.Run(ctx, tmux.Cmd{"set-option", "-gu", "@imux_open"})
 		dir = strings.TrimSpace(out)
 	}
+	if dir == "" && !*fromOpt && isTerminal(os.Stdin) {
+		// No folder given: pick one.
+		if dir, err = pickFolder(ctx, w); err != nil || dir == "" {
+			return err
+		}
+	}
 	if dir == "" {
 		return &UsageError{Msg: i18n.T("cli.usage", "open <folder>")}
 	}
+	return openFolder(ctx, w, dir, *clientF)
+}
+
+// runClose closes a project: its session, after moving the clients that
+// show it to another project (§9.3 "Open and close projects").
+func runClose(e *Env, args []string) error {
+	fs := newFlags(e, "close")
+	sessionF := fs.String("session", "", "the project's session (default: this pane's, or this folder's)")
+	paneF := fs.String("pane", "", "a pane of the project")
+	clientF := fs.String("client", "", "client for messages")
+	if _, err := parseFlags(fs, args); err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	s := *sessionF
+	if s == "" {
+		pane := *paneF
+		if pane == "" {
+			pane = os.Getenv("TMUX_PANE")
+		}
+		if pane != "" {
+			out, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", pane, "#{session_name}"})
+			if err != nil {
+				return err
+			}
+			s = strings.TrimSpace(out)
+		} else {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			s = workspace.SessionName(cwd)
+		}
+	}
+	pi, err := w.Project(ctx, s)
+	if err != nil {
+		return err
+	}
+	if err := w.CloseProject(ctx, s); err != nil {
+		if *clientF != "" {
+			w.Message(ctx, *clientF, "", err.Error())
+		}
+		return err
+	}
+	if *clientF != "" {
+		w.Message(ctx, *clientF, "", i18n.T("close.done", pi.Name))
+	} else {
+		fmt.Fprintln(e.Stderr, i18n.T("close.done", pi.Name))
+	}
+	return nil
+}
+
+// runCloseTab closes the tab of --pane (the × of the tab bar, confirmed).
+func runCloseTab(e *Env, args []string) error {
+	fs := newFlags(e, "__close-tab")
+	paneF := fs.String("pane", "", "a pane of the tab")
+	clientF := fs.String("client", "", "client for messages")
+	if _, err := parseFlags(fs, args); err != nil {
+		return err
+	}
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	p, err := w.PaneTarget(ctx, pane)
+	if err != nil {
+		return err
+	}
+	if err := w.CloseTab(ctx, p); err != nil {
+		w.Message(ctx, *clientF, "", err.Error())
+		return err
+	}
+	return nil
+}
+
+// runOpenPicker is the folder picker in a popup (the sidebar's + and o):
+// the chosen folder opens as a project on the client.
+func runOpenPicker(e *Env, args []string) error {
+	fs := newFlags(e, "__open-picker")
+	clientF := fs.String("client", "", "client to switch to the project")
+	if _, err := parseFlags(fs, args); err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	dir, err := pickFolder(ctx, w)
+	if err != nil || dir == "" {
+		return err
+	}
+	return openFolder(ctx, w, dir, *clientF)
+}
+
+// pickFolder runs the folder picker on this terminal: open, recent and git
+// folders; the git scan runs while the list is shown (§9.3).
+func pickFolder(ctx context.Context, w *workspace.WS) (string, error) {
+	home := paths.UserHome()
+	var open []string
+	if out, err := w.T.Run(ctx, tmux.Cmd{"list-sessions", "-F", "#{session_path}"}); err == nil {
+		for _, l := range strings.Split(strings.TrimSpace(out), "\n") {
+			if l = strings.TrimSpace(l); l != "" && l != home {
+				open = append(open, l)
+			}
+		}
+	}
+	var recent []string
+	if st, _ := state.Read(); st != nil {
+		for _, r := range st.Recent {
+			if r.Path != home {
+				recent = append(recent, r.Path)
+			}
+		}
+	}
+	cached, fresh := folders.Cached(paths.FoldersCache(), now())
+	var more chan []folders.Cand
+	if !fresh {
+		more = make(chan []folders.Cand, 1)
+		go func() {
+			repos := folders.Scan(home, folders.ScanOptions{})
+			_ = folders.Store(paths.FoldersCache(), repos, now())
+			more <- folders.Merge(open, recent, repos)
+		}()
+	}
+	return picker.Run(picker.Options{
+		In: os.Stdin, Out: os.Stdout, Home: home,
+		Cands: folders.Merge(open, recent, cached), More: more,
+	})
+}
+
+// openFolder opens dir as a project (its session, with the default agent
+// and a sidebar) and shows it: on client, in this tmux client, or by
+// attaching this terminal.
+func openFolder(ctx context.Context, w *workspace.WS, dir, client string) error {
 	if dir == "~" || strings.HasPrefix(dir, "~/") {
-		home, _ := os.UserHomeDir()
-		dir = filepath.Join(home, strings.TrimPrefix(dir, "~"))
+		dir = filepath.Join(paths.UserHome(), strings.TrimPrefix(dir, "~"))
 	}
 	if abs, err := filepath.Abs(dir); err == nil {
 		dir = abs
 	}
 	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
 		msg := i18n.T("open.missing", paths.Shorten(dir))
-		if *clientF != "" {
-			w.Message(ctx, *clientF, "", msg)
+		if client != "" {
+			w.Message(ctx, client, "", msg)
 		}
 		return errors.New(msg)
 	}
@@ -251,15 +421,15 @@ func runOpen(e *Env, args []string) error {
 	}
 	res, err := w.Start(ctx, "", dir)
 	if err != nil {
-		if *clientF != "" {
-			w.Message(ctx, *clientF, "", err.Error())
+		if client != "" {
+			w.Message(ctx, client, "", err.Error())
 		}
 		return err
 	}
 	switch {
-	case *clientF != "":
-		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-c", *clientF, "-t", "=" + res.Session})
-		w.Message(ctx, *clientF, "", i18n.T("open.opened", paths.Shorten(dir)))
+	case client != "":
+		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-c", client, "-t", "=" + res.Session})
+		w.Message(ctx, client, "", i18n.T("open.opened", paths.Shorten(dir)))
 		return err
 	case os.Getenv("TMUX") != "":
 		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-t", "=" + res.Session})

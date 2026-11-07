@@ -15,19 +15,20 @@ type ActionKind int
 
 // Actions.
 const (
-	ActNone     ActionKind = iota
-	ActFocus               // focus pane Pane (switching project if needed)
-	ActSwitch              // continue the target pane in Agent (with context)
-	ActSplitH              // split the target pane side by side (agent chooser)
-	ActSplitV              // split it one above the other
-	ActSessions            // session picker
-	ActLimits              // limits popup
-	ActKeys                // keys help
-	ActProject             // switch the client to project Session
-	ActOpen                // ask for a folder and open it as a project
-	ActRename              // ask for a name for the target pane
-	ActNewAgent            // split the target pane (direction by its shape) with an agent chooser
-	ActChanges             // menu of the changed files, each opening its diff
+	ActNone        ActionKind = iota
+	ActFocus                  // focus pane Pane (switching project if needed)
+	ActSwitch                 // continue the target pane in Agent (with context)
+	ActSplitH                 // split the target pane side by side (agent chooser)
+	ActSplitV                 // split it one above the other
+	ActSessions               // session picker
+	ActLimits                 // limits popup
+	ActKeys                   // keys help
+	ActProject                // switch the client to project Session
+	ActOpen                   // ask for a folder and open it as a project
+	ActRename                 // ask for a name for the target pane
+	ActNewAgent               // split the target pane (direction by its shape) with an agent chooser
+	ActChanges                // menu of the changed files, each opening its diff
+	ActProjectMenu            // menu of project Session (go to it, close it)
 )
 
 // Action is a row's action.
@@ -329,7 +330,7 @@ func projectRow(pr ProjectRow, w, tick int) Line {
 	text := spread(left, 5+nw, strings.Join(right, "")+" ", rw+1, w)
 	a := Action{Kind: ActProject, Session: pr.Session}
 	if pr.Current {
-		return Line{Text: withBg(text)}
+		return Line{Text: withBg(text), Action: Action{Kind: ActProjectMenu, Session: pr.Session}}
 	}
 	return Line{Text: text, Action: a}
 }

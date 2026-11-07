@@ -42,11 +42,14 @@ func (in *ConfInput) Clickable() bool {
 // a window range (a click selects it), then a "+" (range=user|imux:tab)
 // and status-right (§9.3 "Tabs").
 func TabFormat() string {
-	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}}#{?@imux_tab_state, #{@imux_tab_state},} "
+	// The state glyph always takes its column (a space when idle), so the
+	// × and the next tabs do not move when an agent starts or stops.
+	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, } "
 	return "#[align=left] " +
 		"#{W:" +
 		"#[range=window|#{window_index}]#[fg=colour245]" + tab + "#[norange default] ," +
-		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange default] " +
+		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange]" +
+		"#[range=user|imux:close]#[bg=colour236 fg=colour245 nobold]× #[norange default] " +
 		"}" +
 		"#[range=user|imux:tab]#[fg=colour245] + #[norange default]" +
 		"#[align=right]#{T:status-right}"
@@ -96,7 +99,7 @@ func BoundKeys(in *ConfInput) []string {
 		}
 	}
 	if in.Clickable() {
-		ks = append(ks, "root MouseDown1Status")
+		ks = append(ks, "root MouseDown1Status", "root MouseUp1Status")
 	}
 	if t.Mouse {
 		ks = append(ks, "root MouseDown3Border")
@@ -191,11 +194,14 @@ func GenerateConf(in *ConfInput) string {
 		}
 	}
 	if in.Clickable() {
-		w("# Clicks on agent-bar regions (range=user|imux:<x>) go to imux; other status clicks keep tmux's default.")
-		w("bind -n MouseDown1Status if-shell -F %s %s %s",
-			Quote("#{m:imux:*,#{mouse_status_range}}"),
-			QuoteDouble(runShell(in.Self, "__click", "#{mouse_status_range}", pane)),
+		w("# Clicks on imux regions (range=user|imux:<x>) go to imux when the button is released: a menu")
+		w("# opened while it is still down would be closed by the release. Other status clicks keep tmux's default.")
+		w("bind -n MouseDown1Status if-shell -F %s %s",
+			Quote("#{?#{m:imux:*,#{mouse_status_range}},0,1}"),
 			QuoteDouble("switch-client -t ="))
+		w("bind -n MouseUp1Status if-shell -F %s %s",
+			Quote("#{m:imux:*,#{mouse_status_range}}"),
+			QuoteDouble(runShell(in.Self, "__click", "#{mouse_status_range}", pane)))
 	}
 	if cfg.Tmux.Mouse {
 		w("# Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).")

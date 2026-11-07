@@ -33,8 +33,9 @@ func TestParse(t *testing.T) {
 	}{
 		{"a\r", true, []Event{{Kind: EvKey, Key: "a"}, {Kind: EvKey, Key: "enter"}}, ""},
 		{"\x1b[A\x1b[B\x1bOA\t\x1b[Z", true, []Event{{Key: "up"}, {Key: "down"}, {Key: "up"}, {Key: "tab"}, {Key: "backtab"}}, ""},
-		// Left press at column 5, row 7; its release and wheel events are ignored.
-		{"\x1b[<0;5;7M\x1b[<0;5;7m\x1b[<64;5;7M\x1b[<2;1;1M", true, []Event{{Kind: EvClick, X: 5, Y: 7}}, ""},
+		// Left press at column 5, row 7; its release and wheel events are
+		// ignored; a right press is a right click.
+		{"\x1b[<0;5;7M\x1b[<0;5;7m\x1b[<64;5;7M\x1b[<2;1;1M", true, []Event{{Kind: EvClick, X: 5, Y: 7}, {Kind: EvRightClick, X: 1, Y: 1}}, ""},
 		// An incomplete sequence is kept for the next read.
 		{"x\x1b[<0;12", true, []Event{{Key: "x"}}, "\x1b[<0;12"},
 		{"\x1b[", true, nil, "\x1b["},
@@ -42,7 +43,10 @@ func TestParse(t *testing.T) {
 		{"\x1b", true, []Event{{Key: "esc"}}, ""},
 		{"\x1b", false, nil, "\x1b"},
 		{"\x1bq", true, []Event{{Key: "esc"}, {Key: "q"}}, ""},
-		{"\x03\x7f", true, nil, ""}, // Ctrl+C and Backspace do nothing
+		{"\x03\x7f\x08\x15", true, []Event{{Key: "ctrl-c"}, {Key: "backspace"}, {Key: "backspace"}, {Key: "ctrl-u"}}, ""},
+		// UTF-8 characters, and one cut in the middle.
+		{"Masaüstü", true, []Event{{Key: "M"}, {Key: "a"}, {Key: "s"}, {Key: "a"}, {Key: "ü"}, {Key: "s"}, {Key: "t"}, {Key: "ü"}}, ""},
+		{"a\xc3", false, []Event{{Key: "a"}}, "\xc3"},
 	}
 	for _, c := range cases {
 		got, rest := Parse([]byte(c.in), c.final)
@@ -157,8 +161,8 @@ func TestRender(t *testing.T) {
 	if l, _ := find(sc, "Agents"); l.ActionAt(32) != (Action{Kind: ActNewAgent}) {
 		t.Error("Agents +")
 	}
-	if l, _ := find(sc, " A  acme-api"); l.Action.Kind != ActNone || !strings.Contains(l.Text, selBg) {
-		t.Error("the current project is highlighted, not an action")
+	if l, _ := find(sc, " A  acme-api"); l.Action != (Action{Kind: ActProjectMenu, Session: "acme-api-1a2b"}) || !strings.Contains(l.Text, selBg) {
+		t.Error("the current project is highlighted and opens its menu")
 	}
 	if l, _ := find(sc, "backend fix"); !strings.HasPrefix(l.Text, selBg) {
 		t.Error("the target agent is highlighted")

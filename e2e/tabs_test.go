@@ -60,7 +60,7 @@ func TestTabs(t *testing.T) {
 	mark := c.Mark()
 	c.Click(0, x, 1)
 	c.waitScreenAfter(h, mark, "New tab with:", 5*time.Second)
-	time.Sleep(600 * time.Millisecond) // past tmux's double-click time
+	time.Sleep(200 * time.Millisecond)
 	c.Write("x")
 	h.run("codex", 1)
 	h.waitFor("client on the new tab", 5*time.Second, func() bool { return window() == "1" })

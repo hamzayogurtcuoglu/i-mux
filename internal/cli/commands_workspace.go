@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"text/tabwriter"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
@@ -119,6 +120,16 @@ func defaultAction(e *Env, args []string) error {
 	}
 	if err := w.EnsureConf(ctx); err != nil {
 		return err
+	}
+	// In the home folder (a terminal's default) ask which project to open
+	// instead of making the home folder one (D22).
+	if len(pos) == 0 && !*detach && os.Getenv("TMUX") == "" && isTerminal(os.Stdin) &&
+		filepath.Clean(cwd) == filepath.Clean(paths.UserHome()) {
+		dir, err := pickFolder(ctx, w)
+		if err != nil || dir == "" {
+			return err
+		}
+		cwd = dir
 	}
 	if pane := os.Getenv("TMUX_PANE"); pane != "" && w.T.Inside(os.Getenv("TMUX")) {
 		p, err := w.NewWindow(ctx, pane, id, cwd)

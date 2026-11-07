@@ -1,0 +1,182 @@
+package workspace
+
+import (
+	"context"
+	"errors"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
+)
+
+// ProjectInfo is what the project menus say about a session.
+type ProjectInfo struct {
+	Session string
+	Name    string // folder name
+	Agents  int    // agent panes (sidebars and shells not counted)
+	Windows int
+}
+
+// Project reads session s.
+func (w *WS) Project(ctx context.Context, s string) (*ProjectInfo, error) {
+	out, err := w.T.Run(ctx, tmux.Cmd{"list-panes", "-s", "-t", "=" + s, "-F", "#{session_path}\t#{@imux_role}\t#{@imux_agent}\t#{session_windows}"})
+	if err != nil {
+		return nil, err
+	}
+	pi := &ProjectInfo{Session: s}
+	for _, r := range tmux.Rows(out, 4) {
+		pi.Name = filepath.Base(r[0])
+		pi.Windows, _ = strconv.Atoi(r[3])
+		if r[1] != sidebar.RoleSidebar && r[2] != "" {
+			pi.Agents++
+		}
+	}
+	if pi.Name == "" {
+		return nil, errors.New(i18n.T("close.no_project", s))
+	}
+	return pi, nil
+}
+
+// ProjectMenu is the menu of a project in the sidebar: go to it (unless the
+// client shows it) and close it.
+func (w *WS) ProjectMenu(ctx context.Context, s, client, pane string) (*Menu, error) {
+	pi, err := w.Project(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+	m := &Menu{Title: pi.Name}
+	if cur := w.clientSession(ctx, client); cur != s && client != "" {
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("project.go"), Key: "g", Cmd: "switch-client -c " + tmux.Quote(client) + " -t " + tmux.Quote("="+s)})
+	}
+	m.Items = append(m.Items, MenuItem{
+		Name: i18n.T("project.close"), Key: "x",
+		Cmd: w.ui(append([]string{"__menu", "--close-project", s}, uiTarget(pane, client)...)...),
+	})
+	return m, nil
+}
+
+// CloseProjectMenu asks before closing session s.
+func (w *WS) CloseProjectMenu(ctx context.Context, s, client, pane string) (*Menu, error) {
+	pi, err := w.Project(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+	args := []string{"close", "--session", s}
+	if client != "" {
+		args = append(args, "--client", client)
+	}
+	return &Menu{
+		Title: i18n.T("close.project_title", pi.Name, pi.Agents),
+		Items: []MenuItem{
+			{Name: i18n.T("close.yes_project"), Key: "y", Cmd: w.ui(args...)},
+			{Name: i18n.T("click.cancel"), Key: "n"},
+		},
+	}, nil
+}
+
+// CloseTabMenu asks before closing the tab (window) of pane p; the last tab
+// closes the project.
+func (w *WS) CloseTabMenu(ctx context.Context, p *Pane, client string) (*Menu, error) {
+	out, err := w.T.Run(ctx, tmux.Cmd{"list-panes", "-t", p.ID, "-F", "#{@imux_role}\t#{@imux_agent}\t#{session_windows}"})
+	if err != nil {
+		return nil, err
+	}
+	agents, windows := 0, 1
+	for _, r := range tmux.Rows(out, 3) {
+		windows, _ = strconv.Atoi(r[2])
+		if r[0] != sidebar.RoleSidebar && r[1] != "" {
+			agents++
+		}
+	}
+	title := i18n.T("close.tab_title", agents)
+	if windows <= 1 {
+		title = i18n.T("close.last_tab_title", agents)
+	}
+	return &Menu{
+		Title: title,
+		Items: []MenuItem{
+			{Name: i18n.T("close.yes_tab"), Key: "y", Cmd: w.ui(append([]string{"__close-tab"}, uiTarget(p.ID, client)...)...)},
+			{Name: i18n.T("click.cancel"), Key: "n"},
+		},
+	}, nil
+}
+
+// clientSession is the session client shows ("" if unknown).
+func (w *WS) clientSession(ctx context.Context, client string) string {
+	if client == "" {
+		return ""
+	}
+	out, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-c", client, "#{client_session}"})
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// CloseProject ends session s. Clients showing it move to the most recently
+// used other imux project first; without one they detach (§9.3).
+func (w *WS) CloseProject(ctx context.Context, s string) error {
+	out, err := w.T.Run(ctx,
+		tmux.DelimCmd("sessions"), tmux.Cmd{"list-sessions", "-F", "#{session_name}\t#{session_activity}"},
+		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}"})
+	if err != nil {
+		return err
+	}
+	sec := tmux.Sections(out)
+	type sess struct {
+		name string
+		act  int64
+	}
+	var others []sess
+	found := false
+	for _, r := range tmux.Rows(sec["sessions"], 2) {
+		if r[0] == s {
+			found = true
+			continue
+		}
+		act, _ := strconv.ParseInt(r[1], 10, 64)
+		others = append(others, sess{r[0], act})
+	}
+	if !found {
+		return errors.New(i18n.T("close.no_project", s))
+	}
+	sort.Slice(others, func(i, j int) bool { return others[i].act > others[j].act })
+	var cmds []tmux.Cmd
+	if len(others) > 0 {
+		for _, r := range tmux.Rows(sec["clients"], 2) {
+			if r[1] == s {
+				cmds = append(cmds, tmux.Cmd{"switch-client", "-c", r[0], "-t", "=" + others[0].name})
+			}
+		}
+	}
+	cmds = append(cmds, tmux.Cmd{"kill-session", "-t", "=" + s})
+	if _, err := w.T.Run(ctx, cmds...); err != nil {
+		return err
+	}
+	w.RefreshSidebars(ctx)
+	return nil
+}
+
+// CloseTab ends the tab (window) of pane p; the last tab closes the project.
+func (w *WS) CloseTab(ctx context.Context, p *Pane) error {
+	out, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", p.ID, "#{session_name}\t#{session_windows}\t#{window_id}"})
+	if err != nil {
+		return err
+	}
+	rows := tmux.Rows(out, 3)
+	if len(rows) == 0 {
+		return errors.New("no window")
+	}
+	if n, _ := strconv.Atoi(rows[0][1]); n <= 1 {
+		return w.CloseProject(ctx, rows[0][0])
+	}
+	if _, err := w.T.Run(ctx, tmux.Cmd{"kill-window", "-t", rows[0][2]}); err != nil {
+		return err
+	}
+	w.RefreshSidebars(ctx)
+	return nil
+}

@@ -1062,6 +1062,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - Keys: `prefix c` new tab (asks for the agent), `prefix ,` rename the tab, `prefix 1..9` /
   `prefix n` / `prefix p` select (tmux's).
 - The agent bar (`tmux.agent_bar`) stays an option on a second status line.
+- Clicks on imux ranges act on `MouseUp1Status` (window ranges keep `MouseDown1Status`): a menu
+  that opens while the button is still down is closed by the release (measured: 0 of 4 menus
+  survived a 600 ms press; 2 of 4 a 30 ms click).
+- The state glyph always takes its column (a space when idle) so the × and later tabs stay put.
 
 #### Open and close projects (v0.9)
 
@@ -1090,7 +1094,7 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   project, right-click any) → "Close project…" → confirm ("stops its N agents; their
   conversations stay in History"). A client showing it is switched to the most recent other
   project first; without one it detaches.
-- **Close a tab:** the **×** after the current tab (`range=user|imux:x`) → confirm →
+- **Close a tab:** the **×** after the current tab (`range=user|imux:close`) → confirm →
   `imux __close-tab`; the last tab closes the project as above.
 
 #### Agent bar
