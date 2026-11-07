@@ -675,6 +675,16 @@ User feedback with a screenshot (ARCHITECTURE D25, §9.3 "Sidebar v5").
   - AC: bars and percentages per window for Claude and Codex, plain words for the others;
     golden test; README.
 
+## M20: Copilot quota and clearer limit texts (added 2026-11-07)
+
+- [ ] **T20.1 Copilot monthly quota** · S
+  - AC: the newest `quotaSnapshots.premium_interactions` of Copilot's session files shows as a
+    monthly bar with "N of M premium requests" and the reset date; unlimited plans say so; unit
+    tests with synthetic events.
+- [ ] **T20.2 Clear waiting texts** · S
+  - AC: "send it a message in imux: the percentages show after its first reply" for Claude,
+    Codex and Copilot; Antigravity: "keeps its quota to itself; a limit hit shows here".
+
 ---
 
 ## Testing strategy
