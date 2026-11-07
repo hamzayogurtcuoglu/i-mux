@@ -585,16 +585,16 @@ User request with a reference screenshot (ARCHITECTURE D19, §9.3 "Sidebar v4").
 User request: tabs like the reference workspace, and an old version that kept running after an
 upgrade (ARCHITECTURE D20, D21, §9.3 "Tabs").
 
-- [ ] **T14.1 Restart on upgrade** · S
+- [x] **T14.1 Restart on upgrade** · S
   - AC: the watcher and the sidebars exec the new binary when the imux file changed (complete,
     executable, not being written); the watcher rewrites the tmux config on start; unit tests.
-- [ ] **T14.2 Tab bar** · M
+- [x] **T14.2 Tab bar** · M
   - AC: `tmux.tabs` (default on): status line at the top with tabs (number, name, state glyph,
     current highlighted) and a **+**; clicks select tabs; the conf golden test covers it.
-- [ ] **T14.3 New tab, names, states** · M
+- [x] **T14.3 New tab, names, states** · M
   - AC: `imux tab <agent>`; **+** and `prefix c` ask for the agent; `prefix ,` names the tab; the
     sidebar keeps `@imux_tab_auto` and `@imux_tab_state` up to date (only on change).
-- [ ] **T14.4 E2E and docs** · M · deps: T14.2, T14.3
+- [x] **T14.4 E2E and docs** · M · deps: T14.2, T14.3
   - AC: a real click on **+** opens a tab with the chosen agent and a sidebar; the bar shows both
     tabs with their names; a click on the first tab goes back; README, CONFIG.md, screenshots.
 

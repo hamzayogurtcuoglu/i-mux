@@ -73,13 +73,24 @@ func TestGenerateConfOptions(t *testing.T) {
 	if last := lines[len(lines)-1]; !strings.HasPrefix(last, "source-file -q ") || !strings.Contains(last, "tmux.local.conf") {
 		t.Fatalf("last line %q", last)
 	}
-	if ks := BoundKeys(in); strings.Join(ks, ",") != "prefix a,prefix S,prefix b,prefix v,prefix -" {
+	if ks := BoundKeys(in); strings.Join(ks, ",") != "prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ," {
 		t.Fatalf("BoundKeys %q", ks)
 	}
 	for _, want := range []string{"bind    b ", "sidebar toggle", "bind    v ", "__menu --split h", "bind    - ", "__menu --split v", "set-hook -g pane-focus-in", "__sidebar-refresh"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q", want)
 		}
+	}
+	// The tab bar: at the top, with window ranges and the + range; c and ,
+	// open a tab and name it.
+	for _, want := range []string{"status-position top", "range=window|#{window_index}", "range=user|imux:tab", "@imux_tab_auto", "__menu --tab", "set-option -w @imux_tab"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("tab bar: missing %q", want)
+		}
+	}
+	in.Cfg.Tmux.Tabs = false
+	if got := GenerateConf(in); strings.Contains(got, "imux:tab") || !strings.Contains(got, "status-position bottom") || strings.Contains(BoundKeys(in)[len(BoundKeys(in))-1], ",") {
+		t.Error("tabs off")
 	}
 	// Without the sidebar no hook signals it.
 	in.Cfg.Tmux.Sidebar = false

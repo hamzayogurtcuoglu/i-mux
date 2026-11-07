@@ -40,6 +40,11 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 		return nil, nil, err
 	}
 	w.T = tc
+	// A watcher started by a new binary brings the tmux config up to date
+	// (key bindings, status bar) for sessions started by an older one.
+	if err := w.EnsureConf(context.Background()); err != nil {
+		logger.Printf("tmux config: %v", err)
+	}
 	actor := &watch.Actor{W: w, Log: logger}
 	keeper := &watch.StatusKeeper{W: w}
 	states := &watch.PaneStates{T: tc}

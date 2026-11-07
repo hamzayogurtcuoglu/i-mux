@@ -35,7 +35,38 @@ const (
 	OptStateAt  = "@imux_state_at"    // pane: when the state last changed (unix seconds)
 	OptDoneAt   = "@imux_done_at"     // pane: when its work last ended (unix seconds)
 	OptSeen     = "@imux_seen"        // pane: when the user last looked at it (unix seconds)
+	OptTabAuto  = "@imux_tab_auto"    // window: the tab's name from its agent (tab bar)
+	OptTabState = "@imux_tab_state"   // window: the tab's state glyph with its style (tab bar)
 )
+
+// TabName is a tab's name from its panes: the target pane's name (# escaped
+// for the status line).
+func TabName(panes []PaneRow) string {
+	for _, p := range panes {
+		if p.Target {
+			return strings.ReplaceAll(p.Display("shell"), "#", "##")
+		}
+	}
+	return ""
+}
+
+// TabState is the most urgent state of a tab's panes as a styled glyph for
+// the tab bar ("" when all are idle).
+func TabState(panes []PaneRow) string {
+	st, ok := rollup(panes)
+	if !ok {
+		return ""
+	}
+	switch {
+	case st.State == StateBlocked:
+		return "#[fg=colour214]!"
+	case st.Limited != "":
+		return "#[fg=colour203]◆"
+	case st.State == StateDone:
+		return "#[fg=colour71]●"
+	}
+	return "#[fg=colour75]●"
+}
 
 // Pane states shown in the sidebar.
 const (
@@ -237,7 +268,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -245,8 +276,10 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	}
 	sec := tmux.Sections(out)
 	win := Window{Self: self}
-	if rows := tmux.Rows(sec["me"], 6); len(rows) > 0 {
+	var tabAuto, tabState string
+	if rows := tmux.Rows(sec["me"], 8); len(rows) > 0 {
 		r := rows[0]
+		tabAuto, tabState = r[6], r[7]
 		win.ID, win.Last, win.Session = r[0], r[1], r[4]
 		win.Width, _ = strconv.Atoi(r[2])
 		win.Height, _ = strconv.Atoi(r[3])
@@ -381,6 +414,19 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	}
 	for _, p := range panes {
 		m.Panes = append(m.Panes, fill(p.row))
+	}
+	// The tab bar shows this window's name and state (§9.3 "Tabs").
+	if win.ID != "" {
+		var set []tmux.Cmd
+		if name := TabName(m.Panes); name != tabAuto {
+			set = append(set, tmux.Cmd{"set-option", "-w", "-q", "-t", win.ID, OptTabAuto, name})
+		}
+		if st := TabState(m.Panes); st != tabState {
+			set = append(set, tmux.Cmd{"set-option", "-w", "-q", "-t", win.ID, OptTabState, st})
+		}
+		if len(set) > 0 {
+			_, _ = s.T.Run(ctx, set...)
+		}
 	}
 	// Projects: one per session, the current one first, then by name.
 	bySession := map[string]*ProjectRow{}

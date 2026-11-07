@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
 
 // ClickMinVersion is the oldest tmux with `#[range=user|X]` style ranges and
@@ -30,9 +31,25 @@ type ConfInput struct {
 	LocalConf string         // the user's tmux.local.conf, sourced last
 }
 
-// Clickable reports whether the agent bar gets click handling.
+// Clickable reports whether the status line (agent bar, tab bar) gets
+// click handling.
 func (in *ConfInput) Clickable() bool {
-	return in.AgentBar != "" && in.Cfg.Tmux.Mouse && in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
+	return (in.AgentBar != "" || in.Cfg.Tmux.Tabs) && in.Cfg.Tmux.Mouse && in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
+}
+
+// TabFormat is the tab bar (status-format[0] with tmux.tabs): the session's
+// windows as tabs " <n> <name> <state> ", the current one highlighted, each
+// a window range (a click selects it), then a "+" (range=user|imux:tab)
+// and status-right (§9.3 "Tabs").
+func TabFormat() string {
+	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}}#{?@imux_tab_state, #{@imux_tab_state},} "
+	return "#[align=left] " +
+		"#{W:" +
+		"#[range=window|#{window_index}]#[fg=colour245]" + tab + "#[norange default] ," +
+		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange default] " +
+		"}" +
+		"#[range=user|imux:tab]#[fg=colour245] + #[norange default]" +
+		"#[align=right]#{T:status-right}"
 }
 
 // Silent is appended to every shell command imux's bindings, hooks and menu
@@ -69,7 +86,11 @@ func BoundKeys(in *ConfInput) []string {
 	if t.PickerKeyPrefix != "" {
 		ks = append(ks, "prefix "+t.PickerKeyPrefix)
 	}
-	for _, k := range []string{t.SidebarKey, t.SplitRightKey, t.SplitDownKey} {
+	keys := []string{t.SidebarKey, t.SplitRightKey, t.SplitDownKey}
+	if t.Tabs {
+		keys = append(keys, t.NewTabKey, t.RenameTabKey)
+	}
+	for _, k := range keys {
 		if k != "" {
 			ks = append(ks, "prefix "+k)
 		}
@@ -123,6 +144,15 @@ func GenerateConf(in *ConfInput) string {
 	w("set -g  status-right-length 80")
 	w("set -g  status-left-length 32") // session names are <dir>-<hash>; the default 10 cuts them
 	w("set -gq @imux_status ''")
+	if cfg.Tmux.Tabs {
+		w("# Tab bar at the top: the session's windows, and + for a new tab.")
+		w("set -g  status-position top")
+		w("set -g  status-style %s", Quote("bg=default,fg=colour245"))
+		w("set -g  status-format[0] %s", Quote(TabFormat()))
+	} else {
+		w("set -g  status-position bottom")
+		w("set -gu status-format[0]")
+	}
 	if in.AgentBar != "" {
 		w("set -g  status 2")
 		w("set -g  status-format[1] %s", Quote(in.AgentBar))
@@ -149,6 +179,16 @@ func GenerateConf(in *ConfInput) string {
 	}
 	if k := cfg.Tmux.SplitDownKey; k != "" {
 		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--split", "v", pane))
+	}
+	if cfg.Tmux.Tabs {
+		w("# New tab (asks which agent) and the tab's name.")
+		if k := cfg.Tmux.NewTabKey; k != "" {
+			w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--tab", pane))
+		}
+		if k := cfg.Tmux.RenameTabKey; k != "" {
+			w("bind    %s command-prompt -I %s -p %s %s", Quote(k), Quote("#{@imux_tab}"), Quote(i18n.T("prompt.tab")),
+				Quote("set-option -w @imux_tab \"%%%\""))
+		}
 	}
 	if in.Clickable() {
 		w("# Clicks on agent-bar regions (range=user|imux:<x>) go to imux; other status clicks keep tmux's default.")

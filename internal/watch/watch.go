@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -178,11 +179,17 @@ type Daemon struct {
 	Log          *log.Logger
 	Wake         <-chan os.Signal // SIGUSR1
 	Stop         <-chan os.Signal // SIGTERM / SIGINT / SIGHUP
+	// Upgraded reports that the imux binary was replaced; Loop then
+	// returns ErrUpgraded.
+	Upgraded func() bool
 }
 
 // Loop runs until the server is gone or a stop signal arrives.
 func (d *Daemon) Loop(ctx context.Context) error {
 	for {
+		if d.Upgraded != nil && d.Upgraded() {
+			return ErrUpgraded
+		}
 		attached, err := d.Tick.Tick(ctx)
 		if errors.Is(err, tmux.ErrNoServer) {
 			d.Log.Printf("tmux server gone; exiting")
@@ -206,6 +213,9 @@ func (d *Daemon) Loop(ctx context.Context) error {
 		}
 	}
 }
+
+// ErrUpgraded ends Loop when the imux binary was replaced.
+var ErrUpgraded = errors.New("imux binary replaced")
 
 // Run is `imux __watch run`: take the singleton lock (exit quietly when
 // another watcher holds it), write the pid, tune the runtime for a small
@@ -245,6 +255,15 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	logger.Printf("started (poll %v, idle %v)", poll, idle)
-	d := &Daemon{T: tc, Tick: tk, PollInterval: poll, IdleInterval: idle, Log: logger, Wake: wake, Stop: stop}
-	return d.Loop(context.Background())
+	stamp := selfexec.Take()
+	d := &Daemon{T: tc, Tick: tk, PollInterval: poll, IdleInterval: idle, Log: logger, Wake: wake, Stop: stop, Upgraded: stamp.Changed}
+	err = d.Loop(context.Background())
+	if errors.Is(err, ErrUpgraded) {
+		// A new imux binary: restart with it (the lock goes with this
+		// process's file; the new one takes it again).
+		logger.Printf("imux binary replaced; restarting with it")
+		f.Close()
+		return stamp.Exec(os.Args)
+	}
+	return err
 }

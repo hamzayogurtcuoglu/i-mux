@@ -69,6 +69,7 @@ bunun ne kadar önce olduğu. Hepsi tıklanabilir:
 | **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver (terminal başlığı koyan agent'lar kendini adlandırır) |
 | **± Değişiklik** (ya da `f`) | değişen dosyalar; birini seçince farkını (diff) gösterir |
 | **⧉ Geçmiş** (ya da `prefix S`) · **◔ Limitler** · **? Yardım** | eski konuşmalar · kullanım limitleri · bütün tuşlar |
+| en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) |
 | `prefix b` | kenar paneli gizle ya da göster |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` | pane menüsü; Claude / Antigravity / Copilot / Codex'te sürdür |
 

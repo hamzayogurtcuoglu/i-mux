@@ -45,6 +45,9 @@ line number.
 | `tmux.sidebar_key_prefix` | `"b"` | prefix + key shows or hides the sidebar. |
 | `tmux.split_right_key_prefix` | `"v"` | prefix + key splits the active pane (asks which agent to start). |
 | `tmux.split_down_key_prefix` | `"-"` |  |
+| `tmux.tabs` | `true` | Tab bar at the top: each tab (tmux window) with its name and state, and a + that opens a new tab with the agent you pick. |
+| `tmux.new_tab_key_prefix` | `"c"` | prefix + key opens a new tab (asks which agent); prefix + key names the tab. |
+| `tmux.rename_tab_key_prefix` | `","` |  |
 | `tmux.agent_bar` | `false` | Clickable agent bar (second status line), the older alternative to the sidebar. |
 | `tmux.mouse` | `true` | Mouse support (clicks on the agent bar, pane borders and menus). |
 | `tmux.history_limit` | `50000` | Scrollback lines kept per pane. |
@@ -167,6 +170,12 @@ sidebar_key_prefix = "b"
 # prefix + key splits the active pane (asks which agent to start).
 split_right_key_prefix = "v"
 split_down_key_prefix  = "-"
+# Tab bar at the top: each tab (tmux window) with its name and state, and a
+# + that opens a new tab with the agent you pick.
+tabs              = true
+# prefix + key opens a new tab (asks which agent); prefix + key names the tab.
+new_tab_key_prefix    = "c"
+rename_tab_key_prefix = ","
 # Clickable agent bar (second status line), the older alternative to the sidebar.
 agent_bar         = false
 # Mouse support (clicks on the agent bar, pane borders and menus).

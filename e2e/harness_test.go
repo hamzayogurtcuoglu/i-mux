@@ -82,8 +82,9 @@ func newH(t *testing.T, extraConfig string) *H {
 	}
 	if !strings.Contains(tables, "[tmux]") {
 		// The tests written before the sidebar (v0.4) expect its absence
-		// and the agent bar; sidebar tests configure [tmux] themselves.
-		cfg.WriteString("[tmux]\nsidebar = false\nagent_bar = true\n\n")
+		// and the agent bar, and no tab bar; sidebar tests configure [tmux]
+		// themselves.
+		cfg.WriteString("[tmux]\nsidebar = false\nagent_bar = true\ntabs = false\n\n")
 	}
 	// The tests written before short handoff messages (v0.6) read the
 	// handoff in argv; the ones for v0.6 set handoff.deliver themselves.

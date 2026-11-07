@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -110,6 +111,12 @@ func init() {
 		Run:     runRename,
 	})
 	register(&command{
+		Name:    "tab",
+		Args:    "<agent> [--pane %N] [--client C]",
+		Summary: "cmd.tab",
+		Run:     runTab,
+	})
+	register(&command{
 		Name:    "open",
 		Args:    "<folder> [--client C]",
 		Summary: "cmd.open",
@@ -152,6 +159,50 @@ func runRename(e *Env, args []string) error {
 	if *clientF != "" {
 		w.Message(ctx, *clientF, p.ID, i18n.T("rename.done", name))
 	}
+	return nil
+}
+
+// runTab opens a new tab (tmux window) in the pane's project with an agent,
+// right after the pane's tab, and shows it (§9.3 "Tabs").
+func runTab(e *Env, args []string) error {
+	fs := newFlags(e, "tab")
+	paneF := fs.String("pane", "", "a pane of the project (default: this pane)")
+	clientF := fs.String("client", "", "client for messages")
+	pos, err := parseFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return &UsageError{Msg: i18n.T("cli.usage", "tab <agent>")}
+	}
+	id, err := parseAgentFlag("agent", pos[0])
+	if err != nil {
+		return err
+	}
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	p, err := w.PaneTarget(ctx, pane)
+	if err != nil {
+		return err
+	}
+	if !w.Installed(id) {
+		err := &workspace.NotInstalledError{Agent: id}
+		w.Message(ctx, *clientF, p.ID, err.Error())
+		return err
+	}
+	np, err := w.NewWindow(ctx, p.ID, id, p.CWD)
+	if err != nil {
+		w.Message(ctx, *clientF, p.ID, err.Error())
+		return err
+	}
+	fmt.Fprintln(e.Stdout, np)
 	return nil
 }
 

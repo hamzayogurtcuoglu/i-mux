@@ -74,7 +74,7 @@ func TestAgentBar(t *testing.T) {
 // TestAgentBarOff: tmux.agent_bar = false gives one status line and no
 // status click binding.
 func TestAgentBarOff(t *testing.T) {
-	h := newH(t, "[tmux]\nagent_bar = false\nsidebar = false\n")
+	h := newH(t, "[tmux]\nagent_bar = false\nsidebar = false\ntabs = false\n")
 	h.startSession("claude")
 	if got := strings.TrimSpace(h.mustTmux("show-options", "-gv", "status")); got != "on" {
 		t.Fatalf("status = %q, want on", got)

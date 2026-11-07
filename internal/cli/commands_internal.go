@@ -24,7 +24,7 @@ func init() {
 	})
 	register(&command{
 		Name:    "__menu",
-		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v | --keys | --limits | --changes]",
+		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v | --keys | --limits | --changes | --tab]",
 		Summary: "cmd.internal",
 		Hidden:  true,
 		Run:     runMenu,
@@ -65,6 +65,7 @@ func runMenu(e *Env, args []string) error {
 	keysF := fs.Bool("keys", false, "show the keys")
 	limitsF := fs.Bool("limits", false, "open the limits popup")
 	changesF := fs.Bool("changes", false, "menu of the changed files")
+	tabF := fs.Bool("tab", false, "ask which agent a new tab starts with")
 	if _, err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -89,6 +90,8 @@ func runMenu(e *Env, args []string) error {
 		return w.ShowLimits(client)
 	case *keysF:
 		m = w.KeysMenu()
+	case *tabF:
+		m = w.TabMenu(p, client)
 	case *changesF:
 		if m = w.ChangesMenu(ctx, p, client); m == nil {
 			w.Message(ctx, client, pane, i18n.T("menu.no_changes"))

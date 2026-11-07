@@ -196,10 +196,26 @@ func (w *WS) ChangesMenu(ctx context.Context, p *Pane, client string) *Menu {
 	return m
 }
 
+// TabMenu asks which agent a new tab starts with.
+func (w *WS) TabMenu(p *Pane, client string) *Menu {
+	m := &Menu{Title: i18n.T("tab.title")}
+	for _, a := range agent.Ordered(w.Cfg) {
+		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: w.ui(append([]string{"tab", string(a.ID)}, uiTarget(p.ID, client)...)...)}
+		if !w.Installed(a.ID) {
+			it.Name += " " + i18n.T("menu.not_installed")
+			it.Disabled, it.Key = true, ""
+		} else if until := w.LimitedUntil(a.ID); until != "" {
+			it.Name += " " + i18n.T("sidebar.limited", until)
+		}
+		m.Items = append(m.Items, it)
+	}
+	return m
+}
+
 // KeysMenu lists the keys (help).
 func (w *WS) KeysMenu() *Menu {
 	m := &Menu{Title: i18n.T("keys.title")}
-	for _, k := range []string{"keys.menu", "keys.switch", "keys.split", "keys.sidebar", "keys.sessions", "keys.panes", "keys.in_sidebar", "", "keys.prefix"} {
+	for _, k := range []string{"keys.menu", "keys.switch", "keys.split", "keys.sidebar", "keys.sessions", "keys.tabs", "keys.panes", "keys.in_sidebar", "", "keys.prefix"} {
 		if k == "" {
 			m.Items = append(m.Items, Separator())
 			continue

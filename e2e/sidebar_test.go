@@ -38,6 +38,13 @@ func (h *H) startWithSidebar() (agentPane, bar string) {
 	return agentPane, bar
 }
 
+// screen captures pane row by row (no -J: the sidebar's full-width rows
+// would be joined).
+func (h *H) screen(pane string) string {
+	out, _ := h.tmux("capture-pane", "-p", "-t", pane)
+	return out
+}
+
 // plusOf returns the client screen position of the "+" of a section
 // header ("Projects", "Agents").
 func (h *H) plusOf(bar, title string) (x, y int) {
@@ -52,9 +59,21 @@ func (h *H) plusOf(bar, title string) (x, y int) {
 // line containing text.
 func (h *H) rowOf(bar, text string) (x, y int) {
 	h.t.Helper()
+	// The sidebar takes its width back after a client attached.
+	h.waitFor("sidebar width", 10*time.Second, func() bool {
+		f := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width} #{window_width}"))
+		ww, _ := strconv.Atoi(f[1])
+		return f[0] == "34" || ww < 54
+	})
+	width, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")))
 	var lines []string
 	h.waitFor("sidebar line "+text, 10*time.Second, func() bool {
-		lines = strings.Split(h.capture(bar), "\n")
+		lines = strings.Split(h.screen(bar), "\n")
+		// Drawn for this width: the "+" of Projects is in the last but one
+		// column (a capture right after a resize still shows the old frame).
+		if len(lines) == 0 || utf8.RuneCountInString(strings.TrimRight(lines[0], " ")) != width-1 {
+			return false
+		}
 		for _, l := range lines {
 			if strings.Contains(l, text) {
 				return true
@@ -62,9 +81,12 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 		}
 		return false
 	})
-	pos := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_left} #{pane_top}"))
+	pos := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_left} #{pane_top} #{status-position} #{status}"))
 	left, _ := strconv.Atoi(pos[0])
 	top, _ := strconv.Atoi(pos[1])
+	if pos[2] == "top" && pos[3] != "off" {
+		top++ // the tab bar takes the client's first line
+	}
 	for i, l := range lines {
 		if j := strings.Index(l, text); j >= 0 {
 			return left + utf8.RuneCountInString(l[:j]) + 1, top + i + 1
@@ -84,9 +106,10 @@ func TestSidebar(t *testing.T) {
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
 	c.waitScreen(h, "Agents", 10*time.Second)
-	if w := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")); w != "34" {
-		t.Errorf("sidebar width %s, want 34", w)
-	}
+	// A bigger client grows the panes; the sidebar takes its width back.
+	h.waitFor("sidebar width 34", 5*time.Second, func() bool {
+		return strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")) == "34"
+	})
 	if got := h.paneOpt(agentPane, "#{pane_active}"); got != "1" {
 		t.Errorf("the agent pane should keep the focus, active=%s", got)
 	}

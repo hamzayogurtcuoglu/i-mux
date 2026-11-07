@@ -75,6 +75,7 @@ long ago that changed. Everything is clickable:
 | **✎ Rename** (or `n`) | give the agent a name of your own, like "backend fix" (agents that title their terminal name themselves) |
 | **± Changes** (or `f`) | the changed files; pick one to see its diff |
 | **⧉ History** (or `prefix S`) · **◔ Limits** · **? Help** | earlier conversations · usage limits · every key |
+| the **tab bar** at the top · its **+** (or `prefix c`) | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) |
 | `prefix b` | hide or show the sidebar |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` | the pane menu; continue in Claude / Antigravity / Copilot / Codex |
 

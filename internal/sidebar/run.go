@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -62,6 +63,8 @@ func Run(ctx context.Context, o Options) error {
 	restore, err := rawMode(int(o.In.Fd()))
 	if err == nil {
 		defer restore()
+	} else {
+		restore = nil
 	}
 	// Alternate screen, no cursor, SGR mouse reports for button presses.
 	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h")
@@ -93,6 +96,16 @@ func Run(ctx context.Context, o Options) error {
 		}
 	}()
 
+	stamp := selfexec.Take()
+	upgrade := func() {
+		// A new imux binary: restart with it in this same pane.
+		if stamp.Changed() {
+			if restore != nil {
+				restore()
+			}
+			_ = stamp.Exec(os.Args)
+		}
+	}
 	tick := time.NewTicker(o.Safety)
 	defer tick.Stop()
 	// The spinner of working agents turns from the cached model: no tmux
@@ -111,12 +124,14 @@ func Run(ctx context.Context, o Options) error {
 		case sig := <-sigs:
 			switch sig {
 			case syscall.SIGUSR1:
+				upgrade()
 			case syscall.SIGWINCH:
 				s.keepWidth(ctx)
 			default:
 				return nil
 			}
 		case <-tick.C:
+			upgrade()
 		case <-spin.C:
 			if s.model.Animated() {
 				s.model.Tick++
@@ -150,6 +165,11 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 	}
 	if w.Alone {
 		return true
+	}
+	// A resize the SIGWINCH did not fix (tmux grows panes in proportion
+	// when a bigger client attaches): take the width back.
+	if want := s.o.Width; want > 0 && w.Width != want && w.WinW >= want+20 {
+		_, _ = s.t.Run(ctx, tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(want)})
 	}
 	m.Tick = s.model.Tick
 	s.model, s.win = m, w

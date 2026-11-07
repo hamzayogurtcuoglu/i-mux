@@ -21,6 +21,7 @@ const (
 	ClickSwitch               // switch the pane to the agent
 	ClickConfirm              // the agent is limited: ask first
 	ClickInstall              // the agent is not installed: show the hint
+	ClickNewTab               // the tab bar's +: ask which agent a new tab starts with
 )
 
 // Classify decides what a click on range rng does for pane p (§9.3, §14.7).
@@ -34,6 +35,8 @@ func (w *WS) Classify(rng string, p *Pane) (ClickAction, session.AgentID) {
 		return ClickMenu, ""
 	case "sessions":
 		return ClickSessions, ""
+	case "tab":
+		return ClickNewTab, ""
 	}
 	id, ok := AgentOfRange(x)
 	if !ok {
@@ -67,6 +70,8 @@ func (w *WS) Click(ctx context.Context, f *sources.Finder, rng string, p *Pane, 
 			return nil
 		}
 		return w.Show(ctx, m, client, p.ID)
+	case ClickNewTab:
+		return w.Show(ctx, w.TabMenu(p, client), client, p.ID)
 	case ClickInstall:
 		a := agent.MustGet(id)
 		w.Message(ctx, client, p.ID, i18n.T("agent.not_installed", a.Name, a.InstallHint))

@@ -19,6 +19,10 @@ set -g  status-right '#{?@imux_status,#{@imux_status} · ,}%H:%M '
 set -g  status-right-length 80
 set -g  status-left-length 32
 set -gq @imux_status ''
+# Tab bar at the top: the session's windows, and + for a new tab.
+set -g  status-position top
+set -g  status-style bg=default,fg=colour245
+set -g  status-format[0] '#[align=left] #{W:#[range=window|#{window_index}]#[fg=colour245] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}}#{?@imux_tab_state, #{@imux_tab_state},} #[norange default] ,#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}}#{?@imux_tab_state, #{@imux_tab_state},} #[norange default] }#[range=user|imux:tab]#[fg=colour245] + #[norange default]#[align=right]#{T:status-right}'
 set -g  status 2
 set -g  status-format[1] '#[align=left] imux #[range=user|imux:menu]☰#[norange default]'
 
@@ -30,11 +34,14 @@ bind    S run-shell -b '/opt/imux/bin/imux __menu --sessions --pane #{pane_id} -
 bind    b run-shell -b '/opt/imux/bin/imux sidebar toggle --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    v run-shell -b '/opt/imux/bin/imux __menu --split h --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    - run-shell -b '/opt/imux/bin/imux __menu --split v --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+# New tab (asks which agent) and the tab's name.
+bind    c run-shell -b '/opt/imux/bin/imux __menu --tab --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    , command-prompt -I '#{@imux_tab}' -p 'Tab name:' 'set-option -w @imux_tab "%%%"'
 # Clicks on agent-bar regions (range=user|imux:<x>) go to imux; other status clicks keep tmux's default.
 bind -n MouseDown1Status if-shell -F '#{m:imux:*,#{mouse_status_range}}' "run-shell -b '/opt/imux/bin/imux __click #{mouse_status_range} --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'" "switch-client -t ="
 # Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).
 bind -n MouseDown3Border run-shell -t = -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
-set -g  @imux_keys 'root C-\,prefix a,prefix S,prefix b,prefix v,prefix -,root MouseDown1Status,root MouseDown3Border'
+set -g  @imux_keys 'root C-\,prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root MouseDown1Status,root MouseDown3Border'
 
 # Pane lifecycle and watcher.
 set-hook -g pane-died "run-shell -b '/opt/imux/bin/imux __pane-died #{pane_id} #{pane_dead_status} >/dev/null 2>&1 || true'"

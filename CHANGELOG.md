@@ -6,6 +6,22 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-07
+
+### Added
+
+- **Tabs:** a tab bar at the top shows the project's tabs (tmux windows) with their names and
+  states; click one to switch, **+** (or `prefix c`) opens a new tab with the agent you pick, and
+  `prefix ,` names it. `imux tab <agent>` does the same from the command line. `[tmux] tabs =
+  false` keeps the status line at the bottom.
+
+### Fixed
+
+- After an upgrade, the background watcher and the sidebars of running sessions kept running the
+  old version. They now restart with the new binary on their own, and the tmux config is
+  refreshed.
+- The sidebar takes its width back when a bigger terminal attaches.
+
 ## [0.7.0] - 2026-11-07
 
 ### Changed

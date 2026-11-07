@@ -117,6 +117,9 @@ type Tmux struct {
 	SidebarKey      string `toml:"sidebar_key_prefix"`
 	SplitRightKey   string `toml:"split_right_key_prefix"`
 	SplitDownKey    string `toml:"split_down_key_prefix"`
+	Tabs            bool   `toml:"tabs"`
+	NewTabKey       string `toml:"new_tab_key_prefix"`
+	RenameTabKey    string `toml:"rename_tab_key_prefix"`
 	Mouse           bool   `toml:"mouse"`
 	HistoryLimit    int    `toml:"history_limit"`
 }
@@ -217,6 +220,9 @@ func Default() *Config {
 			SidebarKey:      "b",
 			SplitRightKey:   "v",
 			SplitDownKey:    "-",
+			Tabs:            true,
+			NewTabKey:       "c",
+			RenameTabKey:    ",",
 			Mouse:           true,
 			HistoryLimit:    50000,
 		},
