@@ -69,6 +69,11 @@ func BoundKeys(in *ConfInput) []string {
 	if t.PickerKeyPrefix != "" {
 		ks = append(ks, "prefix "+t.PickerKeyPrefix)
 	}
+	for _, k := range []string{t.SidebarKey, t.SplitRightKey, t.SplitDownKey} {
+		if k != "" {
+			ks = append(ks, "prefix "+k)
+		}
+	}
 	if in.Clickable() {
 		ks = append(ks, "root MouseDown1Status")
 	}
@@ -134,6 +139,16 @@ func GenerateConf(in *ConfInput) string {
 	if k := cfg.Tmux.PickerKeyPrefix; k != "" {
 		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--sessions", pane))
 	}
+	w("# Sidebar on/off, and splits that ask which agent to start.")
+	if k := cfg.Tmux.SidebarKey; k != "" {
+		w("bind    %s %s", Quote(k), runShell(in.Self, "sidebar", "toggle", pane))
+	}
+	if k := cfg.Tmux.SplitRightKey; k != "" {
+		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--split", "h", pane))
+	}
+	if k := cfg.Tmux.SplitDownKey; k != "" {
+		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--split", "v", pane))
+	}
 	if in.Clickable() {
 		w("# Clicks on agent-bar regions (range=user|imux:<x>) go to imux; other status clicks keep tmux's default.")
 		w("bind -n MouseDown1Status if-shell -F %s %s %s",
@@ -150,6 +165,12 @@ func GenerateConf(in *ConfInput) string {
 	w("# Pane lifecycle and watcher.")
 	w("set-hook -g pane-died %s", QuoteDouble(runShell(in.Self, "__pane-died", "#{pane_id}", "#{pane_dead_status}")))
 	w("set-hook -g client-attached %s", QuoteDouble(runShell(in.Self, "__watch", "ensure")))
+	if cfg.Tmux.Sidebar {
+		w("# Sidebars redraw when panes change (they sleep otherwise).")
+		for _, h := range []string{"pane-focus-in", "after-split-window", "after-kill-pane", "pane-exited", "window-pane-changed"} {
+			w("set-hook -g %s %s", h, QuoteDouble(runShell(in.Self, "__sidebar-refresh")))
+		}
+	}
 	w("")
 	w("source-file -q %s", Quote(in.LocalConf))
 	return b.String()

@@ -111,6 +111,7 @@ func TestAgentBarOverflow(t *testing.T) {
 
 func TestAgentBarInConf(t *testing.T) {
 	w, _, _ := testWS(t)
+	w.Cfg.Tmux.AgentBar = true // the sidebar is the default since v0.4
 	v34, _ := tmux.ParseVersion("tmux 3.4")
 	v32, _ := tmux.ParseVersion("tmux 3.2a")
 	if b := agentBar(w, v34); !strings.Contains(b, "range=user|imux:claude") {

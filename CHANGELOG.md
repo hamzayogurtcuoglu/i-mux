@@ -6,6 +6,24 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-07
+
+### Added
+
+- **Sidebar** on the left of each window, replacing the bottom agent bar as the
+  default: the window's panes with their state (working, idle, limited, exited), the agents the
+  active pane can continue in, Split right / Split down buttons that ask which agent to start,
+  Sessions, Limits and Keys, all clickable, and usable from the keyboard. `prefix b` hides or shows
+  it; `prefix v` / `prefix -` split with an agent chooser. It sleeps until something changes (tmux
+  hooks and the watcher wake it). `[tmux] sidebar = false` and `agent_bar = true` bring back the old
+  bar.
+- The watcher records each agent pane's state (`@imux_state`: working or idle).
+
+### Fixed
+
+- A double click on a sidebar button could close the menu it opened and send the next key to the
+  sidebar: click actions now wait out tmux's double-click time and a second click is ignored.
+
 ## [0.3.0] - 2026-11-07
 
 ### Fixed

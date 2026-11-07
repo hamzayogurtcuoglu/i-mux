@@ -30,6 +30,7 @@ const FastFail = 10 * time.Second
 //
 // status < 0 means unknown (killed by a signal).
 func (w *WS) PaneDied(ctx context.Context, pane string, status int) error {
+	defer w.RefreshSidebars(ctx)
 	p, err := w.Pane(ctx, pane)
 	if errors.Is(err, tmux.ErrNoPane) {
 		return nil

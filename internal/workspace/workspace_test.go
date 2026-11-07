@@ -185,8 +185,28 @@ func TestStartBatchesOptions(t *testing.T) {
 	if !res.Created || res.Pane != "%5" || res.Session != SessionName(h.Project) {
 		t.Fatalf("result %+v", res)
 	}
-	last := f.calls[len(f.calls)-1]
+	var last []string
+	for _, c := range f.calls {
+		if strings.Contains(strings.Join(c, " "), "new-session") {
+			last = c
+		}
+	}
 	joined := strings.Join(last, " ")
+	// The sidebar is added on the left, full height, without the focus,
+	// and marked so commands given it act on the agent pane.
+	var bar string
+	for _, c := range f.calls {
+		j := strings.Join(c, " ")
+		if strings.Contains(j, "split-window -h -b -f -d -l 30 -t %5") && strings.HasSuffix(j, "/opt/imux/bin/imux __sidebar") {
+			bar = "split"
+		}
+		if bar == "split" && strings.Contains(j, "@imux_role sidebar") && strings.Contains(j, "@imux_last %5") {
+			bar = "marked"
+		}
+	}
+	if bar != "marked" {
+		t.Fatalf("no sidebar added and marked:\n%q", f.calls)
+	}
 	for _, want := range []string{
 		"new-session -d -s " + res.Session + " -c " + h.Project, "/opt/imux/bin/imux __exec ",
 		"; set-option -p remain-on-exit on", "; set-option -p @imux_agent claude", "; set-option -p @imux_cwd " + h.Project,

@@ -42,7 +42,7 @@ var ErrNoTarget = errors.New("no such pane")
 // resolves to the unique live pane running it in the caller's session, then
 // server-wide.
 func (b *Bus) Resolve(ctx context.Context, target, caller string) (*workspace.Pane, error) {
-	all, err := b.W.Panes(ctx)
+	all, err := b.agentPanes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func WriteActivity(a *Activity) error {
 // Panes lists every pane with its idle/busy state: from the watcher's
 // activity when it is fresh, else from two screen samples 1 s apart.
 func (b *Bus) Panes(ctx context.Context) ([]Info, error) {
-	all, err := b.W.Panes(ctx)
+	all, err := b.agentPanes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -212,4 +212,20 @@ func (b *Bus) hashes(ctx context.Context, ids []string) (map[string]uint64, erro
 		res[id] = h.Sum64()
 	}
 	return res, nil
+}
+
+// agentPanes lists the server's panes without the sidebars: they are part of
+// the UI, not something to message or wait for.
+func (b *Bus) agentPanes(ctx context.Context) ([]*workspace.Pane, error) {
+	all, err := b.W.Panes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := all[:0]
+	for _, p := range all {
+		if !p.IsSidebar() {
+			out = append(out, p)
+		}
+	}
+	return out, nil
 }

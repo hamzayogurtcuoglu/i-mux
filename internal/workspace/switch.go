@@ -295,6 +295,7 @@ func (w *WS) respawn(ctx context.Context, p *Pane, l Launch, trail Trail, fallba
 // notifySwitch shows the result on the client (and the one-time
 // cross-provider notice on the first switch).
 func (w *WS) notifySwitch(ctx context.Context, client, pane string, r *SwitchResult) {
+	w.RefreshSidebars(ctx)
 	var msg string
 	switch {
 	case r.Resumed && r.Delta:

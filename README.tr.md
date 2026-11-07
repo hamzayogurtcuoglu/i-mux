@@ -56,13 +56,20 @@ cd ~/code/projem
 imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
-| Tuş / eylem | Ne yapar |
+Soldaki **kenar panel** penceredeki paneleri (● çalışıyor, ○ boşta, ◆ limitli) ve yapabileceğin her
+şeyi gösterir; hepsi tıklanabilir:
+
+| Kenar panel / tuş | Ne yapar |
 |---|---|
-| `Ctrl+\` | bölme menüsü: agent değiştir, oturumlar, yeni bölme, devir belgesi, limitler |
-| `Ctrl+\` sonra `c` `a` `p` `x` | Claude / Antigravity / Copilot / Codex'te sürdür |
-| alttaki çubukta bir agent'a tıklamak | o agent'ta sürdür |
-| `prefix S` | projenin önceki sohbetlerinden birini seç |
-| `prefix a` | bölme menüsü (terminal `Ctrl+\` tuşunu kendine ayırıyorsa) |
+| **BURADA DEVAM ET** altındaki bir agent'a tıkla | etkin pane o agent'ta, bağlamıyla devam eder |
+| **PANELER** altındaki bir pane'e tıkla | ona geç |
+| **Sağa böl** / **Aşağı böl** (ya da `prefix v` / `prefix -`) | hangi agent diye sorar, yeni pane'de açar |
+| **Eski konuşmalar…** (ya da `prefix S`) | projenin önceki bir konuşmasını sürdür |
+| **Tuşlar** | bütün tuşlar tek bakışta |
+| `prefix b` | kenar paneli gizle ya da göster |
+| `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` | pane menüsü; Claude / Antigravity / Copilot / Codex'te sürdür |
+
+`prefix`, `Ctrl+b` demektir: bas, bırak, sonra tuşa bas.
 
 <table>
   <tr>

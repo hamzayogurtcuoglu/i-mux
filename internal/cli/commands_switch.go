@@ -69,6 +69,9 @@ func runSwitch(e *Env, args []string) error {
 		return err
 	}
 	ctx := context.Background()
+	if p, err := w.PaneTarget(ctx, pane); err == nil {
+		pane = p.ID // a sidebar's commands act on its target pane
+	}
 	f := sources.New(cfg)
 	req := workspace.SwitchReq{Pane: pane, To: to, Reason: *reasonF, NoResume: *noResume, Client: *clientF}
 	if *fromF != "" {

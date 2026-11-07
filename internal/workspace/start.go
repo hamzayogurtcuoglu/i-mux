@@ -84,6 +84,7 @@ func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartR
 	if err != nil {
 		return nil, err
 	}
+	w.maybeSidebar(ctx, pane)
 	EnsureWatcher(w)
 	return &StartResult{Session: name, Pane: pane, Created: true}, nil
 }
@@ -101,9 +102,13 @@ func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID,
 	if err != nil {
 		return "", err
 	}
-	return w.launchNew(ctx, Launch{Agent: id, CWD: cwd}, func(cmd []string) tmux.Cmd {
+	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd}, func(cmd []string) tmux.Cmd {
 		return append(tmux.Cmd{"new-window", "-a", "-t", strings.TrimSpace(win), "-c", cwd, "-P", "-F", "#{pane_id}"}, cmd...)
 	})
+	if err == nil {
+		w.maybeSidebar(ctx, pane)
+	}
+	return pane, err
 }
 
 // Split opens a pane with agent id next to pane, in the same directory.
@@ -149,6 +154,9 @@ func (w *WS) Sessions(ctx context.Context) ([]*SessionInfo, error) {
 		return nil, err
 	}
 	for _, p := range panes {
+		if p.IsSidebar() {
+			continue // part of the UI, not a pane of the project
+		}
 		if s := byName[p.Session]; s != nil {
 			s.Panes = append(s.Panes, p)
 		}

@@ -110,6 +110,11 @@ type Tmux struct {
 	MenuKeyPrefix   string `toml:"menu_key_prefix"`
 	PickerKeyPrefix string `toml:"picker_key_prefix"`
 	AgentBar        bool   `toml:"agent_bar"`
+	Sidebar         bool   `toml:"sidebar"`
+	SidebarWidth    int    `toml:"sidebar_width"`
+	SidebarKey      string `toml:"sidebar_key_prefix"`
+	SplitRightKey   string `toml:"split_right_key_prefix"`
+	SplitDownKey    string `toml:"split_down_key_prefix"`
 	Mouse           bool   `toml:"mouse"`
 	HistoryLimit    int    `toml:"history_limit"`
 }
@@ -202,7 +207,12 @@ func Default() *Config {
 			MenuKeyRoot:     `C-\`,
 			MenuKeyPrefix:   "a",
 			PickerKeyPrefix: "S",
-			AgentBar:        true,
+			AgentBar:        false,
+			Sidebar:         true,
+			SidebarWidth:    30,
+			SidebarKey:      "b",
+			SplitRightKey:   "v",
+			SplitDownKey:    "-",
 			Mouse:           true,
 			HistoryLimit:    50000,
 		},
@@ -355,6 +365,9 @@ func (c *Config) validate(src []byte) error {
 		if p.v <= 0 {
 			return &Error{Line: lineOf(src, p.key), Msg: fmt.Sprintf("%s must be positive", p.key)}
 		}
+	}
+	if c.Tmux.Sidebar && (c.Tmux.SidebarWidth < 20 || c.Tmux.SidebarWidth > 80) {
+		return &Error{Line: lineOf(src, "sidebar_width"), Msg: "sidebar_width must be between 20 and 80"}
 	}
 	if c.Handoff.BudgetChars < 2000 {
 		return &Error{Line: lineOf(src, "budget_chars"), Msg: "budget_chars must be at least 2000"}

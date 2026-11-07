@@ -41,7 +41,7 @@ func handoffForPane(e *Env, cfg *config.Config, pane string, to session.AgentID,
 	}
 	w.Now = now
 	ctx := context.Background()
-	p, err := w.Pane(ctx, pane)
+	p, err := w.PaneTarget(ctx, pane)
 	if err != nil {
 		return "", err
 	}
@@ -268,10 +268,11 @@ func runSplit(e *Env, args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	p, err := w.Pane(ctx, pane)
+	p, err := w.PaneTarget(ctx, pane)
 	if err != nil {
 		return err
 	}
+	pane = p.ID // a sidebar's commands act on its target pane
 	if *fromF != "" {
 		f := sources.New(w.Cfg)
 		ref, err := f.Resolve(ctx, "", *fromF, p.CWD)

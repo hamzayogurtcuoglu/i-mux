@@ -38,7 +38,12 @@ line number.
 | `tmux.menu_key_root` | `'C-\'` | Key that opens the pane menu without the prefix. "" disables it. |
 | `tmux.menu_key_prefix` | `"a"` | prefix + key opens the pane menu. |
 | `tmux.picker_key_prefix` | `"S"` | prefix + key opens the session picker. |
-| `tmux.agent_bar` | `true` | Clickable agent bar (second status line). |
+| `tmux.sidebar` | `true` | Sidebar on the left of each window: panes, agents to continue in, split buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3). |
+| `tmux.sidebar_width` | `30` |  |
+| `tmux.sidebar_key_prefix` | `"b"` | prefix + key shows or hides the sidebar. |
+| `tmux.split_right_key_prefix` | `"v"` | prefix + key splits the active pane (asks which agent to start). |
+| `tmux.split_down_key_prefix` | `"-"` |  |
+| `tmux.agent_bar` | `false` | Clickable agent bar (second status line), the older alternative to the sidebar. |
 | `tmux.mouse` | `true` | Mouse support (clicks on the agent bar, pane borders and menus). |
 | `tmux.history_limit` | `50000` | Scrollback lines kept per pane. |
 | `agents.claude.bin` | `""` | Binary to run; "" finds it on PATH (an absolute path or a name). |
@@ -143,8 +148,17 @@ menu_key_root     = 'C-\'
 menu_key_prefix   = "a"
 # prefix + key opens the session picker.
 picker_key_prefix = "S"
-# Clickable agent bar (second status line).
-agent_bar         = true
+# Sidebar on the left of each window: panes, agents to continue in, split
+# buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3).
+sidebar           = true
+sidebar_width     = 30
+# prefix + key shows or hides the sidebar.
+sidebar_key_prefix = "b"
+# prefix + key splits the active pane (asks which agent to start).
+split_right_key_prefix = "v"
+split_down_key_prefix  = "-"
+# Clickable agent bar (second status line), the older alternative to the sidebar.
+agent_bar         = false
 # Mouse support (clicks on the agent bar, pane borders and menus).
 mouse             = true
 # Scrollback lines kept per pane.

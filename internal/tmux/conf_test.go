@@ -73,8 +73,18 @@ func TestGenerateConfOptions(t *testing.T) {
 	if last := lines[len(lines)-1]; !strings.HasPrefix(last, "source-file -q ") || !strings.Contains(last, "tmux.local.conf") {
 		t.Fatalf("last line %q", last)
 	}
-	if ks := BoundKeys(in); strings.Join(ks, ",") != "prefix a,prefix S" {
+	if ks := BoundKeys(in); strings.Join(ks, ",") != "prefix a,prefix S,prefix b,prefix v,prefix -" {
 		t.Fatalf("BoundKeys %q", ks)
+	}
+	for _, want := range []string{"bind    b ", "sidebar toggle", "bind    v ", "__menu --split h", "bind    - ", "__menu --split v", "set-hook -g pane-focus-in", "__sidebar-refresh"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	// Without the sidebar no hook signals it.
+	in.Cfg.Tmux.Sidebar = false
+	if got := GenerateConf(in); strings.Contains(got, "__sidebar-refresh") {
+		t.Error("sidebar hooks without a sidebar")
 	}
 }
 

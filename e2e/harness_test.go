@@ -80,6 +80,11 @@ func newH(t *testing.T, extraConfig string) *H {
 		}
 		fmt.Fprintf(&cfg, "[agents.%s]\nbin = %q\n\n", a, filepath.Join(h.Fakes, "fake-"+a))
 	}
+	if !strings.Contains(tables, "[tmux]") {
+		// The tests written before the sidebar (v0.4) expect its absence
+		// and the agent bar; sidebar tests configure [tmux] themselves.
+		cfg.WriteString("[tmux]\nsidebar = false\nagent_bar = true\n\n")
+	}
 	if !strings.Contains(tables, "[limits]") {
 		// A fast watcher keeps tests short; it still has to see a screen
 		// twice before it acts.

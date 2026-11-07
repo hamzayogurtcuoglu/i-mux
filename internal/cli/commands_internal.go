@@ -24,7 +24,7 @@ func init() {
 	})
 	register(&command{
 		Name:    "__menu",
-		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id>]",
+		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v | --keys | --limits]",
 		Summary: "cmd.internal",
 		Hidden:  true,
 		Run:     runMenu,
@@ -61,6 +61,9 @@ func runMenu(e *Env, args []string) error {
 	sessionsF := fs.Bool("sessions", false, "open the session picker")
 	pageF := fs.Int("page", 0, "picker page (0-based)")
 	sessionF := fs.String("session", "", "menu for one conversation (<agent>:<id>)")
+	splitF := fs.String("split", "", "ask which agent a new pane starts with: h (right) or v (down)")
+	keysF := fs.Bool("keys", false, "show the keys")
+	limitsF := fs.Bool("limits", false, "open the limits popup")
 	if _, err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -73,13 +76,20 @@ func runMenu(e *Env, args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	p, err := w.Pane(ctx, pane)
+	p, err := w.PaneTarget(ctx, pane)
 	if err != nil {
 		return err
 	}
+	pane = p.ID // a sidebar's commands act on its target pane
 	client := *clientF
 	var m *workspace.Menu
 	switch {
+	case *limitsF:
+		return w.ShowLimits(client)
+	case *keysF:
+		m = w.KeysMenu()
+	case *splitF != "":
+		m = w.SplitMenu(p, client, *splitF == "h")
 	case *sessionsF:
 		m = w.PickerMenu(ctx, sources.New(cfg), p, client, *pageF)
 		if m == nil {
@@ -125,7 +135,7 @@ func runClick(e *Env, args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	p, err := w.Pane(ctx, pane)
+	p, err := w.PaneTarget(ctx, pane)
 	if err != nil {
 		return err
 	}
@@ -167,7 +177,7 @@ func runPick(e *Env, args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	p, err := w.Pane(ctx, pane)
+	p, err := w.PaneTarget(ctx, pane)
 	if err != nil {
 		return err
 	}

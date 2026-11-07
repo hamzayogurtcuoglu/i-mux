@@ -26,12 +26,22 @@ set -g  status-format[1] '#[align=left] imux #[range=user|imux:menu]☰#[norange
 bind -n 'C-\' run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    a run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    S run-shell -b '/opt/imux/bin/imux __menu --sessions --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+# Sidebar on/off, and splits that ask which agent to start.
+bind    b run-shell -b '/opt/imux/bin/imux sidebar toggle --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    v run-shell -b '/opt/imux/bin/imux __menu --split h --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    - run-shell -b '/opt/imux/bin/imux __menu --split v --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).
 bind -n MouseDown3Border run-shell -t = -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
-set -g  @imux_keys 'root C-\,prefix a,prefix S,root MouseDown3Border'
+set -g  @imux_keys 'root C-\,prefix a,prefix S,prefix b,prefix v,prefix -,root MouseDown3Border'
 
 # Pane lifecycle and watcher.
 set-hook -g pane-died "run-shell -b '/opt/imux/bin/imux __pane-died #{pane_id} #{pane_dead_status} >/dev/null 2>&1 || true'"
 set-hook -g client-attached "run-shell -b '/opt/imux/bin/imux __watch ensure >/dev/null 2>&1 || true'"
+# Sidebars redraw when panes change (they sleep otherwise).
+set-hook -g pane-focus-in "run-shell -b '/opt/imux/bin/imux __sidebar-refresh >/dev/null 2>&1 || true'"
+set-hook -g after-split-window "run-shell -b '/opt/imux/bin/imux __sidebar-refresh >/dev/null 2>&1 || true'"
+set-hook -g after-kill-pane "run-shell -b '/opt/imux/bin/imux __sidebar-refresh >/dev/null 2>&1 || true'"
+set-hook -g pane-exited "run-shell -b '/opt/imux/bin/imux __sidebar-refresh >/dev/null 2>&1 || true'"
+set-hook -g window-pane-changed "run-shell -b '/opt/imux/bin/imux __sidebar-refresh >/dev/null 2>&1 || true'"
 
 source-file -q /home/test/.imux/tmux.local.conf

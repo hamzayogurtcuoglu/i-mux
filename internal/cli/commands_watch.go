@@ -42,6 +42,7 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	w.T = tc
 	actor := &watch.Actor{W: w, Log: logger}
 	keeper := &watch.StatusKeeper{W: w}
+	states := &watch.PaneStates{T: tc}
 	return &watch.Detector{
 		T: tc, Patterns: set, Cfg: cfg.Limits, Now: time.Now, Log: logger,
 		OnEvent: actor.OnEvent,
@@ -55,6 +56,7 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 				a.Changed[p] = t.UnixMilli()
 			}
 			_ = bus.WriteActivity(a)
+			states.Apply(context.Background(), at, changed)
 		},
 	}, tc, nil
 }

@@ -500,28 +500,28 @@ Google stopped serving personal Google accounts in Gemini CLI on 2026-06-18 (ARC
 The user found the bottom agent bar awkward and splitting unclear; the primary UI becomes a
 sidebar (ARCHITECTURE D17, §9.3 "Sidebar").
 
-- [ ] **T10.1 Sidebar model and rendering** · M
+- [x] **T10.1 Sidebar model and rendering** · M
   - AC: a pure `Render(model, width, height)` draws the mockup in §9.3; golden tests for typical,
     narrow, limited, not-installed and many-pane states; Unicode width handled.
-- [ ] **T10.2 Terminal input** · M
+- [x] **T10.2 Terminal input** · M
   - AC: raw mode via termios (darwin, linux), alternate screen, SGR mouse; a parser for keys,
     arrows, Enter, Esc and mouse press/release with unit tests; hit-testing maps a click to a row.
-- [ ] **T10.3 `imux __sidebar` process** · M · deps: T10.1, T10.2
+- [x] **T10.3 `imux __sidebar` process** · M · deps: T10.1, T10.2
   - AC: redraws on SIGUSR1, SIGWINCH (keeping its width) and a 15 s safety tick; actions focus,
     switch (with context), split (agent chooser menu), sessions, limits, keys; focus returns to
     the target pane; exits when it is the window's last pane.
-- [ ] **T10.4 Workspace integration** · M · deps: T10.3
+- [x] **T10.4 Workspace integration** · M · deps: T10.3
   - AC: every new imux window gets a sidebar (`tmux.sidebar`); `prefix b` toggles them;
     `prefix v` / `prefix -` split with an agent chooser; commands and menus given the sidebar pane
     act on the target pane; the sidebar is never listed as a pane by `imux panes`, the bus or the
     watcher.
-- [ ] **T10.5 Pane state** · S · deps: T3.4
+- [x] **T10.5 Pane state** · S · deps: T3.4
   - AC: the watcher sets `@imux_state` working/idle on change and signals the sidebars.
-- [ ] **T10.6 E2E with a real client** · M · deps: T10.4
+- [x] **T10.6 E2E with a real client** · M · deps: T10.4
   - AC: the sidebar shows the panes and targets; a real mouse click on "Antigravity" switches the
     target pane with context; "Split right" + an agent opens a new pane with it; `prefix b` hides
     and shows the sidebar; closing the last agent pane closes the window.
-- [ ] **T10.7 Docs and screenshots** · S · deps: T10.6
+- [x] **T10.7 Docs and screenshots** · S · deps: T10.6
   - AC: README keys and screenshots show the sidebar; CONFIG.md lists the new keys.
 ---
 

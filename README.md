@@ -62,13 +62,20 @@ cd ~/code/my-project
 imux            # start the first installed agent (or: imux claude)
 ```
 
-| Key / action | What it does |
+The **sidebar** on the left shows the window's panes (● working, ○ idle, ◆ limited) and everything
+you can do, all clickable:
+
+| Sidebar / key | What it does |
 |---|---|
-| `Ctrl+\` | pane menu: switch agent, sessions, new pane, preview handoff, limits |
-| `Ctrl+\` then `c` `a` `p` `x` | continue in Claude / Antigravity / Copilot / Codex |
-| click an agent on the bottom bar | continue in that agent |
-| `prefix S` | pick any earlier conversation of the project |
-| `prefix a` | the pane menu, for terminals that keep `Ctrl+\` |
+| click an agent under **CONTINUE HERE IN** | the active pane continues in that agent, with the context |
+| click a pane under **PANES** | focus it |
+| **Split right** / **Split down** (or `prefix v` / `prefix -`) | asks which agent, then opens it in a new pane |
+| **Sessions…** (or `prefix S`) | continue any earlier conversation of the project |
+| **Keys** | every key at a glance |
+| `prefix b` | hide or show the sidebar |
+| `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` | the pane menu; continue in Claude / Antigravity / Copilot / Codex |
+
+`prefix` is `Ctrl+b`: press it, release, then press the key.
 
 <table>
   <tr>
