@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Hit your usage limit in one AI coding agent? Keep going in another, with the whole conversation.</b><br>
-  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode
+  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI
 </p>
 
 <p align="center">
@@ -66,11 +66,6 @@ The rail shows the editor's icons when your terminal uses a [Nerd Font](https://
 (`brew install --cask font-jetbrains-mono-nerd-font`, then pick it in the terminal's settings),
 emoji otherwise.
 
-**OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
-NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
-when the others hit their limits. Install it with `brew install opencode`; `imux doctor` checks
-that it can run.
-
 Files open in your editor: `editor` in the config, else micro (the easiest in a terminal: `brew
 install micro`), `$VISUAL`, `$EDITOR`, nano, vim. The mouse wheel scrolls everywhere.
 
@@ -101,7 +96,7 @@ them) switches its view.
 | **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
 | the **tab bar** at the top · its **+** (or `prefix c`) · **×** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab |
 | `prefix b` | hide or show the sidebar |
-| `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode |
+| `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` | the pane menu; continue in Claude / Antigravity / Copilot / Codex |
 
 `prefix` is `Ctrl+b`: press it, release, then press the key.
 

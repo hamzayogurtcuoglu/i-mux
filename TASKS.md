@@ -732,21 +732,6 @@ User feedback (ARCHITECTURE D27, §9.3 "Sidebar v7").
 - [x] **T23.2 Separator** · S
   - AC: a line between the rail and the view on every row; default width 41; golden tests.
 
-## M24: OpenCode (added 2026-11-08)
-
-User request: an agent that works with any model endpoint (ARCHITECTURE D28, §7.7).
-
-- [x] **T24.1 Agent and launch** · S
-  - AC: registry entry (key `e`), templates with an imux-chosen `ses_` id, resume; unit tests.
-- [x] **T24.2 Session provider** · M
-  - AC: Find via sqlite3 (cwd, since, id), Load via `session export`: text, tools, model, tokens,
-    chained handoffs; tests with synthetic exports and a synthetic database.
-- [x] **T24.3 Limits, doctor, UI** · S
-  - AC: limit patterns; panel row with recent tokens; doctor warns about an unwritable state
-    folder; sidebar icon; i18n.
-- [x] **T24.4 E2E and docs** · M · deps: T24.1–T24.3
-  - AC: a fake opencode; Claude → OpenCode → Claude round trip keeps the context; README.
-
 ---
 
 ## Testing strategy
