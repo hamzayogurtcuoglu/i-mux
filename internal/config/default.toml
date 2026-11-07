@@ -4,7 +4,7 @@
 # Regex patterns use TOML literal strings ('...'), so backslashes need no escaping.
 
 # Agent order: menu order, agent bar order and auto-switch priority.
-order         = ["claude", "antigravity", "copilot", "codex"]
+order         = ["claude", "antigravity", "copilot", "codex", "opencode"]
 
 # Agent started by a plain `imux`. "" = first installed agent in `order`.
 default_agent = ""
@@ -163,6 +163,18 @@ args                     = []
 new_args                 = ["{prompt}"]
 resume_args              = ["resume", "{id}", "{prompt}"]
 home                     = ""   # "" = $CODEX_HOME or ~/.codex
+resume                   = true
+patterns                 = []
+replace_default_patterns = false
+
+# OpenCode: works with any model endpoint you configure in OpenCode itself
+# (OpenAI-compatible APIs, Anthropic, Ollama, NVIDIA, Groq ...).
+[agents.opencode]
+bin                      = ""
+args                     = []
+new_args                 = ["--session", "ses_imux{uuid}", "--prompt", "{prompt}"]
+resume_args              = ["--session", "{id}", "--prompt", "{prompt}"]
+home                     = ""   # "" = $XDG_DATA_HOME/opencode or ~/.local/share/opencode
 resume                   = true
 patterns                 = []
 replace_default_patterns = false

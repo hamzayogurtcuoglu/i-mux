@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Hit your usage limit in one AI coding agent? Keep going in another, with the whole conversation.</b><br>
-  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI
+  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode
 </p>
 
 <p align="center">
@@ -96,7 +96,7 @@ them) switches its view.
 | **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
 | the **tab bar** at the top · its **+** (or `prefix c`) · **×** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab |
 | `prefix b` | hide or show the sidebar |
-| `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` | the pane menu; continue in Claude / Antigravity / Copilot / Codex |
+| `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode |
 
 `prefix` is `Ctrl+b`: press it, release, then press the key.
 

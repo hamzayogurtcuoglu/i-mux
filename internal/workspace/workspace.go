@@ -286,7 +286,14 @@ func (w *WS) Spec(l Launch) (*launch.Spec, TrailEntry, error) {
 	case l.ResumeID != "":
 		te.SessionID = l.ResumeID
 	case hasPlaceholder(tpl, "{uuid}"):
-		te.SessionID = vars.UUID // pre-assigned (claude --session-id)
+		// Pre-assigned (claude --session-id, opencode --session ses_imux…):
+		// the argument that holds {uuid}, expanded.
+		for _, a := range tpl {
+			if strings.Contains(a, "{uuid}") {
+				te.SessionID = strings.ReplaceAll(a, "{uuid}", vars.UUID)
+				break
+			}
+		}
 	}
 	pathEnv := r.PathEnv
 	if pathEnv == "" {

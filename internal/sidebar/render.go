@@ -191,6 +191,8 @@ func icon(a session.AgentID) (string, string) {
 		return "◎", "\x1b[38;5;252m"
 	case session.Copilot:
 		return "◉", "\x1b[38;5;141m"
+	case session.OpenCode:
+		return "▣", "\x1b[38;5;215m"
 	}
 	return "›", faint
 }

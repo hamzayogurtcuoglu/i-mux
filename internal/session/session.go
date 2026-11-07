@@ -22,10 +22,15 @@ const (
 	Antigravity AgentID = "antigravity" // Antigravity CLI (agy), Google's successor to Gemini CLI for personal accounts
 	Copilot     AgentID = "copilot"
 	Codex       AgentID = "codex"
+	OpenCode    AgentID = "opencode" // any model endpoint (OpenAI-compatible, Anthropic, Ollama ...)
 )
 
 // AllAgents lists the known agents in default order.
-var AllAgents = []AgentID{Claude, Antigravity, Copilot, Codex}
+var AllAgents = []AgentID{Claude, Antigravity, Copilot, Codex, OpenCode}
+
+// SharedStore reports whether an agent keeps every session in one file (a
+// database: OpenCode). Its sessions are told apart by id, never by Ref.Path.
+func SharedStore(id AgentID) bool { return id == OpenCode }
 
 // Known reports whether id is a known agent.
 func Known(id string) bool {
@@ -48,6 +53,8 @@ func DisplayName(id AgentID) string {
 		return "GitHub Copilot CLI"
 	case Codex:
 		return "Codex CLI"
+	case OpenCode:
+		return "OpenCode"
 	}
 	return string(id)
 }
@@ -63,6 +70,8 @@ func ShortName(id AgentID) string {
 		return "Copilot"
 	case Codex:
 		return "Codex"
+	case OpenCode:
+		return "OpenCode"
 	}
 	return string(id)
 }
