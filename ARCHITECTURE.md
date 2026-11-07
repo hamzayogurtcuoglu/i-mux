@@ -103,6 +103,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D24 | **Projects reopen as they were** (added 2026-11-07, v0.10, at the user's request: "like VS Code, save what was open when I closed it"): the watcher snapshots every open project (tabs, names, layouts, each pane's agent, name and conversation) to `~/.imux/workspace.json`; closing a project snapshots it too. Opening a folder with a snapshot recreates its tabs and panes, each agent resuming its conversation natively. The picker shows **Recent** (with tabs, agents and age) above the other folders, and **Restore last session** after the tmux server went away (a reboot). | tmux sessions die with the machine and with Close, and the user had to rebuild tabs and find conversations again. The trail already records each run (agent, start, session id), so a snapshot is a list of trail entries; native resume (§8.6) brings each conversation back without a handoff. |
 | D25 | **Plan percentages come from the CLIs themselves** (added 2026-11-07, v0.13): Claude Code gives its status-line command `rate_limits.five_hour` / `seven_day` (`used_percentage`, `resets_at`; Pro/Max, after the first reply), so imux starts Claude with `--settings=~/.imux/claude-settings.json` whose `statusLine` is `imux __statusline claude`: it records the numbers in `~/.imux/usage/claude.json` and prints the user's own status line (from their settings, highest precedence first) or a short usage line. Codex already writes `rate_limits` in its rollouts. Copilot writes `quotaSnapshots.premium_interactions` (entitlement, used requests, remaining %, reset date) in every `model.model_call_success` event of its session files (v0.14: read from there). Antigravity keeps its quota inside its local language server, behind a CSRF token of the running agy process; imux does not read it, so the panel shows only limits seen on screen for it. | The user found the limits panel unreadable and asked for percentages per window. No credentials are read and no request is sent: the numbers are the ones each CLI already has. The user's settings files are never written. |
 | D26 | **The sidebar gets an activity bar like an editor's** (added 2026-11-08, v0.15, at the user's request): a 3-column rail of view icons (Agents, Explorer, Search, Source Control; Limits and Help at the bottom). Explorer is the project's file tree; Search and diffs open in wide popups; a diff shows the whole file with the changes highlighted, side by side when wide. | The user wanted the editor's way of looking at a project (files, search, changes) next to the agents, without leaving the terminal. A narrow sidebar is enough to choose; reading happens in popups that use the whole window. |
+| D27 | **The sidebar's source control works like an editor's** (added 2026-11-08, v0.16): staged and unstaged changes, per-file stage / unstage / discard, stage / unstage / discard all, commit (a prompt; with nothing staged it stages everything first), push / pull / sync with ahead and behind counts, branch checkout and creation, and the recent history. Git runs in the project folder; discards ask first; network commands run in a popup so their output and any password prompt show. Files open in an editor (micro, $VISUAL/$EDITOR, nano, vim with the mouse on) or VS Code. | The user asked for the editor's source control "with every feature", and to edit files, not only read them. imux stays a thin layer over git and the user's editor: no git library, no editor of its own. |
 
 ## 4. Components
 
@@ -1197,6 +1198,41 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   line numbers, removed lines on a red background and added ones on green; side by side when the
   popup is at least 120 columns wide, otherwise one column; `less -R -S` starts at the first
   change.
+
+#### Sidebar v7: bigger rail, source control, editing (v0.16)
+
+```
+  🤖  │ SOURCE CONTROL                 ⟳
+ Agent│ ⎇ main  ↑1 ↓0            ⇅ Sync
+      │ [ ✓ Commit… ]
+  📁  │ ▾ STAGED CHANGES  1           −
+ Dosya│   M  a.go        +3 −1        −
+      │ ▾ CHANGES  2                ↶ +
+  🔍  │   M  b.go        +1         ↶ +
+  Ara │   ?  c.txt                  ↶ +
+      │ ▾ HISTORY
+  🔀  │   a1b2c3d feat: login      2h
+  Git │
+```
+
+- **Rail:** 6 columns; an emoji (2 columns, colored) with a short label under it, one item per
+  three rows; on short windows (< 26 rows) the labels go. Default sidebar width 40.
+- **Source control:** `git status --porcelain` splits into STAGED CHANGES (index column) and
+  CHANGES (work tree column, untracked included); each row: status, path, +/− (`git diff
+  --cached --numstat` / `git diff --numstat`), then its buttons. Row click: the diff of that side
+  (`imux __diff --staged|--worktree`). Buttons: + stage (`git add --`), − unstage (`git restore
+  --staged --`), ↶ discard (confirm; `git restore --worktree --` or, untracked, `git clean -f
+  --`); on the titles: all of them. Commit…: `command-prompt` → `imux __git commit`
+  (`git commit -m`; nothing staged → `git add -A` first). ⇅ Sync / ↑ Push / ↓ Pull: a popup
+  running git with its output, ending on "press Enter". ⎇ branch: a menu of local branches
+  (checkout) and "New branch…". HISTORY: `git log -n 15`; a click shows the commit
+  (`git show --stat --patch`). Every action refreshes the view at once.
+- **Editing:** a file click in the explorer or Enter on a search result opens the editor in a
+  popup at the line: `editor` in the config, else micro, $VISUAL, $EDITOR, nano, vim
+  (`+set mouse=a`). Right-click on a file: Edit, View, Open in VS Code (when its `code` CLI or app
+  is found). In the diff and file viewers `v` opens the editor (less's VISUAL).
+- **Mouse:** viewers run `less --mouse` (wheel scrolls); the folder picker and search popups
+  scroll with the wheel; search results fold per file (click the file, ← →) and all at once (Tab).
 
 #### Agent bar
 

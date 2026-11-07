@@ -704,6 +704,26 @@ User request with a screenshot of an editor (ARCHITECTURE D26, §9.3 "Sidebar v6
   - AC: real clicks: explorer opens a folder and a file; source control opens a diff with the
     whole file; search finds a word and opens it; README, screenshots.
 
+## M22: Bigger rail, full source control, editing, mouse (added 2026-11-08)
+
+User feedback (ARCHITECTURE D27, §9.3 "Sidebar v7").
+
+- [ ] **T22.1 Git operations** · M
+  - AC: `internal/gitops` (status split, numstat per side, ahead/behind, history, stage, unstage,
+    discard, commit with smart staging, checkout, new branch) with tests on temp repos; `imux __git`.
+- [ ] **T22.2 Source control view** · L · deps: T22.1
+  - AC: the layout in §9.3 with every button; discards confirm; push/pull/sync popups; branch menu;
+    history with commit view; golden tests.
+- [ ] **T22.3 Editing** · M
+  - AC: editor choice and line argument per editor; explorer click, search Enter and the viewers'
+    `v` edit; right-click file menu with VS Code; unit tests for the editor command.
+- [ ] **T22.4 Rail and mouse** · M
+  - AC: emoji rail with labels (compact on short windows); `less --mouse`; wheel in the popups;
+    search results fold; golden tests.
+- [ ] **T22.5 E2E and docs** · M · deps: T22.1–T22.4
+  - AC: real clicks: stage a file, commit it with a message, discard a change (confirmed); a file
+    opens in the editor; search folds a file; README.
+
 ---
 
 ## Testing strategy
