@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -20,6 +23,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/usage"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -134,6 +138,12 @@ func init() {
 		Args:   "--pane %N [--client C]",
 		Hidden: true,
 		Run:    runClosePane,
+	})
+	register(&command{
+		Name:   "__statusline",
+		Args:   "claude",
+		Hidden: true,
+		Run:    runStatusline,
 	})
 	register(&command{
 		Name:   "__open-picker",
@@ -391,6 +401,42 @@ func runClosePane(e *Env, args []string) error {
 	if err := w.CloseAgent(ctx, &workspace.Pane{ID: pane}); err != nil {
 		w.Message(ctx, *clientF, "", err.Error())
 		return err
+	}
+	return nil
+}
+
+// StatuslineTimeout bounds the user's own status-line command.
+var StatuslineTimeout = 3 * time.Second
+
+// runStatusline is Claude Code's status line when imux starts it (D25): it
+// records the plan percentages in Claude's input, then prints the user's own
+// status line (run with the same input) or a short usage line.
+func runStatusline(e *Env, args []string) error {
+	in, _ := io.ReadAll(io.LimitReader(e.Stdin, 1<<20))
+	snap, dir := usage.ParseClaudeStatusline(in, now())
+	if snap != nil {
+		_ = usage.Save(paths.ClaudeUsage(), snap)
+	}
+	if cmd := usage.UserStatusLine(paths.UserHome(), dir); cmd != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), StatuslineTimeout)
+		defer cancel()
+		c := exec.CommandContext(ctx, "sh", "-c", cmd)
+		c.Stdin, c.Stdout, c.Stderr = bytes.NewReader(in), e.Stdout, io.Discard
+		if dir != "" {
+			c.Dir = dir
+		}
+		_ = c.Run()
+		return nil
+	}
+	if snap != nil {
+		var parts []string
+		if w := snap.FiveHour; w != nil {
+			parts = append(parts, i18n.T("statusline.five_hour", int(w.UsedPercent+0.5)))
+		}
+		if w := snap.Weekly; w != nil {
+			parts = append(parts, i18n.T("statusline.weekly", int(w.UsedPercent+0.5)))
+		}
+		fmt.Fprintln(e.Stdout, strings.Join(parts, " · "))
 	}
 	return nil
 }

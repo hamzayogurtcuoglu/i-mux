@@ -69,7 +69,7 @@ func model() Model {
 	}
 	return Model{
 		Project: "acme-api", CWD: "/home/test/acme-api", Branch: "main", Changed: 3, Git: true, Target: "%1", Now: now,
-		Changes: []ChangeRow{{"M", "src/auth/redirect.ts"}, {"A", "test/auth.test.ts"}, {"?", "notes.md"}},
+		Changes: []ChangeRow{{Status: "M", Path: "src/auth/redirect.ts", Added: 12, Removed: 3}, {Status: "A", Path: "test/auth.test.ts", Added: 40}, {Status: "?", Path: "notes.md"}},
 		Panes:   cur,
 		Projects: []ProjectRow{
 			{Session: "acme-api-1a2b", Name: "acme-api", Branch: "main", Dirty: true, Current: true, Panes: cur},
@@ -106,11 +106,12 @@ func TestRender(t *testing.T) {
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
-		"Projects", " A  acme-api", "main ●", " B  blog", "master ●",
-		"Agents", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Terminal",
+		"▾ PROJECTS", " A  acme-api", "main ●", " B  blog", "master ●",
+		"▾ AGENTS", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Terminal",
 		"blog", "▲  blog pass", "9m ●", "✻  Claude", "3d ○",
 		"Continue this chat in", "▲ Antigravity", "◉ Copilot", "◎ Codex",
-		"✎ Rename", "± Changes 3", "⧉ History", "◔ Limits", "? Help",
+		"▾ SOURCE CONTROL · main", "M  src/auth/redirect.ts +12 −3", "A  test/auth.test.ts       +40", "?  notes.md",
+		"✎ Rename", "⧉ History", "◔ Limits", "? Help",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sidebar lacks %q:\n%s", want, text)
@@ -143,7 +144,7 @@ func TestRender(t *testing.T) {
 		{"▲ Antigravity", Action{Kind: ActSwitch, Agent: "antigravity"}},
 		{"◎ Codex", Action{Kind: ActSwitch, Agent: "codex"}},
 		{"✎ Rename", Action{Kind: ActRename}},
-		{"± Changes", Action{Kind: ActChanges}},
+		{"src/auth/redirect.ts", Action{Kind: ActDiff, Path: "src/auth/redirect.ts", Status: "M"}},
 		{"⧉ History", Action{Kind: ActSessions}},
 		{"◔ Limits", Action{Kind: ActLimits}},
 		{"? Help", Action{Kind: ActKeys}},
@@ -155,10 +156,10 @@ func TestRender(t *testing.T) {
 		}
 	}
 	// The "+" of the headers.
-	if l, _ := find(sc, "Projects"); l.ActionAt(33) != (Action{Kind: ActOpen}) || l.ActionAt(3).Kind != ActNone {
+	if l, _ := find(sc, "PROJECTS"); l.ActionAt(33) != (Action{Kind: ActOpen}) || l.ActionAt(3) != (Action{Kind: ActFold, Section: SecProjects}) {
 		t.Error("Projects +")
 	}
-	if l, _ := find(sc, "Agents"); l.ActionAt(32) != (Action{Kind: ActNewAgent}) {
+	if l, _ := find(sc, "AGENTS"); l.ActionAt(32) != (Action{Kind: ActNewAgent}) {
 		t.Error("Agents +")
 	}
 	if l, _ := find(sc, " A  acme-api"); l.Action != (Action{Kind: ActProjectMenu, Session: "acme-api-1a2b"}) || !strings.Contains(l.Text, selBg) {
@@ -178,7 +179,7 @@ func TestRender(t *testing.T) {
 	short := Render(model(), 34, 18, NoItem)
 	stext := screenText(short)
 	t.Logf("\n%s", stext)
-	for _, want := range []string{"Agents", "backend fix", "Continue this chat in", "✎ Rename", "? Help"} {
+	for _, want := range []string{"AGENTS", "backend fix", "Continue this chat in", "✎ Rename", "? Help"} {
 		if !strings.Contains(stext, want) {
 			t.Errorf("short sidebar lacks %q:\n%s", want, stext)
 		}
@@ -198,8 +199,8 @@ func TestRender(t *testing.T) {
 
 	// The keyboard selection is drawn in reverse video, a button on its own.
 	items := sc.Items()
-	if a := sc.ActionOf(items[0]); a.Kind != ActOpen {
-		t.Fatalf("first item %+v", a)
+	if a, b := sc.ActionOf(items[0]), sc.ActionOf(items[1]); a != (Action{Kind: ActFold, Section: SecProjects}) || b.Kind != ActOpen {
+		t.Fatalf("first items %+v %+v", a, b)
 	}
 	row := -1
 	for _, it := range items {
@@ -213,7 +214,7 @@ func TestRender(t *testing.T) {
 		t.Error("selection not highlighted")
 	}
 	last := items[len(items)-1]
-	if last.Cell != 2 || sc.ActionOf(last).Kind != ActKeys {
+	if last.Cell != 1 || sc.ActionOf(last).Kind != ActKeys {
 		t.Fatalf("last item %+v", last)
 	}
 	sel = Render(model(), 34, 0, last)
@@ -260,7 +261,7 @@ func screenText(sc Screen) string {
 
 func TestParseStatus(t *testing.T) {
 	got := ParseStatus([]string{" M src/a.go", "A  b.go", "?? notes.md", "R  old.go -> new.go", "MM both.go", `?? "with space.md"`, "x"})
-	want := []ChangeRow{{"M", "src/a.go"}, {"A", "b.go"}, {"?", "notes.md"}, {"R", "new.go"}, {"M", "both.go"}, {"?", "with space.md"}}
+	want := []ChangeRow{{Status: "M", Path: "src/a.go"}, {Status: "A", Path: "b.go"}, {Status: "?", Path: "notes.md"}, {Status: "R", Path: "new.go"}, {Status: "M", Path: "both.go"}, {Status: "?", Path: "with space.md"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("%+v", got)
 	}
@@ -417,5 +418,57 @@ func TestGatherRealTmux(t *testing.T) {
 	_, _ = c.Run(ctx, tmux.Cmd{"kill-pane", "-t", shell}, tmux.Cmd{"kill-pane", "-t", agentPane})
 	if _, win, _ = src.Gather(ctx, bar); !win.Alone {
 		t.Error("a window with only the sidebar should be alone")
+	}
+}
+
+// A folded section shows only its title with a count; the title folds and
+// unfolds it.
+func TestFold(t *testing.T) {
+	i18n.SetLocale("en")
+	m := model()
+	m.Fold = map[string]bool{SecProjects: true, SecChanges: true}
+	text := screenText(Render(m, 34, 0, NoItem))
+	t.Logf("\n%s", text)
+	lineWith := func(sub string) string {
+		for _, l := range strings.Split(text, "\n") {
+			if strings.Contains(l, sub) {
+				return l
+			}
+		}
+		return ""
+	}
+	if l := lineWith("▸ PROJECTS"); !strings.HasSuffix(l, "2  +") {
+		t.Errorf("projects title %q", l)
+	}
+	if l := lineWith("▸ SOURCE CONTROL · main"); !strings.HasSuffix(l, "3") {
+		t.Errorf("source control title %q", l)
+	}
+	if lineWith("▾ AGENTS") == "" {
+		t.Error("agents stay open")
+	}
+	for _, gone := range []string{" A  acme-api", "redirect.ts"} {
+		if strings.Contains(text, gone) {
+			t.Errorf("folded section shows %q", gone)
+		}
+	}
+	// More files than rows: "+N more" opens the full list.
+	m = model()
+	m.Changed = 14
+	sc := Render(m, 34, 0, NoItem)
+	for _, l := range sc.Lines {
+		if strings.Contains(Plain(l.Text), "+11 more files") && l.Action.Kind != ActChanges {
+			t.Error("+N more opens the changes menu")
+		}
+	}
+	if !strings.Contains(screenText(sc), "+11 more files") {
+		t.Errorf("more row:\n%s", screenText(sc))
+	}
+}
+
+func TestParseNumstat(t *testing.T) {
+	got := ParseNumstat("12\t3\tsrc/a.go\n-\t-\timg.png\n4\t0\told.go => new.go\n1\t1\tsrc/{x => y}/z.go\nbad\n")
+	want := map[string][2]int{"src/a.go": {12, 3}, "img.png": {0, 0}, "new.go": {4, 0}, "src/y/z.go": {1, 1}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("%v", got)
 	}
 }

@@ -45,8 +45,18 @@ func (h *H) screen(pane string) string {
 	return out
 }
 
+// lineOf returns the sidebar line containing text.
+func (h *H) lineOf(bar, text string) string {
+	for _, l := range strings.Split(h.screen(bar), "\n") {
+		if strings.Contains(l, text) {
+			return l
+		}
+	}
+	return ""
+}
+
 // plusOf returns the client screen position of the "+" of a section
-// header ("Projects", "Agents").
+// header ("PROJECTS", "AGENTS").
 func (h *H) plusOf(bar, title string) (x, y int) {
 	h.t.Helper()
 	_, y = h.rowOf(bar, " "+title+" ")
@@ -105,7 +115,7 @@ func TestSidebar(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 	// A bigger client grows the panes; the sidebar takes its width back.
 	h.waitFor("sidebar width 34", 5*time.Second, func() bool {
 		return strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")) == "34"
@@ -139,7 +149,7 @@ func TestSidebar(t *testing.T) {
 	// The "+" of Agents asks which agent, then splits the wide agent pane side
 	// by side. A person does not click twice within tmux's double-click time.
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.plusOf(bar, "Agents")
+	x, y = h.plusOf(bar, "AGENTS")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Split right: new pane with", 5*time.Second)
@@ -184,8 +194,8 @@ func TestSidebarDoubleClick(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
-	x, y := h.plusOf(bar, "Agents")
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	x, y := h.plusOf(bar, "AGENTS")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	time.Sleep(80 * time.Millisecond)
@@ -231,15 +241,16 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 
-	// "± Changes 1" lists the changed files; choosing one shows its diff.
-	x, y := h.rowOf(bar, "± Changes 1")
+	// SOURCE CONTROL lists the changed file with its line counts; a click
+	// shows its diff.
+	x, y := h.rowOf(bar, "M  readme.md")
+	if l := h.lineOf(bar, "M  readme.md"); !strings.Contains(l, "+1") {
+		t.Errorf("source control row %q", l)
+	}
 	mark := c.Mark()
 	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "M  readme.md", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	c.Write("\r")
 	c.waitScreenAfter(h, mark, "+changed line for the diff", 5*time.Second)
 	c.Write("q") // less
 	time.Sleep(500 * time.Millisecond)
@@ -263,7 +274,7 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.plusOf(bar, "Projects")
+	x, y = h.plusOf(bar, "PROJECTS")
 	mark = c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Open a project", 5*time.Second)
@@ -309,8 +320,43 @@ func TestSidebarNeedsYou(t *testing.T) {
 	_, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 	h.waitFor("Needs you on the agent and the project", 15*time.Second, func() bool {
 		return strings.Count(h.capture(bar), "Needs you") == 2
 	})
+}
+
+// TestSidebarFold (T19.1): a click on a section title folds it in every
+// sidebar (@imux_fold) and a second click unfolds it.
+func TestSidebarFold(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	_, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	x, y := h.rowOf(bar, "▾ PROJECTS")
+	c.Click(0, x+2, y)
+	h.waitFor("projects folded", 5*time.Second, func() bool {
+		return strings.TrimSpace(h.mustTmux("show-options", "-gqv", "@imux_fold")) == "projects" && h.lineOf(bar, "▸ PROJECTS") != ""
+	})
+	time.Sleep(500 * time.Millisecond)
+	x, y = h.rowOf(bar, "▸ PROJECTS")
+	c.Click(0, x+2, y)
+	h.waitFor("projects unfolded", 5*time.Second, func() bool {
+		return strings.TrimSpace(h.mustTmux("show-options", "-gqv", "@imux_fold")) == "" && h.lineOf(bar, "▾ PROJECTS") != ""
+	})
+}
+
+// TestClaudeStatusline (T19.3): with claude_statusline Claude starts with
+// --settings= naming imux's status line.
+func TestClaudeStatusline(t *testing.T) {
+	h := newH(t, "[limits]\nclaude_statusline = true\npoll_interval = \"200ms\"\n")
+	h.startSession("claude")
+	argv := h.run("claude", 1)
+	if len(argv) < 1 || !strings.HasPrefix(argv[0], "--settings=") {
+		t.Fatalf("claude argv %q", argv)
+	}
+	if b := h.readFile(strings.TrimPrefix(argv[0], "--settings=")); !strings.Contains(b, "__statusline claude") {
+		t.Fatalf("settings %s", b)
+	}
 }

@@ -95,6 +95,9 @@ type Limits struct {
 	Cooldown      Duration `toml:"cooldown"`
 	ScanLines     int      `toml:"scan_lines"`
 	DefaultExpiry Duration `toml:"default_expiry"`
+	// ClaudeStatusline starts Claude with imux's status line, which records
+	// the plan percentages Claude reports (D25).
+	ClaudeStatusline bool `toml:"claude_statusline"`
 }
 
 // Bus is the [bus] section.
@@ -197,12 +200,13 @@ func Default() *Config {
 			TailBytes:         8 << 20,
 		},
 		Limits: Limits{
-			PollInterval:  D(2500 * time.Millisecond),
-			IdleInterval:  D(15 * time.Second),
-			Grace:         D(20 * time.Second),
-			Cooldown:      D(10 * time.Minute),
-			ScanLines:     25,
-			DefaultExpiry: D(5 * time.Hour),
+			PollInterval:     D(2500 * time.Millisecond),
+			IdleInterval:     D(15 * time.Second),
+			Grace:            D(20 * time.Second),
+			Cooldown:         D(10 * time.Minute),
+			ScanLines:        25,
+			DefaultExpiry:    D(5 * time.Hour),
+			ClaudeStatusline: true,
 		},
 		Bus: Bus{
 			Enabled:         true,

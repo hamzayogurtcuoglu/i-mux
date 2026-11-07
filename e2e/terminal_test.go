@@ -16,7 +16,7 @@ func TestTerminalFromMenus(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 	shells := func(target string) int {
 		n := 0
 		for _, l := range strings.Split(h.mustTmux("list-panes", "-t", target, "-F", "#{@imux_role}:#{@imux_agent}:#{pane_dead}"), "\n") {
@@ -27,7 +27,7 @@ func TestTerminalFromMenus(t *testing.T) {
 		return n
 	}
 
-	x, y := h.plusOf(bar, "Agents")
+	x, y := h.plusOf(bar, "AGENTS")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Terminal (shell)", 5*time.Second)

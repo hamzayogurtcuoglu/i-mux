@@ -6,6 +6,24 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-07
+
+### Added
+
+- **Folding sidebar:** click PROJECTS, AGENTS or SOURCE CONTROL to fold or unfold the section; the
+  choice is shared by every sidebar.
+- **SOURCE CONTROL** in the sidebar: the branch and the changed files with their added and removed
+  lines; click a file for its diff. It replaces the "Changes N" button.
+- **Plan percentages in Limits:** a bar per window, e.g. `5-hour ███████░░░ 72% · resets 15:00`
+  and `weekly`. Claude's come from its own status line: imux starts Claude with a status line for
+  that session only (your settings files are not changed; your own status line still shows).
+  Codex's come from its session files. Copilot and Antigravity do not report percentages; the
+  panel says so. `[limits] claude_statusline = false` turns Claude's off.
+
+### Changed
+
+- Brighter sidebar text and bold section titles.
+
 ## [0.12.0] - 2026-11-07
 
 ### Added

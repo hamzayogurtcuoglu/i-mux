@@ -43,20 +43,22 @@ func Home() string {
 }
 
 // Files inside Home.
-func Config() string        { return filepath.Join(Home(), "config.toml") }
-func State() string         { return filepath.Join(Home(), "state.json") }
-func StateLock() string     { return filepath.Join(Home(), "state.lock") }
-func TmuxConf() string      { return filepath.Join(Home(), "tmux.conf") }
-func TmuxLocal() string     { return filepath.Join(Home(), "tmux.local.conf") }
-func WatchPid() string      { return filepath.Join(Home(), "watch.pid") }
-func WatchLog() string      { return filepath.Join(Home(), "watch.log") }
-func Handoffs() string      { return filepath.Join(Home(), "handoffs") }
-func Launch() string        { return filepath.Join(Home(), "launch") }
-func BusDir() string        { return filepath.Join(Home(), "bus") }
-func Activity() string      { return filepath.Join(Home(), "activity.json") }
-func PruneStamp() string    { return filepath.Join(Home(), ".pruned") }
-func FoldersCache() string  { return filepath.Join(Home(), "folders.json") }
-func WorkspaceFile() string { return filepath.Join(Home(), "workspace.json") }
+func Config() string         { return filepath.Join(Home(), "config.toml") }
+func State() string          { return filepath.Join(Home(), "state.json") }
+func StateLock() string      { return filepath.Join(Home(), "state.lock") }
+func TmuxConf() string       { return filepath.Join(Home(), "tmux.conf") }
+func TmuxLocal() string      { return filepath.Join(Home(), "tmux.local.conf") }
+func WatchPid() string       { return filepath.Join(Home(), "watch.pid") }
+func WatchLog() string       { return filepath.Join(Home(), "watch.log") }
+func Handoffs() string       { return filepath.Join(Home(), "handoffs") }
+func Launch() string         { return filepath.Join(Home(), "launch") }
+func BusDir() string         { return filepath.Join(Home(), "bus") }
+func Activity() string       { return filepath.Join(Home(), "activity.json") }
+func PruneStamp() string     { return filepath.Join(Home(), ".pruned") }
+func FoldersCache() string   { return filepath.Join(Home(), "folders.json") }
+func WorkspaceFile() string  { return filepath.Join(Home(), "workspace.json") }
+func ClaudeSettings() string { return filepath.Join(Home(), "claude-settings.json") }
+func ClaudeUsage() string    { return filepath.Join(Home(), "usage", "claude.json") }
 
 // Ensure creates Home and its subdirectories with DirMode. Existing
 // directories that are too permissive are tightened.

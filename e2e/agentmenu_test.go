@@ -18,7 +18,7 @@ func TestAgentMenu(t *testing.T) {
 	h.mustImux("split", "codex", "-h", "--pane", agentPane)
 	h.run("codex", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 
 	// Rename Claude from its row.
 	x, y := h.rowOf(bar, "✻  Claude")

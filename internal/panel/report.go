@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
@@ -14,10 +13,12 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff/clean"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/limits"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/usage"
 )
 
 // Report is the limits panel. Its JSON form (`imux limits --json`) is
@@ -72,6 +73,7 @@ func Collect(ctx context.Context, cfg *config.Config, st *state.State, installed
 			row.Usage = &Usage{
 				Window: "5h", From: w.From, Replies: w.Replies, InputTokens: w.Input, OutputTokens: w.Output,
 				CacheReadTokens: w.CacheRead, CacheWrite: w.CacheWrite, Sessions: w.Files,
+				RateLimits: claudeLimits(now),
 			}
 		case session.Antigravity:
 			d := AntigravityToday(ctx, f, now)
@@ -97,24 +99,103 @@ func (r *Report) JSON(w io.Writer) error {
 	return enc.Encode(r)
 }
 
-// Table writes the human-readable panel.
+// claudeLimits is what Claude's status line last reported (D25), with
+// windows that have reset since dropped to 0%.
+func claudeLimits(now time.Time) *session.RateLimitSnapshot {
+	u := usage.Load(paths.ClaudeUsage()).Current(now)
+	if u == nil {
+		return nil
+	}
+	rl := &session.RateLimitSnapshot{At: u.At}
+	if w := u.FiveHour; w != nil {
+		rl.PrimaryUsedPercent, rl.PrimaryWindowMinutes, rl.PrimaryResetsAt = w.UsedPercent, 300, w.ResetsAt
+	}
+	if w := u.Weekly; w != nil {
+		rl.SecondaryUsedPercent, rl.SecondaryWindowMins, rl.SecondaryResetsAt = w.UsedPercent, 10080, w.ResetsAt
+	}
+	return rl
+}
+
+// Table writes the human-readable panel: a block per agent with a bar per
+// usage window (§9.3 "Sidebar v5", limits panel).
 func (r *Report) Table(w io.Writer) error {
 	now := r.GeneratedAt
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, i18n.T("limits.header"))
-	for _, row := range r.Agents {
-		status := statusText(row, now)
-		fmt.Fprintf(tw, "%s\t%s\t%s\n", agent.MustGet(row.Agent).Short, status, usageText(row, now))
+	var b strings.Builder
+	for i, row := range r.Agents {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		name := agent.MustGet(row.Agent).Short
+		fmt.Fprintf(&b, " %s%-12s%s %s\n", bold, name, reset, statusText(row, now))
+		if !row.Installed {
+			continue
+		}
+		u := row.Usage
+		rl := (*session.RateLimitSnapshot)(nil)
+		if u != nil {
+			rl = u.RateLimits
+		}
+		switch {
+		case rl != nil:
+			if rl.PrimaryWindowMinutes > 0 || rl.PrimaryUsedPercent > 0 {
+				b.WriteString(windowLine(windowName(rl.PrimaryWindowMinutes, "5h"), rl.PrimaryUsedPercent, rl.PrimaryResetsAt, now))
+			}
+			if rl.SecondaryWindowMins > 0 || rl.SecondaryUsedPercent > 0 {
+				b.WriteString(windowLine(windowName(rl.SecondaryWindowMins, "week"), rl.SecondaryUsedPercent, rl.SecondaryResetsAt, now))
+			}
+		case row.Agent == session.Claude:
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.pct_later_claude"), reset)
+		case row.Agent == session.Codex:
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.pct_later_codex"), reset)
+		default:
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.no_pct", name), reset)
+		}
+		if t := usageText(row, now); t != "" {
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, t, reset)
+		}
 		if row.Limit != nil && row.Limit.Text != "" {
-			fmt.Fprintf(tw, "\t\t%s\n", i18n.T("limits.seen", clean.OneLine(row.Limit.Text, 70), textfmt.Ago(now, row.Limit.At)))
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.seen", clean.OneLine(row.Limit.Text, 70), textfmt.Ago(now, row.Limit.At)), reset)
 		}
 	}
-	if err := tw.Flush(); err != nil {
-		return err
+	_, err := io.WriteString(w, b.String())
+	return err
+}
+
+const (
+	bold  = "\x1b[1m"
+	dim   = "\x1b[2m"
+	reset = "\x1b[0m"
+)
+
+// windowName names a usage window by its length.
+func windowName(minutes int, fallback string) string {
+	switch {
+	case minutes == 0 && fallback == "5h", minutes > 0 && minutes <= 6*60:
+		return i18n.T("limits.win_5h")
+	case minutes == 0, minutes >= 6*24*60:
+		return i18n.T("limits.win_week")
 	}
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, i18n.T("limits.footer"))
-	return nil
+	return i18n.T("limits.win_hours", minutes/60)
+}
+
+// windowLine is "   5-hour   ███████░░░  72%   resets 15:00".
+func windowLine(name string, pct float64, resets, now time.Time) string {
+	const width = 20
+	p := min(max(pct, 0), 100)
+	full := int(p/100*width + 0.5)
+	color := "\x1b[32m" // green
+	switch {
+	case p >= 90:
+		color = "\x1b[31m"
+	case p >= 70:
+		color = "\x1b[33m"
+	}
+	bar := color + strings.Repeat("█", full) + reset + dim + strings.Repeat("░", width-full) + reset
+	when := ""
+	if !resets.IsZero() {
+		when = "  " + dim + i18n.T("limits.resets", textfmt.Clock(now, resets)) + reset
+	}
+	return fmt.Sprintf("   %-9s %s %3.0f%%%s\n", name, bar, p, when)
 }
 
 func statusText(row Row, now time.Time) string {
@@ -126,11 +207,11 @@ func statusText(row Row, now time.Time) string {
 		if t.IsZero() {
 			t = row.Limit.ExpiresAt
 		}
-		return "⛔ " + i18n.T("limits.limited_until", textfmt.Clock(now, t))
+		return "\x1b[31m◆ " + i18n.T("limits.limited_until", textfmt.Clock(now, t)) + reset
 	case row.Status == "warn":
-		return "◐ " + i18n.T("limits.approaching")
+		return "\x1b[33m◐ " + i18n.T("limits.approaching") + reset
 	}
-	return "● " + i18n.T("limits.ok")
+	return "\x1b[32m●" + reset + " " + i18n.T("limits.ok")
 }
 
 func usageText(row Row, now time.Time) string {
@@ -153,24 +234,9 @@ func usageText(row Row, now time.Time) string {
 	case "month":
 		return i18n.T("limits.copilot", strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", u.PremiumRequests), "0"), "."))
 	case "latest":
-		rl := u.RateLimits
-		if rl == nil {
-			return i18n.T("limits.codex_na")
-		}
-		s := i18n.T("limits.codex_primary", rl.PrimaryUsedPercent, resetText(now, rl.PrimaryResetsAt))
-		if rl.SecondaryUsedPercent > 0 || !rl.SecondaryResetsAt.IsZero() {
-			s += " · " + i18n.T("limits.codex_secondary", rl.SecondaryUsedPercent, resetText(now, rl.SecondaryResetsAt))
-		}
-		return s
+		return "" // Codex: its windows are drawn as bars
 	}
 	return ""
-}
-
-func resetText(now, t time.Time) string {
-	if t.IsZero() {
-		return "?"
-	}
-	return textfmt.Clock(now, t)
 }
 
 // short renders a token count: 812, 34.5K, 1.2M.

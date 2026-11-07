@@ -34,10 +34,10 @@ func TestOpenPickerAndClose(t *testing.T) {
 	_, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 	first := h.clientSession(client)
 
-	x, y := h.plusOf(bar, "Projects")
+	x, y := h.plusOf(bar, "PROJECTS")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Open a project", 5*time.Second)
@@ -88,7 +88,7 @@ func TestCloseTab(t *testing.T) {
 	agentPane, _ := h.startWithSidebar()
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 	window := func() string {
 		for _, l := range strings.Split(h.mustTmux("list-clients", "-F", "#{client_name} #{window_index}"), "\n") {
 			if f := strings.Fields(l); len(f) == 2 && f[0] == client {

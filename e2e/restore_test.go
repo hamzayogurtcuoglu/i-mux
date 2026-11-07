@@ -71,7 +71,7 @@ func TestRecentInPicker(t *testing.T) {
 	h.mustImux("open", "-d", other)
 	h.run("claude", 2)
 	c, client := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 	h.mustImux("close", "--session", first)
 	h.waitFor("client on blog", 5*time.Second, func() bool { return strings.HasPrefix(h.clientSession(client), "blog-") })
 
@@ -84,7 +84,7 @@ func TestRecentInPicker(t *testing.T) {
 		}
 		return bar != ""
 	})
-	x, y := h.plusOf(bar, "Projects")
+	x, y := h.plusOf(bar, "PROJECTS")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "RECENT", 5*time.Second)

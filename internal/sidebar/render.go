@@ -30,6 +30,8 @@ const (
 	ActChanges                // menu of the changed files, each opening its diff
 	ActProjectMenu            // menu of project Session (go to it, close it)
 	ActAgentMenu              // menu of agent Pane (go to it, rename it, close it)
+	ActFold                   // fold or unfold section Section
+	ActDiff                   // show the diff of Path
 )
 
 // Action is a row's action.
@@ -40,6 +42,7 @@ type Action struct {
 	Session string
 	Path    string
 	Status  string
+	Section string // ActFold: "projects", "agents" or "changes"
 }
 
 // ANSI styles. Only foreground colors and attributes, so any terminal theme
@@ -148,8 +151,9 @@ func fit(s string, w int) string {
 // 256-color styles of the v4 look. Backgrounds are used only for the
 // highlighted rows, the project avatars and the state pills.
 const (
-	muted     = "\x1b[38;5;245m"
-	faint     = "\x1b[38;5;240m"
+	muted     = "\x1b[38;5;247m"
+	faint     = "\x1b[38;5;244m"
+	title     = "\x1b[1m\x1b[38;5;252m"
 	selBg     = "\x1b[48;5;236m"
 	spinFg    = "\x1b[38;5;75m"
 	doneFg    = "\x1b[38;5;71m"
@@ -273,9 +277,33 @@ func withBg(t string) string {
 	return selBg + strings.ReplaceAll(t, reset, reset+selBg) + reset
 }
 
-// header is a section title with a "+" button on the right.
-func header(title string, w int, plus Action) Line {
-	cells := []Cell{{X: 0, W: w - 3, Text: muted + fit(" "+title, w-3) + reset}}
+// Section names (the fold state, @imux_fold).
+const (
+	SecProjects = "projects"
+	SecAgents   = "agents"
+	SecChanges  = "changes"
+)
+
+// header is a section title that folds the section on click, with an
+// optional count and a "+" button on the right.
+func header(name, text string, folded bool, count string, w int, plus Action) Line {
+	arrow := "▾"
+	if folded {
+		arrow = "▸"
+	}
+	tw := w
+	if plus.Kind != ActNone {
+		tw = w - 3
+	}
+	l, r := text, ""
+	if count != "" {
+		r = count + " "
+	}
+	lw := tw - 1 - runes(r)
+	cells := []Cell{{
+		X: 0, W: tw, Text: " " + muted + arrow + reset + " " + title + fit(l, max(lw-2, 1)) + reset + muted + r + reset,
+		Action: Action{Kind: ActFold, Section: name},
+	}}
 	if plus.Kind != ActNone {
 		cells = append(cells, Cell{X: w - 3, W: 3, Text: muted + " + " + reset, Action: plus})
 	}
@@ -393,7 +421,7 @@ func groupRow(pr ProjectRow, w, tick int, collapsed bool) Line {
 		a = Action{Kind: ActProject, Session: pr.Session}
 	}
 	if !collapsed {
-		return Line{Text: faint + fit(" "+pr.Name, w) + reset, Action: a}
+		return Line{Text: muted + fit(" "+pr.Name, w) + reset, Action: a}
 	}
 	right, rw := muted+strconv.Itoa(len(pr.Panes))+reset, runes(strconv.Itoa(len(pr.Panes)))
 	if st, ok := rollup(pr.Panes); ok {
@@ -401,7 +429,7 @@ func groupRow(pr ProjectRow, w, tick int, collapsed bool) Line {
 		right, rw = right+" "+b, rw+1+bw
 	}
 	nw := max(w-rw-3, 1)
-	return Line{Text: spread(faint+" "+fit(pr.Name, nw)+reset, nw+1, right+" ", rw+1, w), Action: a}
+	return Line{Text: spread(muted+" "+fit(pr.Name, nw)+reset, nw+1, right+" ", rw+1, w), Action: a}
 }
 
 // continueRows: the agents the chat can move to, two buttons per row.
@@ -444,42 +472,136 @@ func toolbar(m Model, w int) []Line {
 	}
 	row := func(cells ...Cell) Line { return Line{Text: compose(cells, w), Cells: cells} }
 	half := (w - 1) / 2
-	first := []Cell{btn(1, half, "✎", i18n.T("sidebar.rename"), Action{Kind: ActRename})}
-	if m.Git && m.Changed > 0 {
-		first = append(first, btn(1+half, half, "±", i18n.T("sidebar.changes_n", m.Changed), Action{Kind: ActChanges}))
-	}
-	third := (w - 1) / 3
 	return []Line{
-		row(first...),
-		row(btn(1, third, "⧉", i18n.T("sidebar.history"), Action{Kind: ActSessions}),
-			btn(1+third, third, "◔", i18n.T("sidebar.limits"), Action{Kind: ActLimits}),
-			btn(1+2*third, w-1-2*third, "?", i18n.T("sidebar.help"), Action{Kind: ActKeys})),
+		row(btn(1, half, "✎", i18n.T("sidebar.rename"), Action{Kind: ActRename}),
+			btn(1+half, w-1-half, "⧉", i18n.T("sidebar.history"), Action{Kind: ActSessions})),
+		row(btn(1, half, "◔", i18n.T("sidebar.limits"), Action{Kind: ActLimits}),
+			btn(1+half, w-1-half, "?", i18n.T("sidebar.help"), Action{Kind: ActKeys})),
 	}
 }
 
-// top is the Projects and Agents blocks. Without blanks there are no empty
-// rows; collapse shows the other projects' agents as one row each.
-func top(m Model, w int, blanks, collapse bool) []Line {
-	rule := Line{Text: faint + strings.Repeat("─", w) + reset}
-	out := []Line{header(i18n.T("sidebar.projects"), w, Action{Kind: ActOpen})}
-	for _, pr := range m.Projects {
-		out = append(out, projectRow(pr, w, m.Tick))
+// changeRow is one changed file: status, path, added and removed lines.
+func changeRow(c ChangeRow, w int) Line {
+	color := yellow
+	switch c.Status {
+	case "A":
+		color = green
+	case "D":
+		color = red
+	case "?":
+		color = muted
+	case "R":
+		color = cyan
 	}
-	if blanks {
-		out = append(out, Line{Text: strings.Repeat(" ", w)})
+	right, rw := "", 0
+	if c.Added > 0 || c.Removed > 0 {
+		var parts []string
+		if c.Added > 0 {
+			parts = append(parts, green+"+"+strconv.Itoa(c.Added)+reset)
+			rw += 1 + len(strconv.Itoa(c.Added))
+		}
+		if c.Removed > 0 {
+			parts = append(parts, red+"−"+strconv.Itoa(c.Removed)+reset)
+			rw += 1 + len(strconv.Itoa(c.Removed))
+		}
+		right = strings.Join(parts, " ")
+		rw += len(parts) - 1
 	}
-	out = append(out, rule, header(i18n.T("sidebar.agents"), w, Action{Kind: ActNewAgent}))
-	for _, pr := range m.Projects {
-		if len(pr.Panes) == 0 {
-			continue
+	// "   M  path +12 −3 ": indent, status, gap, path, counts, margin.
+	pw := w - 7
+	if rw > 0 {
+		pw -= rw + 1
+	}
+	pw = max(pw, 1)
+	path := c.Path
+	if r := []rune(path); len(r) > pw && pw > 1 {
+		path = "…" + string(r[len(r)-pw+1:])
+	}
+	text := "   " + color + fit(c.Status, 1) + reset + "  " + fit(path, pw)
+	if rw > 0 {
+		text += " " + right
+	}
+	return Line{Text: text + " ", Action: Action{Kind: ActDiff, Path: c.Path, Status: c.Status}}
+}
+
+// top is the PROJECTS, AGENTS and SOURCE CONTROL sections (folded ones show
+// only their title). Without blanks there are no empty rows; collapse shows
+// the other projects' agents as one row each; maxChanges caps the file rows
+// (-1: up to 10).
+func top(m Model, w int, blanks, collapse bool, maxChanges int) []Line {
+	var out []Line
+	gap := func() {
+		if blanks && len(out) > 0 {
+			out = append(out, Line{Text: strings.Repeat(" ", w)})
 		}
-		folded := collapse && !pr.Current
-		out = append(out, groupRow(pr, w, m.Tick, folded))
-		if folded {
-			continue
+	}
+	folded := func(name string) bool { return m.Fold[name] }
+
+	count := ""
+	if folded(SecProjects) {
+		count = strconv.Itoa(len(m.Projects))
+	}
+	out = append(out, header(SecProjects, i18n.T("sidebar.projects"), folded(SecProjects), count, w, Action{Kind: ActOpen}))
+	if !folded(SecProjects) {
+		for _, pr := range m.Projects {
+			out = append(out, projectRow(pr, w, m.Tick))
 		}
-		for _, p := range pr.Panes {
-			out = append(out, agentRow(p, w, m.Now, m.Tick))
+	}
+
+	gap()
+	count = ""
+	if folded(SecAgents) {
+		n := 0
+		for _, pr := range m.Projects {
+			n += len(pr.Panes)
+		}
+		count = strconv.Itoa(n)
+	}
+	out = append(out, header(SecAgents, i18n.T("sidebar.agents"), folded(SecAgents), count, w, Action{Kind: ActNewAgent}))
+	if !folded(SecAgents) {
+		for _, pr := range m.Projects {
+			if len(pr.Panes) == 0 {
+				continue
+			}
+			fold := collapse && !pr.Current
+			out = append(out, groupRow(pr, w, m.Tick, fold))
+			if fold {
+				continue
+			}
+			for _, p := range pr.Panes {
+				out = append(out, agentRow(p, w, m.Now, m.Tick))
+			}
+		}
+	}
+
+	if m.Git {
+		gap()
+		text := i18n.T("sidebar.source_control")
+		if m.Branch != "" {
+			text += " · " + m.Branch
+		}
+		count = ""
+		if m.Changed > 0 {
+			count = strconv.Itoa(m.Changed)
+		}
+		out = append(out, header(SecChanges, text, folded(SecChanges), count, w, Action{}))
+		if !folded(SecChanges) {
+			if m.Changed == 0 {
+				out = append(out, Line{Text: muted + fit("   "+i18n.T("sidebar.no_changes"), w) + reset})
+			}
+			limit := 10
+			if maxChanges >= 0 {
+				limit = maxChanges
+			}
+			for i, c := range m.Changes {
+				if i >= limit {
+					break
+				}
+				out = append(out, changeRow(c, w))
+			}
+			if more := m.Changed - min(len(m.Changes), limit); more > 0 {
+				out = append(out, Line{Text: muted + fit("   "+i18n.T("sidebar.more_files", more), w) + reset, Action: Action{Kind: ActChanges}})
+			}
 		}
 	}
 	return out
@@ -505,11 +627,14 @@ func bottom(m Model, w int) []Line {
 // When the rows do not fit, blank rows go first, then the other projects'
 // agents fold into one row each, then the top is cut.
 func Render(m Model, w, h int, sel Item) Screen {
-	up, down := top(m, w, true, false), bottom(m, w)
+	up, down := top(m, w, true, false, -1), bottom(m, w)
 	if h > 0 && len(up)+len(down) > h {
-		up = top(m, w, false, false)
+		up = top(m, w, false, false, -1)
 		if len(up)+len(down) > h {
-			up = top(m, w, false, true)
+			up = top(m, w, false, true, -1)
+		}
+		if len(up)+len(down) > h {
+			up = top(m, w, false, true, 3)
 		}
 		if len(up)+len(down) > h {
 			up = up[:max(h-len(down), 0)]

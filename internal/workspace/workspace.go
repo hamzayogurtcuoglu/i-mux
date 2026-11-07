@@ -275,6 +275,11 @@ func (w *WS) Spec(l Launch) (*launch.Spec, TrailEntry, error) {
 	if l.Handoff != "" && w.Cfg.Handoff.Deliver != "inline" {
 		argv = agent.ReadDirArgs(l.Agent, filepath.Dir(l.Handoff)) // the agent reads the file itself
 	}
+	if l.Agent == session.Claude && w.Cfg.Limits.ClaudeStatusline {
+		if p, err := w.claudeSettings(); err == nil {
+			argv = append(argv, "--settings="+p)
+		}
+	}
 	argv = append(append(argv, ac.Args...), agent.Expand(tpl, vars)...)
 	te := TrailEntry{Agent: l.Agent, Start: w.Now().UnixMilli(), Handoff: l.Handoff, Resumed: l.ResumeID != ""}
 	switch {
@@ -454,3 +459,21 @@ func (w *WS) EnsureConf(ctx context.Context) error {
 
 // EnsureWatcher starts the limit watcher or wakes it (M3).
 var EnsureWatcher = func(w *WS) {}
+
+// claudeSettings writes the settings file Claude is started with: only a
+// status line that runs imux (D25). It is rewritten when imux moved.
+func (w *WS) claudeSettings() (string, error) {
+	p := paths.ClaudeSettings()
+	cmd := tmux.ShQuote(w.Self) + " __statusline claude"
+	b, err := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": cmd, "padding": 0}})
+	if err != nil {
+		return "", err
+	}
+	if old, err := os.ReadFile(p); err == nil && string(old) == string(b) {
+		return p, nil
+	}
+	if err := paths.EnsureDir(paths.Home()); err != nil {
+		return "", err
+	}
+	return p, paths.WriteFile(p, b)
+}

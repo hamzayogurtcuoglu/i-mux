@@ -5,15 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/usage"
 )
 
 // agyChat writes an Antigravity conversation of project with msgs replies of
@@ -114,14 +117,33 @@ func TestReportTableAndJSON(t *testing.T) {
 	if err := rep.Table(&b); err != nil {
 		t.Fatal(err)
 	}
-	out := b.String()
+	out := stripANSI(b.String())
 	for _, want := range []string{
-		"AGENT", "Claude", "⛔ limited until 15:00", `"5-hour limit reached ∙ resets 3pm" (seen 12 min ago)`,
-		"Antigravity", "● ok", "today: 2 requests · 200 in / 20 out · 10 cache read",
-		"Copilot", "not installed", "this month: 0 premium requests",
-		"Codex", "◐ approaching a limit", "rate limits: n/a (update Codex)",
-		"CodexBar (brew install --cask codexbar)",
+		"Claude", "◆ limit reached · back at 15:00", `"5-hour limit reached ∙ resets 3pm" (seen 12 min ago)`,
+		"percentages show after Claude answers once",
+		"Antigravity", "● available", "Antigravity does not report plan percentages", "today: 2 requests · 200 in / 20 out · 10 cache read",
+		"Copilot", "not installed",
+		"Codex", "◐ approaching a limit", "percentages show after Codex answers once",
 	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("table lacks %q:\n%s", want, out)
+		}
+	}
+	// What Claude's status line recorded shows as bars, per window.
+	if err := usage.Save(paths.ClaudeUsage(), &usage.Snapshot{
+		At:       now,
+		FiveHour: &usage.Window{UsedPercent: 72, ResetsAt: reset},
+		Weekly:   &usage.Window{UsedPercent: 18, ResetsAt: now.Add(72 * time.Hour)},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	b.Reset()
+	if err := Collect(context.Background(), config.Default(), st, installed, now).Table(&b); err != nil {
+		t.Fatal(err)
+	}
+	out = stripANSI(b.String())
+	t.Logf("\n%s", out)
+	for _, want := range []string{"5-hour    ██████████████░░░░░░  72%  resets 15:00", "weekly    ████░░░░░░░░░░░░░░░░  18%  resets "} {
 		if !strings.Contains(out, want) {
 			t.Errorf("table lacks %q:\n%s", want, out)
 		}
@@ -155,3 +177,7 @@ func TestReportTableAndJSON(t *testing.T) {
 		t.Fatal("short")
 	}
 }
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+func stripANSI(s string) string { return ansiRe.ReplaceAllString(s, "") }

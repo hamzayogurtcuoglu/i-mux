@@ -95,10 +95,15 @@ func newH(t *testing.T, extraConfig string) *H {
 			cfg.WriteString("[handoff]\ndeliver = \"inline\"\n\n")
 		}
 	}
+	// The tests written before imux's Claude status line (v0.13) check
+	// Claude's argv exactly; the ones for it set claude_statusline.
+	if strings.Contains(tables, "[limits]\n") && !strings.Contains(tables, "claude_statusline") {
+		tables = strings.Replace(tables, "[limits]\n", "[limits]\nclaude_statusline = false\n", 1)
+	}
 	if !strings.Contains(tables, "[limits]") {
 		// A fast watcher keeps tests short; it still has to see a screen
 		// twice before it acts.
-		cfg.WriteString("[limits]\npoll_interval = \"200ms\"\nidle_interval = \"500ms\"\ngrace = \"0s\"\n\n")
+		cfg.WriteString("[limits]\npoll_interval = \"200ms\"\nidle_interval = \"500ms\"\ngrace = \"0s\"\nclaude_statusline = false\n\n")
 	}
 	cfg.WriteString(tables)
 	testutil.WriteFile(t, filepath.Join(homes.Imux, "config.toml"), []byte(cfg.String()))

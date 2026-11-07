@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -335,6 +336,20 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		}
 		_ = s.t.Spawn(append(c, "-E", "-w", "80%", "-h", "70%", tmux.ShJoin(args...)))
 		return
+	case ActFold:
+		// Fold or unfold a section in every sidebar (@imux_fold, global).
+		var names []string
+		for _, n := range []string{SecProjects, SecAgents, SecChanges} {
+			if f := s.model.Fold[n]; f != (n == a.Section) {
+				names = append(names, n)
+			}
+		}
+		_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-g", "@imux_fold", strings.Join(names, ",")})
+		RefreshAll(ctx, s.t)
+		return
+	case ActDiff:
+		s.diff(a, client)
+		return
 	case ActAgentMenu:
 		args := []string{"__menu", "--agent", "--pane", a.Pane}
 		if client != "" {
@@ -417,6 +432,19 @@ func (s *sidebar) prompt(ctx context.Context, client, label, initial, template s
 	}
 	c = append(c, "-I", initial, "-p", label, template)
 	_, _ = s.t.Run(ctx, c)
+}
+
+// diff opens a popup with a changed file's diff.
+func (s *sidebar) diff(a Action, client string) {
+	c := tmux.Cmd{"display-popup"}
+	if client != "" {
+		c = append(c, "-c", client)
+	}
+	c = append(c, "-E", "-w", "90%", "-h", "90%")
+	if s.model.CWD != "" {
+		c = append(c, "-d", s.model.CWD)
+	}
+	_ = s.t.Spawn(append(c, DiffShell(a.Status, a.Path)))
 }
 
 // DiffShell is the sh command that shows a changed file's diff in a pager

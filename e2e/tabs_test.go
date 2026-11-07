@@ -40,7 +40,7 @@ func TestTabs(t *testing.T) {
 	agentPane, _ := h.startWithSidebar()
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
-	c.waitScreen(h, "Agents", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 	if pos := strings.TrimSpace(h.mustTmux("show-options", "-gv", "status-position")); pos != "top" {
 		t.Fatalf("status-position %q", pos)
 	}

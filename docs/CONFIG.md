@@ -32,6 +32,7 @@ line number.
 | `limits.cooldown` | `"10m"` | After a limit prompt, the same pane is not prompted again for this long. |
 | `limits.scan_lines` | `25` | Number of last non-blank lines of an agent's screen that are scanned. |
 | `limits.default_expiry` | `"5h"` | How long a limit without a parseable reset time is shown. |
+| `limits.claude_statusline` | `true` | Start Claude Code with imux's status line (for this session only, your settings files are not changed): it records the 5-hour and weekly percentages Claude reports, for the limits panel. Your own status line still shows. |
 | `bus.enabled` | `true` | Allow agents to message each other with `imux send`. |
 | `bus.confirm` | `false` | Ask before every message is delivered. |
 | `bus.idle_after` | `"5s"` | A pane counts as idle once its screen did not change for this long. |
@@ -141,6 +142,11 @@ cooldown       = "10m"
 scan_lines     = 25
 # How long a limit without a parseable reset time is shown.
 default_expiry = "5h"
+# Start Claude Code with imux's status line (for this session only, your
+# settings files are not changed): it records the 5-hour and weekly
+# percentages Claude reports, for the limits panel. Your own status line
+# still shows.
+claude_statusline = true
 
 [bus]
 # Allow agents to message each other with `imux send`.

@@ -63,6 +63,11 @@ cooldown       = "10m"
 scan_lines     = 25
 # How long a limit without a parseable reset time is shown.
 default_expiry = "5h"
+# Start Claude Code with imux's status line (for this session only, your
+# settings files are not changed): it records the 5-hour and weekly
+# percentages Claude reports, for the limits panel. Your own status line
+# still shows.
+claude_statusline = true
 
 [bus]
 # Allow agents to message each other with `imux send`.

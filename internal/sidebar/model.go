@@ -8,6 +8,7 @@ package sidebar
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -117,8 +118,10 @@ type ProjectRow struct {
 
 // ChangeRow is one `git status --short` entry.
 type ChangeRow struct {
-	Status string // "M", "A", "D", "R", "?" ...
-	Path   string
+	Status  string // "M", "A", "D", "R", "?" ...
+	Path    string
+	Added   int // lines (git diff --numstat HEAD); 0 when unknown
+	Removed int
 }
 
 // AgentRow is one agent the target pane can continue in.
@@ -146,8 +149,9 @@ type Model struct {
 	Target   string // pane id actions apply to; "" when the window has none
 	TargetW  int    // its size in cells (+ New agent picks the split direction)
 	TargetH  int
-	Now      time.Time // for the times shown
-	Tick     int       // spinner frame
+	Now      time.Time       // for the times shown
+	Tick     int             // spinner frame
+	Fold     map[string]bool // folded sections (@imux_fold)
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -179,6 +183,8 @@ type Source struct {
 	Resolve func(cfg *config.Config, st *state.State) map[session.AgentID]agent.Resolved
 	// Git reads a directory's repository state; nil = gitinfo.Collect.
 	Git func(ctx context.Context, dir string) gitinfo.Info
+	// Numstat returns `git diff --numstat HEAD` of a directory; nil runs git.
+	Numstat func(ctx context.Context, dir string) string
 	// Host is this machine's name (a terminal title equal to it is not a
 	// name); nil = os.Hostname.
 	Host func() string
@@ -188,8 +194,10 @@ type Source struct {
 }
 
 type gitCache struct {
-	at   time.Time
-	info gitinfo.Info
+	at    time.Time
+	info  gitinfo.Info
+	num   map[string][2]int
+	numAt time.Time
 }
 
 const gitTTL = 20 * time.Second
@@ -268,7 +276,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -277,9 +285,15 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	sec := tmux.Sections(out)
 	win := Window{Self: self}
 	var tabAuto, tabState string
-	if rows := tmux.Rows(sec["me"], 8); len(rows) > 0 {
+	fold := map[string]bool{}
+	if rows := tmux.Rows(sec["me"], 9); len(rows) > 0 {
 		r := rows[0]
 		tabAuto, tabState = r[6], r[7]
+		for _, f := range strings.Split(r[8], ",") {
+			if f = strings.TrimSpace(f); f != "" {
+				fold[f] = true
+			}
+		}
 		win.ID, win.Last, win.Session = r[0], r[1], r[4]
 		win.Width, _ = strconv.Atoi(r[2])
 		win.Height, _ = strconv.Atoi(r[3])
@@ -382,7 +396,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now}
+	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target
@@ -484,6 +498,14 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		if gi.State == gitinfo.OK {
 			m.Git, m.Branch, m.Changed = true, gi.Branch, gi.StatusTotal
 			m.Changes = ParseStatus(gi.Status)
+			if len(m.Changes) > 0 {
+				ns := s.numstat(ctx, cwd)
+				for i := range m.Changes {
+					if n, ok := ns[m.Changes[i].Path]; ok {
+						m.Changes[i].Added, m.Changes[i].Removed = n[0], n[1]
+					}
+				}
+			}
 			for i := range m.Projects {
 				if m.Projects[i].Current {
 					m.Projects[i].Branch, m.Projects[i].Dirty = gi.Branch, gi.StatusTotal > 0
@@ -535,4 +557,68 @@ func ParseStatus(lines []string) []ChangeRow {
 		out = append(out, ChangeRow{Status: st, Path: strings.Trim(path, `"`)})
 	}
 	return out
+}
+
+// numstat returns the added and removed lines per changed file of dir
+// (git diff --numstat HEAD), cached like the status.
+func (s *Source) numstat(ctx context.Context, dir string) map[string][2]int {
+	s.mu.Lock()
+	c := s.git[dir]
+	if c.num != nil && s.Now().Sub(c.numAt) < gitTTL {
+		s.mu.Unlock()
+		return c.num
+	}
+	s.mu.Unlock()
+	run := s.Numstat
+	if run == nil {
+		run = gitNumstat
+	}
+	num := ParseNumstat(run(ctx, dir))
+	s.mu.Lock()
+	c = s.git[dir]
+	c.num, c.numAt = num, s.Now()
+	if s.git == nil {
+		s.git = map[string]gitCache{}
+	}
+	s.git[dir] = c
+	s.mu.Unlock()
+	return num
+}
+
+// gitNumstat runs git diff --numstat HEAD in dir (2 s at most).
+func gitNumstat(ctx context.Context, dir string) string {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "git", "-C", dir, "diff", "--numstat", "HEAD").Output()
+	if err != nil {
+		return ""
+	}
+	return string(out)
+}
+
+// ParseNumstat reads `git diff --numstat` output: "12\t3\tpath"; binary
+// files ("-\t-") count 0; a rename "a => b" (or "{a => b}/c") keeps the new path.
+func ParseNumstat(out string) map[string][2]int {
+	m := map[string][2]int{}
+	for _, l := range strings.Split(out, "\n") {
+		f := strings.SplitN(l, "\t", 3)
+		if len(f) != 3 {
+			continue
+		}
+		a, _ := strconv.Atoi(f[0])
+		r, _ := strconv.Atoi(f[1])
+		path := f[2]
+		if i := strings.Index(path, "{"); i >= 0 {
+			if j := strings.Index(path[i:], "}"); j > 0 {
+				inner := path[i+1 : i+j]
+				if _, after, ok := strings.Cut(inner, " => "); ok {
+					path = strings.ReplaceAll(path[:i]+after+path[i+j+1:], "//", "/")
+				}
+			}
+		} else if _, after, ok := strings.Cut(path, " => "); ok {
+			path = after
+		}
+		m[path] = [2]int{a, r}
+	}
+	return m
 }

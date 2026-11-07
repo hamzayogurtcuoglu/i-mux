@@ -55,6 +55,9 @@ func testWS(t *testing.T) (*WS, *fakeTmux, *testutil.Homes) {
 		Self: "/opt/imux/bin/imux",
 		Now:  testutil.Clock().Now,
 	}
+	// Tests that check Claude's argv exactly; TestClaudeStatuslineSettings
+	// covers it.
+	w.Cfg.Limits.ClaudeStatusline = false
 	w.SetBins(map[session.AgentID]agent.Resolved{
 		"claude":      {Agent: "claude", Installed: true, Path: "/opt/bin/claude", PathEnv: "/opt/bin:/usr/bin"},
 		"antigravity": {Agent: "antigravity", Installed: true, Path: "/opt/bin/agy", PathEnv: "/opt/bin:/usr/bin"},
@@ -280,5 +283,23 @@ func TestPasteModeKeepsPromptOutOfArgv(t *testing.T) {
 	w.Cfg.Agents["antigravity"].NewArgs = []string{"--interactive"}
 	if !w.pasteMode(Launch{Agent: "antigravity", Prompt: "x"}) {
 		t.Fatal("no prompt slot should paste")
+	}
+}
+
+// Claude starts with imux's status line (D25): --settings= names a file that
+// only sets a status line running imux; other agents get nothing.
+func TestClaudeStatuslineSettings(t *testing.T) {
+	w, _, h := testWS(t)
+	w.Cfg.Limits.ClaudeStatusline = true
+	s, _, err := w.Spec(Launch{Agent: "claude", CWD: h.Project})
+	if err != nil || len(s.Args) != 3 || !strings.HasPrefix(s.Args[0], "--settings=") || s.Args[1] != "--session-id" {
+		t.Fatalf("claude argv %q %v", s.Args, err)
+	}
+	b, err := os.ReadFile(strings.TrimPrefix(s.Args[0], "--settings="))
+	if err != nil || string(b) != `{"statusLine":{"command":"/opt/imux/bin/imux __statusline claude","padding":0,"type":"command"}}` {
+		t.Fatalf("settings %s %v", b, err)
+	}
+	if s, _, _ := w.Spec(Launch{Agent: "antigravity", CWD: h.Project}); len(s.Args) != 0 {
+		t.Fatalf("antigravity argv %q", s.Args)
 	}
 }

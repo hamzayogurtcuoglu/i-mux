@@ -661,17 +661,17 @@ User request: the + menus should offer a plain shell too (ARCHITECTURE §9.3, pl
 
 User feedback with a screenshot (ARCHITECTURE D25, §9.3 "Sidebar v5").
 
-- [ ] **T19.1 Folding and contrast** · S
+- [x] **T19.1 Folding and contrast** · S
   - AC: section titles fold / unfold on click, shared through `@imux_fold`; brighter colors;
     golden tests.
-- [ ] **T19.2 SOURCE CONTROL** · M
+- [x] **T19.2 SOURCE CONTROL** · M
   - AC: branch, changed files with +/− lines, diff on click, "+N more" opens the full menu; the
     Changes button is gone; unit tests for numstat parsing.
-- [ ] **T19.3 Claude percentages** · M
+- [x] **T19.3 Claude percentages** · M
   - AC: `--settings=` for Claude launches; `imux __statusline claude` records `rate_limits` and
     chains the user's status line; unit tests with synthetic status-line input (both timestamp
     forms, missing windows).
-- [ ] **T19.4 Limits panel** · S · deps: T19.3
+- [x] **T19.4 Limits panel** · S · deps: T19.3
   - AC: bars and percentages per window for Claude and Codex, plain words for the others;
     golden test; README.
 
