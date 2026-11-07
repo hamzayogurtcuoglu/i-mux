@@ -732,6 +732,15 @@ User feedback (ARCHITECTURE D27, §9.3 "Sidebar v7").
 - [x] **T23.2 Separator** · S
   - AC: a line between the rail and the view on every row; default width 41; golden tests.
 
+## M24: Closing the side panel (added 2026-11-08)
+
+- [ ] **T24.1 Toggle from the rail** · S
+  - AC: a click on the active view's icon closes the panel (pane width 6, rail without its line);
+    any view's icon opens it with that view; `@imux_collapsed` per window; the width is kept
+    while closed; unit tests for the closed rail.
+- [ ] **T24.2 E2E and docs** · S · deps: T24.1
+  - AC: real clicks close and open the panel; the agent pane grows and shrinks; README.
+
 ---
 
 ## Testing strategy

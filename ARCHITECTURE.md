@@ -1244,6 +1244,16 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Mouse:** viewers run `less --mouse` (wheel scrolls); the folder picker and search popups
   scroll with the wheel; search results fold per file (click the file, ← →) and all at once (Tab).
 
+#### Closing the side panel (v0.20)
+
+- A click on the active view's icon closes the panel, as in the editor: the sidebar pane narrows
+  to the rail's item (6 columns; the pane border is the line) and the agent pane gets the room.
+  A click on any view's icon opens it again with that view, at the sidebar width. The view keys
+  (`1`, `2`, `4`) do the same.
+- Kept per tab in the window option `@imux_collapsed` (`1` when closed), like `@imux_view`; the
+  sidebar keeps the narrow width while closed (window resizes, a bigger client) and a restarted
+  sidebar reads it back. Search, Limits and Help work while closed.
+
 #### Agent bar
 
 Each region is marked with `#[range=user|imux:<x>]`. A left click fires `MouseDown1Status`, and
