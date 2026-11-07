@@ -598,6 +598,25 @@ upgrade (ARCHITECTURE D20, D21, §9.3 "Tabs").
   - AC: a real click on **+** opens a tab with the chosen agent and a sidebar; the bar shows both
     tabs with their names; a click on the first tab goes back; README, CONFIG.md, screenshots.
 
+## M15: Open and close projects easily (added 2026-11-07)
+
+User feedback: "why does i-mux show up on its own", "how do I close a project", "finding the path
+in Open project is hard" (ARCHITECTURE D22, D23, §9.3 "Open and close projects").
+
+- [ ] **T15.1 Folder candidates** · M
+  - AC: recent folders in state (written on start); git repositories under home with the skip list
+    and budgets; ranking and path browsing as pure functions with unit tests on a temp tree.
+- [ ] **T15.2 Picker UI** · M · deps: T15.1
+  - AC: a filter line, a list with the selection, Tab completion, Enter, Esc; UTF-8 input,
+    Backspace, Ctrl+U; golden render tests; used by the sidebar's **+**, `o`, `imux open` without
+    a folder and `imux` in the home folder.
+- [ ] **T15.3 Close projects and tabs** · M
+  - AC: `imux close`; project menu (click the current project, right-click any) with a confirm;
+    × on the current tab with a confirm; the client moves to another project first.
+- [ ] **T15.4 E2E and docs** · M · deps: T15.2, T15.3
+  - AC: real-client tests: open a project by typing part of its name in the picker; close a
+    project from its menu (the client lands on the other one); close a tab with ×; README.
+
 ---
 
 ## Testing strategy

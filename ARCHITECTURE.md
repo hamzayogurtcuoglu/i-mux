@@ -98,6 +98,8 @@ done by tmux on a dedicated socket. i-mux only:
 | D19 | **The sidebar is a full agent workspace UI** (added 2026-11-07, v0.7, at the user's request; our extra is moving a chat to another CLI): Projects (letter avatar, branch, roll-up status) above Agents grouped by project (icon, name, time since the state changed, status), and a "Continue this chat in" block for the switch. States: **Needs you** (the agent asks something), **Done** (finished while you looked elsewhere), working (spinner), idle (ring). | The sidebar answers "what needs me?" at a glance, and adds what other agent workspaces lack: moving the chat. imux keeps reading the screen it already captures: a question on a still screen is "Needs you", a working → idle change the user has not looked at is "Done". |
 | D20 | **Tabs: a project holds tabs, a tab holds panes** (added 2026-11-07, v0.8, at the user's request). A tab is a tmux window; a tab bar at the top (the status line, `status-position top`) shows each tab's number, name and most urgent state, and a **+** that asks which agent the new tab starts with. | One project, several tasks: each task gets its own tab with its own agents and sidebar, instead of one crowded window. tmux windows already are tabs; only the bar and the naming are new. |
 | D21 | **Long-running imux processes restart themselves after an upgrade** (v0.8): the watcher and each sidebar compare the imux binary's size and mtime with the ones they started from and `exec` the new binary when it changed; the restarted watcher rewrites the tmux config. | The user saw an old version keep running after the one-line install ("0.5.0 shows up out of nowhere"): the daemon and the sidebars of sessions started earlier never restarted. |
+| D22 | **Folders are picked, not typed** (added 2026-11-07, v0.9): "open a project" shows a popup that filters as you type: recent projects first, then git repositories found under the home folder; a query starting with `/` or `~` browses folders, Tab completes. `imux` run in the home folder opens the same picker instead of making the home folder a project. | The user could not find paths in tmux's command prompt (Tab completes tmux commands there, not folders). Most projects are git repositories under the home folder, and most opens are of a recent one. |
+| D23 | **Projects and tabs close from the UI** (v0.9): a click on the current project (or a right-click on any) opens its menu with Close; the current tab has a **×**; both ask first. Closing the project the client shows moves the client to another project first. | Sessions outlive the terminal, so projects piled up in the sidebar ("why does i-mux show up on its own?") with no visible way to close them. The agents' own session files stay, so a closed conversation can be continued from History. |
 
 ## 4. Components
 
@@ -1060,6 +1062,36 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - Keys: `prefix c` new tab (asks for the agent), `prefix ,` rename the tab, `prefix 1..9` /
   `prefix n` / `prefix p` select (tmux's).
 - The agent bar (`tmux.agent_bar`) stays an option on a second status line.
+
+#### Open and close projects (v0.9)
+
+```
+ Open a project
+ > acm▏
+ ─────────────────────────────────────
+ ▸ ~/code/acme-api              recent
+   ~/work/acme-mobile              git
+   ~/Documents/acme-notes          git
+ ↑↓ choose · Enter open · Tab complete · Esc cancel
+```
+
+- **Picker** (`imux __open-picker`, in a `display-popup`; `imux open` without a folder and `imux`
+  in the home folder run it in the terminal): candidates are recent project folders
+  (`state.json` `recent`, written by every start, newest first, at most 30), the folders of open
+  projects, then git repositories under the home folder (depth ≤ 4; hidden folders, `Library`,
+  `node_modules`, `vendor` and similar skipped; at most 40 000 folders or 2 s, run in the
+  background while the list is shown; cached in `~/.imux/folders.json` for 10 minutes).
+- **Matching:** case-insensitive subsequence on the `~`-shortened path; a match in the folder name
+  ranks first (prefix, then substring), recent folders before the rest.
+- **Browsing:** a query starting with `/` or `~` lists the subfolders of its directory part whose
+  name starts with the rest; Tab completes the selection (adding `/`); Enter opens the selection,
+  or the typed folder when nothing matches.
+- **Close a project:** `imux close [--session S]`; the sidebar's project menu (click the current
+  project, right-click any) → "Close project…" → confirm ("stops its N agents; their
+  conversations stay in History"). A client showing it is switched to the most recent other
+  project first; without one it detaches.
+- **Close a tab:** the **×** after the current tab (`range=user|imux:x`) → confirm →
+  `imux __close-tab`; the last tab closes the project as above.
 
 #### Agent bar
 
