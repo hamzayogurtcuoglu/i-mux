@@ -56,11 +56,16 @@ jobs:
       - name: imux doctor --ci
         run: '"$HOME/.local/bin/imux" doctor --ci'
       - name: Without --version the installer picks the latest release
-        # Only a full release (no "-rc1" suffix) is "latest".
+        # Only a full release (no "-rc1" suffix) is "latest". A newer release
+        # can come out while a slow runner installs tmux (Intel macOS: 50 min),
+        # so the check is against whatever "latest" is now.
         if: ${{ !contains(inputs.tag, '-') }}
         run: |
           curl -fsSL "$INSTALLER" | sh -s -- --prefix "$RUNNER_TEMP/latest" --no-modify-path
-          "$RUNNER_TEMP/latest/imux" version | grep -q "${TAG#v}"
+          latest=$(curl -fsSI "https://github.com/${{ github.repository }}/releases/latest" \
+            | tr -d '\r' | sed -n 's|^[Ll]ocation: .*/tag/v||p')
+          echo "latest release: $latest"
+          "$RUNNER_TEMP/latest/imux" version | grep -q "${latest:-${TAG#v}}"
       - name: The installer attached to the release works too
         run: |
           curl -fsSL "https://github.com/${{ github.repository }}/releases/download/$TAG/install.sh" \
