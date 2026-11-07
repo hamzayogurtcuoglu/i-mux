@@ -30,6 +30,7 @@ const (
 type Model struct {
 	Home     string
 	Cands    []folders.Cand // open, recent and git folders
+	Restore  *folders.Cand  // "Restore last session", when there is one
 	Query    string
 	Sel      int
 	Top      int  // first list row shown
@@ -37,9 +38,10 @@ type Model struct {
 	Shorten  func(string) string
 }
 
-// List is what the query shows: matching candidates, or while browsing a
-// path, its folder (when the query ends with "/") and the matching
-// subfolders.
+// List is what the query shows. With nothing typed: the restore row, the
+// RECENT section (open and recent folders) and ON THIS MAC (git folders),
+// with headers; typed text ranks every folder; a typed path is browsed:
+// its folder (when the query ends with "/") and the matching subfolders.
 func (m *Model) List() []folders.Cand {
 	if folders.IsPath(m.Query) {
 		var out []folders.Cand
@@ -51,39 +53,88 @@ func (m *Model) List() []folders.Cand {
 		}
 		return append(out, folders.Browse(m.Query, m.Home)...)
 	}
-	return folders.Rank(m.Query, m.Cands, m.Shorten)
+	if strings.TrimSpace(m.Query) != "" {
+		return folders.Rank(m.Query, m.Cands, m.Shorten)
+	}
+	var out []folders.Cand
+	if m.Restore != nil {
+		out = append(out, *m.Restore)
+	}
+	var recent, git []folders.Cand
+	for _, c := range m.Cands {
+		if c.Kind == folders.KindGit {
+			git = append(git, c)
+		} else {
+			recent = append(recent, c)
+		}
+	}
+	if len(recent) > 0 {
+		out = append(out, folders.Cand{Kind: folders.KindHeader, Label: i18n.T("folders.recent")})
+		out = append(out, recent...)
+	}
+	if len(git) > 0 {
+		out = append(out, folders.Cand{Kind: folders.KindHeader, Label: i18n.T("folders.on_this_mac")})
+		out = append(out, git...)
+	}
+	return out
 }
 
 // kindThis marks the browsed folder itself.
 const kindThis folders.Kind = 100
 
-// Key applies one key. It returns the chosen folder, or done with "" when
-// the user cancelled.
-func (m *Model) Key(k string) (choice string, done bool) {
+// fix moves the selection off a header (searching in direction d).
+func (m *Model) fix(list []folders.Cand, d int) {
+	if len(list) == 0 {
+		m.Sel = 0
+		return
+	}
+	m.Sel = min(max(m.Sel, 0), len(list)-1)
+	for i := 0; i < len(list); i++ {
+		if list[m.Sel].Selectable() {
+			return
+		}
+		next := m.Sel + d
+		if next < 0 || next >= len(list) {
+			d = -d
+			next = m.Sel + d
+		}
+		if next < 0 || next >= len(list) {
+			return
+		}
+		m.Sel = next
+	}
+}
+
+// Key applies one key. It returns the chosen row with done, or done with
+// a zero row when the user cancelled.
+func (m *Model) Key(k string) (choice folders.Cand, done bool) {
 	list := m.List()
+	m.fix(list, 1)
 	switch k {
 	case "up":
 		if m.Sel > 0 {
 			m.Sel--
+			m.fix(list, -1)
 		}
 	case "down":
 		if m.Sel < len(list)-1 {
 			m.Sel++
+			m.fix(list, 1)
 		}
 	case "esc", "ctrl-c":
-		return "", true
+		return folders.Cand{}, true
 	case "enter":
-		if m.Sel < len(list) {
-			return list[m.Sel].Path, true
+		if m.Sel < len(list) && list[m.Sel].Selectable() {
+			return list[m.Sel], true
 		}
 		if folders.IsPath(m.Query) {
 			p := filepath.Clean(folders.Expand(m.Query, m.Home))
 			if fi, err := os.Stat(p); err == nil && fi.IsDir() {
-				return p, true
+				return folders.Cand{Path: p, Kind: folders.KindDir}, true
 			}
 		}
 	case "tab":
-		if m.Sel < len(list) {
+		if m.Sel < len(list) && list[m.Sel].Path != "" {
 			q := m.Query
 			if !folders.IsPath(q) {
 				q = "~/" // a candidate becomes the folder to browse
@@ -103,7 +154,7 @@ func (m *Model) Key(k string) (choice string, done bool) {
 			}
 		}
 	}
-	return "", false
+	return folders.Cand{}, false
 }
 
 func fit(s string, w int) string {
@@ -124,15 +175,16 @@ func fit(s string, w int) string {
 func rowsFor(h int) int { return max(h-4, 1) }
 
 // Render draws the picker on a w×h terminal: title, query, rule, list,
-// hint. ListTop is the terminal row (0-based) of the first list row.
+// hint.
 func (m *Model) Render(w, h int) []string {
 	list := m.List()
 	rows := rowsFor(h)
-	if m.Sel >= len(list) {
-		m.Sel = max(len(list)-1, 0)
-	}
+	m.fix(list, 1)
 	if m.Sel < m.Top {
 		m.Top = m.Sel
+		if m.Top > 0 && !list[m.Top-1].Selectable() {
+			m.Top-- // keep the section's header in view
+		}
 	}
 	if m.Sel >= m.Top+rows {
 		m.Top = m.Sel - rows + 1
@@ -144,24 +196,39 @@ func (m *Model) Render(w, h int) []string {
 	}
 	for i := m.Top; i < len(list) && i < m.Top+rows; i++ {
 		c := list[i]
-		label := ""
-		switch c.Kind {
-		case folders.KindOpen:
-			label = i18n.T("folders.kind_open")
-		case folders.KindRecent:
-			label = i18n.T("folders.kind_recent")
-		case folders.KindGit:
-			label = "git"
-		case kindThis:
-			label = i18n.T("folders.kind_this")
+		if c.Kind == folders.KindHeader {
+			out = append(out, " "+faint+bold+fit(c.Label, w-1)+reset)
+			continue
+		}
+		label := c.Detail
+		if label == "" {
+			switch c.Kind {
+			case folders.KindOpen:
+				label = i18n.T("folders.kind_open")
+			case folders.KindRecent:
+				label = i18n.T("folders.kind_recent")
+			case folders.KindGit:
+				label = "git"
+			case kindThis:
+				label = i18n.T("folders.kind_this")
+			}
 		}
 		lw := utf8.RuneCountInString(label)
-		path := m.Shorten(c.Path)
+		text := m.Shorten(c.Path)
+		if c.Label != "" {
+			text = c.Label
+		}
 		mark := "  "
 		if i == m.Sel {
 			mark = cyan + "▸ " + reset
 		}
-		line := " " + mark + fit(path, w-4-lw-1) + " " + muted + label + reset
+		if c.Kind == folders.KindRestore {
+			text = "↺ " + text
+		}
+		line := " " + mark + fit(text, w-4-lw-1) + " " + muted + label + reset
+		if c.Kind == folders.KindRestore {
+			line = " " + mark + cyan + fit(text, w-4-lw-1) + reset + " " + muted + label + reset
+		}
 		if i == m.Sel {
 			line = selBg + strings.ReplaceAll(line, reset, reset+selBg) + reset
 		}
@@ -187,21 +254,22 @@ type Options struct {
 	Home string
 	// Cands are listed at once; More, when not nil, delivers the full list
 	// once the git folders are found.
-	Cands []folders.Cand
-	More  <-chan []folders.Cand
+	Cands   []folders.Cand
+	More    <-chan []folders.Cand
+	Restore *folders.Cand
 }
 
-// Run shows the picker until a folder is chosen ("" = cancelled).
-func Run(o Options) (string, error) {
+// Run shows the picker until a row is chosen (ok false = cancelled).
+func Run(o Options) (folders.Cand, bool, error) {
 	restore, err := sidebar.RawMode(int(o.In.Fd()))
 	if err != nil {
-		return "", err
+		return folders.Cand{}, false, err
 	}
 	defer restore()
 	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h")
 	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 
-	m := &Model{Home: o.Home, Cands: o.Cands, Scanning: o.More != nil, Shorten: func(p string) string {
+	m := &Model{Home: o.Home, Cands: o.Cands, Restore: o.Restore, Scanning: o.More != nil, Shorten: func(p string) string {
 		if p == o.Home {
 			return "~"
 		}
@@ -256,7 +324,7 @@ func Run(o Options) (string, error) {
 			}
 		case b, ok := <-input:
 			if !ok {
-				return "", nil
+				return folders.Cand{}, false, nil
 			}
 			var evs []sidebar.Event
 			evs, pending = sidebar.Parse(append(pending, b...), true)
@@ -264,8 +332,8 @@ func Run(o Options) (string, error) {
 				if ev.Kind == sidebar.EvClick {
 					// A click on a list row opens it.
 					list := m.List()
-					if i := m.Top + ev.Y - 4; ev.Y >= 4 && i < len(list) {
-						return list[i].Path, nil
+					if i := m.Top + ev.Y - 4; ev.Y >= 4 && i < len(list) && list[i].Selectable() {
+						return list[i], true, nil
 					}
 					continue
 				}
@@ -273,7 +341,7 @@ func Run(o Options) (string, error) {
 					continue
 				}
 				if choice, done := m.Key(ev.Key); done {
-					return choice, nil
+					return choice, choice.Kind == folders.KindRestore || choice.Path != "", nil
 				}
 			}
 		}

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/picker"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
@@ -139,7 +142,7 @@ func init() {
 	})
 	register(&command{
 		Name:    "open",
-		Args:    "<folder> [--client C]",
+		Args:    "[<folder>] [-d] [--client C]",
 		Summary: "cmd.open",
 		Run:     runOpen,
 	})
@@ -235,6 +238,7 @@ func runOpen(e *Env, args []string) error {
 	fs := newFlags(e, "open")
 	clientF := fs.String("client", "", "client to switch to the project")
 	fromOpt := fs.Bool("from-option", false, "read the folder from the @imux_open option")
+	detach := fs.Bool("d", false, "open the project but do not show it")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
@@ -252,12 +256,17 @@ func runOpen(e *Env, args []string) error {
 	}
 	if dir == "" && !*fromOpt && isTerminal(os.Stdin) {
 		// No folder given: pick one.
-		if dir, err = pickFolder(ctx, w); err != nil || dir == "" {
+		c, ok, err := pickFolder(ctx, w)
+		if err != nil || !ok {
 			return err
 		}
+		return openChoice(ctx, w, c, *clientF)
 	}
 	if dir == "" {
 		return &UsageError{Msg: i18n.T("cli.usage", "open <folder>")}
+	}
+	if *detach {
+		return openDetached(ctx, w, dir, e)
 	}
 	return openFolder(ctx, w, dir, *clientF)
 }
@@ -356,47 +365,141 @@ func runOpenPicker(e *Env, args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	dir, err := pickFolder(ctx, w)
-	if err != nil || dir == "" {
+	c, ok, err := pickFolder(ctx, w)
+	if err != nil || !ok {
 		return err
 	}
-	return openFolder(ctx, w, dir, *clientF)
+	return openChoice(ctx, w, c, *clientF)
 }
 
-// pickFolder runs the folder picker on this terminal: open, recent and git
-// folders; the git scan runs while the list is shown (§9.3).
-func pickFolder(ctx context.Context, w *workspace.WS) (string, error) {
+// pickFolder runs the folder picker on this terminal: the restore row,
+// open and recent projects (with their saved tabs), then git folders; the
+// git scan runs while the list is shown (§9.3).
+func pickFolder(ctx context.Context, w *workspace.WS) (folders.Cand, bool, error) {
 	home := paths.UserHome()
-	var open []string
+	t := now()
+	openSet := map[string]bool{}
+	var openC []folders.Cand
 	if out, err := w.T.Run(ctx, tmux.Cmd{"list-sessions", "-F", "#{session_path}"}); err == nil {
 		for _, l := range strings.Split(strings.TrimSpace(out), "\n") {
-			if l = strings.TrimSpace(l); l != "" && l != home {
-				open = append(open, l)
+			if l = strings.TrimSpace(l); l != "" && l != home && !openSet[l] {
+				openSet[l] = true
+				openC = append(openC, folders.Cand{Path: l, Kind: folders.KindOpen})
 			}
 		}
 	}
-	var recent []string
+	snaps := workspace.LoadSnapshots()
+	type rec struct {
+		c  folders.Cand
+		at int64
+	}
+	var recs []rec
+	for _, p := range snaps.Projects {
+		if openSet[p.Dir] || p.Dir == home {
+			continue
+		}
+		d := ageText(t, time.Unix(p.At, 0))
+		if p.Agents() > 0 {
+			d = projectSummary(p) + " · " + d
+		}
+		recs = append(recs, rec{folders.Cand{Path: p.Dir, Kind: folders.KindRecent, Detail: d}, p.At})
+	}
 	if st, _ := state.Read(); st != nil {
 		for _, r := range st.Recent {
-			if r.Path != home {
-				recent = append(recent, r.Path)
+			if !openSet[r.Path] && r.Path != home && snaps.Find(r.Path) == nil {
+				recs = append(recs, rec{folders.Cand{Path: r.Path, Kind: folders.KindRecent, Detail: ageText(t, time.Unix(r.At, 0))}, r.At})
 			}
 		}
 	}
-	cached, fresh := folders.Cached(paths.FoldersCache(), now())
+	sort.SliceStable(recs, func(i, j int) bool { return recs[i].at > recs[j].at })
+	recentC := make([]folders.Cand, len(recs))
+	for i, r := range recs {
+		recentC[i] = r.c
+	}
+	var restore *folders.Cand
+	if n := len(snaps.Interrupted(w.ServerID(ctx), openSet)); n > 0 {
+		restore = &folders.Cand{Kind: folders.KindRestore, Label: i18n.T("folders.restore"), Detail: i18n.T("folders.restore_n", n)}
+	}
+	asGit := func(ps []string) []folders.Cand {
+		out := make([]folders.Cand, len(ps))
+		for i, p := range ps {
+			out[i] = folders.Cand{Path: p, Kind: folders.KindGit}
+		}
+		return out
+	}
+	cached, fresh := folders.Cached(paths.FoldersCache(), t)
 	var more chan []folders.Cand
 	if !fresh {
 		more = make(chan []folders.Cand, 1)
 		go func() {
 			repos := folders.Scan(home, folders.ScanOptions{})
 			_ = folders.Store(paths.FoldersCache(), repos, now())
-			more <- folders.Merge(open, recent, repos)
+			more <- folders.MergeCands(openC, recentC, asGit(repos))
 		}()
 	}
 	return picker.Run(picker.Options{
-		In: os.Stdin, Out: os.Stdout, Home: home,
-		Cands: folders.Merge(open, recent, cached), More: more,
+		In: os.Stdin, Out: os.Stdout, Home: home, Restore: restore,
+		Cands: folders.MergeCands(openC, recentC, asGit(cached)), More: more,
 	})
+}
+
+// projectSummary is "3 tabs · 4 agents".
+func projectSummary(p workspace.ProjectSnap) string {
+	plural := func(n int, one, many string) string {
+		if n == 1 {
+			return i18n.T(one)
+		}
+		return i18n.T(many, n)
+	}
+	return p.Summary(func(n int) string { return plural(n, "folders.tab", "folders.tabs") },
+		func(n int) string { return plural(n, "folders.agent", "folders.agents") })
+}
+
+// ageText is how long ago t was: "<1m", "9m", "2h", "3d".
+func ageText(now, t time.Time) string {
+	d := now.Sub(t)
+	switch {
+	case d < time.Minute:
+		return "<1m"
+	case d < time.Hour:
+		return strconv.Itoa(int(d/time.Minute)) + "m"
+	case d < 24*time.Hour:
+		return strconv.Itoa(int(d/time.Hour)) + "h"
+	}
+	return strconv.Itoa(int(d/(24*time.Hour))) + "d"
+}
+
+// openChoice opens what the picker returned: a folder, or every project of
+// the last session.
+func openChoice(ctx context.Context, w *workspace.WS, c folders.Cand, client string) error {
+	if c.Kind != folders.KindRestore {
+		return openFolder(ctx, w, c.Path, client)
+	}
+	open := map[string]bool{}
+	if out, err := w.T.Run(ctx, tmux.Cmd{"list-sessions", "-F", "#{session_path}"}); err == nil {
+		for _, l := range strings.Split(strings.TrimSpace(out), "\n") {
+			open[strings.TrimSpace(l)] = true
+		}
+	}
+	snaps := workspace.LoadSnapshots()
+	f := sources.New(w.Cfg)
+	if err := w.EnsureConf(ctx); err != nil {
+		return err
+	}
+	first := ""
+	for _, p := range snaps.Interrupted(w.ServerID(ctx), open) {
+		res, err := w.Restore(ctx, f, &p)
+		if err != nil {
+			continue
+		}
+		if first == "" {
+			first = res.Session
+		}
+	}
+	if first == "" {
+		return errors.New(i18n.T("folders.restore_failed"))
+	}
+	return showSession(ctx, w, first, client)
 }
 
 // openFolder opens dir as a project (its session, with the default agent
@@ -426,14 +529,42 @@ func openFolder(ctx context.Context, w *workspace.WS, dir, client string) error 
 		}
 		return err
 	}
-	switch {
-	case client != "":
-		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-c", client, "-t", "=" + res.Session})
+	if client != "" {
 		w.Message(ctx, client, "", i18n.T("open.opened", paths.Shorten(dir)))
-		return err
-	case os.Getenv("TMUX") != "":
-		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-t", "=" + res.Session})
+	}
+	return showSession(ctx, w, res.Session, client)
+}
+
+// openDetached opens dir as a project without showing it (imux open -d).
+func openDetached(ctx context.Context, w *workspace.WS, dir string, e *Env) error {
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return errors.New(i18n.T("open.missing", paths.Shorten(dir)))
+	}
+	if err := w.EnsureConf(ctx); err != nil {
 		return err
 	}
-	return attachExec(w, res.Session)
+	res, err := w.Start(ctx, "", dir)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(e.Stdout, res.Session)
+	return nil
+}
+
+// showSession shows session s: on client, in this tmux client, or by
+// attaching this terminal.
+func showSession(ctx context.Context, w *workspace.WS, s, client string) error {
+	var err error
+	switch {
+	case client != "":
+		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-c", client, "-t", "=" + s})
+		return err
+	case os.Getenv("TMUX") != "":
+		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-t", "=" + s})
+		return err
+	}
+	return attachExec(w, s)
 }

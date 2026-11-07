@@ -19,17 +19,24 @@ type Kind int
 
 // Kinds, in the order they are listed when nothing is typed.
 const (
-	KindOpen   Kind = iota // a project open now
-	KindRecent             // started before
-	KindGit                // a git repository found under home
-	KindDir                // a folder listed while browsing a path
+	KindOpen    Kind = iota // a project open now
+	KindRecent              // started before
+	KindGit                 // a git repository found under home
+	KindDir                 // a folder listed while browsing a path
+	KindRestore             // "Restore last session" (Path empty)
+	KindHeader              // a section title (not selectable)
 )
 
 // Cand is one folder to offer.
 type Cand struct {
-	Path string
-	Kind Kind
+	Path   string
+	Kind   Kind
+	Detail string // shown on the right ("3 tabs · 4 agents · 2h"); "" = the kind
+	Label  string // the text instead of the path (headers, the restore row)
 }
+
+// Selectable reports whether the row can be chosen.
+func (c Cand) Selectable() bool { return c.Kind != KindHeader }
 
 // Skip are folder names never scanned into.
 var Skip = map[string]bool{
@@ -145,24 +152,34 @@ func Store(path string, repos []string, now time.Time) error {
 // Merge lists candidates without duplicates in kind order: open, recent,
 // git. Folders that no longer exist are dropped.
 func Merge(open, recent, git []string) []Cand {
+	as := func(ps []string, k Kind) []Cand {
+		out := make([]Cand, len(ps))
+		for i, p := range ps {
+			out[i] = Cand{Path: p, Kind: k}
+		}
+		return out
+	}
+	return MergeCands(as(open, KindOpen), as(recent, KindRecent), as(git, KindGit))
+}
+
+// MergeCands joins lists in order without duplicate paths (the first one
+// wins); folders that no longer exist are dropped.
+func MergeCands(lists ...[]Cand) []Cand {
 	seen := map[string]bool{}
 	var out []Cand
-	add := func(ps []string, k Kind) {
-		for _, p := range ps {
-			p = filepath.Clean(p)
-			if p == "" || seen[p] {
+	for _, l := range lists {
+		for _, c := range l {
+			c.Path = filepath.Clean(c.Path)
+			if c.Path == "" || c.Path == "." || seen[c.Path] {
 				continue
 			}
-			if fi, err := os.Stat(p); err != nil || !fi.IsDir() {
+			if fi, err := os.Stat(c.Path); err != nil || !fi.IsDir() {
 				continue
 			}
-			seen[p] = true
-			out = append(out, Cand{Path: p, Kind: k})
+			seen[c.Path] = true
+			out = append(out, c)
 		}
 	}
-	add(open, KindOpen)
-	add(recent, KindRecent)
-	add(git, KindGit)
 	return out
 }
 

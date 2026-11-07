@@ -57,6 +57,9 @@ imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
 `imux`'u ana klasöründe çalıştırırsan hangi projeyi açacağını sorar: adının birkaç harfini yaz.
+**Son kullanılanlar** en üstte gelir ve bıraktığın gibi açılır: aynı sekmeler, adlar ve agent'lar,
+her agent kendi sohbetine döner. Bilgisayar yeniden başladıysa **Son oturumu geri yükle** açık olan
+bütün projeleri geri getirir.
 
 Soldaki **kenar panel** projelerini (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan
 bütün agent'ları, her birinin ne yaptığıyla gösterir: çalışırken dönen bir işaret, sana bir şey

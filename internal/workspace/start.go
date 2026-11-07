@@ -13,6 +13,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -76,6 +77,13 @@ func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartR
 		return &StartResult{Session: name}, nil
 	}
 	if id == "" {
+		// Opened before: bring its tabs and agents back as they were (D24).
+		if snap := LoadSnapshots().Find(cwd); snap != nil && snap.Agents() > 0 {
+			if res, err := w.Restore(ctx, sources.New(w.Cfg), snap); err == nil {
+				_ = state.Update(func(s *state.State) error { s.AddRecent(cwd, w.Now()); return nil })
+				return res, nil
+			}
+		}
 		if id, err = w.DefaultAgent(); err != nil {
 			return nil, err
 		}

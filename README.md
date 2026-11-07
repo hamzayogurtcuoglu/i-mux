@@ -63,6 +63,9 @@ imux            # start the first installed agent (or: imux claude)
 ```
 
 Run `imux` in your home folder and it asks which project to open: type a few letters of its name.
+**Recent** projects come first and reopen as you left them: the same tabs, names and agents, each
+agent back in its own conversation. After a restart, **Restore last session** brings back every
+project that was open.
 
 The **sidebar** on the left shows your projects (branch, uncommitted changes) and every agent
 working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks

@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-07
+
+### Added
+
+- **Recent projects reopen as you left them:** the folder picker lists RECENT projects first, with
+  their tabs, agents and when you last used them; choosing one brings back its tabs, pane names,
+  layout and agents, each resuming its own conversation. Opening a project folder in any other way
+  (`imux` in the folder, `imux open`) does the same.
+- **Restore last session:** after a restart (when the tmux server went away), the picker offers to
+  bring back every project that was open.
+- `imux open -d <folder>` opens a project without showing it.
+
 ## [0.9.0] - 2026-11-07
 
 ### Added

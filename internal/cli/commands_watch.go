@@ -28,6 +28,9 @@ func init() {
 	watcherStatus = watch.Status
 }
 
+// SnapshotEvery is how often the watcher saves the open projects.
+var SnapshotEvery = 30 * time.Second
+
 // newTicker builds the watcher's per-tick work from the config.
 var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmux.Client, error) {
 	tc := tmux.New(paths.TmuxConf())
@@ -48,6 +51,7 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	actor := &watch.Actor{W: w, Log: logger}
 	keeper := &watch.StatusKeeper{W: w}
 	states := &watch.PaneStates{T: tc}
+	var lastSnap time.Time
 	return &watch.Detector{
 		T: tc, Patterns: set, Cfg: cfg.Limits, Now: time.Now, Log: logger,
 		OnEvent: actor.OnEvent,
@@ -62,6 +66,13 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 			}
 			_ = bus.WriteActivity(a)
 			states.Apply(context.Background(), at, changed, asking)
+			// The open projects, for reopening them as they were (D24).
+			if at.Sub(lastSnap) >= SnapshotEvery {
+				lastSnap = at
+				if err := w.SaveSnapshot(context.Background()); err != nil {
+					logger.Printf("snapshot: %v", err)
+				}
+			}
 		},
 	}, tc, nil
 }

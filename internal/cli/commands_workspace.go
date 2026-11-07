@@ -10,6 +10,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -125,11 +126,14 @@ func defaultAction(e *Env, args []string) error {
 	// instead of making the home folder one (D22).
 	if len(pos) == 0 && !*detach && os.Getenv("TMUX") == "" && isTerminal(os.Stdin) &&
 		filepath.Clean(cwd) == filepath.Clean(paths.UserHome()) {
-		dir, err := pickFolder(ctx, w)
-		if err != nil || dir == "" {
+		c, ok, err := pickFolder(ctx, w)
+		if err != nil || !ok {
 			return err
 		}
-		cwd = dir
+		if c.Kind == folders.KindRestore {
+			return openChoice(ctx, w, c, "")
+		}
+		cwd = c.Path
 	}
 	if pane := os.Getenv("TMUX_PANE"); pane != "" && w.T.Inside(os.Getenv("TMUX")) {
 		p, err := w.NewWindow(ctx, pane, id, cwd)

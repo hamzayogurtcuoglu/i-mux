@@ -153,9 +153,18 @@ func (w *WS) CloseProject(ctx context.Context, s string) error {
 			}
 		}
 	}
+	// Save it as it is, so that opening it again brings its tabs back.
+	dir := ""
+	if out, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", "=" + s, "#{session_path}"}); err == nil {
+		dir = strings.TrimSpace(out)
+	}
+	_ = w.SaveSnapshot(ctx)
 	cmds = append(cmds, tmux.Cmd{"kill-session", "-t", "=" + s})
 	if _, err := w.T.Run(ctx, cmds...); err != nil {
 		return err
+	}
+	if dir != "" {
+		markClosed(dir)
 	}
 	w.RefreshSidebars(ctx)
 	return nil
