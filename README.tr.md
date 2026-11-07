@@ -60,6 +60,11 @@ Terminalin bir [Nerd Font](https://www.nerdfonts.com) kullanıyorsa şerit edit�
 gösterir (`brew install --cask font-jetbrains-mono-nerd-font`, sonra terminalin ayarlarından seç);
 yoksa emojileri.
 
+**OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
+Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):
+diğerleri limite takılınca devam etmek için kullanışlı bir yer. `brew install opencode` ile kur;
+`imux doctor` çalışabildiğini kontrol eder.
+
 Dosyalar editöründe açılır: config'teki `editor`, yoksa micro (terminalde en kolayı: `brew install
 micro`), `$VISUAL`, `$EDITOR`, nano, vim. Fare tekerleği her yerde kaydırır.
 

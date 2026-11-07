@@ -6,6 +6,16 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-08
+
+### Added
+
+- **OpenCode** as the fifth agent (key `e`): it works with any model endpoint configured in
+  OpenCode (OpenAI-compatible APIs, Anthropic, Ollama ...). Chats move to and from it with their
+  context, it resumes its own sessions, its sessions are in History, and the limits panel shows its
+  recent tokens. `imux doctor` warns when OpenCode cannot run (a state folder owned by root) and
+  when `sqlite3`, used to list its sessions, is missing.
+
 ## [0.17.0] - 2026-11-08
 
 ### Added

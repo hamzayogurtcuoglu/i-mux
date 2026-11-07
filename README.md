@@ -66,6 +66,11 @@ The rail shows the editor's icons when your terminal uses a [Nerd Font](https://
 (`brew install --cask font-jetbrains-mono-nerd-font`, then pick it in the terminal's settings),
 emoji otherwise.
 
+**OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
+NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
+when the others hit their limits. Install it with `brew install opencode`; `imux doctor` checks
+that it can run.
+
 Files open in your editor: `editor` in the config, else micro (the easiest in a terminal: `brew
 install micro`), `$VISUAL`, `$EDITOR`, nano, vim. The mouse wheel scrolls everywhere.
 
