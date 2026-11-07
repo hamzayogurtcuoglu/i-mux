@@ -32,6 +32,10 @@ const (
 	ActAgentMenu              // menu of agent Pane (go to it, rename it, close it)
 	ActFold                   // fold or unfold section Section
 	ActDiff                   // show the diff of Path
+	ActView                   // show view Section on the activity rail
+	ActToggleDir              // open or close folder Path in the explorer
+	ActOpenFile               // show file Path
+	ActSearch                 // the project search popup
 )
 
 // Action is a row's action.
@@ -470,14 +474,12 @@ func toolbar(m Model, w int) []Line {
 	btn := func(x, cw int, sym, label string, a Action) Cell {
 		return Cell{X: x, W: cw, Text: muted + sym + reset + " " + fit(label, cw-2), Action: a}
 	}
-	row := func(cells ...Cell) Line { return Line{Text: compose(cells, w), Cells: cells} }
 	half := (w - 1) / 2
-	return []Line{
-		row(btn(1, half, "✎", i18n.T("sidebar.rename"), Action{Kind: ActRename}),
-			btn(1+half, w-1-half, "⧉", i18n.T("sidebar.history"), Action{Kind: ActSessions})),
-		row(btn(1, half, "◔", i18n.T("sidebar.limits"), Action{Kind: ActLimits}),
-			btn(1+half, w-1-half, "?", i18n.T("sidebar.help"), Action{Kind: ActKeys})),
+	cells := []Cell{
+		btn(1, half, "✎", i18n.T("sidebar.rename"), Action{Kind: ActRename}),
+		btn(1+half, w-1-half, "⧉", i18n.T("sidebar.history"), Action{Kind: ActSessions}),
 	}
+	return []Line{{Text: compose(cells, w), Cells: cells}}
 }
 
 // changeRow is one changed file: status, path, added and removed lines.
@@ -528,7 +530,7 @@ func changeRow(c ChangeRow, w int) Line {
 // only their title). Without blanks there are no empty rows; collapse shows
 // the other projects' agents as one row each; maxChanges caps the file rows
 // (-1: up to 10).
-func top(m Model, w int, blanks, collapse bool, maxChanges int) []Line {
+func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool) []Line {
 	var out []Line
 	gap := func() {
 		if blanks && len(out) > 0 {
@@ -574,7 +576,7 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int) []Line {
 		}
 	}
 
-	if m.Git {
+	if m.Git && withChanges {
 		gap()
 		text := i18n.T("sidebar.source_control")
 		if m.Branch != "" {
@@ -627,14 +629,31 @@ func bottom(m Model, w int) []Line {
 // When the rows do not fit, blank rows go first, then the other projects'
 // agents fold into one row each, then the top is cut.
 func Render(m Model, w, h int, sel Item) Screen {
-	up, down := top(m, w, true, false, -1), bottom(m, w)
+	cw := w - railW
+	var content []Line
+	switch m.View {
+	case ViewExplorer:
+		content = renderExplorer(m, cw, h)
+	case ViewChanges:
+		content = renderChanges(m, cw, h)
+	default:
+		content = renderAgents(m, cw, h)
+	}
+	sc := Screen{Lines: withRail(content, m, w, h)}
+	highlight(sc, sel)
+	return sc
+}
+
+// renderAgents is the Agents view: PROJECTS and AGENTS at the top, "Continue
+// this chat in" and the toolbar at the bottom. When the rows do not fit,
+// blank rows go first, then the other projects' agents fold into one row
+// each, then the top is cut.
+func renderAgents(m Model, w, h int) []Line {
+	up, down := top(m, w, true, false, -1, false), bottom(m, w)
 	if h > 0 && len(up)+len(down) > h {
-		up = top(m, w, false, false, -1)
+		up = top(m, w, false, false, -1, false)
 		if len(up)+len(down) > h {
-			up = top(m, w, false, true, -1)
-		}
-		if len(up)+len(down) > h {
-			up = top(m, w, false, true, 3)
+			up = top(m, w, false, true, -1, false)
 		}
 		if len(up)+len(down) > h {
 			up = up[:max(h-len(down), 0)]
@@ -649,9 +668,7 @@ func Render(m Model, w, h int, sel Item) Screen {
 			lines = append(lines, Line{Text: strings.Repeat(" ", w)})
 		}
 	}
-	sc := Screen{Lines: append(lines, down...)}
-	highlight(sc, sel)
-	return sc
+	return append(lines, down...)
 }
 
 // highlight draws the keyboard selection in reverse video.

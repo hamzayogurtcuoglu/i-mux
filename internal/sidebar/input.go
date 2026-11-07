@@ -14,6 +14,7 @@ const (
 	EvKey        EventKind = iota // Key holds the key
 	EvClick                       // left button press at X, Y (1-based)
 	EvRightClick                  // right button press at X, Y
+	EvScroll                      // mouse wheel at X, Y: Key "up" or "down"
 )
 
 // Event is one key press or mouse click.
@@ -156,6 +157,10 @@ func mouse(body string, final byte) (Event, bool) {
 		return Event{Kind: EvClick, X: f[1], Y: f[2]}, true
 	case 2:
 		return Event{Kind: EvRightClick, X: f[1], Y: f[2]}, true
+	case 64:
+		return Event{Kind: EvScroll, Key: "up", X: f[1], Y: f[2]}, true
+	case 65:
+		return Event{Kind: EvScroll, Key: "down", X: f[1], Y: f[2]}, true
 	}
 	return Event{}, false
 }

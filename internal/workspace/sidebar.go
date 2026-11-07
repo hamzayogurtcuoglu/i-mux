@@ -191,7 +191,7 @@ func (w *WS) ChangesMenu(ctx context.Context, p *Pane, client string) *Menu {
 		if client != "" {
 			c += " -c " + tmux.Quote(client)
 		}
-		c += " -E -w 90% -h 90% -d " + tmux.Quote(p.CWD) + " " + tmux.Quote(sidebar.DiffShell(r.Status, r.Path))
+		c += " -E -w 90% -h 90% -d " + tmux.Quote(p.CWD) + " " + tmux.Quote(sidebar.DiffShell(w.Self, r.Status, r.Path))
 		m.Items = append(m.Items, MenuItem{Name: r.Status + "  " + r.Path, Cmd: c})
 	}
 	if more := gi.StatusTotal - len(rows); more > 0 {

@@ -36,6 +36,7 @@ type sidebar struct {
 	win    Window
 	screen Screen
 	sel    Item // keyboard selection, NoItem = none
+	scroll int  // first row of the explorer or changes list
 
 	clicks    chan Action // click actions, delivered after ClickDelay
 	lastClick time.Time
@@ -172,7 +173,7 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 	if want := s.o.Width; want > 0 && w.Width != want && w.WinW >= want+20 {
 		_, _ = s.t.Run(ctx, tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(want)})
 	}
-	m.Tick = s.model.Tick
+	m.Tick, m.Scroll = s.model.Tick, s.scroll
 	s.model, s.win = m, w
 	s.draw()
 	return false
@@ -208,6 +209,20 @@ func (s *sidebar) keepWidth(ctx context.Context) {
 
 // handle reacts to one key or click.
 func (s *sidebar) handle(ctx context.Context, ev Event) {
+	if ev.Kind == EvScroll {
+		n := len(s.model.Tree)
+		if s.model.View == ViewChanges {
+			n = len(s.model.Changes)
+		}
+		if ev.Key == "up" {
+			s.scroll = max(s.scroll-3, 0)
+		} else {
+			s.scroll = min(s.scroll+3, max(n-1, 0))
+		}
+		s.model.Scroll = s.scroll
+		s.draw()
+		return
+	}
 	if ev.Kind == EvRightClick {
 		// A right-click on a project opens its menu (go to it, close it).
 		row := ev.Y - 1
@@ -265,6 +280,14 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.do(ctx, Action{Kind: ActOpen})
 	case "f":
 		s.do(ctx, Action{Kind: ActChanges})
+	case "1":
+		s.do(ctx, Action{Kind: ActView, Section: ViewAgents})
+	case "2":
+		s.do(ctx, Action{Kind: ActView, Section: ViewExplorer})
+	case "3", "/":
+		s.do(ctx, Action{Kind: ActSearch})
+	case "4":
+		s.do(ctx, Action{Kind: ActView, Section: ViewChanges})
 	default:
 		for _, a := range s.model.Agents {
 			if a.Key == ev.Key {
@@ -335,6 +358,29 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 			args = append(args, "--client", client)
 		}
 		_ = s.t.Spawn(append(c, "-E", "-w", "80%", "-h", "70%", tmux.ShJoin(args...)))
+		return
+	case ActView:
+		// Show another view in this sidebar (@imux_view, per window).
+		s.scroll = 0
+		if s.win.ID != "" {
+			_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", s.win.ID, OptView, a.Section})
+		}
+		return
+	case ActToggleDir:
+		if s.o.Source.Expanded == nil {
+			s.o.Source.Expanded = map[string]bool{}
+		}
+		if s.o.Source.Expanded[a.Path] {
+			delete(s.o.Source.Expanded, a.Path)
+		} else {
+			s.o.Source.Expanded[a.Path] = true
+		}
+		return
+	case ActOpenFile:
+		s.popup(client, "90%", "90%", "__view", a.Path)
+		return
+	case ActSearch:
+		s.popup(client, "90%", "90%", "__search")
 		return
 	case ActFold:
 		// Fold or unfold a section in every sidebar (@imux_fold, global).
@@ -440,23 +486,30 @@ func (s *sidebar) diff(a Action, client string) {
 	if client != "" {
 		c = append(c, "-c", client)
 	}
-	c = append(c, "-E", "-w", "90%", "-h", "90%")
+	c = append(c, "-E", "-w", "95%", "-h", "90%")
 	if s.model.CWD != "" {
 		c = append(c, "-d", s.model.CWD)
 	}
-	_ = s.t.Spawn(append(c, DiffShell(a.Status, a.Path)))
+	_ = s.t.Spawn(append(c, DiffShell(s.o.Self, a.Status, a.Path)))
 }
 
-// DiffShell is the sh command that shows a changed file's diff in a pager
-// (the file itself when git does not track it yet).
-func DiffShell(status, path string) string {
-	if status == "?" {
-		return tmux.ShJoin("less", "-R", "--", path)
+// popup runs an imux command in a popup in the project folder.
+func (s *sidebar) popup(client, w, h string, args ...string) {
+	c := tmux.Cmd{"display-popup"}
+	if client != "" {
+		c = append(c, "-c", client)
 	}
-	d := func(args ...string) string {
-		return tmux.ShJoin(append([]string{"git", "diff", "--color=always"}, args...)...)
+	c = append(c, "-E", "-w", w, "-h", h)
+	if s.model.CWD != "" {
+		c = append(c, "-d", s.model.CWD)
 	}
-	return "{ " + d("HEAD", "--", path) + " 2>/dev/null || " + d("--", path) + "; } | less -R"
+	_ = s.t.Spawn(append(c, tmux.ShJoin(append([]string{s.o.Self}, args...)...)))
+}
+
+// DiffShell is the sh command that shows a changed file's diff: the whole
+// file with the changes highlighted (imux __diff, D26).
+func DiffShell(self, status, path string) string {
+	return tmux.ShJoin(self, "__diff", status, path)
 }
 
 // spawn starts imux with args without waiting for it.

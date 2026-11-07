@@ -152,6 +152,9 @@ type Model struct {
 	Now      time.Time       // for the times shown
 	Tick     int             // spinner frame
 	Fold     map[string]bool // folded sections (@imux_fold)
+	View     string          // the view on the activity rail (@imux_view)
+	Tree     []TreeRow       // the explorer's rows (Explorer view)
+	Scroll   int             // first row of the view's list
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -185,6 +188,9 @@ type Source struct {
 	Git func(ctx context.Context, dir string) gitinfo.Info
 	// Numstat returns `git diff --numstat HEAD` of a directory; nil runs git.
 	Numstat func(ctx context.Context, dir string) string
+	// Expanded holds the explorer's open folders (paths relative to the
+	// project folder); the sidebar process keeps it.
+	Expanded map[string]bool
 	// Host is this machine's name (a terminal title equal to it is not a
 	// name); nil = os.Hostname.
 	Host func() string
@@ -276,7 +282,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -286,7 +292,11 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	win := Window{Self: self}
 	var tabAuto, tabState string
 	fold := map[string]bool{}
-	if rows := tmux.Rows(sec["me"], 9); len(rows) > 0 {
+	view := ViewAgents
+	if rows := tmux.Rows(sec["me"], 10); len(rows) > 0 {
+		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges {
+			view = v
+		}
 		r := rows[0]
 		tabAuto, tabState = r[6], r[7]
 		for _, f := range strings.Split(r[8], ",") {
@@ -396,7 +406,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold}
+	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target
@@ -512,6 +522,9 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 				}
 			}
 		}
+	}
+	if m.View == ViewExplorer && cwd != "" {
+		m.Tree = BuildTree(cwd, s.Expanded, m.Changes)
 	}
 	return m, win, nil
 }

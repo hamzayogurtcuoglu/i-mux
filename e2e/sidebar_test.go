@@ -73,7 +73,7 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 	h.waitFor("sidebar width", 10*time.Second, func() bool {
 		f := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width} #{window_width}"))
 		ww, _ := strconv.Atoi(f[1])
-		return f[0] == "34" || ww < 54
+		return f[0] == "38" || ww < 54
 	})
 	width, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")))
 	var lines []string
@@ -117,8 +117,8 @@ func TestSidebar(t *testing.T) {
 	c, _ := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
 	// A bigger client grows the panes; the sidebar takes its width back.
-	h.waitFor("sidebar width 34", 5*time.Second, func() bool {
-		return strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")) == "34"
+	h.waitFor("sidebar width 38", 5*time.Second, func() bool {
+		return strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")) == "38"
 	})
 	if got := h.paneOpt(agentPane, "#{pane_active}"); got != "1" {
 		t.Errorf("the agent pane should keep the focus, active=%s", got)
@@ -243,16 +243,23 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	c, client := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
 
-	// SOURCE CONTROL lists the changed file with its line counts; a click
-	// shows its diff.
-	x, y := h.rowOf(bar, "M  readme.md")
+	// Source Control (⑂ on the rail) lists the changed file with its line
+	// counts; a click shows the whole file with the change marked.
+	x, y := h.rowOf(bar, "⑂")
+	c.Click(0, x, y)
+	x, y = h.rowOf(bar, "M  readme.md")
 	if l := h.lineOf(bar, "M  readme.md"); !strings.Contains(l, "+1") {
 		t.Errorf("source control row %q", l)
 	}
 	mark := c.Mark()
 	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "+changed line for the diff", 5*time.Second)
-	c.Write("q") // less
+	c.waitScreenAfter(h, mark, "+ changed line for the diff", 5*time.Second)
+	c.waitScreenAfter(h, mark, "1   hello", 5*time.Second) // the unchanged line too
+	c.Write("q")                                           // less
+	time.Sleep(500 * time.Millisecond)
+	x, y = h.rowOf(bar, "✻")
+	c.Click(0, x, y) // back to the Agents view
+	h.rowOf(bar, "AGENTS")
 	time.Sleep(500 * time.Millisecond)
 
 	// Name this pane: the prompt's answer becomes the name, quotes and all.

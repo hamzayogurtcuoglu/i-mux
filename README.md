@@ -67,10 +67,15 @@ Run `imux` in your home folder and it asks which project to open: type a few let
 agent back in its own conversation. After a restart, **Restore last session** brings back every
 project that was open.
 
-The **sidebar** on the left shows your projects (branch, uncommitted changes) and every agent
-working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks
-you something, a green dot when it finished while you were elsewhere, a ring when idle, and how
-long ago that changed. Everything is clickable:
+The **sidebar** on the left works like an editor's: a column of icons switches its view.
+
+| Icon | View |
+|---|---|
+| ✻ | **Agents:** your projects (branch, uncommitted changes) and every agent working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks you something, a green dot when it finished while you were elsewhere, a ring when idle, and how long ago that changed |
+| ▤ | **Explorer:** the project's files; click a folder to open it, a file to read it with line numbers; changed files are colored |
+| ⌕ | **Search:** every file of the project, results as you type; Enter opens the file at the line |
+| ⑂ | **Source control:** the changed files with their added / removed lines; a click shows the whole file with the changes highlighted, side by side when the window is wide |
+| ◔ · ? | usage limits · every key |
 
 | Sidebar / key | What it does |
 |---|---|
@@ -79,8 +84,8 @@ long ago that changed. Everything is clickable:
 | click an agent · **+** next to **Agents** | go to it (in any project) · open a new agent, or a plain **Terminal**, in a pane (`prefix v` / `prefix -` for right / down) |
 | click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation |
 | **✎ Rename** (or `n`) | give the agent a name of your own, like "backend fix" (agents that title their terminal name themselves) |
-| a file under **SOURCE CONTROL** | its diff (each file shows its added / removed lines); click a section title to fold it |
-| **⧉ History** (or `prefix S`) · **◔ Limits** · **? Help** | earlier conversations · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) · every key |
+| a section title (PROJECTS, AGENTS) | fold or unfold it |
+| **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
 | the **tab bar** at the top · its **+** (or `prefix c`) · **×** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab |
 | `prefix b` | hide or show the sidebar |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` | the pane menu; continue in Claude / Antigravity / Copilot / Codex |

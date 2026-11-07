@@ -61,10 +61,15 @@ imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 her agent kendi sohbetine döner. Bilgisayar yeniden başladıysa **Son oturumu geri yükle** açık olan
 bütün projeleri geri getirir.
 
-Soldaki **kenar panel** projelerini (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan
-bütün agent'ları, her birinin ne yaptığıyla gösterir: çalışırken dönen bir işaret, sana bir şey
-sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve
-bunun ne kadar önce olduğu. Hepsi tıklanabilir:
+Soldaki **kenar panel** bir kod editörününki gibi çalışır: en soldaki simgeler görünümü değiştirir.
+
+| Simge | Görünüm |
+|---|---|
+| ✻ | **Agent'lar:** projelerin (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan bütün agent'lar, her birinin ne yaptığıyla: çalışırken dönen bir işaret, sana bir şey sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve bunun ne kadar önce olduğu |
+| ▤ | **Gezgin:** projenin dosyaları; klasöre tıklayınca açılır, dosyaya tıklayınca satır numaralarıyla okunur; değişen dosyalar renklidir |
+| ⌕ | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar; Enter dosyayı o satırda açar |
+| ⑂ | **Kaynak kontrolü:** değişen dosyalar, eklenen / silinen satır sayılarıyla; tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
+| ◔ · ? | kullanım limitleri · bütün tuşlar |
 
 | Kenar panel / tuş | Ne yapar |
 |---|---|
@@ -73,8 +78,8 @@ bunun ne kadar önce olduğu. Hepsi tıklanabilir:
 | bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni bir pane'de yeni agent ya da düz **Terminal** aç (sağa / aşağı için `prefix v` / `prefix -`) |
 | **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder |
 | **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver (terminal başlığı koyan agent'lar kendini adlandırır) |
-| **KAYNAK KONTROLÜ** altındaki bir dosya | farkı (diff); her dosya eklenen / silinen satır sayısını gösterir. Bölüm başlığına tıklayınca bölüm kapanır / açılır |
-| **⧉ Geçmiş** (ya da `prefix S`) · **◔ Limitler** · **? Yardım** | eski konuşmalar · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) · bütün tuşlar |
+| bir bölüm başlığı (PROJELER, AGENT'LAR) | bölümü kapatır / açar |
+| **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |
 | en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat |
 | `prefix b` | kenar paneli gizle ya da göster |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` | pane menüsü; Claude / Antigravity / Copilot / Codex'te sürdür |

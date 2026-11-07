@@ -220,7 +220,7 @@ func Default() *Config {
 			PickerKeyPrefix: "S",
 			AgentBar:        false,
 			Sidebar:         true,
-			SidebarWidth:    34,
+			SidebarWidth:    38,
 			SidebarKey:      "b",
 			SplitRightKey:   "v",
 			SplitDownKey:    "-",

@@ -6,6 +6,25 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-08
+
+### Added
+
+- **Activity bar:** a column of icons on the sidebar's left switches its view, as in an editor:
+  ✻ Agents, ▤ Explorer, ⌕ Search, ⑂ Source control, and ◔ Limits and ? Help at the bottom. Keys
+  `1`–`4` (and `/` for search) when the sidebar has the focus.
+- **Explorer:** the project's files as a tree; folders open on click, files open with line numbers
+  (`bat` with colors when installed); files changed in git are colored.
+- **Search:** the whole project, results grouped by file as you type, the match highlighted;
+  Enter opens the file at the line.
+- **Diffs like an editor's:** a changed file opens whole, with line numbers, removed lines on red
+  and added ones on green, side by side when the window is wide, starting at the first change.
+
+### Changed
+
+- The default sidebar width is 38 columns (the rail takes 3).
+- Source control moved from the Agents view to its own view.
+
 ## [0.14.0] - 2026-11-07
 
 ### Added
