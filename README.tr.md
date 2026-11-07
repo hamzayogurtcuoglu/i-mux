@@ -56,13 +56,16 @@ cd ~/code/projem
 imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
-Soldaki **kenar panel** penceredeki paneleri (● çalışıyor, ○ boşta, ◆ limitli) ve yapabileceğin her
-şeyi gösterir; hepsi tıklanabilir:
+Soldaki **kenar panel** projelerini ve agent'larını (● çalışıyor, ○ boşta, ◆ limitli), projenin git
+değişikliklerini ve yapabileceğin her şeyi gösterir; hepsi tıklanabilir:
 
 | Kenar panel / tuş | Ne yapar |
 |---|---|
-| **BURADA DEVAM ET** altındaki bir agent'a tıkla | etkin pane o agent'ta, bağlamıyla devam eder |
-| **PANELER** altındaki bir pane'e tıkla | ona geç |
+| **GEÇ** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder (Claude: Anthropic, Antigravity: Google, Codex: OpenAI, Copilot: GitHub) |
+| **PROJELER** altındaki bir agent'a tıkla | ona geç; başka bir projeye tıklarsan o projeye geçersin |
+| **+ Proje aç…** (ya da `o`) | başka bir klasörü yanına proje olarak aç |
+| **DEĞİŞİKLİKLER** altındaki bir dosyaya tıkla | farkını (diff) gör |
+| **✎ Bu pane'e isim ver** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver |
 | **Sağa böl** / **Aşağı böl** (ya da `prefix v` / `prefix -`) | hangi agent diye sorar, yeni pane'de açar |
 | **Eski konuşmalar…** (ya da `prefix S`) | projenin önceki bir konuşmasını sürdür |
 | **Tuşlar** | bütün tuşlar tek bakışta |
@@ -81,6 +84,10 @@ Soldaki **kenar panel** penceredeki paneleri (● çalışıyor, ○ boşta, ◆
     <td align="center">Bölme menüsü (<code>Ctrl+\</code>)</td>
   </tr>
 </table>
+
+Geçişten sonra yeni agent konuşmayı okur, bağlamı aldığını tek cümleyle söyler ve seni bekler:
+kendiliğinden işe girişmez, boşuna token harcamaz. Yarım kalan işe hemen devam etmesini istersen
+`[handoff] on_arrival = "continue"` yaz.
 
 Bölmede daha önce çalışmış bir agent'a geri dönmek, o agent'ın kendi oturumunu sürdürür ve ona
 yalnızca aradaki gelişmeleri anlatır. Komut satırı için `imux help` (`switch`, `split`, `ls`,

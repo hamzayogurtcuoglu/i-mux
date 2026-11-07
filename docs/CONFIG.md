@@ -18,6 +18,7 @@ line number.
 | `handoff.budget_chars` | `30000` | Size of the handoff document in characters (runes). |
 | `handoff.max_arg_bytes` | `102400` | Upper bound for the handoff when passed as a command-line argument. |
 | `handoff.inject` | `"argv"` | "argv" passes the handoff as the agent's initial prompt; "paste" pastes it into the agent after it started (hides it from `ps`). |
+| `handoff.on_arrival` | `"wait"` | What the new agent does with the handoff: "wait" = confirm in one sentence and wait for your next message (starts no work, spends no extra tokens); "continue" = carry on with the unfinished request at once. |
 | `handoff.redact_secrets` | `true` | Best-effort removal of API keys, tokens and private keys. |
 | `handoff.include_git` | `true` | Include branch, `git status --short` and `git diff --stat`. |
 | `handoff.include_source_path` | `true` | Include the path of the previous session's transcript file. |
@@ -102,6 +103,10 @@ max_arg_bytes       = 102400
 # "argv" passes the handoff as the agent's initial prompt; "paste" pastes it
 # into the agent after it started (hides it from `ps`).
 inject              = "argv"
+# What the new agent does with the handoff: "wait" = confirm in one sentence
+# and wait for your next message (starts no work, spends no extra tokens);
+# "continue" = carry on with the unfinished request at once.
+on_arrival          = "wait"
 # Best-effort removal of API keys, tokens and private keys.
 redact_secrets      = true
 # Include branch, `git status --short` and `git diff --stat`.

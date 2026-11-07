@@ -2,7 +2,10 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -97,4 +100,119 @@ func runSidebarToggle(e *Env, args []string) error {
 		w.Message(ctx, *clientF, pane, msg)
 	}
 	return nil
+}
+
+func init() {
+	register(&command{
+		Name:    "rename",
+		Args:    "<name> [--pane %N]",
+		Summary: "cmd.rename",
+		Run:     runRename,
+	})
+	register(&command{
+		Name:    "open",
+		Args:    "<folder> [--client C]",
+		Summary: "cmd.open",
+		Run:     runOpen,
+	})
+}
+
+// runRename names a pane ("" clears the name); the sidebar and the pane
+// border show it.
+func runRename(e *Env, args []string) error {
+	fs := newFlags(e, "rename")
+	paneF := fs.String("pane", "", "pane to name (default: this pane)")
+	clientF := fs.String("client", "", "client for the message")
+	pos, err := parseFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	name := strings.TrimSpace(strings.Join(pos, " "))
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	p, err := w.PaneTarget(ctx, pane)
+	if err != nil {
+		return err
+	}
+	c := tmux.Cmd{"set-option", "-p", "-t", p.ID, sidebar.OptName, name}
+	if name == "" {
+		c = tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, sidebar.OptName}
+	}
+	if _, err := w.T.Run(ctx, c); err != nil {
+		return err
+	}
+	w.RefreshSidebars(ctx)
+	if *clientF != "" {
+		w.Message(ctx, *clientF, p.ID, i18n.T("rename.done", name))
+	}
+	return nil
+}
+
+// runOpen opens a folder as a project (its own session, with the default
+// agent and a sidebar) and switches the client to it. --from-option takes
+// the folder from @imux_open, where the sidebar's prompt put it (the answer
+// never goes through a shell).
+func runOpen(e *Env, args []string) error {
+	fs := newFlags(e, "open")
+	clientF := fs.String("client", "", "client to switch to the project")
+	fromOpt := fs.Bool("from-option", false, "read the folder from the @imux_open option")
+	pos, err := parseFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	dir := strings.Join(pos, " ")
+	if *fromOpt {
+		out, _ := w.T.Run(ctx, tmux.Cmd{"show-options", "-gqv", "@imux_open"})
+		_, _ = w.T.Run(ctx, tmux.Cmd{"set-option", "-gu", "@imux_open"})
+		dir = strings.TrimSpace(out)
+	}
+	if dir == "" {
+		return &UsageError{Msg: i18n.T("cli.usage", "open <folder>")}
+	}
+	if dir == "~" || strings.HasPrefix(dir, "~/") {
+		home, _ := os.UserHomeDir()
+		dir = filepath.Join(home, strings.TrimPrefix(dir, "~"))
+	}
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		msg := i18n.T("open.missing", paths.Shorten(dir))
+		if *clientF != "" {
+			w.Message(ctx, *clientF, "", msg)
+		}
+		return errors.New(msg)
+	}
+	if err := w.EnsureConf(ctx); err != nil {
+		return err
+	}
+	res, err := w.Start(ctx, "", dir)
+	if err != nil {
+		if *clientF != "" {
+			w.Message(ctx, *clientF, "", err.Error())
+		}
+		return err
+	}
+	switch {
+	case *clientF != "":
+		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-c", *clientF, "-t", "=" + res.Session})
+		w.Message(ctx, *clientF, "", i18n.T("open.opened", paths.Shorten(dir)))
+		return err
+	case os.Getenv("TMUX") != "":
+		_, err = w.T.Run(ctx, tmux.Cmd{"switch-client", "-t", "=" + res.Session})
+		return err
+	}
+	return attachExec(w, res.Session)
 }

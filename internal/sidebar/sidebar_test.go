@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -53,18 +55,24 @@ func TestParse(t *testing.T) {
 }
 
 func model() Model {
+	cur := []PaneRow{
+		{ID: "%1", Agent: "claude", Name: "backend fix", Label: "Claude · opus", State: StateWorking, Target: true},
+		{ID: "%2", Agent: "codex", Label: "Codex", State: StateIdle, Limited: "15:00"},
+		{ID: "%3", State: StateShell},
+	}
 	return Model{
-		Project: "acme-api", Branch: "main", Changed: 3, Git: true, Target: "%1",
-		Panes: []PaneRow{
-			{ID: "%1", Agent: "claude", Label: "Claude · opus", State: StateWorking, Target: true},
-			{ID: "%2", Agent: "codex", Label: "Codex", State: StateIdle, Limited: "15:00"},
-			{ID: "%3", State: StateShell},
+		Project: "acme-api", CWD: "/home/test/acme-api", Branch: "main", Changed: 3, Git: true, Target: "%1",
+		Changes: []ChangeRow{{"M", "src/auth/redirect.ts"}, {"A", "test/auth.test.ts"}, {"?", "notes.md"}},
+		Panes:   cur,
+		Projects: []ProjectRow{
+			{Session: "acme-api-1a2b", Name: "acme-api", Current: true, Panes: cur},
+			{Session: "blog-3c4d", Name: "blog", Panes: []PaneRow{{ID: "%7", Agent: "antigravity", State: StateWorking}, {ID: "%8", State: StateShell}}},
 		},
 		Agents: []AgentRow{
-			{ID: "claude", Name: "Claude", Key: "c", Installed: true, Current: true},
-			{ID: "antigravity", Name: "Antigravity", Key: "a", Installed: true},
-			{ID: "copilot", Name: "Copilot", Key: "p"},
-			{ID: "codex", Name: "Codex", Key: "x", Installed: true, Limited: "15:00"},
+			{ID: "claude", Name: "Claude", Vendor: "Anthropic", Key: "c", Installed: true, Current: true},
+			{ID: "antigravity", Name: "Antigravity", Vendor: "Google", Key: "a", Installed: true},
+			{ID: "copilot", Name: "Copilot", Vendor: "GitHub", Key: "p"},
+			{ID: "codex", Name: "Codex", Vendor: "OpenAI", Key: "x", Installed: true, Limited: "15:00"},
 		},
 	}
 }
@@ -72,27 +80,24 @@ func model() Model {
 func TestRender(t *testing.T) {
 	i18n.SetLocale("en")
 	for _, w := range []int{22, 30, 44} {
-		sc := Render(model(), w, -1)
-		for i, l := range sc.Lines {
+		for _, l := range Render(model(), w, 0, -1).Lines {
 			if n := utf8.RuneCountInString(Plain(l.Text)); n != w {
-				t.Errorf("width %d: line %d is %d columns: %q", w, i, n, Plain(l.Text))
+				t.Errorf("width %d: line is %d columns: %q", w, n, Plain(l.Text))
 			}
 		}
 	}
-	sc := Render(model(), 30, -1)
+	sc := Render(model(), 30, 0, -1)
 	var plain []string
-	byText := map[string]Action{}
 	for _, l := range sc.Lines {
-		p := strings.TrimRight(Plain(l.Text), " ")
-		plain = append(plain, p)
-		byText[strings.TrimSpace(p)] = l.Action
+		plain = append(plain, strings.TrimRight(Plain(l.Text), " "))
 	}
 	text := strings.Join(plain, "\n")
 	for _, want := range []string{
-		" acme-api", "on main · 3 changed", "PANES", "▌● Claude · opus", "working",
-		"◆ Codex", "limited 15:00", "· Shell", "CONTINUE HERE IN", "c Claude", "current",
-		"a Antigravity", "Copilot", "not installed", "Split right", "Split down", "Sessions…", "Limits", "Keys",
-		"^b b hide",
+		"PROJECTS", "▾ acme-api", "here", "▌● backend fix", "Claude", "◆ Codex", "limited 15:00", "· Shell",
+		"▸ blog", "●· 2", "+ Open a project…",
+		"CHANGES · main", "M src/auth/redirect.ts", "A test/auth.test.ts", "? notes.md",
+		"SWITCH TO · keeps the chat", "c Claude", "current", "a Antigravity", "Google", "Copilot", "not installed",
+		"✎ Name this pane", "→ Split right", "↓ Split down", "⧉ Sessions…", "◔ Limits", "≡ Keys", "^b b hide",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sidebar lacks %q:\n%s", want, text)
@@ -101,8 +106,7 @@ func TestRender(t *testing.T) {
 	if strings.Contains(text, "⛔") {
 		t.Error("the sidebar must not use wide characters")
 	}
-	// Rows map to actions.
-	find := func(sub string) Action {
+	find := func(sc Screen, sub string) Action {
 		for _, l := range sc.Lines {
 			if strings.Contains(Plain(l.Text), sub) {
 				return l.Action
@@ -111,37 +115,65 @@ func TestRender(t *testing.T) {
 		t.Fatalf("no row with %q", sub)
 		return Action{}
 	}
-	if a := find("◆ Codex"); a.Kind != ActFocus || a.Pane != "%2" {
-		t.Errorf("codex pane row %+v", a)
+	for _, c := range []struct {
+		row  string
+		want Action
+	}{
+		{"◆ Codex", Action{Kind: ActFocus, Pane: "%2"}},
+		{"▸ blog", Action{Kind: ActProject, Session: "blog-3c4d"}},
+		{"+ Open a project", Action{Kind: ActOpen}},
+		{"M src/auth", Action{Kind: ActDiff, Path: "src/auth/redirect.ts", Status: "M"}},
+		{"? notes.md", Action{Kind: ActDiff, Path: "notes.md", Status: "?"}},
+		{"a Antigravity", Action{Kind: ActSwitch, Agent: "antigravity"}},
+		{"✎ Name", Action{Kind: ActRename}},
+		{"→ Split right", Action{Kind: ActSplitH}},
+		{"↓ Split down", Action{Kind: ActSplitV}},
+	} {
+		if got := find(sc, c.row); got != c.want {
+			t.Errorf("%q: %+v, want %+v", c.row, got, c.want)
+		}
 	}
-	if a := find("a Antigravity"); a.Kind != ActSwitch || a.Agent != "antigravity" {
-		t.Errorf("antigravity row %+v", a)
-	}
-	if a := find("Split right"); a.Kind != ActSplitH {
-		t.Errorf("split right %+v", a)
-	}
-	if a := find("Split down"); a.Kind != ActSplitV {
-		t.Errorf("split down %+v", a)
-	}
-	if find("PANES").Kind != ActNone || find("acme-api").Kind != ActNone {
+	if find(sc, "PROJECTS").Kind != ActNone || find(sc, "▾ acme-api").Kind != ActNone {
 		t.Error("headings must not be actions")
+	}
+	// Too short: changes and other projects shrink to "+N more"; the
+	// buttons stay.
+	short := Render(model(), 30, 24, -1)
+	if len(short.Lines) > 24 {
+		t.Fatalf("%d rows for a height of 24", len(short.Lines))
+	}
+	stext := ""
+	for _, l := range short.Lines {
+		stext += Plain(l.Text) + "\n"
+	}
+	for _, want := range []string{"more", "→ Split right", "≡ Keys", "SWITCH TO"} {
+		if !strings.Contains(stext, want) {
+			t.Errorf("short sidebar lacks %q:\n%s", want, stext)
+		}
 	}
 	// The keyboard selection is drawn in reverse video.
 	rows := sc.Selectable()
-	sel := Render(model(), 30, rows[1])
+	sel := Render(model(), 30, 0, rows[1])
 	if !strings.HasPrefix(sel.Lines[rows[1]].Text, rev) || strings.HasPrefix(sel.Lines[rows[0]].Text, rev) {
 		t.Error("selection not highlighted")
 	}
-	// Frame draws from the top and clears the rest.
 	f := Frame(sc, 10)
 	if !strings.HasPrefix(f, "\x1b[H") || !strings.HasSuffix(f, "\x1b[J") || strings.Count(f, "\r\n") != 9 {
 		t.Errorf("frame %q", f)
 	}
 }
 
+func TestParseStatus(t *testing.T) {
+	got := ParseStatus([]string{" M src/a.go", "A  b.go", "?? notes.md", "R  old.go -> new.go", "MM both.go", `?? "with space.md"`, "x"})
+	want := []ChangeRow{{"M", "src/a.go"}, {"A", "b.go"}, {"?", "notes.md"}, {"R", "new.go"}, {"M", "both.go"}, {"?", "with space.md"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("%+v", got)
+	}
+}
+
 func TestMoveWraps(t *testing.T) {
 	i18n.SetLocale("en")
-	s := &sidebar{screen: Render(model(), 30, -1), sel: -1}
+	s := &sidebar{screen: Render(model(), 30, 0, -1), sel: -1}
 	rows := s.screen.Selectable()
 	s.move(1)
 	if s.sel != rows[0] {
@@ -246,6 +278,29 @@ func TestGatherRealTmux(t *testing.T) {
 	if m, _, _ = src.Gather(ctx, bar); m.Target != agentPane {
 		t.Errorf("target with the sidebar focused: %q", m.Target)
 	}
+	// Another project (session) with a named agent pane is listed after
+	// the current one; this project's pane name is read.
+	other := filepath.Join(h.Home, "blog")
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	out, err = c.Run(ctx, tmux.Cmd{"new-session", "-d", "-s", "blog-1234", "-c", other, "-P", "-F", "#{pane_id}", "sh"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blogPane := strings.TrimSpace(out)
+	_, _ = c.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", blogPane, "@imux_agent", "antigravity"},
+		tmux.Cmd{"set-option", "-p", "-t", agentPane, OptName, "backend fix"})
+	m, _, _ = src.Gather(ctx, bar)
+	if len(m.Projects) != 2 || !m.Projects[0].Current || m.Projects[0].Name != "proj" ||
+		m.Projects[1].Name != "blog" || m.Projects[1].Session != "blog-1234" || len(m.Projects[1].Panes) != 1 ||
+		m.Projects[1].Panes[0].Agent != "antigravity" {
+		t.Fatalf("projects %+v", m.Projects)
+	}
+	if m.Panes[0].Name != "backend fix" || m.Projects[0].Panes[0].Name != "backend fix" {
+		t.Errorf("pane name %+v", m.Panes[0])
+	}
+	_, _ = c.Run(ctx, tmux.Cmd{"kill-session", "-t", "blog-1234"})
 	// Only the sidebar left: alone.
 	_, _ = c.Run(ctx, tmux.Cmd{"kill-pane", "-t", shell}, tmux.Cmd{"kill-pane", "-t", agentPane})
 	if _, win, _ = src.Gather(ctx, bar); !win.Alone {

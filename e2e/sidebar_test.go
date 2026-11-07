@@ -3,10 +3,15 @@
 package e2e
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 const sidebarConfig = "[tmux]\nsidebar = true\nagent_bar = false\n"
@@ -67,7 +72,7 @@ func TestSidebar(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "CONTINUE HERE IN", 10*time.Second)
+	c.waitScreen(h, "SWITCH TO", 10*time.Second)
 	if w := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")); w != "30" {
 		t.Errorf("sidebar width %s, want 30", w)
 	}
@@ -143,7 +148,7 @@ func TestSidebarDoubleClick(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "CONTINUE HERE IN", 10*time.Second)
+	c.waitScreen(h, "SWITCH TO", 10*time.Second)
 	x, y := h.rowOf(bar, "Split right")
 	mark := c.Mark()
 	c.Click(0, x, y)
@@ -162,4 +167,93 @@ func TestSidebarDoubleClick(t *testing.T) {
 	if n := strings.Count(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{@imux_agent}"), "codex"); n != 1 || h.runs("codex") != 1 {
 		t.Fatalf("split ran %d times (%d codex runs)", n, h.runs("codex"))
 	}
+}
+
+// TestSidebarProjectsNamesChanges (T11.6): the sidebar's CHANGES row opens
+// the file's diff, "Name this pane" names the pane (quotes are safe), and
+// "Open a project…" opens another folder as a project and switches to it;
+// clicking the first project in PROJECTS switches back.
+func TestSidebarProjectsNamesChanges(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-c", "user.name=t", "-c", "user.email=t@example.com"}, args...)...)
+		cmd.Dir = h.Homes.Project
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "readme.md"), []byte("hello\n"))
+	git("init", "-q", "-b", "main")
+	git("add", "-A")
+	git("commit", "-q", "-m", "init")
+	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "readme.md"), []byte("hello\nchanged line for the diff\n"))
+
+	agentPane, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	c, client := h.attach(140, 40)
+	c.waitScreen(h, "SWITCH TO", 10*time.Second)
+
+	// CHANGES: a click shows the diff in a popup.
+	x, y := h.rowOf(bar, "M readme.md")
+	mark := c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "+changed line for the diff", 5*time.Second)
+	c.Write("q") // less
+	time.Sleep(500 * time.Millisecond)
+
+	// Name this pane: the prompt's answer becomes the name, quotes and all.
+	x, y = h.rowOf(bar, "Name this pane")
+	mark = c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "Name for this pane:", 5*time.Second)
+	c.Write(`backend "fix"; true` + "\r")
+	h.waitFor("pane named", 5*time.Second, func() bool { return h.paneOpt(agentPane, "#{@imux_name}") == `backend "fix"; true` })
+	h.rowOf(bar, `backend "fix"`)
+	if b := h.mustTmux("display-message", "-p", "-t", agentPane, "#{T:pane-border-format}"); !strings.Contains(b, `backend "fix"; true · Claude`) {
+		t.Errorf("border %q", b)
+	}
+
+	// Open a project: a new session for the folder, and the client moves there.
+	other := filepath.Join(h.Homes.Home, "blog")
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(500 * time.Millisecond)
+	x, y = h.rowOf(bar, "Open a project")
+	mark = c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "Open project folder:", 5*time.Second)
+	c.Write("\x15" + other + "\r") // Ctrl+U clears the suggested "~/"
+	h.run("claude", 2)
+	session := func() string {
+		for _, l := range strings.Split(h.mustTmux("list-clients", "-F", "#{client_name} #{client_session}"), "\n") {
+			if f := strings.Fields(l); len(f) == 2 && f[0] == client {
+				return f[1]
+			}
+		}
+		return ""
+	}
+	first := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", agentPane, "#{session_name}"))
+	h.waitFor("client in the new project", 5*time.Second, func() bool { s := session(); return s != "" && s != first })
+	if !strings.HasPrefix(session(), "blog-") {
+		t.Fatalf("client session %q", session())
+	}
+	// The new project's sidebar lists the first project; a click goes back.
+	var newBar string
+	for _, l := range strings.Split(h.mustTmux("list-panes", "-s", "-t", session(), "-F", "#{pane_id} #{@imux_role}"), "\n") {
+		if f := strings.Fields(l); len(f) == 2 && f[1] == "sidebar" {
+			newBar = f[0]
+		}
+	}
+	if newBar == "" {
+		t.Fatal("the opened project has no sidebar")
+	}
+	time.Sleep(500 * time.Millisecond)
+	x, y = h.rowOf(newBar, "▸ "+filepath.Base(h.Homes.Project))
+	c.Click(0, x, y)
+	h.waitFor("client back in the first project", 5*time.Second, func() bool { return session() == first })
 }

@@ -76,7 +76,8 @@ func (a *Agent) normalize() {
 type Handoff struct {
 	BudgetChars       int    `toml:"budget_chars"`
 	MaxArgBytes       int    `toml:"max_arg_bytes"`
-	Inject            string `toml:"inject"` // argv | paste
+	Inject            string `toml:"inject"`     // argv | paste
+	OnArrival         string `toml:"on_arrival"` // wait | continue
 	RedactSecrets     bool   `toml:"redact_secrets"`
 	IncludeGit        bool   `toml:"include_git"`
 	IncludeSourcePath bool   `toml:"include_source_path"`
@@ -182,6 +183,7 @@ func Default() *Config {
 			BudgetChars:       30000,
 			MaxArgBytes:       102400,
 			Inject:            "argv",
+			OnArrival:         "wait",
 			RedactSecrets:     true,
 			IncludeGit:        true,
 			IncludeSourcePath: true,
@@ -337,6 +339,7 @@ func (c *Config) validate(src []byte) error {
 		allowed  []string
 	}{
 		{"on_limit", c.OnLimit, []string{"ask", "auto", "off"}},
+		{"on_arrival", c.Handoff.OnArrival, []string{"wait", "continue"}},
 		{"on_exit", c.OnExit, []string{"shell", "close"}},
 		{"inject", c.Handoff.Inject, []string{"argv", "paste"}},
 		{"locale", c.Locale, []string{"", "en", "tr"}},

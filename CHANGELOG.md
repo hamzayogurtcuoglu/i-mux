@@ -6,6 +6,24 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-07
+
+### Added
+
+- **PROJECTS** in the sidebar: every open project with its agents; click an agent to focus it or
+  another project to switch to it. **+ Open a project…** (or `imux open <folder>`) opens a folder as
+  a project and switches to it.
+- **CHANGES** in the sidebar: the branch and the files `git status` lists; click one for its diff.
+- **Pane names:** **✎ Name this pane** (or `imux rename <name>`); the name shows in the sidebar and
+  the pane border.
+- Agents show who makes them (Anthropic, Google, GitHub, OpenAI); headings use plain words.
+
+### Changed
+
+- **After a switch the new agent waits for you.** It confirms in one sentence that it has the
+  context instead of starting work (and spending tokens) on its own.
+  `[handoff] on_arrival = "continue"` restores the old behavior.
+
 ## [0.4.0] - 2026-11-07
 
 ### Added

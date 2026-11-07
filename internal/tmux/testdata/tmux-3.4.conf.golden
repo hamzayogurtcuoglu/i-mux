@@ -14,7 +14,7 @@ set -g  mouse on
 set -g  focus-events on
 set -g  pane-border-status top
 set -g  automatic-rename-format '#{?@imux_agent,#{@imux_agent},#{pane_current_command}}'
-set -g  pane-border-format ' #{?@imux_label,#{@imux_label},#{pane_current_command}} #{?@imux_flag,#{@imux_flag} ,}'
+set -g  pane-border-format ' #{?@imux_name,#{@imux_name} · ,}#{?@imux_label,#{@imux_label},#{pane_current_command}} #{?@imux_flag,#{@imux_flag} ,}'
 set -g  status-right '#{?@imux_status,#{@imux_status} · ,}%H:%M '
 set -g  status-right-length 80
 set -g  status-left-length 32

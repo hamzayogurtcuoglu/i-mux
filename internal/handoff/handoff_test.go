@@ -278,3 +278,21 @@ func BenchmarkBuild(b *testing.B) {
 		}
 	}
 }
+
+// The new agent waits by default (one sentence, no work); on_arrival =
+// "continue" restores carrying on with an unfinished request (§8.2a).
+func TestArrival(t *testing.T) {
+	o := opts()
+	doc, err := Build([]*session.Session{shortSession()}, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(doc.Text, "Do not start working yet.") || strings.Contains(doc.Text, "continue it") {
+		t.Fatalf("default should wait:\n%s", doc.Text[len(doc.Text)-400:])
+	}
+	o.Continue = true
+	doc, _ = Build([]*session.Session{shortSession()}, o)
+	if !strings.Contains(doc.Text, "If the last request is not finished, continue it.") || strings.Contains(doc.Text, "Do not start working yet.") {
+		t.Fatalf("continue mode:\n%s", doc.Text[len(doc.Text)-400:])
+	}
+}

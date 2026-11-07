@@ -60,6 +60,9 @@ type Options struct {
 	IncludeSourcePath bool
 	Redact            bool
 	Delta             bool // "welcome back" mode (target resumed natively)
+	// Continue makes the new agent carry on with an unfinished request at
+	// once; otherwise it confirms in one sentence and waits (§8.2a).
+	Continue bool
 }
 
 // Doc is a rendered handoff.
@@ -625,6 +628,10 @@ func (r *renderer) whereStopped() string {
 }
 
 func (r *renderer) whatNow() string {
+	if !r.opt.Continue {
+		return "Do not start working yet. Reply with one short sentence in the user's language saying you have\n" +
+			"the context and what was last being worked on, then wait for the user's next message."
+	}
 	if r.opt.Delta {
 		return "Pick up from here. If the last request is not finished, continue it. Otherwise give a 2–3 sentence status\nand wait for the user."
 	}

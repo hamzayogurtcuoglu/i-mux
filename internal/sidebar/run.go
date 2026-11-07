@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -140,7 +141,7 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 		return true
 	}
 	s.model, s.win = m, w
-	s.screen = Render(m, w.Width, s.sel)
+	s.screen = Render(m, w.Width, w.Height, s.sel)
 	_, _ = io.WriteString(s.o.Out, Frame(s.screen, w.Height))
 	return false
 }
@@ -208,6 +209,10 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.do(ctx, Action{Kind: ActLimits})
 	case "?":
 		s.do(ctx, Action{Kind: ActKeys})
+	case "n":
+		s.do(ctx, Action{Kind: ActRename})
+	case "o":
+		s.do(ctx, Action{Kind: ActOpen})
 	default:
 		for _, a := range s.model.Agents {
 			if a.Key == ev.Key {
@@ -260,7 +265,16 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActNone:
 		return
 	case ActFocus:
-		_, _ = s.t.Run(ctx, tmux.Cmd{"select-pane", "-t", a.Pane})
+		s.focus(ctx, a.Pane, client)
+		return
+	case ActProject:
+		if client != "" {
+			_, _ = s.t.Run(ctx, tmux.Cmd{"switch-client", "-c", client, "-t", "=" + a.Session})
+		}
+		return
+	case ActOpen:
+		s.prompt(ctx, client, i18n.T("prompt.open"), "~/",
+			"set-option -g @imux_open \"%%%\" ; "+tmux.RunShell(s.o.Self, "open", "--from-option", "--client", client))
 		return
 	}
 	if target == "" {
@@ -280,7 +294,68 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.spawn(append([]string{"__menu", "--limits"}, tgt...))
 	case ActKeys:
 		s.spawn(append([]string{"__menu", "--keys"}, tgt...))
+	case ActRename:
+		cur := ""
+		for _, p := range s.model.Panes {
+			if p.ID == target {
+				cur = p.Name
+			}
+		}
+		s.prompt(ctx, client, i18n.T("prompt.rename"), cur,
+			"set-option -p -t "+target+" "+OptName+" \"%%%\" ; "+tmux.RunShell(s.o.Self, "__sidebar-refresh"))
+	case ActDiff:
+		s.diff(a, client)
 	}
+}
+
+// focus selects pane id, switching the client to its project and window
+// when it is elsewhere.
+func (s *sidebar) focus(ctx context.Context, id, client string) {
+	for _, p := range s.model.Panes {
+		if p.ID == id {
+			_, _ = s.t.Run(ctx, tmux.Cmd{"select-pane", "-t", id})
+			return
+		}
+	}
+	cmds := []tmux.Cmd{{"select-window", "-t", id}, {"select-pane", "-t", id}}
+	if client != "" {
+		cmds = append([]tmux.Cmd{{"switch-client", "-c", client, "-t", id}}, cmds...)
+	}
+	_, _ = s.t.Run(ctx, cmds...)
+}
+
+// prompt asks on the client's command prompt and runs template with the
+// answer. The answer only ever reaches tmux, escaped by %%%: never a shell.
+func (s *sidebar) prompt(ctx context.Context, client, label, initial, template string) {
+	c := tmux.Cmd{"command-prompt"}
+	if client != "" {
+		c = append(c, "-t", client)
+	}
+	c = append(c, "-I", initial, "-p", label, template)
+	_, _ = s.t.Run(ctx, c)
+}
+
+// diff opens a popup with the changes of a file (the file itself when git
+// does not track it yet).
+func (s *sidebar) diff(a Action, client string) {
+	var sh string
+	if a.Status == "?" {
+		sh = tmux.ShJoin("less", "-R", "--", a.Path)
+	} else {
+		d := func(args ...string) string {
+			return tmux.ShJoin(append([]string{"git", "diff", "--color=always"}, args...)...)
+		}
+		sh = "{ " + d("HEAD", "--", a.Path) + " 2>/dev/null || " + d("--", a.Path) + "; } | less -R"
+	}
+	c := tmux.Cmd{"display-popup"}
+	if client != "" {
+		c = append(c, "-c", client)
+	}
+	c = append(c, "-E", "-w", "90%", "-h", "90%")
+	if s.model.CWD != "" {
+		c = append(c, "-d", s.model.CWD)
+	}
+	_ = s.t.Spawn(append(c, sh))
 }
 
 // spawn starts imux with args without waiting for it.

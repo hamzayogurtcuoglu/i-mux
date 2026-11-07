@@ -40,20 +40,36 @@ const (
 	StateShell   = "shell"
 )
 
-// PaneRow is one non-sidebar pane of the window.
+// PaneRow is one agent (or shell) pane of a project.
 type PaneRow struct {
 	ID      string
 	Agent   session.AgentID
+	Name    string // the user's name for the pane (@imux_name), or ""
 	Label   string // "Claude · opus"; "" for a shell
 	State   string // working | idle | exited | shell
 	Limited string // reset clock when the agent is limited, e.g. "15:00"
 	Target  bool
 }
 
+// ProjectRow is one imux session: a project directory and its panes.
+type ProjectRow struct {
+	Session string
+	Name    string // directory name
+	Current bool
+	Panes   []PaneRow
+}
+
+// ChangeRow is one `git status --short` entry.
+type ChangeRow struct {
+	Status string // "M", "A", "D", "R", "?" ...
+	Path   string
+}
+
 // AgentRow is one agent the target pane can continue in.
 type AgentRow struct {
 	ID        session.AgentID
 	Name      string // short name, "Claude"
+	Vendor    string // "Anthropic"
 	Key       string // menu mnemonic
 	Installed bool
 	Limited   string // reset clock, or ""
@@ -62,13 +78,16 @@ type AgentRow struct {
 
 // Model is everything the sidebar shows.
 type Model struct {
-	Project string // directory name of the target pane
-	Branch  string // "" outside a git repository
-	Changed int    // files with uncommitted changes
-	Git     bool
-	Panes   []PaneRow
-	Agents  []AgentRow
-	Target  string // pane id actions apply to; "" when the window has none
+	Project  string // directory name of the target pane
+	CWD      string // its directory (diff popups run there)
+	Branch   string // "" outside a git repository
+	Changed  int    // files with uncommitted changes
+	Git      bool
+	Changes  []ChangeRow
+	Projects []ProjectRow // the current project first
+	Panes    []PaneRow    // the current window's panes (also inside Projects)
+	Agents   []AgentRow
+	Target   string // pane id actions apply to; "" when the window has none
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -84,7 +103,10 @@ type Window struct {
 	Last    string
 }
 
-const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}"
+const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}"
+
+// OptName is the user's name for a pane.
+const OptName = "@imux_name"
 
 // Source gathers the model; it caches git information per directory.
 type Source struct {
@@ -132,7 +154,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	out, err := s.T.Run(ctx,
 		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}"},
-		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-t", self, "-F", paneFormat})
+		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
 		return Model{}, Window{}, err
 	}
@@ -157,16 +179,21 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	}
 
 	type raw struct {
-		row    PaneRow
-		active bool
-		cwd    string
+		row     PaneRow
+		active  bool
+		cwd     string
+		session string
+		window  string
 	}
-	var panes []raw
-	for _, r := range tmux.Rows(sec["panes"], 10) {
+	var all []raw
+	for _, r := range tmux.Rows(sec["panes"], 13) {
 		if r[1] == RoleSidebar {
 			continue
 		}
-		p := raw{row: PaneRow{ID: r[0], Agent: session.AgentID(r[2]), Label: r[3]}, active: r[5] == "1", cwd: r[7]}
+		p := raw{
+			row:    PaneRow{ID: r[0], Agent: session.AgentID(r[2]), Label: r[3], Name: r[10]},
+			active: r[5] == "1" && r[12] == "1", cwd: r[7], session: r[9], window: r[11],
+		}
 		if p.cwd == "" {
 			p.cwd = r[8]
 		}
@@ -180,7 +207,13 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		default:
 			p.row.State = StateIdle
 		}
-		panes = append(panes, p)
+		all = append(all, p)
+	}
+	var panes []raw // this window's
+	for _, p := range all {
+		if p.window == win.ID {
+			panes = append(panes, p)
+		}
 	}
 	if len(panes) == 0 {
 		win.Alone = true
@@ -225,15 +258,41 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		}
 		return textfmt.Clock(now, t)
 	}
-	for _, p := range panes {
-		row := p.row
+	fill := func(row PaneRow) PaneRow {
 		if row.Agent != "" {
 			row.Limited = limited(row.Agent)
 			if row.Label == "" {
 				row.Label = session.ShortName(row.Agent)
 			}
 		}
-		m.Panes = append(m.Panes, row)
+		return row
+	}
+	for _, p := range panes {
+		m.Panes = append(m.Panes, fill(p.row))
+	}
+	// Projects: one per session, the current one first, then by name.
+	bySession := map[string]*ProjectRow{}
+	var order []string
+	for _, p := range all {
+		pr := bySession[p.session]
+		if pr == nil {
+			pr = &ProjectRow{Session: p.session, Name: filepath.Base(p.cwd), Current: p.session == win.Session}
+			bySession[p.session] = pr
+			order = append(order, p.session)
+		}
+		row := fill(p.row)
+		row.Target = p.row.ID == m.Target
+		pr.Panes = append(pr.Panes, row)
+	}
+	sort.SliceStable(order, func(i, j int) bool {
+		a, b := bySession[order[i]], bySession[order[j]]
+		if a.Current != b.Current {
+			return a.Current
+		}
+		return a.Name < b.Name
+	})
+	for _, name := range order {
+		m.Projects = append(m.Projects, *bySession[name])
 	}
 
 	resolve := s.Resolve
@@ -247,17 +306,18 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	}
 	for _, a := range agent.Ordered(s.Cfg) {
 		m.Agents = append(m.Agents, AgentRow{
-			ID: a.ID, Name: a.Short, Key: a.Key, Installed: bins[a.ID].Installed,
+			ID: a.ID, Name: a.Short, Vendor: a.Vendor, Key: a.Key, Installed: bins[a.ID].Installed,
 			Limited: limited(a.ID), Current: a.ID == cur,
 		})
 	}
 
 	cwd := panes[target].cwd
-	m.Project = filepath.Base(cwd)
+	m.Project, m.CWD = filepath.Base(cwd), cwd
 	if cwd != "" {
 		gi := s.gitInfo(ctx, cwd)
 		if gi.State == gitinfo.OK {
 			m.Git, m.Branch, m.Changed = true, gi.Branch, gi.StatusTotal
+			m.Changes = ParseStatus(gi.Status)
 		}
 	}
 	return m, win, nil
@@ -280,4 +340,28 @@ func RefreshAll(ctx context.Context, t *tmux.Client) {
 	for _, pid := range pids {
 		signalRedraw(pid)
 	}
+}
+
+// ParseStatus turns `git status --short` lines into rows: "?? notes.md" is
+// "?", "R  a -> b" keeps b.
+func ParseStatus(lines []string) []ChangeRow {
+	var out []ChangeRow
+	for _, l := range lines {
+		if len(l) < 4 {
+			continue
+		}
+		st := strings.TrimSpace(l[:2])
+		if st == "??" {
+			st = "?"
+		}
+		if len(st) > 1 {
+			st = st[:1]
+		}
+		path := strings.TrimSpace(l[3:])
+		if _, after, ok := strings.Cut(path, " -> "); ok {
+			path = after
+		}
+		out = append(out, ChangeRow{Status: st, Path: strings.Trim(path, `"`)})
+	}
+	return out
 }

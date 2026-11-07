@@ -29,14 +29,15 @@ type Info struct {
 	Short       string // UI name: "Claude"
 	Key         string // menu mnemonic
 	Bin         string // default binary name
+	Vendor      string // who makes it: "Anthropic"
 	InstallHint string
 }
 
 var registry = []Info{
-	{ID: session.Claude, Key: "c", Bin: "claude", InstallHint: "npm i -g @anthropic-ai/claude-code"},
-	{ID: session.Antigravity, Key: "a", Bin: "agy", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash"},
-	{ID: session.Copilot, Key: "p", Bin: "copilot", InstallHint: "npm i -g @github/copilot"},
-	{ID: session.Codex, Key: "x", Bin: "codex", InstallHint: "npm i -g @openai/codex"},
+	{ID: session.Claude, Key: "c", Bin: "claude", Vendor: "Anthropic", InstallHint: "npm i -g @anthropic-ai/claude-code"},
+	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash"},
+	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot"},
+	{ID: session.Codex, Key: "x", Bin: "codex", Vendor: "OpenAI", InstallHint: "npm i -g @openai/codex"},
 }
 
 func init() {

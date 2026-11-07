@@ -29,6 +29,10 @@ max_arg_bytes       = 102400
 # "argv" passes the handoff as the agent's initial prompt; "paste" pastes it
 # into the agent after it started (hides it from `ps`).
 inject              = "argv"
+# What the new agent does with the handoff: "wait" = confirm in one sentence
+# and wait for your next message (starts no work, spends no extra tokens);
+# "continue" = carry on with the unfinished request at once.
+on_arrival          = "wait"
 # Best-effort removal of API keys, tokens and private keys.
 redact_secrets      = true
 # Include branch, `git status --short` and `git diff --stat`.

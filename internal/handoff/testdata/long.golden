@@ -66,7 +66,7 @@ Last user request: ok, continue with step 120
 Last assistant message: Step 119: working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉 working on it 🎉
 
 ## What to do now
-If the last request is not finished, continue it. Otherwise give a 2–3 sentence status
-and wait for the user.
+Do not start working yet. Reply with one short sentence in the user's language saying you have
+the context and what was last being worked on, then wait for the user's next message.
 
 Full transcript of the previous session (read only if needed): /home/test/.claude/projects/-home-test-proj/s-long.jsonl

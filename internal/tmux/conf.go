@@ -117,7 +117,8 @@ func GenerateConf(in *ConfInput) string {
 	w("set -g  pane-border-status top")
 	// Windows are named after the active pane's agent ("claude"), not its process ("node").
 	w("set -g  automatic-rename-format %s", Quote("#{?@imux_agent,#{@imux_agent},#{pane_current_command}}"))
-	w("set -g  pane-border-format %s", Quote(" #{?@imux_label,#{@imux_label},#{pane_current_command}} #{?@imux_flag,#{@imux_flag} ,}"))
+	// A named pane shows its name first: " backend fix · Claude ".
+	w("set -g  pane-border-format %s", Quote(" #{?@imux_name,#{@imux_name} · ,}#{?@imux_label,#{@imux_label},#{pane_current_command}} #{?@imux_flag,#{@imux_flag} ,}"))
 	w("set -g  status-right %s", Quote("#{?@imux_status,#{@imux_status} · ,}%H:%M "))
 	w("set -g  status-right-length 80")
 	w("set -g  status-left-length 32") // session names are <dir>-<hash>; the default 10 cuts them

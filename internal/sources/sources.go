@@ -189,6 +189,7 @@ func (f *Finder) Build(ctx context.Context, req BuildRequest) (*handoff.Doc, err
 		IncludeSourcePath: cfg.Handoff.IncludeSourcePath,
 		Redact:            cfg.Handoff.RedactSecrets,
 		Delta:             req.Delta,
+		Continue:          cfg.Handoff.OnArrival == "continue",
 	}
 	if req.Budget > 0 {
 		opt.Budget = req.Budget
