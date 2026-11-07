@@ -70,7 +70,7 @@ bunun ne kadar önce olduğu. Hepsi tıklanabilir:
 |---|---|
 | bir projeye tıkla · **Projeler** yanındaki **+** (ya da `o`) | o projeye geç (projeyi **kapatmak** için mevcut projeye tıkla ya da herhangi birine sağ tıkla) · başka proje aç: adının birkaç harfini yaz, Enter |
 | bir agent'a sağ tıkla (ya da seçili olana tıkla) | menüsü: **Yeniden adlandır…** (sohbet başka CLI'ya geçse de ad kalır) ya da **Agent'ı kapat…** |
-| bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni bir pane'de yeni agent aç (sağa / aşağı için `prefix v` / `prefix -`) |
+| bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni bir pane'de yeni agent ya da düz **Terminal** aç (sağa / aşağı için `prefix v` / `prefix -`) |
 | **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder |
 | **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver (terminal başlığı koyan agent'lar kendini adlandırır) |
 | **± Değişiklik** (ya da `f`) | değişen dosyalar; birini seçince farkını (diff) gösterir |

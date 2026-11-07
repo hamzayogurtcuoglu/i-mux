@@ -248,7 +248,7 @@ func runLs(e *Env, args []string) error {
 func init() {
 	register(&command{
 		Name:    "split",
-		Args:    "<agent> [-h|-v] [--pane %N]",
+		Args:    "<agent|shell> [-h|-v] [--pane %N]",
 		Summary: "cmd.split",
 		Run:     runSplit,
 	})
@@ -268,11 +268,14 @@ func runSplit(e *Env, args []string) error {
 		return err
 	}
 	if len(pos) != 1 || *horiz && *vert {
-		return &UsageError{Msg: i18n.T("cli.usage", "split <agent> [-h|-v]")}
+		return &UsageError{Msg: i18n.T("cli.usage", "split <agent|shell> [-h|-v]")}
 	}
-	id, err := parseAgentFlag("agent", pos[0])
-	if err != nil {
-		return err
+	var id session.AgentID
+	shell := pos[0] == workspace.ShellAgent
+	if !shell {
+		if id, err = parseAgentFlag("agent", pos[0]); err != nil {
+			return err
+		}
 	}
 	pane, err := targetPane(*paneF)
 	if err != nil {
@@ -301,6 +304,15 @@ func runSplit(e *Env, args []string) error {
 			return err
 		}
 		fmt.Fprintln(e.Stdout, res.Pane)
+		return nil
+	}
+	if shell {
+		np, err := w.SplitShell(ctx, p.ID, p.CWD, *horiz)
+		if err != nil {
+			w.Message(ctx, *clientF, pane, err.Error())
+			return err
+		}
+		fmt.Fprintln(e.Stdout, np)
 		return nil
 	}
 	np, err := w.Split(ctx, p.ID, id, p.CWD, *horiz)

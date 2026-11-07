@@ -107,7 +107,7 @@ func TestRender(t *testing.T) {
 	t.Logf("\n%s", text)
 	for _, want := range []string{
 		"Projects", " A  acme-api", "main ●", " B  blog", "master ●",
-		"Agents", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Shell",
+		"Agents", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Terminal",
 		"blog", "▲  blog pass", "9m ●", "✻  Claude", "3d ○",
 		"Continue this chat in", "▲ Antigravity", "◉ Copilot", "◎ Codex",
 		"✎ Rename", "± Changes 3", "⧉ History", "◔ Limits", "? Help",

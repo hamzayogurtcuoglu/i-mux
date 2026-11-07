@@ -15,6 +15,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/picker"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
@@ -142,7 +143,7 @@ func init() {
 	})
 	register(&command{
 		Name:    "tab",
-		Args:    "<agent> [--pane %N] [--client C]",
+		Args:    "<agent|shell> [--pane %N] [--client C]",
 		Summary: "cmd.tab",
 		Run:     runTab,
 	})
@@ -203,11 +204,14 @@ func runTab(e *Env, args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return &UsageError{Msg: i18n.T("cli.usage", "tab <agent>")}
+		return &UsageError{Msg: i18n.T("cli.usage", "tab <agent|shell>")}
 	}
-	id, err := parseAgentFlag("agent", pos[0])
-	if err != nil {
-		return err
+	var id session.AgentID
+	shell := pos[0] == workspace.ShellAgent
+	if !shell {
+		if id, err = parseAgentFlag("agent", pos[0]); err != nil {
+			return err
+		}
 	}
 	pane, err := targetPane(*paneF)
 	if err != nil {
@@ -221,6 +225,15 @@ func runTab(e *Env, args []string) error {
 	p, err := w.PaneTarget(ctx, pane)
 	if err != nil {
 		return err
+	}
+	if shell {
+		np, err := w.NewShellWindow(ctx, p.ID, p.CWD)
+		if err != nil {
+			w.Message(ctx, *clientF, p.ID, err.Error())
+			return err
+		}
+		fmt.Fprintln(e.Stdout, np)
+		return nil
 	}
 	if !w.Installed(id) {
 		err := &workspace.NotInstalledError{Agent: id}

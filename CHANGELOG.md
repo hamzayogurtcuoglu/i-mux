@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-07
+
+### Added
+
+- **Plain terminals:** the **+** next to Agents, the tab bar's **+**, `prefix c`, `prefix v` and
+  `prefix -` now end with **Terminal (shell)**, which opens your shell in the project folder
+  without an agent. `imux split shell` and `imux tab shell` do the same.
+
 ## [0.11.0] - 2026-11-07
 
 ### Added

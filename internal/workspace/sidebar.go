@@ -163,6 +163,10 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal bool) *Menu {
 		}
 		m.Items = append(m.Items, it)
 	}
+	m.Items = append(m.Items, Separator(), MenuItem{
+		Name: i18n.T("menu.terminal"), Key: "t",
+		Cmd: w.ui(append([]string{"split", ShellAgent, dir}, uiTarget(p.ID, client)...)...),
+	})
 	return m
 }
 
@@ -209,6 +213,10 @@ func (w *WS) TabMenu(p *Pane, client string) *Menu {
 		}
 		m.Items = append(m.Items, it)
 	}
+	m.Items = append(m.Items, Separator(), MenuItem{
+		Name: i18n.T("menu.terminal"), Key: "t",
+		Cmd: w.ui(append([]string{"tab", ShellAgent}, uiTarget(p.ID, client)...)...),
+	})
 	return m
 }
 

@@ -200,3 +200,36 @@ func (w *WS) ExecAttach(name string) error {
 
 // execFunc is syscall.Exec; tests replace it.
 var execFunc = syscall.Exec
+
+// ShellAgent is the name menus and commands use for a plain terminal.
+const ShellAgent = "shell"
+
+// SplitShell opens the user's shell (no agent) next to pane, in cwd.
+func (w *WS) SplitShell(ctx context.Context, pane, cwd string, horizontal bool) (string, error) {
+	dir := "-v"
+	if horizontal {
+		dir = "-h"
+	}
+	out, err := w.T.Run(ctx, tmux.Cmd{"split-window", dir, "-t", pane, "-c", cwd, "-P", "-F", "#{pane_id}"})
+	if err != nil {
+		return "", err
+	}
+	w.RefreshSidebars(ctx)
+	return strings.TrimSpace(out), nil
+}
+
+// NewShellWindow opens a tab with the user's shell after fromPane's tab,
+// with a sidebar.
+func (w *WS) NewShellWindow(ctx context.Context, fromPane, cwd string) (string, error) {
+	win, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", fromPane, "#{window_id}"})
+	if err != nil {
+		return "", err
+	}
+	out, err := w.T.Run(ctx, tmux.Cmd{"new-window", "-a", "-t", strings.TrimSpace(win), "-c", cwd, "-P", "-F", "#{pane_id}"})
+	if err != nil {
+		return "", err
+	}
+	pane := strings.TrimSpace(out)
+	w.maybeSidebar(ctx, pane)
+	return pane, nil
+}
