@@ -96,6 +96,8 @@ done by tmux on a dedicated socket. i-mux only:
 | D17 | **The primary UI is a sidebar pane on the left of each window** (added 2026-11-07, at the user's request, after the bottom agent bar): a small `imux __sidebar` process drawing with ANSI escapes and reading keys and SGR mouse events, no TUI library. The agent bar stays as an option (`tmux.agent_bar`). | A sidebar can show what a status line cannot: every pane's agent and state, the switch targets, split buttons and help, all clickable. A familiar agent-workspace layout, built on tmux. Cost: one resident process per window (~6 MB, no CPU while idle: it sleeps until a tmux hook or the watcher signals it). |
 | D18 | **The handoff stays in its file; the agent gets a two-line message pointing to it** (added 2026-11-07, v0.6): `[i-mux handoff · A → B · time]`, one sentence in the user's language and the file's path. The agent reads the file with its own tools; `--add-dir` lets Claude, Copilot and Antigravity read `~/.imux/handoffs` without asking. `handoff.deliver = "inline"` keeps the old behavior. | The user saw the whole 30 000-character document as their own first message: a wall of text in the pane. The file is 0600, so the document also leaves argv (no process-list exposure, no argv size limit). Cost: one file read by the agent. Chained handoffs follow the path back to the file. |
 | D19 | **The sidebar is a full agent workspace UI** (added 2026-11-07, v0.7, at the user's request; our extra is moving a chat to another CLI): Projects (letter avatar, branch, roll-up status) above Agents grouped by project (icon, name, time since the state changed, status), and a "Continue this chat in" block for the switch. States: **Needs you** (the agent asks something), **Done** (finished while you looked elsewhere), working (spinner), idle (ring). | The sidebar answers "what needs me?" at a glance, and adds what other agent workspaces lack: moving the chat. imux keeps reading the screen it already captures: a question on a still screen is "Needs you", a working → idle change the user has not looked at is "Done". |
+| D20 | **Tabs: a project holds tabs, a tab holds panes** (added 2026-11-07, v0.8, at the user's request). A tab is a tmux window; a tab bar at the top (the status line, `status-position top`) shows each tab's number, name and most urgent state, and a **+** that asks which agent the new tab starts with. | One project, several tasks: each task gets its own tab with its own agents and sidebar, instead of one crowded window. tmux windows already are tabs; only the bar and the naming are new. |
+| D21 | **Long-running imux processes restart themselves after an upgrade** (v0.8): the watcher and each sidebar compare the imux binary's size and mtime with the ones they started from and `exec` the new binary when it changed; the restarted watcher rewrites the tmux config. | The user saw an old version keep running after the one-line install ("0.5.0 shows up out of nowhere"): the daemon and the sidebars of sessions started earlier never restarted. |
 
 ## 4. Components
 
@@ -1040,6 +1042,24 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   Limits, Help.
 - Default width 32. When rows do not fit: blank lines go, then the other projects' agent groups
   shrink to one row each, then rows are cut above the bottom blocks.
+
+#### Tabs (v0.8)
+
+```
+  1 backend fix ●   2 tests !   3 Claude    +                    Codex ⛔15:00 · 12:30
+```
+
+- The status line moves to the top (`tmux.tabs = true`, default) and shows the session's windows as
+  tabs: ` <n> <name> <state> `; the current tab on a dark background. A click selects it (tmux's
+  window ranges); the **+** (`range=user|imux:tab`) opens "New tab with: Claude / Antigravity / …"
+  and `imux tab <agent>` opens a window with that agent (and its sidebar) after the current one.
+- **Name:** the user's (`@imux_tab`, set with `prefix ,`), else the name of the tab's target agent
+  (`@imux_tab_auto`, kept by the tab's sidebar), else the window name. `#` is escaped.
+- **State:** the most urgent of the tab's panes as a coloured glyph (`@imux_tab_state`, kept by
+  the sidebar): `!` needs you, `●` green done, `●` blue working, `◆` limited; nothing when idle.
+- Keys: `prefix c` new tab (asks for the agent), `prefix ,` rename the tab, `prefix 1..9` /
+  `prefix n` / `prefix p` select (tmux's).
+- The agent bar (`tmux.agent_bar`) stays an option on a second status line.
 
 #### Agent bar
 
