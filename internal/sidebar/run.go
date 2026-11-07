@@ -41,16 +41,18 @@ type sidebar struct {
 	sel    Item // keyboard selection, NoItem = none
 	scroll int  // first row of the explorer or changes list
 
-	clicks    chan Action // click actions, delivered after ClickDelay
-	lastClick time.Time
+	clicks     chan Action // click actions, delivered after ClickDelay
+	lastClick  time.Time
+	lastClickY int // row of the last click
 }
 
 // ClickDelay holds a click's action until tmux's double-click window (300 ms)
 // has passed. tmux reports a second click within it as DoubleClick1Pane
 // later on, and that binding selects the sidebar pane again: it would close
 // a menu the first click opened and take the focus back from the agent pane.
-// A click within ClickIgnore of the previous one is a double click and is
-// dropped, so an action never runs twice.
+// A click on the same row within ClickIgnore of the previous one is a double
+// click and is dropped, so an action never runs twice; a quick click on
+// another row (a file right after the view's icon) still counts.
 var (
 	ClickDelay  = 350 * time.Millisecond
 	ClickIgnore = 400 * time.Millisecond
@@ -254,10 +256,10 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			return
 		}
 		now := time.Now()
-		if now.Sub(s.lastClick) < ClickIgnore {
+		if ev.Y == s.lastClickY && now.Sub(s.lastClick) < ClickIgnore {
 			return
 		}
-		s.lastClick = now
+		s.lastClick, s.lastClickY = now, ev.Y
 		s.sel = NoItem
 		a := s.screen.Lines[row].ActionAt(ev.X - 1)
 		time.AfterFunc(ClickDelay, func() { s.clicks <- a })

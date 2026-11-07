@@ -199,9 +199,19 @@ func page(e *Env, text *bytes.Buffer, opts ...string) error {
 		return err
 	}
 	cmd := exec.Command(less, opts...)
-	cmd.Env = append(os.Environ(), "LESS="+strings.TrimSpace(os.Getenv("LESS")+" -X -K"))
+	cmd.Env = lessEnv("-X -K")
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = text, os.Stdout, os.Stderr
 	return cmd.Run()
+}
+
+// lessEnv is less's environment: $LESS plus flags, and UTF-8 when no
+// charset is set (under a C locale less shows "·" as <C2><B7>).
+func lessEnv(flags string) []string {
+	env := append(os.Environ(), "LESS="+strings.TrimSpace(os.Getenv("LESS")+" "+flags))
+	if os.Getenv("LESSCHARSET") == "" {
+		env = append(env, "LESSCHARSET=utf-8")
+	}
+	return env
 }
 
 // pageFile shows a file in less.
@@ -216,7 +226,7 @@ func pageFile(e *Env, path string, opts ...string) error {
 		return err
 	}
 	cmd := exec.Command(less, append(opts, "--", path)...)
-	cmd.Env = append(os.Environ(), "LESS="+strings.TrimSpace(os.Getenv("LESS")+" -K"))
+	cmd.Env = lessEnv("-K")
 	if cfg, err := loadConfig(e); err == nil {
 		if ed := editor.Choose(cfg.Editor); ed != nil {
 			cmd.Env = append(cmd.Env, "VISUAL="+strings.Join(ed, " ")) // less's v edits

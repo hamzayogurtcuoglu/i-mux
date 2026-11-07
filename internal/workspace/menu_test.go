@@ -39,7 +39,7 @@ func TestPaneMenuDisplayMenuArgs(t *testing.T) {
 		"Sessions…\x00s\x00run-shell -b '/opt/imux/bin/imux __menu --sessions --pane %3 --client /dev/pts/4",
 		"New pane → Claude\x00C\x00run-shell -b '/opt/imux/bin/imux split claude -h --pane %3",
 		"New pane → Antigravity\x00A\x00",
-		"Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/imux/bin/imux handoff --pane %3 --print 2>&1 | less -R'",
+		"Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/imux/bin/imux handoff --pane %3 --print 2>&1 | LESSCHARSET=utf-8 less -R'",
 		"Limits\x00l\x00display-popup -E -w 80% -h 60% '/opt/imux/bin/imux limits --pager'",
 		"Close pane\x00k\x00kill-pane -t %3",
 	}

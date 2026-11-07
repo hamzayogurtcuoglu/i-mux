@@ -1096,6 +1096,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   that opens while the button is still down is closed by the release (measured: 0 of 4 menus
   survived a 600 ms press; 2 of 4 a 30 ms click).
 - The state glyph always takes its column (a space when idle) so the × and later tabs stay put.
+- Every range is followed by a cell outside any range: tmux 3.4 makes a range one cell longer
+  than drawn, so a range right after another lost its first cell (the × of the current tab took
+  the click as a window click; measured in Ubuntu 24.04's tmux 3.4).
 
 #### Open and close projects (v0.9)
 
@@ -1303,7 +1306,8 @@ right-click on a pane border. `imux __menu` builds the items from state and runs
    - Mnemonic keys `c` / `g` / `p` / `x`: **`Ctrl+\` `g` = switch to Gemini**.
 3. `Sessions…` (key `s`) opens the session picker.
 4. `New pane → <Agent>`, one per installed agent.
-5. `Preview handoff` (`display-popup -E -w 90% -h 90% "imux handoff --pane %N --print | less -R"`).
+5. `Preview handoff` (`display-popup -E -w 90% -h 90% "imux handoff --pane %N --print | LESSCHARSET=utf-8 less -R"`;
+   UTF-8 whatever the popup's locale).
 6. `Limits` (`display-popup -E "imux limits --pager"`).
 7. `Close pane`.
 

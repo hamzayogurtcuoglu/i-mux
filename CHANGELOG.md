@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-11-08
+
+### Fixed
+
+- With tmux 3.4 (Ubuntu 24.04) a click on the × of the current tab selected the tab instead of
+  asking to close it.
+- Under a locale that is not UTF-8, the handoff preview and other pages showed `·` and `→` as
+  `<C2><B7>` and `<E2><86><92>`.
+- A quick click in the sidebar right after another one on a different row (a file just after the
+  Source Control icon) was dropped as a double click.
+
 ## [0.18.0] - 2026-11-08
 
 ### Added

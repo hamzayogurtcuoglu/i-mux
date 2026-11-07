@@ -44,11 +44,14 @@ func (in *ConfInput) Clickable() bool {
 func TabFormat() string {
 	// The state glyph always takes its column (a space when idle), so the
 	// × and the next tabs do not move when an agent starts or stops.
-	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, } "
+	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }"
+	// Every range is followed by a cell outside any range: tmux 3.4 makes a
+	// range one cell longer than drawn, so a range right after another loses
+	// its first cell (the current tab took the click on its ×).
 	return "#[align=left] " +
 		"#{W:" +
-		"#[range=window|#{window_index}]#[fg=colour245]" + tab + "#[norange default] ," +
-		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange]" +
+		"#[range=window|#{window_index}]#[fg=colour245]" + tab + " #[norange default] ," +
+		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange] " +
 		"#[range=user|imux:close]#[bg=colour236 fg=colour245 nobold]× #[norange default] " +
 		"}" +
 		"#[range=user|imux:tab]#[fg=colour245] + #[norange default]" +
