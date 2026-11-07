@@ -64,15 +64,6 @@ var Defaults = map[session.AgentID][]Spec{
 	session.Codex: {
 		{`you'?ve hit your usage limit`, SevLimit},
 	},
-	// OpenCode shows its provider's errors; the provider decides the words.
-	session.OpenCode: {
-		{`rate limit (?:exceeded|reached)`, SevLimit},
-		{`too many requests`, SevLimit},
-		{`\b429\b.*(?:rate|limit|quota|requests)`, SevLimit},
-		{`quota (?:exceeded|exhausted)`, SevLimit},
-		{`insufficient (?:credits|quota|balance)`, SevLimit},
-		{`out of (?:credits|quota)`, SevLimit},
-	},
 }
 
 // Set is the compiled patterns of every agent.

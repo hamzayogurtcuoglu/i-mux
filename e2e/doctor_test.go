@@ -22,7 +22,7 @@ func TestDoctor(t *testing.T) {
 			t.Errorf("doctor output lacks %q:\n%s", want, out)
 		}
 	}
-	for _, a := range []string{"claude", "antigravity", "copilot", "codex", "opencode"} {
+	for _, a := range []string{"claude", "antigravity", "copilot", "codex"} {
 		if h.runs(a) != 0 {
 			t.Fatalf("doctor started %s", a)
 		}

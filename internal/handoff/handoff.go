@@ -273,12 +273,7 @@ func (r *renderer) render(convBudget int) (string, int, int) {
 	section(&bottom, "Where it stopped", r.whereStopped())
 	section(&bottom, "What to do now", r.whatNow())
 	if o.IncludeSourcePath && !o.Delta && r.main.Path != "" && !r.main.Reconstructed {
-		if session.SharedStore(r.main.Agent) {
-			// One database for every session: point to the CLI's export.
-			bottom.WriteString("Full transcript of the previous session (read only if needed): run `opencode session export " + r.main.ID + "`\n")
-		} else {
-			bottom.WriteString("Full transcript of the previous session (read only if needed): " + r.main.Path + "\n")
-		}
+		bottom.WriteString("Full transcript of the previous session (read only if needed): " + r.main.Path + "\n")
 	}
 
 	fixed := utf8.RuneCountInString(top.String()) + utf8.RuneCountInString(bottom.String())

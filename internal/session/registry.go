@@ -14,8 +14,6 @@ type Env struct {
 	AntigravityHome string // "" = ~/.gemini/antigravity-cli
 	CopilotHome     string // "" = $COPILOT_HOME or ~/.copilot
 	CodexHome       string // "" = $CODEX_HOME or ~/.codex
-	OpenCodeHome    string // "" = $XDG_DATA_HOME/opencode or ~/.local/share/opencode
-	OpenCodeBin     string // the opencode binary; "" = from the PATH
 }
 
 // UserHome returns Env.Home or $HOME.
@@ -63,14 +61,6 @@ func (e Env) Resolve(id AgentID) string {
 			return v
 		}
 		return filepath.Join(home, ".codex")
-	case OpenCode:
-		if e.OpenCodeHome != "" {
-			return e.OpenCodeHome
-		}
-		if v := os.Getenv("XDG_DATA_HOME"); v != "" {
-			return filepath.Join(v, "opencode")
-		}
-		return filepath.Join(home, ".local", "share", "opencode")
 	}
 	return ""
 }

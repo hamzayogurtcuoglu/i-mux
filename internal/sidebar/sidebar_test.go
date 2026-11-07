@@ -512,7 +512,7 @@ func TestGatherRealTmux(t *testing.T) {
 	for _, a := range m.Agents {
 		ids = append(ids, string(a.ID))
 	}
-	if strings.Join(ids, ",") != "claude,antigravity,copilot,codex,opencode" {
+	if strings.Join(ids, ",") != "claude,antigravity,copilot,codex" {
 		t.Errorf("agents %v", ids)
 	}
 	if !m.Agents[0].Current || m.Agents[1].Installed || m.Agents[3].Limited != "15:32" {

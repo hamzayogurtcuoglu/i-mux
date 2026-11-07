@@ -1,3 +1,0 @@
-#!/bin/sh
-# Fake opencode CLI for e2e tests (see fake.sh).
-FAKE_AGENT=opencode exec /bin/sh "$(dirname "$0")/fake.sh" "$@"

@@ -30,23 +30,6 @@ if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
 	exit 0
 fi
 
-# opencode keeps its sessions as fake-sessions/<id>.msgs (one JSON message per
-# line) next to an opencode.db that is not a database: imux falls back to the
-# ids it knows. `opencode session export [--standalone] <id>` prints them in
-# OpenCode's export shape.
-ocdir="${XDG_DATA_HOME:-$HOME/.local/share}/opencode"
-if [ "$agent" = opencode ] && [ "${1:-}" = session ] && [ "${2:-}" = export ]; then
-	for id in "$@"; do :; done
-	f="$ocdir/fake-sessions/$id.msgs"
-	[ -f "$f" ] || { echo "Session not found: $id" >&2; exit 1; }
-	dir=$(cat "$ocdir/fake-sessions/$id.dir")
-	printf '{"info":{"id":"%s","model":{"id":"fake-model","providerID":"fake"},"time":{"created":%s,"updated":%s},"location":{"directory":"%s"}},"messages":[' \
-		"$id" "$(head -c 13 "$ocdir/fake-sessions/$id.created")" "$(date +%s)000" "$dir"
-	awk 'NR > 1 { printf "," } { printf "%s", $0 }' "$f"
-	printf ']}\n'
-	exit 0
-fi
-
 # Claim the next run number atomically (noclobber create).
 n=1
 while ! (set -C; : >"$log/$agent-$n.argv") 2>/dev/null; do
@@ -151,17 +134,6 @@ EOF
 		printf '{"step_index":%d,"source":"MODEL","type":"GENERIC","status":"DONE","created_at":"%s","content":"ok"}\n' "$((step + 2))" "$ts" >>"$session"
 		printf '{"display":"%s","timestamp":%s000,"workspace":"%s"}\n' "$req" "$(date -u +%s)" "$PWD" >>"$root/history.jsonl"
 		printf '# Task\n\n- [x] fake antigravity step done %s\n- [/] fake antigravity step in progress %s\n' "$n" "$n" >"$dir/task.md"
-		;;
-	opencode)
-		id=$(opt --session "$@") || id="ses_$(uuid)"
-		mkdir -p "$ocdir/fake-sessions"
-		: >>"$ocdir/opencode.db"
-		session="$ocdir/fake-sessions/$id.msgs"
-		[ -e "$ocdir/fake-sessions/$id.created" ] || date +%s000 >"$ocdir/fake-sessions/$id.created"
-		printf '%s' "$PWD" >"$ocdir/fake-sessions/$id.dir"
-		ms="$(date +%s)000"
-		printf '{"type":"user","time":{"created":%s},"text":"%s"}\n' "$ms" "$req" >>"$session"
-		printf '{"type":"assistant","time":{"created":%s},"content":[{"type":"text","text":"%s"},{"type":"tool","name":"bash","state":{"status":"completed","input":{"command":"fake test %s"}}}]}\n' "$ms" "$reply" "$n" >>"$session"
 		;;
 	copilot)
 		id=$(opt --resume "$@") || id=$(uuid)

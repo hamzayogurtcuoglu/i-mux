@@ -223,9 +223,6 @@ func checkAgents(ctx context.Context, r *Report, o Options) {
 			continue
 		}
 		installed++
-		if a.ID == session.OpenCode && !checkOpenCode(r) {
-			continue // it cannot start: probing it would only add noise
-		}
 		ver := x.Version
 		if ver == "" {
 			ver = agent.ProbeVersion(x.Path, x.PathEnv)
@@ -361,43 +358,5 @@ func keyHints(r *Report, cfg *config.Config) {
 	}
 	if cfg.Tmux.MenuKeyRoot != "" {
 		r.add(Info, "doctor.key_vscode", cfg.Tmux.MenuKeyRoot)
-	}
-}
-
-// checkOpenCode: OpenCode needs a writable state folder (a root-owned
-// ~/.local/state, made by an earlier sudo, stops it), and imux lists its
-// sessions with the sqlite3 CLI (§7.7).
-func checkOpenCode(r *Report) bool {
-	if _, err := exec.LookPath("sqlite3"); err != nil {
-		r.add(Warn, "doctor.opencode_sqlite")
-	}
-	state := os.Getenv("XDG_STATE_HOME")
-	if state == "" {
-		state = filepath.Join(paths.UserHome(), ".local", "state")
-	}
-	if !writableDir(state) {
-		r.add(Fail, "doctor.opencode_state", paths.Shorten(state), state)
-		return false
-	}
-	return true
-}
-
-// writableDir reports whether dir (or, when it does not exist yet, its
-// nearest existing parent) can get new entries.
-func writableDir(dir string) bool {
-	for d := dir; ; d = filepath.Dir(d) {
-		if _, err := os.Stat(d); err == nil {
-			f, err := os.CreateTemp(d, ".imux-doctor-*")
-			if err != nil {
-				return false
-			}
-			name := f.Name()
-			f.Close()
-			os.Remove(name)
-			return true
-		}
-		if d == filepath.Dir(d) {
-			return false
-		}
 	}
 }

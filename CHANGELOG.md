@@ -6,6 +6,13 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-08
+
+### Removed
+
+- OpenCode support (added in 0.18.0). A pane an earlier version started with it shows under its
+  id in the sidebar and can be switched to another agent; it is not restored.
+
 ## [0.18.1] - 2026-11-08
 
 ### Fixed

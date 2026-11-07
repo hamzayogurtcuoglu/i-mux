@@ -12,14 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/limits"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/all" // register providers
-	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 )
 
 // ErrNotFound means no session matched.
@@ -27,21 +25,12 @@ var ErrNotFound = errors.New("no session found")
 
 // Env returns the provider environment with per-agent home overrides from cfg.
 func Env(cfg *config.Config) session.Env {
-	env := session.Env{
+	return session.Env{
 		ClaudeHome:      cfg.Agent("claude").Home,
 		AntigravityHome: cfg.Agent("antigravity").Home,
 		CopilotHome:     cfg.Agent("copilot").Home,
 		CodexHome:       cfg.Agent("codex").Home,
-		OpenCodeHome:    cfg.Agent("opencode").Home,
 	}
-	// OpenCode's sessions are read through its own CLI: find it the way
-	// launches do (config, PATH, then the bin cache: menus run with tmux's
-	// PATH).
-	st, _ := state.Read()
-	if r := agent.Resolve(cfg, session.OpenCode, st); r.Installed {
-		env.OpenCodeBin = r.Path
-	}
-	return env
 }
 
 // Finder finds and loads sessions.
