@@ -543,6 +543,25 @@ User feedback on v0.4 (ARCHITECTURE §9.3 "Sidebar v2", §8.2a).
     **+ Open a project…** with `imux open <dir>`.
 - [x] **T11.6 E2E and docs** · M
   - AC: real-client tests for project switching, renaming and a diff popup; README, screenshots.
+## M12: Quiet handoffs and sidebar v3 (added 2026-11-07)
+
+User feedback on v0.5: the handoff showed as a wall of text, and the sidebar should look more like
+an agent workspace with an agents section (ARCHITECTURE D18, §8.2b, §9.3 "Sidebar v3").
+
+- [ ] **T12.1 Short handoff message** · M
+  - AC: `handoff.deliver = "file"` (default) sends the marker, one localized sentence and the path;
+    `--add-dir=` for Claude, Copilot and Antigravity; delta, fallback, paste and `imux handoff`
+    use it too; `inline` keeps the old text; unit tests for the message and argv.
+- [ ] **T12.2 Chained handoffs through the file** · S · deps: T12.1
+  - AC: `ParseChained` follows the path on the message's last line (handoff files only); an e2e
+    chain Claude → Codex → Claude keeps the original request.
+- [ ] **T12.3 Sidebar v3** · M
+  - AC: PROJECTS, AGENTS cards, + New agent (auto direction), CHANGES, MOVE THIS CHAT TO without
+    the current agent, a bottom toolbar of two-button rows with per-button clicks and keyboard
+    selection; height trimming as in §9.3; golden tests.
+- [ ] **T12.4 E2E, docs, screenshots** · M · deps: T12.1–T12.3
+  - AC: existing sidebar e2e tests pass on v3; README, CONFIG.md and screenshots updated.
+
 ---
 
 ## Testing strategy

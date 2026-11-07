@@ -94,6 +94,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D15 | **Distribution:** GoReleaser (darwin/linux × arm64/amd64), `install.sh` (installs tmux if missing), Homebrew tap with `depends_on "tmux"` | Users never need Go. |
 | D16 | **The UI is built only from tmux-native elements:** a clickable second status line (`status-format[1]` with `#[range=user\|…]` regions), `display-menu` (mouse and keyboard), `display-popup` and pane border labels. No TUI framework. | tmux draws everything and handles mouse and keys, so nothing of ours stays resident and the lightness budget holds. tmux 3.8 supports `range=user\|X` (verified in its man page): a click fires the `MouseDown1Status` binding with `X` in `#{mouse_status_range}`. |
 | D17 | **The primary UI is a sidebar pane on the left of each window** (added 2026-11-07, at the user's request, after the bottom agent bar): a small `imux __sidebar` process drawing with ANSI escapes and reading keys and SGR mouse events, no TUI library. The agent bar stays as an option (`tmux.agent_bar`). | A sidebar can show what a status line cannot: every pane's agent and state, the switch targets, split buttons and help, all clickable. A familiar agent-workspace layout, built on tmux. Cost: one resident process per window (~6 MB, no CPU while idle: it sleeps until a tmux hook or the watcher signals it). |
+| D18 | **The handoff stays in its file; the agent gets a two-line message pointing to it** (added 2026-11-07, v0.6): `[i-mux handoff · A → B · time]`, one sentence in the user's language and the file's path. The agent reads the file with its own tools; `--add-dir` lets Claude, Copilot and Antigravity read `~/.imux/handoffs` without asking. `handoff.deliver = "inline"` keeps the old behavior. | The user saw the whole 30 000-character document as their own first message: a wall of text in the pane. The file is 0600, so the document also leaves argv (no process-list exposure, no argv size limit). Cost: one file read by the agent. Chained handoffs follow the path back to the file. |
 
 ## 4. Components
 
@@ -665,6 +666,28 @@ Details:
   tokens once (they would be spent on the next message anyway); no work is started unasked.
 - `continue`: the v0.1 behavior: continue the unfinished request, or give a short status.
 
+### 8.2b Delivery: a short message, the record in a file (v0.6)
+
+The user should not see the record. With `handoff.deliver = "file"` (default) the agent's first
+message is:
+
+```
+[i-mux handoff · Claude Code → Codex CLI · 2026-11-07 09:47]
+Claude Code hit its usage limit, so we continue here. First read this file in full: it is the record of this session and ends with what to do now.
+/Users/me/.imux/handoffs/20261107-094700-claude-to-codex.md
+```
+
+- The sentence is in the UI language (`i18n`): it is what the user sees, and it sets the reply
+  language. Variants: limit, manual switch, delta ("Welcome back…").
+- The path is the saved handoff (§8.1), alone on the last line (paths may contain spaces).
+- Claude, Copilot and Antigravity get `--add-dir=<handoffs dir>` so that reading it asks nothing
+  (the `=` form: Claude's `--add-dir` is variadic). Codex reads any path in every sandbox mode.
+- **Chained handoffs:** when a session's first user message is such a message, `ParseChained`
+  reads the file named on its last line (only a `YYYYMMDD-HHMMSS-a-to-b[-n].md` file inside a
+  `handoffs` directory, at most 4 MiB) and parses that. A pruned file leaves From/To/At only.
+- `deliver = "inline"` passes the whole document as before (argv or paste). Doctor's argv-exposure
+  warning applies only to inline.
+
 ### 8.3 Budget allocation
 
 Default `handoff.budget_chars = 30000` (characters, i.e. runes). Algorithm:
@@ -912,6 +935,54 @@ jump between projects, and asked why the new agent starts working (spending toke
   is shown; headings use plain words.
 - Rows that do not fit the height are cut from the bottom of PROJECTS and CHANGES first; the
   action buttons always stay.
+
+#### Sidebar v3: agents first (v0.6)
+
+Feedback on v0.5 (2026-11-07, screenshot): the panel looked like a list of text buttons; "agents"
+should be a section of their own, and "here", key letters in front of rows and six
+buttons made it hard to read.
+
+```
+ PROJECTS
+ ▌acme-api                 ●○
+   blog                     ●
+   + Open a folder…
+
+ AGENTS
+ ▌● backend fix       working
+      Claude · opus
+  ○ Codex                idle
+   + New agent…
+
+ CHANGES · main             3
+   M src/auth.ts
+   A test/auth.test.ts
+   ? notes.md
+
+ MOVE THIS CHAT TO
+   Antigravity         Google
+   Codex               OpenAI
+   Copilot      not installed
+
+ ────────────────────────────
+  ✎ Rename      ⧉ History
+  ◔ Limits      ? Help
+  ^b b hide · Ctrl+\ menu
+```
+
+- Sections separated by blank lines, not rules; the toolbar is anchored to the bottom.
+- **PROJECTS:** one row per project with its agents' state dots (up to 4, then `+N`); the current
+  one is marked `▌`. Click another: switch to it.
+- **AGENTS:** the current project's agent panes as cards: the name (the pane's name, else the
+  agent), the state on the right, and a second dim line with the agent (and model) when the pane is
+  named or the label has a model. **+ New agent…** splits the target pane with an agent chooser,
+  side by side when it is at least twice as wide as tall (in cells), else one above the other.
+- **MOVE THIS CHAT TO:** the other agents (the current one is left out), maker on the right.
+  No key letters in rows; keys are in Help.
+- **Toolbar:** two buttons per row; a click hits the button under the pointer, the keyboard
+  selection moves over buttons. Rename, History (the session picker), Limits, Help.
+- Rows that do not fit: CHANGES shrinks to 2 + "+N more", then cards lose their second line,
+  then other projects shrink, then blank lines go.
 
 #### Agent bar
 
