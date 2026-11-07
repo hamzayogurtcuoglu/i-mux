@@ -635,6 +635,19 @@ User request: a VS Code-like Recent list that reopens a project as it was last c
   - AC: a project with two tabs and a named pane is closed, reopened from the picker and comes
     back with both tabs, the name and each fake agent resumed with its session id; README.
 
+## M17: Agent menu (added 2026-11-07)
+
+User request: rename an agent from its row and close an agent (ARCHITECTURE §9.3 "Open and close
+projects", agent menu).
+
+- [ ] **T17.1 Agent menu** · M
+  - AC: right-click on an agent row, or a click on the selected one, opens Go to / Rename… /
+    Close agent…; rename prefills the name; close asks first and closes the tab or project when it
+    was the last agent; unit tests for the sidebar actions and the close rules.
+- [ ] **T17.2 E2E and docs** · S · deps: T17.1
+  - AC: real-client tests: right-click → Rename names the pane; right-click → Close removes it;
+    README.
+
 ---
 
 ## Testing strategy

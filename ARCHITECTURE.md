@@ -1095,6 +1095,12 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   project, right-click any) → "Close project…" → confirm ("stops its N agents; their
   conversations stay in History"). A client showing it is switched to the most recent other
   project first; without one it detaches.
+- **Agent menu** (v0.11): a right-click on an agent row, or a click on the agent already selected,
+  opens its menu: Go to it, Rename… (a `command-prompt` filled with the current name; empty
+  clears it, the agent's own name shows again), Close agent… (confirm: "its conversation stays in
+  History"). Closing the last agent of a tab closes the tab; of the last tab, the project (the
+  client moves first). The name belongs to the pane, so it stays when the chat moves to another
+  CLI.
 - **Close a tab:** the **×** after the current tab (`range=user|imux:close`) → confirm →
   `imux __close-tab`; the last tab closes the project as above.
 
