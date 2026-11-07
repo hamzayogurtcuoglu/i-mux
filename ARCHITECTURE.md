@@ -656,6 +656,15 @@ Details:
   were away the user continued in X; here is what happened there." It keeps only Conversation,
   Files touched, Repository state, Where it stopped and What to do now.
 
+### 8.2a Arrival: wait for the user (v0.5)
+
+`handoff.on_arrival` decides what the new agent does with the handoff:
+
+- `wait` (default): "Read the record, reply with one short sentence that you have the context, then
+  wait for the user's next message; do not start working." Reading the handoff costs its input
+  tokens once (they would be spent on the next message anyway); no work is started unasked.
+- `continue`: the v0.1 behavior: continue the unfinished request, or give a short status.
+
 ### 8.3 Budget allocation
 
 Default `handoff.budget_chars = 30000` (characters, i.e. runes). Algorithm:
@@ -857,6 +866,52 @@ default 30 columns), running `imux __sidebar`:
   plus a 15 s safety refresh. One redraw = one batched tmux exec plus `state.json`.
 - **Pane state:** the watcher already hashes each agent pane's bottom lines every tick; it now also
   writes `@imux_state` (`working` / `idle`) on change. Only while a client is attached.
+
+#### Sidebar v2: projects, changes, names (v0.5)
+
+Feedback on v0.4 (2026-11-07): the user wanted to see the project and its git changes, to tell the
+agents apart ("Claude, Copilot… I can't name them"), to see the agents of every open project and
+jump between projects, and asked why the new agent starts working (spending tokens) right away.
+
+```
+ PROJECTS
+ ▾ acme-api             current
+  ▌● backend fix   Claude
+   ○ tests         Codex
+ ▸ blog                ●○ 2
+ + Open a project…
+ ──────────────────────────────
+ CHANGES · main
+  M src/auth.ts
+  A test/auth.test.ts
+  ? notes.md
+ ──────────────────────────────
+ SWITCH TO · keeps the chat
+ c Claude          current
+ a Antigravity      Google
+ x Codex            OpenAI
+   Copilot   not installed
+ ──────────────────────────────
+ ✎ Name this pane
+ → Split right   ↓ Split down
+ ⧉ Sessions  ◔ Limits  ? Keys
+```
+
+- **PROJECTS** replaces PANES: every imux session (one per project directory) with its agents. The
+  current project is expanded; others show their state dots and count. Click: another project →
+  `switch-client` to it; an agent → focus it (in another project: switch to it). **+ Open a
+  project…** asks for a folder (`command-prompt`) and runs `imux open <dir>` (start the project's
+  session and switch the client to it).
+- **CHANGES** (git only): branch and `git status --short` files, at most 8 rows plus "+N more".
+  Click a file: a popup with its diff (`git diff --color=always -- <file> | less -R`; the file
+  itself when untracked). Hidden outside a git repository.
+- **Names:** `@imux_name` on a pane; **✎ Name this pane** (or `n`) asks for it with `command-prompt`
+  (`%%%` escapes quotes) and `imux rename`. The name leads the sidebar row and the pane border
+  (`backend fix · Claude`).
+- **Who is who:** each agent row shows its maker (Anthropic, Google, GitHub, OpenAI) when no status
+  is shown; headings use plain words.
+- Rows that do not fit the height are cut from the bottom of PROJECTS and CHANGES first; the
+  action buttons always stay.
 
 #### Agent bar
 

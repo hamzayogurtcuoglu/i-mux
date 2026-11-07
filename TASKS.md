@@ -523,6 +523,26 @@ sidebar (ARCHITECTURE D17, §9.3 "Sidebar").
     and shows the sidebar; closing the last agent pane closes the window.
 - [x] **T10.7 Docs and screenshots** · S · deps: T10.6
   - AC: README keys and screenshots show the sidebar; CONFIG.md lists the new keys.
+
+## M11: Friendlier sidebar (added 2026-11-07)
+
+User feedback on v0.4 (ARCHITECTURE §9.3 "Sidebar v2", §8.2a).
+
+- [ ] **T11.1 Wait on arrival** · S
+  - AC: `handoff.on_arrival = "wait"` (default) asks the new agent for a one-sentence
+    acknowledgement and to wait; `continue` keeps the old text; golden tests for both.
+- [ ] **T11.2 Makers and plain headings** · S
+  - AC: agent rows show Anthropic / Google / GitHub / OpenAI; headings read as plain words.
+- [ ] **T11.3 Pane names** · M
+  - AC: `imux rename [--pane] <name>`; ✎ in the sidebar and `n` ask with `command-prompt`; the name
+    shows in the sidebar and the pane border; quotes in names are safe.
+- [ ] **T11.4 CHANGES** · M
+  - AC: git status files (≤ 8 + "+N more") with a diff popup per file; hidden outside git.
+- [ ] **T11.5 PROJECTS** · M
+  - AC: all imux sessions with their agents; click switches project or focuses an agent;
+    **+ Open a project…** with `imux open <dir>`.
+- [ ] **T11.6 E2E and docs** · M
+  - AC: real-client tests for project switching, renaming and a diff popup; README, screenshots.
 ---
 
 ## Testing strategy
