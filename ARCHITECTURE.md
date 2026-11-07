@@ -102,6 +102,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D23 | **Projects and tabs close from the UI** (v0.9): a click on the current project (or a right-click on any) opens its menu with Close; the current tab has a **×**; both ask first. Closing the project the client shows moves the client to another project first. | Sessions outlive the terminal, so projects piled up in the sidebar ("why does i-mux show up on its own?") with no visible way to close them. The agents' own session files stay, so a closed conversation can be continued from History. |
 | D24 | **Projects reopen as they were** (added 2026-11-07, v0.10, at the user's request: "like VS Code, save what was open when I closed it"): the watcher snapshots every open project (tabs, names, layouts, each pane's agent, name and conversation) to `~/.imux/workspace.json`; closing a project snapshots it too. Opening a folder with a snapshot recreates its tabs and panes, each agent resuming its conversation natively. The picker shows **Recent** (with tabs, agents and age) above the other folders, and **Restore last session** after the tmux server went away (a reboot). | tmux sessions die with the machine and with Close, and the user had to rebuild tabs and find conversations again. The trail already records each run (agent, start, session id), so a snapshot is a list of trail entries; native resume (§8.6) brings each conversation back without a handoff. |
 | D25 | **Plan percentages come from the CLIs themselves** (added 2026-11-07, v0.13): Claude Code gives its status-line command `rate_limits.five_hour` / `seven_day` (`used_percentage`, `resets_at`; Pro/Max, after the first reply), so imux starts Claude with `--settings=~/.imux/claude-settings.json` whose `statusLine` is `imux __statusline claude`: it records the numbers in `~/.imux/usage/claude.json` and prints the user's own status line (from their settings, highest precedence first) or a short usage line. Codex already writes `rate_limits` in its rollouts. Copilot writes `quotaSnapshots.premium_interactions` (entitlement, used requests, remaining %, reset date) in every `model.model_call_success` event of its session files (v0.14: read from there). Antigravity keeps its quota inside its local language server, behind a CSRF token of the running agy process; imux does not read it, so the panel shows only limits seen on screen for it. | The user found the limits panel unreadable and asked for percentages per window. No credentials are read and no request is sent: the numbers are the ones each CLI already has. The user's settings files are never written. |
+| D26 | **The sidebar gets an activity bar like an editor's** (added 2026-11-08, v0.15, at the user's request): a 3-column rail of view icons (Agents, Explorer, Search, Source Control; Limits and Help at the bottom). Explorer is the project's file tree; Search and diffs open in wide popups; a diff shows the whole file with the changes highlighted, side by side when wide. | The user wanted the editor's way of looking at a project (files, search, changes) next to the agents, without leaving the terminal. A narrow sidebar is enough to choose; reading happens in popups that use the whole window. |
 
 ## 4. Components
 
@@ -1165,6 +1166,37 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Limits panel** (`imux limits`, ◔ Limits): one block per agent with a bar per window:
   `5-hour ███████░░░ 72% · resets 15:00`, `weekly ██░░░░░░░░ 18% · resets Mon 09:00`; a limit seen
   on screen in red; "not reported by <agent>" for Copilot and Antigravity, with their local counts.
+
+#### Sidebar v6: activity bar, explorer, search, diffs (v0.15)
+
+```
+ ✻ │ ▾ PROJECTS                    +        ✻ Agents (default)
+   │  O  opcua-qtclient     main ●          ▤ Explorer
+ ▤ │ ▾ AGENTS                      +        ⌕ Search (popup)
+   │  ✻  Claude               1h ○          ⑂ Source Control (yellow when files changed)
+ ⌕ │ ...                                    ◔ Limits, ? Help (bottom)
+ ⑂ │
+ ◔ │
+ ? │
+```
+
+- **Rail:** 3 columns; the active view is marked (`▌` and a background). The view of a sidebar is
+  kept in the window option `@imux_view`. Default width 38 (rail 3 + 35).
+- **Explorer:** the target pane's project folder as a tree: folders first, then files, by name;
+  hidden entries and `.git`, `node_modules` and similar left out; folders open and close on click
+  (kept per sidebar); files changed in git are colored (modified yellow, added / untracked green,
+  deleted red) and their folders too. A file opens in a popup viewer: `bat` when installed
+  (`--style=numbers,changes`), else `less -N`. Long trees scroll (wheel, ↑↓).
+- **Search** (`imux __search`, popup 90%): a query line; results as you type (150 ms), grouped by
+  file with line numbers and the match highlighted; smart case (uppercase in the query makes it
+  case-sensitive); files from `git ls-files` (tracked and untracked, not ignored) or a walk with
+  the explorer's skip list; text files under 2 MB; at most 2 000 matches. Enter opens the file
+  at the line in the viewer.
+- **Source Control:** every changed file with +/− lines; a click opens the diff viewer
+  (`imux __diff`): `git diff -U<all> HEAD` of the file (an untracked file is all added) drawn with
+  line numbers, removed lines on a red background and added ones on green; side by side when the
+  popup is at least 120 columns wide, otherwise one column; `less -R -S` starts at the first
+  change.
 
 #### Agent bar
 

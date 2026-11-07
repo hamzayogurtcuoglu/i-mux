@@ -685,6 +685,25 @@ User feedback with a screenshot (ARCHITECTURE D25, §9.3 "Sidebar v5").
   - AC: "send it a message in imux: the percentages show after its first reply" for Claude,
     Codex and Copilot; Antigravity: "keeps its quota to itself; a limit hit shows here".
 
+## M21: Activity bar, explorer, search and diffs (added 2026-11-08)
+
+User request with a screenshot of an editor (ARCHITECTURE D26, §9.3 "Sidebar v6").
+
+- [ ] **T21.1 Diff viewer** · M
+  - AC: whole-file diffs with line numbers and colored lines, side by side when wide; untracked
+    and deleted files; starts at the first change; golden tests.
+- [ ] **T21.2 File viewer** · S
+  - AC: `imux __view [--line N] <file>` with bat or less; unit test for the command it builds.
+- [ ] **T21.3 Search** · M
+  - AC: smart-case search over the project's files with the caps; a popup UI with live results
+    and Enter to open; unit tests on a temp tree.
+- [ ] **T21.4 Activity bar and views** · L · deps: T21.1–T21.3
+  - AC: rail with Agents, Explorer, Search, Source Control, Limits, Help; explorer tree with
+    folding, git colors and scrolling; source control view; `@imux_view`; golden tests.
+- [ ] **T21.5 E2E and docs** · M · deps: T21.4
+  - AC: real clicks: explorer opens a folder and a file; source control opens a diff with the
+    whole file; search finds a word and opens it; README, screenshots.
+
 ---
 
 ## Testing strategy
