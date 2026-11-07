@@ -6,6 +6,19 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-07
+
+### Added
+
+- **Copilot's monthly quota in Limits:** a bar with the share of premium requests used, "N of M
+  premium requests used" and the reset date, read from Copilot's own session files (the numbers
+  of its last reply).
+
+### Changed
+
+- Clearer limit texts: until an agent has answered once, the panel says to send it a message;
+  Antigravity, which keeps its quota to itself, shows only limits it hits.
+
 ## [0.13.0] - 2026-11-07
 
 ### Added

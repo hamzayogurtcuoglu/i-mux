@@ -102,6 +102,6 @@ func TestMenuItemsByKey(t *testing.T) {
 	// Limits: the panel in a popup.
 	mark = open()
 	c.Write("l")
-	c.waitScreenAfter(h, mark, "does not report plan percentages", 5*time.Second)
+	c.waitScreenAfter(h, mark, "keeps its quota to itself", 5*time.Second)
 	c.Write("q")
 }

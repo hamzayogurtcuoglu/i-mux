@@ -74,7 +74,7 @@ bunun ne kadar önce olduğu. Hepsi tıklanabilir:
 | **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder |
 | **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver (terminal başlığı koyan agent'lar kendini adlandırır) |
 | **KAYNAK KONTROLÜ** altındaki bir dosya | farkı (diff); her dosya eklenen / silinen satır sayısını gösterir. Bölüm başlığına tıklayınca bölüm kapanır / açılır |
-| **⧉ Geçmiş** (ya da `prefix S`) · **◔ Limitler** · **? Yardım** | eski konuşmalar · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %) · bütün tuşlar |
+| **⧉ Geçmiş** (ya da `prefix S`) · **◔ Limitler** · **? Yardım** | eski konuşmalar · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) · bütün tuşlar |
 | en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat |
 | `prefix b` | kenar paneli gizle ya da göster |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` | pane menüsü; Claude / Antigravity / Copilot / Codex'te sürdür |

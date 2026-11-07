@@ -50,6 +50,7 @@ type Usage struct {
 	CacheReadTokens int64                      `json:"cache_read_tokens,omitempty"`
 	CacheWrite      int64                      `json:"cache_write_tokens,omitempty"`
 	PremiumRequests float64                    `json:"premium_requests,omitempty"`
+	CopilotQuota    *CopilotQuota              `json:"copilot_quota,omitempty"`
 	Sessions        int                        `json:"sessions,omitempty"`
 	RateLimits      *session.RateLimitSnapshot `json:"rate_limits,omitempty"`
 }
@@ -83,7 +84,10 @@ func Collect(ctx context.Context, cfg *config.Config, st *state.State, installed
 			}
 		case session.Copilot:
 			m := CopilotMonth(ctx, f, now)
-			row.Usage = &Usage{Window: "month", From: m.Start, PremiumRequests: m.PremiumRequests, Sessions: m.Sessions}
+			row.Usage = &Usage{
+				Window: "month", From: m.Start, PremiumRequests: m.PremiumRequests, Sessions: m.Sessions,
+				CopilotQuota: CopilotQuotaNow(ctx, f),
+			}
 		case session.Codex:
 			row.Usage = &Usage{Window: "latest", RateLimits: CodexLimits(ctx, f)}
 		}
@@ -135,7 +139,20 @@ func (r *Report) Table(w io.Writer) error {
 		if u != nil {
 			rl = u.RateLimits
 		}
+		var cq *CopilotQuota
+		if u != nil {
+			cq = u.CopilotQuota
+		}
 		switch {
+		case cq != nil && cq.Unlimited:
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.copilot_unlimited"), reset)
+		case cq != nil:
+			b.WriteString(windowLine(i18n.T("limits.win_month"), cq.UsedPercent, cq.ResetsAt, now))
+			line := i18n.T("limits.copilot_requests", trimFloat(cq.Used), trimFloat(cq.Entitlement))
+			if !cq.At.IsZero() {
+				line += " · " + i18n.T("limits.as_of", textfmt.Ago(now, cq.At))
+			}
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, line, reset)
 		case rl != nil:
 			if rl.PrimaryWindowMinutes > 0 || rl.PrimaryUsedPercent > 0 {
 				b.WriteString(windowLine(windowName(rl.PrimaryWindowMinutes, "5h"), rl.PrimaryUsedPercent, rl.PrimaryResetsAt, now))
@@ -147,10 +164,12 @@ func (r *Report) Table(w io.Writer) error {
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.pct_later_claude"), reset)
 		case row.Agent == session.Codex:
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.pct_later_codex"), reset)
+		case row.Agent == session.Copilot:
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.pct_later_copilot"), reset)
 		default:
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.no_pct", name), reset)
 		}
-		if t := usageText(row, now); t != "" {
+		if t := usageText(row, now); t != "" && cq == nil {
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, t, reset)
 		}
 		if row.Limit != nil && row.Limit.Text != "" {
@@ -248,4 +267,9 @@ func short(n int64) string {
 		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(n)/1000), ".0") + "K"
 	}
 	return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(n)/1e6), ".0") + "M"
+}
+
+// trimFloat prints 1.6 as "1.6" and 200 as "200".
+func trimFloat(f float64) string {
+	return strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.1f", f), "0"), ".")
 }

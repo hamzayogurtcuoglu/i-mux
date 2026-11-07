@@ -120,10 +120,10 @@ func TestReportTableAndJSON(t *testing.T) {
 	out := stripANSI(b.String())
 	for _, want := range []string{
 		"Claude", "◆ limit reached · back at 15:00", `"5-hour limit reached ∙ resets 3pm" (seen 12 min ago)`,
-		"percentages show after Claude answers once",
-		"Antigravity", "● available", "Antigravity does not report plan percentages", "today: 2 requests · 200 in / 20 out · 10 cache read",
+		"Send Claude a message in an imux pane",
+		"Antigravity", "● available", "Antigravity keeps its quota to itself", "today: 2 requests · 200 in / 20 out · 10 cache read",
 		"Copilot", "not installed",
-		"Codex", "◐ approaching a limit", "percentages show after Codex answers once",
+		"Codex", "◐ approaching a limit", "Send Codex a message",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("table lacks %q:\n%s", want, out)
@@ -181,3 +181,33 @@ func TestReportTableAndJSON(t *testing.T) {
 var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func stripANSI(s string) string { return ansiRe.ReplaceAllString(s, "") }
+
+func TestCopilotQuota(t *testing.T) {
+	h := testutil.Isolate(t)
+	ev := func(used, rem float64, unlimited bool) string {
+		u := "false"
+		if unlimited {
+			u = "true"
+		}
+		return `{"type":"model.model_call_success","timestamp":"2026-11-05T10:00:00Z","data":{"quotaSnapshots":{"chat":{"isUnlimitedEntitlement":true,"entitlementRequests":-1,"usedRequests":0,"remainingPercentage":100},` +
+			`"premium_interactions":{"isUnlimitedEntitlement":` + u + `,"entitlementRequests":200,"usedRequests":` + trimFloat(used) + `,"remainingPercentage":` + trimFloat(rem) + `,"resetDate":"2026-12-01T00:00:00Z"}}}}`
+	}
+	q := ParseCopilotQuota([]byte(ev(1.6, 99.2, false)))
+	if q == nil || q.Entitlement != 200 || q.Used != 1.6 || q.UsedPercent < 0.79 || q.UsedPercent > 0.81 || q.ResetsAt.Day() != 1 || q.At.IsZero() {
+		t.Fatalf("quota %+v", q)
+	}
+	if q := ParseCopilotQuota([]byte(ev(5, 100, true))); q == nil || !q.Unlimited || q.UsedPercent != 0 {
+		t.Fatalf("unlimited %+v", q)
+	}
+	if ParseCopilotQuota([]byte(`{"type":"x","data":{}}`)) != nil || ParseCopilotQuota(nil) != nil {
+		t.Fatal("no snapshot")
+	}
+	// The newest snapshot of a session folder's events.jsonl.
+	dir := filepath.Join(h.Copilot, "session-state", "11111111-aaaa-4000-8000-000000000009")
+	testutil.WriteFile(t, filepath.Join(dir, "workspace.yaml"), []byte("id: x\ncwd: "+h.Project+"\n"))
+	testutil.WriteFile(t, filepath.Join(dir, "events.jsonl"), []byte(ev(1, 99.5, false)+"\n"+`{"type":"user.message","data":{"content":"x"}}`+"\n"+ev(3, 98.5, false)+"\n"))
+	q = CopilotQuotaNow(context.Background(), sources.New(config.Default()))
+	if q == nil || q.Used != 3 {
+		t.Fatalf("newest %+v", q)
+	}
+}

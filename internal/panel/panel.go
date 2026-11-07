@@ -4,7 +4,12 @@
 package panel
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/limits"
@@ -100,4 +105,84 @@ func CodexLimits(ctx context.Context, f *sources.Finder) *session.RateLimitSnaps
 		}
 	}
 	return nil
+}
+
+// CopilotQuota is Copilot's monthly premium-request quota as its session
+// files last recorded it (quotaSnapshots.premium_interactions of a
+// model.model_call_success event).
+type CopilotQuota struct {
+	Entitlement float64   `json:"entitlement"` // requests per month; 0 when unlimited
+	Used        float64   `json:"used"`
+	UsedPercent float64   `json:"used_percent"`
+	Unlimited   bool      `json:"unlimited,omitempty"`
+	ResetsAt    time.Time `json:"resets_at,omitzero"`
+	At          time.Time `json:"at"`
+}
+
+// CopilotQuotaNow reads the newest quota snapshot of Copilot's sessions
+// (nil when none has one: Copilot writes it after a model reply).
+func CopilotQuotaNow(ctx context.Context, f *sources.Finder) *CopilotQuota {
+	for _, r := range f.Find(ctx, []session.AgentID{session.Copilot}, session.Query{Limit: 20}) {
+		if q := copilotQuotaIn(r.Path); q != nil {
+			return q
+		}
+	}
+	return nil
+}
+
+// copilotQuotaIn returns the last quota snapshot of a session (its folder,
+// or its events.jsonl).
+func copilotQuotaIn(path string) *CopilotQuota {
+	if fi, err := os.Stat(path); err == nil && fi.IsDir() {
+		path = filepath.Join(path, "events.jsonl")
+	}
+	fh, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer fh.Close()
+	var last []byte
+	sc := bufio.NewScanner(fh)
+	sc.Buffer(make([]byte, 64*1024), 16<<20)
+	for sc.Scan() {
+		if bytes.Contains(sc.Bytes(), []byte(`"quotaSnapshots"`)) {
+			last = append(last[:0], sc.Bytes()...)
+		}
+	}
+	return ParseCopilotQuota(last)
+}
+
+// ParseCopilotQuota reads the premium_interactions snapshot of one event.
+func ParseCopilotQuota(line []byte) *CopilotQuota {
+	var ev struct {
+		Timestamp time.Time `json:"timestamp"`
+		Data      struct {
+			QuotaSnapshots map[string]struct {
+				Unlimited   bool     `json:"isUnlimitedEntitlement"`
+				Entitlement float64  `json:"entitlementRequests"`
+				Used        float64  `json:"usedRequests"`
+				Remaining   *float64 `json:"remainingPercentage"`
+				ResetDate   string   `json:"resetDate"`
+			} `json:"quotaSnapshots"`
+		} `json:"data"`
+	}
+	if len(line) == 0 || json.Unmarshal(line, &ev) != nil {
+		return nil
+	}
+	p, ok := ev.Data.QuotaSnapshots["premium_interactions"]
+	if !ok {
+		return nil
+	}
+	q := &CopilotQuota{Unlimited: p.Unlimited, Used: p.Used, At: ev.Timestamp}
+	if !p.Unlimited && p.Entitlement > 0 {
+		q.Entitlement = p.Entitlement
+		q.UsedPercent = p.Used / p.Entitlement * 100
+	}
+	if p.Remaining != nil && !p.Unlimited {
+		q.UsedPercent = 100 - *p.Remaining
+	}
+	if t, err := time.Parse(time.RFC3339, p.ResetDate); err == nil {
+		q.ResetsAt = t
+	}
+	return q
 }
