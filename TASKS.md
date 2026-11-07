@@ -724,6 +724,14 @@ User feedback (ARCHITECTURE D27, §9.3 "Sidebar v7").
   - AC: real clicks: stage a file, commit it with a message, discard a change (confirmed); a file
     opens in the editor; search folds a file; README.
 
+## M23: Editor icons and the rail's line (added 2026-11-08)
+
+- [x] **T23.1 Icon themes** · S
+  - AC: `tmux.icons` auto | nerd | emoji; auto from installed Nerd Fonts and the terminal; unit
+    tests for the detection and the nerd theme's widths.
+- [x] **T23.2 Separator** · S
+  - AC: a line between the rail and the view on every row; default width 41; golden tests.
+
 ---
 
 ## Testing strategy

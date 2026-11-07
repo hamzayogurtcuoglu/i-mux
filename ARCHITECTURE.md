@@ -1215,8 +1215,13 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   Git │
 ```
 
-- **Rail:** 6 columns; an emoji (2 columns, colored) with a short label under it, one item per
-  three rows; on short windows (< 26 rows) the labels go. Default sidebar width 40.
+- **Rail:** 7 columns: the item (an icon with a short label under it, one item per three rows;
+  on short windows, < 26 rows, the labels go) and a separator line. Icons (v0.17, `tmux.icons`):
+  `nerd` = the editor's codicons from a Nerd Font (v3: hubot U+EB08, files U+EAF0, search
+  U+EA6D, source_control U+EA68, dashboard U+EACD, question U+EB32), `emoji`, or `auto` = nerd
+  when a Nerd Font file is installed (`*Nerd*`, `*NF-*`, `*NFM-*` in the font folders) or the
+  client terminal brings Nerd Font symbols (Ghostty, WezTerm, kitty: `client_termname`), else
+  emoji. Default sidebar width 41.
 - **Source control:** `git status --porcelain` splits into STAGED CHANGES (index column) and
   CHANGES (work tree column, untracked included); each row: status, path, +/− (`git diff
   --cached --numstat` / `git diff --numstat`), then its buttons. Row click: the diff of that side
