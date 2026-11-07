@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -161,6 +162,36 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal bool) *Menu {
 			it.Name += " " + i18n.T("sidebar.limited", until)
 		}
 		m.Items = append(m.Items, it)
+	}
+	return m
+}
+
+// ChangesMenu lists the target project's changed files (git status); each
+// opens its diff in a popup. nil when nothing changed.
+func (w *WS) ChangesMenu(ctx context.Context, p *Pane, client string) *Menu {
+	gi := gitinfo.Collect(ctx, p.CWD)
+	if gi.State != gitinfo.OK {
+		return nil
+	}
+	rows := sidebar.ParseStatus(gi.Status)
+	if len(rows) == 0 {
+		return nil
+	}
+	title := i18n.T("sidebar.changes")
+	if gi.Branch != "" {
+		title += " · " + gi.Branch
+	}
+	m := &Menu{Title: title}
+	for _, r := range rows {
+		c := "display-popup"
+		if client != "" {
+			c += " -c " + tmux.Quote(client)
+		}
+		c += " -E -w 90% -h 90% -d " + tmux.Quote(p.CWD) + " " + tmux.Quote(sidebar.DiffShell(r.Status, r.Path))
+		m.Items = append(m.Items, MenuItem{Name: r.Status + "  " + r.Path, Cmd: c})
+	}
+	if more := gi.StatusTotal - len(rows); more > 0 {
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("menu.more", more), Disabled: true})
 	}
 	return m
 }

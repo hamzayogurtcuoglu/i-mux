@@ -56,18 +56,19 @@ cd ~/code/projem
 imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
-Soldaki **kenar panel** projelerini, bu projede çalışan agent'ları (● çalışıyor, ○ boşta,
-◆ limitli), projenin git değişikliklerini ve yapabileceğin her şeyi gösterir; hepsi tıklanabilir:
+Soldaki **kenar panel** projelerini (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan
+bütün agent'ları, her birinin ne yaptığıyla gösterir: çalışırken dönen bir işaret, sana bir şey
+sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve
+bunun ne kadar önce olduğu. Hepsi tıklanabilir:
 
 | Kenar panel / tuş | Ne yapar |
 |---|---|
-| **PROJELER** altındaki bir projeye tıkla | o projeye geç; **+ Proje aç…** (ya da `o`) başka bir klasörü yanına açar |
-| **AGENT'LAR** altındaki bir agent'a tıkla | ona geç; **+ Yeni agent…** hangi agent diye sorar ve yeni pane'de açar (sağa / aşağı için `prefix v` / `prefix -`) |
-| **DEĞİŞİKLİKLER** altındaki bir dosyaya tıkla | farkını (diff) gör |
-| **SOHBETİ AKTAR** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder (Claude: Anthropic, Antigravity: Google, Codex: OpenAI, Copilot: GitHub) |
-| **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver |
-| **⧉ Geçmiş** (ya da `prefix S`) | projenin önceki bir konuşmasını sürdür |
-| **◔ Limitler** · **? Yardım** | kullanım limitleri; bütün tuşlar tek bakışta |
+| bir projeye tıkla · **Projeler** yanındaki **+** (ya da `o`) | o projeye geç · başka bir klasörü yanına aç |
+| bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni bir pane'de yeni agent aç (sağa / aşağı için `prefix v` / `prefix -`) |
+| **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder |
+| **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver (terminal başlığı koyan agent'lar kendini adlandırır) |
+| **± Değişiklik** (ya da `f`) | değişen dosyalar; birini seçince farkını (diff) gösterir |
+| **⧉ Geçmiş** (ya da `prefix S`) · **◔ Limitler** · **? Yardım** | eski konuşmalar · kullanım limitleri · bütün tuşlar |
 | `prefix b` | kenar paneli gizle ya da göster |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` | pane menüsü; Claude / Antigravity / Copilot / Codex'te sürdür |
 

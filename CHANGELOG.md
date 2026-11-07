@@ -6,6 +6,25 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-07
+
+### Changed
+
+- **New sidebar:** **Projects** with a colored letter, branch, a dot for uncommitted changes and
+  the most urgent state of their agents; **Agents** of every project grouped by project, each with
+  its icon, name, how long ago its state changed and its state; **Continue this chat in** as
+  buttons; a toolbar with Rename, Changes (a menu of changed files with their diffs), History,
+  Limits and Help. The default width is 34 columns.
+- Agents are named after their terminal title when they set one (Claude Code does), unless you
+  name them.
+
+### Added
+
+- **Needs you:** an agent that asks a question (a permission prompt, a numbered Yes choice, y/n)
+  is marked in the sidebar.
+- **Done:** an agent that finished while you looked elsewhere gets a green dot until you look.
+- A working agent's spinner turns; it costs no tmux calls.
+
 ## [0.6.0] - 2026-11-07
 
 ### Changed

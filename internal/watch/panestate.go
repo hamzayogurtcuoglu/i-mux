@@ -3,6 +3,7 @@ package watch
 import (
 	"context"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
@@ -13,16 +14,19 @@ import (
 // working.
 const WorkingFor = 3 * time.Second
 
-// PaneStates writes each agent pane's state (@imux_state: working or idle)
-// from the watcher's activity, only when it changes, and then makes the
-// sidebars redraw (§9.3 "Sidebar").
+// PaneStates writes each agent pane's state (@imux_state: working, idle or
+// blocked) from the watcher's activity, only when it changes, with the time
+// of the change (@imux_state_at, unix seconds) and, when work ended, the
+// time it ended (@imux_done_at: the sidebar shows "Done" until the user looks
+// at the pane). Then it makes the sidebars redraw (§9.3 "Sidebar v4").
 type PaneStates struct {
 	T    *tmux.Client
 	last map[string]string
 }
 
-// Commands returns the set-option commands for states that changed.
-func (s *PaneStates) Commands(at time.Time, changed map[string]time.Time) []tmux.Cmd {
+// Commands returns the set-option commands for states that changed. An idle
+// screen that asks a question is blocked ("Needs you").
+func (s *PaneStates) Commands(at time.Time, changed map[string]time.Time, asking map[string]bool) []tmux.Cmd {
 	if s.last == nil {
 		s.last = map[string]string{}
 	}
@@ -33,17 +37,26 @@ func (s *PaneStates) Commands(at time.Time, changed map[string]time.Time) []tmux
 	sort.Strings(panes)
 	var cmds []tmux.Cmd
 	seen := map[string]bool{}
+	stamp := strconv.FormatInt(at.Unix(), 10)
 	for _, p := range panes {
 		seen[p] = true
 		st := sidebar.StateIdle
-		if at.Sub(changed[p]) < WorkingFor {
+		switch {
+		case at.Sub(changed[p]) < WorkingFor:
 			st = sidebar.StateWorking
+		case asking[p]:
+			st = sidebar.StateBlocked
 		}
-		if s.last[p] == st {
+		prev := s.last[p]
+		if prev == st {
 			continue
 		}
 		s.last[p] = st
-		cmds = append(cmds, tmux.Cmd{"set-option", "-p", "-q", "-t", p, sidebar.OptState, st})
+		set := func(k, v string) tmux.Cmd { return tmux.Cmd{"set-option", "-p", "-q", "-t", p, k, v} }
+		cmds = append(cmds, set(sidebar.OptState, st), set(sidebar.OptStateAt, stamp))
+		if prev == sidebar.StateWorking && st == sidebar.StateIdle {
+			cmds = append(cmds, set(sidebar.OptDoneAt, stamp))
+		}
 	}
 	for p := range s.last {
 		if !seen[p] {
@@ -54,8 +67,8 @@ func (s *PaneStates) Commands(at time.Time, changed map[string]time.Time) []tmux
 }
 
 // Apply writes the changed states and signals the sidebars.
-func (s *PaneStates) Apply(ctx context.Context, at time.Time, changed map[string]time.Time) {
-	cmds := s.Commands(at, changed)
+func (s *PaneStates) Apply(ctx context.Context, at time.Time, changed map[string]time.Time, asking map[string]bool) {
+	cmds := s.Commands(at, changed, asking)
 	if len(cmds) == 0 {
 		return
 	}

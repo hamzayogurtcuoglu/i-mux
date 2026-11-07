@@ -3,6 +3,7 @@ package sidebar
 import (
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -25,8 +26,8 @@ const (
 	ActProject             // switch the client to project Session
 	ActOpen                // ask for a folder and open it as a project
 	ActRename              // ask for a name for the target pane
-	ActDiff                // show the diff of Path
 	ActNewAgent            // split the target pane (direction by its shape) with an agent chooser
+	ActChanges             // menu of the changed files, each opening its diff
 )
 
 // Action is a row's action.
@@ -142,108 +143,385 @@ func fit(s string, w int) string {
 	return s + strings.Repeat(" ", w-n)
 }
 
-// fitLeft is fit that keeps the end (file names): "…/auth/redirect.ts".
-func fitLeft(s string, w int) string {
-	n := runes(s)
-	if n <= w || w <= 1 {
-		return fit(s, w)
+// 256-color styles of the v4 look. Backgrounds are used only for the
+// highlighted rows, the project avatars and the state pills.
+const (
+	muted     = "\x1b[38;5;245m"
+	faint     = "\x1b[38;5;240m"
+	selBg     = "\x1b[48;5;236m"
+	spinFg    = "\x1b[38;5;75m"
+	doneFg    = "\x1b[38;5;71m"
+	dirtyFg   = "\x1b[38;5;179m"
+	needPill  = "\x1b[48;5;58m\x1b[38;5;214m"
+	limitPill = "\x1b[48;5;52m\x1b[38;5;210m"
+	white     = "\x1b[38;5;255m"
+)
+
+// avatarBg are the avatar colors; a project's comes from its name.
+var avatarBg = []int{30, 166, 68, 71, 98, 168, 136, 37}
+
+// spinner frames for working agents (narrow braille glyphs).
+var spinner = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+// icon is an agent's glyph and color.
+func icon(a session.AgentID) (string, string) {
+	switch a {
+	case session.Claude:
+		return "✻", "\x1b[38;5;173m"
+	case session.Antigravity:
+		return "▲", "\x1b[38;5;75m"
+	case session.Codex:
+		return "◎", "\x1b[38;5;252m"
+	case session.Copilot:
+		return "◉", "\x1b[38;5;141m"
 	}
-	r := []rune(s)
-	return "…" + string(r[n-w+1:])
+	return "›", faint
 }
 
-// cols lays out a left part and a right-aligned right part in w columns.
-func cols(left, right string, w int) (string, string) {
-	if right == "" {
-		return fit(left, w), ""
+// avatar is a project's letter on its color (3 columns).
+func avatar(name string) string {
+	r := []rune(strings.TrimLeft(name, ".-_ "))
+	letter := "?"
+	if len(r) > 0 {
+		letter = strings.ToUpper(string(r[0]))
 	}
-	rw := runes(right)
-	if rw+2 > w {
-		return fit(left, w), ""
+	var h uint32
+	for _, c := range name {
+		h = h*31 + uint32(c)
 	}
-	return fit(left, w-rw-1) + " ", right
+	return "\x1b[48;5;" + strconv.Itoa(avatarBg[h%uint32(len(avatarBg))]) + "m" + white + bold + " " + letter + " " + reset
 }
 
-// stateText is the label of a pane state ("" for a shell).
-func stateText(st string) string {
-	switch st {
-	case StateWorking:
-		return i18n.T("sidebar.state.working")
-	case StateExited:
-		return i18n.T("sidebar.state.exited")
-	case StateShell:
+// age is the time since since: "<1m", "9m", "2h", "3d" ("" if unknown).
+func age(now, since time.Time) string {
+	if since.IsZero() || now.IsZero() {
 		return ""
 	}
-	return i18n.T("sidebar.state.idle")
+	d := now.Sub(since)
+	switch {
+	case d < time.Minute:
+		return "<1m"
+	case d < time.Hour:
+		return strconv.Itoa(int(d/time.Minute)) + "m"
+	case d < 24*time.Hour:
+		return strconv.Itoa(int(d/time.Hour)) + "h"
+	}
+	return strconv.Itoa(int(d/(24*time.Hour))) + "d"
 }
 
-// dot is a pane's state symbol and color.
-func dot(p PaneRow) (string, string) {
+// badge is a pane's state indicator and its width. compact draws the pills
+// as one "!" (narrow rows).
+func badge(p PaneRow, tick int, compact bool) (string, int) {
+	pill := func(style, text string) (string, int) {
+		if compact {
+			return style + "!" + reset, 1
+		}
+		return style + " " + text + " " + reset, runes(text) + 2
+	}
 	switch {
 	case p.Limited != "":
-		return "◆", red
+		return pill(limitPill, p.Limited)
+	case p.State == StateBlocked:
+		return pill(needPill, i18n.T("sidebar.needs_you"))
 	case p.State == StateWorking:
-		return "●", green
+		return spinFg + spinner[tick%len(spinner)] + reset, 1
+	case p.State == StateDone:
+		return doneFg + "●" + reset, 1
 	case p.State == StateExited:
-		return "✕", red
-	case p.State == StateShell:
-		return "·", dim
+		return red + "✕" + reset, 1
+	case p.State == StateIdle:
+		return faint + "○" + reset, 1
 	}
-	return "○", dim
+	return "", 0
 }
 
-// layout says how much of the sidebar is drawn; Render shrinks it until it
-// fits the height.
-type layout struct {
-	changes int  // change rows shown (-1 = all)
-	detail  bool // second line of agent cards
-	others  int  // other projects shown (-1 = all)
-	blanks  bool // blank lines between sections
+// urgency orders states for a project's roll-up.
+func urgency(p PaneRow) int {
+	switch {
+	case p.State == StateBlocked:
+		return 5
+	case p.Limited != "":
+		return 4
+	case p.State == StateDone:
+		return 3
+	case p.State == StateWorking:
+		return 2
+	}
+	return 0
+}
+
+// rollup is the most urgent pane of a project (ok false when all are idle).
+func rollup(panes []PaneRow) (PaneRow, bool) {
+	var best PaneRow
+	for _, p := range panes {
+		if urgency(p) > urgency(best) {
+			best = p
+		}
+	}
+	return best, urgency(best) > 0
+}
+
+// spread lays out left (lw columns) and right (rw columns) on a w-column row.
+func spread(left string, lw int, right string, rw, w int) string {
+	return left + strings.Repeat(" ", max(w-lw-rw, 0)) + right
+}
+
+// withBg draws a whole row on the highlight background.
+func withBg(t string) string {
+	return selBg + strings.ReplaceAll(t, reset, reset+selBg) + reset
+}
+
+// header is a section title with a "+" button on the right.
+func header(title string, w int, plus Action) Line {
+	cells := []Cell{{X: 0, W: w - 3, Text: muted + fit(" "+title, w-3) + reset}}
+	if plus.Kind != ActNone {
+		cells = append(cells, Cell{X: w - 3, W: 3, Text: muted + " + " + reset, Action: plus})
+	}
+	return Line{Text: compose(cells, w), Cells: cells}
+}
+
+// projectRow: avatar, name, branch, dirty dot and the roll-up state.
+func projectRow(pr ProjectRow, w, tick int) Line {
+	var right []string
+	rw := 0
+	add := func(t string, n int) {
+		if n == 0 {
+			return
+		}
+		if rw > 0 {
+			right, rw = append(right, " "), rw+1
+		}
+		right, rw = append(right, t), rw+n
+	}
+	st, ok := rollup(pr.Panes)
+	room := func() int { return w - 5 - rw - 2 }
+	branch := pr.Branch
+	build := func(compact bool) {
+		right, rw = nil, 0
+		if branch != "" {
+			add(muted+branch+reset, runes(branch))
+		}
+		if pr.Dirty {
+			add(dirtyFg+"●"+reset, 1)
+		}
+		if ok {
+			add(badge(st, tick, compact))
+		}
+	}
+	build(false)
+	if room() < 8 {
+		build(true)
+	}
+	if room() < 6 && branch != "" {
+		branch = ""
+		build(true)
+	}
+	if room() < 6 {
+		right, rw = nil, 0
+	}
+	name := pr.Name
+	style := ""
+	if pr.Current {
+		style = bold
+	}
+	nw := min(runes(name), max(room(), 1))
+	left := " " + avatar(pr.Name) + " " + style + fit(name, nw) + reset
+	text := spread(left, 5+nw, strings.Join(right, "")+" ", rw+1, w)
+	a := Action{Kind: ActProject, Session: pr.Session}
+	if pr.Current {
+		return Line{Text: withBg(text)}
+	}
+	return Line{Text: text, Action: a}
+}
+
+// agentRow: icon, name, time since the state changed and the state.
+func agentRow(p PaneRow, w int, now time.Time, tick int) Line {
+	sym, color := icon(p.Agent)
+	name := p.Display(i18n.T("sidebar.shell"))
+	nameStyle := ""
+	if p.State == StateIdle || p.State == StateShell || p.State == StateExited {
+		nameStyle = muted
+	}
+	if p.Target {
+		nameStyle = bold
+	}
+	b, bw := badge(p, tick, false)
+	t := age(now, p.Since)
+	if p.State == StateShell {
+		t = ""
+	}
+	right, rw := "", 0
+	layout := func() {
+		right, rw = "", 0
+		if t != "" {
+			right, rw = muted+t+reset, runes(t)
+		}
+		if bw > 0 {
+			if rw > 0 {
+				right, rw = right+" ", rw+1
+			}
+			right, rw = right+b, rw+bw
+		}
+	}
+	layout()
+	room := func() int { return w - 4 - rw - 2 }
+	if room() < 8 && bw > 1 {
+		b, bw = badge(p, tick, true)
+		layout()
+	}
+	if room() < 6 {
+		t = ""
+		layout()
+	}
+	nw := min(runes(name), max(room(), 1))
+	left := " " + color + sym + reset + "  " + nameStyle + fit(name, nw) + reset
+	text := spread(left, 4+nw, right+" ", rw+1, w)
+	if p.Target {
+		text = withBg(text)
+	}
+	return Line{Text: text, Action: Action{Kind: ActFocus, Pane: p.ID}}
+}
+
+// groupRow is a project's name above its agents; collapsed, it also shows
+// how many agents it has and their roll-up state.
+func groupRow(pr ProjectRow, w, tick int, collapsed bool) Line {
+	a := Action{}
+	if !pr.Current {
+		a = Action{Kind: ActProject, Session: pr.Session}
+	}
+	if !collapsed {
+		return Line{Text: faint + fit(" "+pr.Name, w) + reset, Action: a}
+	}
+	right, rw := muted+strconv.Itoa(len(pr.Panes))+reset, runes(strconv.Itoa(len(pr.Panes)))
+	if st, ok := rollup(pr.Panes); ok {
+		b, bw := badge(st, tick, true)
+		right, rw = right+" "+b, rw+1+bw
+	}
+	nw := max(w-rw-3, 1)
+	return Line{Text: spread(faint+" "+fit(pr.Name, nw)+reset, nw+1, right+" ", rw+1, w), Action: a}
+}
+
+// continueRows: the agents the chat can move to, two buttons per row.
+func continueRows(m Model, w int) []Line {
+	cw := w / 2
+	var cells []Cell
+	for _, a := range m.Agents {
+		if a.Current {
+			continue
+		}
+		sym, color := icon(a.ID)
+		style := ""
+		switch {
+		case !a.Installed:
+			style, color = faint, faint
+		case a.Limited != "":
+			style = red
+		}
+		cells = append(cells, Cell{W: cw, Text: " " + color + sym + reset + " " + style + fit(a.Name, cw-3) + reset, Action: Action{Kind: ActSwitch, Agent: a.ID}})
+	}
+	var out []Line
+	for i := 0; i < len(cells); i += 2 {
+		row := []Cell{cells[i]}
+		row[0].X = 0
+		if i+1 < len(cells) {
+			c := cells[i+1]
+			c.X = cw
+			row = append(row, c)
+		}
+		out = append(out, Line{Text: compose(row, w), Cells: row})
+	}
+	return out
+}
+
+// toolbar is the bottom block: Rename and Changes, then History, Limits and
+// Help.
+func toolbar(m Model, w int) []Line {
+	btn := func(x, cw int, sym, label string, a Action) Cell {
+		return Cell{X: x, W: cw, Text: muted + sym + reset + " " + fit(label, cw-2), Action: a}
+	}
+	row := func(cells ...Cell) Line { return Line{Text: compose(cells, w), Cells: cells} }
+	half := (w - 1) / 2
+	first := []Cell{btn(1, half, "✎", i18n.T("sidebar.rename"), Action{Kind: ActRename})}
+	if m.Git && m.Changed > 0 {
+		first = append(first, btn(1+half, half, "±", i18n.T("sidebar.changes_n", m.Changed), Action{Kind: ActChanges}))
+	}
+	third := (w - 1) / 3
+	return []Line{
+		row(first...),
+		row(btn(1, third, "⧉", i18n.T("sidebar.history"), Action{Kind: ActSessions}),
+			btn(1+third, third, "◔", i18n.T("sidebar.limits"), Action{Kind: ActLimits}),
+			btn(1+2*third, w-1-2*third, "?", i18n.T("sidebar.help"), Action{Kind: ActKeys})),
+	}
+}
+
+// top is the Projects and Agents blocks. Without blanks there are no empty
+// rows; collapse shows the other projects' agents as one row each.
+func top(m Model, w int, blanks, collapse bool) []Line {
+	rule := Line{Text: faint + strings.Repeat("─", w) + reset}
+	out := []Line{header(i18n.T("sidebar.projects"), w, Action{Kind: ActOpen})}
+	for _, pr := range m.Projects {
+		out = append(out, projectRow(pr, w, m.Tick))
+	}
+	if blanks {
+		out = append(out, Line{Text: strings.Repeat(" ", w)})
+	}
+	out = append(out, rule, header(i18n.T("sidebar.agents"), w, Action{Kind: ActNewAgent}))
+	for _, pr := range m.Projects {
+		if len(pr.Panes) == 0 {
+			continue
+		}
+		folded := collapse && !pr.Current
+		out = append(out, groupRow(pr, w, m.Tick, folded))
+		if folded {
+			continue
+		}
+		for _, p := range pr.Panes {
+			out = append(out, agentRow(p, w, m.Now, m.Tick))
+		}
+	}
+	return out
+}
+
+// bottom is the "Continue this chat in" block and the toolbar.
+func bottom(m Model, w int) []Line {
+	rule := Line{Text: faint + strings.Repeat("─", w) + reset}
+	var out []Line
+	if m.Target != "" {
+		if rows := continueRows(m, w); len(rows) > 0 {
+			out = append(out, rule, Line{Text: muted + fit(" "+i18n.T("sidebar.continue_in"), w) + reset})
+			out = append(out, rows...)
+		}
+	}
+	out = append(out, rule)
+	return append(out, toolbar(m, w)...)
 }
 
 // Render draws the sidebar for w columns and h rows (0 = no limit) with sel
-// selected (keyboard; NoItem for none). Sections (§9.3 "Sidebar v3"):
-// PROJECTS, AGENTS, CHANGES, MOVE THIS CHAT TO, then the toolbar anchored to
-// the bottom. When the rows do not fit, changes shrink first, then agent
-// cards lose their second line, then other projects, then blank lines go.
+// selected (keyboard; NoItem for none), §9.3 "Sidebar v4": Projects and
+// Agents at the top, "Continue this chat in" and the toolbar at the bottom.
+// When the rows do not fit, blank rows go first, then the other projects'
+// agents fold into one row each, then the top is cut.
 func Render(m Model, w, h int, sel Item) Screen {
-	lay := layout{changes: -1, detail: true, others: -1, blanks: true}
-	lines := build(m, w, lay)
-	if h > 0 {
-		steps := []func(){
-			func() { lay.changes = min(2, len(m.Changes)) },
-			func() { lay.detail = false },
-			func() { lay.others = 0 },
-			func() { lay.blanks = false },
-			func() { lay.changes = 0 },
+	up, down := top(m, w, true, false), bottom(m, w)
+	if h > 0 && len(up)+len(down) > h {
+		up = top(m, w, false, false)
+		if len(up)+len(down) > h {
+			up = top(m, w, false, true)
 		}
-		for _, step := range steps {
-			if len(lines) <= h {
-				break
-			}
-			step()
-			lines = build(m, w, lay)
+		if len(up)+len(down) > h {
+			up = up[:max(h-len(down), 0)]
 		}
-		if len(lines) > h {
-			// Still too long: keep the toolbar, cut the content.
-			tb := toolbar(w)
-			keep := max(h-len(tb), 0)
-			lines = append(lines[:min(keep, len(lines)-len(tb))], tb...)
-			if len(lines) > h {
-				lines = lines[len(lines)-h:]
-			}
-		} else {
-			// Anchor the toolbar to the bottom.
-			tb := len(toolbar(w))
-			fill := make([]Line, h-len(lines))
-			for i := range fill {
-				fill[i] = Line{Text: strings.Repeat(" ", w)}
-			}
-			body := append(append([]Line{}, lines[:len(lines)-tb]...), fill...)
-			lines = append(body, lines[len(lines)-tb:]...)
+		if len(down) > h {
+			down = down[len(down)-h:]
 		}
 	}
-	sc := Screen{Lines: lines}
+	lines := append([]Line{}, up...)
+	if h > 0 {
+		for len(lines)+len(down) < h {
+			lines = append(lines, Line{Text: strings.Repeat(" ", w)})
+		}
+	}
+	sc := Screen{Lines: append(lines, down...)}
 	highlight(sc, sel)
 	return sc
 }
@@ -286,211 +564,16 @@ func compose(cells []Cell, w int) string {
 	return b.String()
 }
 
-// toolbar is the bottom block: a rule, two rows of two buttons, the hint.
-func toolbar(w int) []Line {
-	cw := (w - 2) / 2
-	btn := func(x int, icon, label string, a Action) Cell {
-		return Cell{X: x, W: cw, Text: " " + dim + icon + reset + " " + fit(label, cw-3), Action: a}
-	}
-	row := func(a, b Cell) Line {
-		cells := []Cell{a, b}
-		return Line{Text: compose(cells, w), Cells: cells}
-	}
-	return []Line{
-		{Text: dim + strings.Repeat("─", w) + reset},
-		row(btn(1, "✎", i18n.T("sidebar.rename"), Action{Kind: ActRename}),
-			btn(1+cw, "⧉", i18n.T("sidebar.history"), Action{Kind: ActSessions})),
-		row(btn(1, "◔", i18n.T("sidebar.limits"), Action{Kind: ActLimits}),
-			btn(1+cw, "?", i18n.T("sidebar.help"), Action{Kind: ActKeys})),
-		{Text: dim + fit(" "+i18n.T("sidebar.footer"), w) + reset},
-	}
-}
-
-// build draws every section with layout lay; the toolbar comes last.
-func build(m Model, w int, lay layout) []Line {
-	plain := func(style, s string) string { return style + fit(s, w) + reset }
-	heading := func(left, right string) Line {
-		l, r := cols(" "+left, right, w-1)
-		return Line{Text: bold + dim + l + reset + dim + r + reset + " "}
-	}
-	add := func(label string, a Action) Line {
-		return Line{Text: "   " + cyan + "+" + reset + " " + fit(label, w-5), Action: a}
-	}
-	var out []Line
-	blank := func() {
-		if lay.blanks && len(out) > 0 {
-			out = append(out, Line{Text: strings.Repeat(" ", w)})
-		}
-	}
-
-	// PROJECTS: one row each, with the state dots of their agents.
-	out = append(out, heading(i18n.T("sidebar.projects"), ""))
-	var cur *ProjectRow
-	shown, limit := 0, lay.others
-	if limit >= 0 && len(m.Projects)-1-limit == 1 {
-		limit++ // "+1 more" would take the row the project takes
-	}
-	for i := range m.Projects {
-		pr := &m.Projects[i]
-		if pr.Current {
-			cur = pr
-		} else {
-			if limit >= 0 && shown >= limit {
-				continue
+// Animated reports whether the screen shows a spinner (a working agent).
+func (m Model) Animated() bool {
+	for _, pr := range m.Projects {
+		for _, p := range pr.Panes {
+			if p.State == StateWorking && p.Limited == "" {
+				return true
 			}
-			shown++
-		}
-		var dots strings.Builder
-		n := min(len(pr.Panes), 4)
-		for _, p := range pr.Panes[:n] {
-			sym, color := dot(p)
-			dots.WriteString(color + sym + reset)
-		}
-		extra := ""
-		if len(pr.Panes) > n {
-			extra = dim + "+" + strconv.Itoa(len(pr.Panes)-n) + reset
-		}
-		dw := n + runes(Plain(extra))
-		mark, style, a := " ", "", Action{Kind: ActProject, Session: pr.Session}
-		if pr.Current {
-			mark, style, a = cyan+"▌"+reset, bold, Action{}
-		}
-		out = append(out, Line{
-			Text:   " " + mark + style + fit(pr.Name, w-3-dw-1) + reset + " " + dots.String() + extra + " ",
-			Action: a,
-		})
-	}
-	if hidden := len(m.Projects) - 1 - shown; cur != nil && hidden > 0 {
-		out = append(out, Line{Text: plain(dim, "   "+i18n.T("sidebar.more_projects", hidden))})
-	}
-	out = append(out, add(i18n.T("sidebar.open_project"), Action{Kind: ActOpen}))
-
-	// AGENTS: the current project's panes as cards.
-	blank()
-	out = append(out, heading(i18n.T("sidebar.agents"), ""))
-	if cur == nil || len(cur.Panes) == 0 {
-		out = append(out, Line{Text: plain(dim, "   "+i18n.T("sidebar.no_panes"))})
-	} else {
-		for _, p := range cur.Panes {
-			out = append(out, card(p, w, lay.detail)...)
 		}
 	}
-	out = append(out, add(i18n.T("sidebar.new_agent"), Action{Kind: ActNewAgent}))
-
-	// CHANGES (git only).
-	if m.Git && lay.changes != 0 {
-		blank()
-		title := i18n.T("sidebar.changes")
-		if m.Branch != "" {
-			title += " · " + m.Branch
-		}
-		count := ""
-		if m.Changed > 0 {
-			count = strconv.Itoa(m.Changed)
-		}
-		out = append(out, heading(title, count))
-		if len(m.Changes) == 0 {
-			out = append(out, Line{Text: plain(dim, "   "+i18n.T("sidebar.no_changes"))})
-		}
-		changes := m.Changes
-		if lay.changes > 0 && len(changes) > lay.changes {
-			changes = changes[:lay.changes]
-		}
-		for _, c := range changes {
-			color := yellow
-			switch c.Status {
-			case "A":
-				color = green
-			case "D":
-				color = red
-			case "?":
-				color = dim
-			case "R":
-				color = cyan
-			}
-			out = append(out, Line{
-				Text:   "   " + color + fit(c.Status, 1) + reset + " " + fitLeft(c.Path, w-6) + " ",
-				Action: Action{Kind: ActDiff, Path: c.Path, Status: c.Status},
-			})
-		}
-		if hidden := m.Changed - len(changes); hidden > 0 {
-			out = append(out, Line{Text: plain(dim, "   "+i18n.T("sidebar.more", hidden))})
-		}
-	}
-
-	// MOVE THIS CHAT TO: the other agents, with their maker.
-	var moves []Line
-	for _, a := range m.Agents {
-		if a.Current {
-			continue
-		}
-		right, style, rstyle := a.Vendor, "", dim
-		switch {
-		case !a.Installed:
-			right, style, rstyle = i18n.T("sidebar.not_installed"), dim, dim
-		case a.Limited != "":
-			right, rstyle = i18n.T("sidebar.limited", a.Limited), red
-		}
-		l, r := cols(a.Name, right, w-4)
-		moves = append(moves, Line{
-			Text:   "   " + style + l + reset + rstyle + r + reset + " ",
-			Action: Action{Kind: ActSwitch, Agent: a.ID},
-		})
-	}
-	if len(moves) > 0 && m.Target != "" {
-		blank()
-		out = append(out, heading(i18n.T("sidebar.move_to"), ""))
-		out = append(out, moves...)
-	}
-	if lay.blanks {
-		out = append(out, Line{Text: strings.Repeat(" ", w)})
-	}
-	return append(out, toolbar(w)...)
-}
-
-// card draws one agent pane of the current project: its name (or agent) and
-// state, and with detail a dim second line with the agent (and model) when
-// the name does not say it already.
-func card(p PaneRow, w int, detail bool) []Line {
-	mark, style := " ", ""
-	if p.Target {
-		mark, style = cyan+"▌"+reset, bold
-	}
-	sym, color := dot(p)
-	short := session.ShortName(p.Agent)
-	name, sub := short, ""
-	switch {
-	case p.Agent == "":
-		name = i18n.T("sidebar.shell")
-	case p.Label != "" && p.Label != short:
-		sub = strings.TrimPrefix(p.Label, short+" · ")
-	}
-	if p.Name != "" {
-		name, sub = p.Name, p.Label
-		if p.Agent == "" {
-			sub = i18n.T("sidebar.shell")
-		}
-		if sub == "" {
-			sub = short
-		}
-	}
-	right, rcolor := stateText(p.State), color
-	if p.State == StateIdle {
-		rcolor = dim
-	}
-	if p.Limited != "" {
-		right, rcolor = i18n.T("sidebar.limited", p.Limited), red
-	}
-	a := Action{Kind: ActFocus, Pane: p.ID}
-	l, r := cols(name, right, w-5)
-	out := []Line{{
-		Text:   " " + mark + color + sym + reset + " " + style + l + reset + rcolor + r + reset + " ",
-		Action: a,
-	}}
-	if detail && sub != "" {
-		out = append(out, Line{Text: "     " + dim + fit(sub, w-6) + reset + " ", Action: a})
-	}
-	return out
+	return false
 }
 
 // Frame turns a screen into the bytes that draw it on an h-row terminal:

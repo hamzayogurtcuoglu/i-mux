@@ -60,8 +60,9 @@ type Detector struct {
 	// OnTickFailed runs when the exec carrying OnTick's commands failed.
 	OnTickFailed func()
 	// OnActivity receives, after each attached tick, when each agent pane's
-	// screen last changed (the bus uses it for idle/busy).
-	OnActivity func(at time.Time, changed map[string]time.Time)
+	// screen last changed (the bus uses it for idle/busy) and which screens
+	// ask the user something (Asking).
+	OnActivity func(at time.Time, changed map[string]time.Time, asking map[string]bool)
 	// OnEvent runs for each new limit or warn line outside grace and
 	// cooldown. It reports whether it prompted or acted, which starts the
 	// pane's cooldown.
@@ -69,6 +70,7 @@ type Detector struct {
 
 	hashes   map[string]uint64          // pane → hash of the last capture
 	changed  map[string]time.Time       // pane → when its screen last changed
+	asking   map[string]bool            // pane → its last screen asks a question
 	seen     map[string]map[string]bool // pane instance → matched lines
 	cooldown map[string]time.Time       // pane → no prompts until
 	nudges   map[string]int             // dead, unreaped pane → reap nudges sent
@@ -180,10 +182,14 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 		}
 		d.hashes[p.ID] = sum
 		d.changed[p.ID] = d.Now()
+		if d.asking == nil {
+			d.asking = map[string]bool{}
+		}
+		d.asking[p.ID] = Asking(screen)
 		d.scan(ctx, p, screen, clients)
 	}
 	if d.OnActivity != nil {
-		d.OnActivity(d.Now(), d.changed)
+		d.OnActivity(d.Now(), d.changed, d.asking)
 	}
 	return true, nil
 }
@@ -249,6 +255,11 @@ func (d *Detector) prune(panes []PaneRow) {
 	for id := range d.hashes {
 		if !live[id] {
 			delete(d.hashes, id)
+		}
+	}
+	for id := range d.asking {
+		if !live[id] {
+			delete(d.asking, id)
 		}
 	}
 	for id := range d.cooldown {

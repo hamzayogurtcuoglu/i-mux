@@ -7,12 +7,14 @@ package sidebar
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
@@ -49,17 +51,35 @@ const (
 type PaneRow struct {
 	ID      string
 	Agent   session.AgentID
-	Name    string // the user's name for the pane (@imux_name), or ""
-	Label   string // "Claude · opus"; "" for a shell
-	State   string // working | idle | exited | shell
-	Limited string // reset clock when the agent is limited, e.g. "15:00"
+	Name    string    // the user's name for the pane (@imux_name), or ""
+	Title   string    // the terminal title the agent set, cleaned ("" if none)
+	Label   string    // "Claude · opus"; "" for a shell
+	State   string    // working | blocked | done | idle | exited | shell
+	Since   time.Time // when the state began (zero if unknown)
+	Limited string    // reset clock when the agent is limited, e.g. "15:00"
 	Target  bool
+}
+
+// Display is the row's name: the user's name, else the agent's title, else
+// the agent (or "Shell").
+func (p PaneRow) Display(shell string) string {
+	switch {
+	case p.Name != "":
+		return p.Name
+	case p.Title != "":
+		return p.Title
+	case p.Agent == "":
+		return shell
+	}
+	return session.ShortName(p.Agent)
 }
 
 // ProjectRow is one imux session: a project directory and its panes.
 type ProjectRow struct {
 	Session string
 	Name    string // directory name
+	Branch  string // "" outside git
+	Dirty   bool   // uncommitted changes
 	Current bool
 	Panes   []PaneRow
 }
@@ -95,6 +115,8 @@ type Model struct {
 	Target   string // pane id actions apply to; "" when the window has none
 	TargetW  int    // its size in cells (+ New agent picks the split direction)
 	TargetH  int
+	Now      time.Time // for the times shown
+	Tick     int       // spinner frame
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -110,7 +132,9 @@ type Window struct {
 	Last    string
 }
 
-const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}"
+const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}\t#{@imux_state_at}\t#{@imux_done_at}\t#{@imux_seen}\t#{@imux_start}\t#{session_attached}\t#{pane_title}"
+
+const paneFields = 21
 
 // OptName is the user's name for a pane.
 const OptName = "@imux_name"
@@ -124,6 +148,9 @@ type Source struct {
 	Resolve func(cfg *config.Config, st *state.State) map[session.AgentID]agent.Resolved
 	// Git reads a directory's repository state; nil = gitinfo.Collect.
 	Git func(ctx context.Context, dir string) gitinfo.Info
+	// Host is this machine's name (a terminal title equal to it is not a
+	// name); nil = os.Hostname.
+	Host func() string
 
 	mu  sync.Mutex
 	git map[string]gitCache
@@ -154,9 +181,60 @@ func (s *Source) gitInfo(ctx context.Context, dir string) gitinfo.Info {
 	return info
 }
 
-// Gather reads the window of pane self in one tmux exec, picks the target
-// pane (the active one, else the last one focused, else the first) and
-// records it in the window option @imux_last.
+func (s *Source) host() string {
+	if s.Host != nil {
+		return s.Host()
+	}
+	h, _ := os.Hostname()
+	return h
+}
+
+// unix parses a unix-seconds option ("" or junk is zero).
+func unix(v string) int64 {
+	n, _ := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+	return n
+}
+
+// CleanTitle turns a terminal title into a pane name: spinner and status
+// glyphs in front are dropped; the host name, a program or agent name and
+// paths are not names ("").
+func CleanTitle(title, host string, agentID session.AgentID) string {
+	if t := strings.TrimSpace(title); strings.HasPrefix(t, "/") || strings.HasPrefix(t, "~") {
+		return ""
+	}
+	t := strings.TrimLeftFunc(title, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+	t = strings.TrimSpace(t)
+	if t == "" {
+		return ""
+	}
+	low := strings.ToLower(t)
+	short := strings.ToLower(strings.SplitN(host, ".", 2)[0])
+	if low == strings.ToLower(host) || low == short || strings.HasPrefix(low, short+".") {
+		return ""
+	}
+	for _, n := range []string{"node", "bash", "zsh", "sh", "fish", "tmux", "imux", "i-mux"} {
+		if low == n {
+			return ""
+		}
+	}
+	if agentID != "" {
+		a := agent.MustGet(agentID)
+		for _, n := range []string{a.Bin, a.Name, a.Short, string(agentID)} {
+			if low == strings.ToLower(n) {
+				return ""
+			}
+		}
+	}
+	return t
+}
+
+// Gather reads every pane in one tmux exec, picks the window's target pane
+// (the active one, else the last one focused, else the first) and records
+// it in the window option @imux_last. The pane the user is looking at (the
+// active pane of an attached session's current window) is marked seen
+// (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
 		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}"},
@@ -185,16 +263,20 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		}
 	}
 
+	now := s.Now()
+	host := s.host()
 	type raw struct {
 		row     PaneRow
-		active  bool
+		active  bool // active pane of its window's active window
+		looked  bool // ... of an attached session: the user sees it
 		cwd     string
 		session string
 		window  string
 		w, h    int
 	}
 	var all []raw
-	for _, r := range tmux.Rows(sec["panes"], 15) {
+	var seen []tmux.Cmd
+	for _, r := range tmux.Rows(sec["panes"], paneFields) {
 		if r[1] == RoleSidebar {
 			continue
 		}
@@ -202,11 +284,22 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 			row:    PaneRow{ID: r[0], Agent: session.AgentID(r[2]), Label: r[3], Name: r[10]},
 			active: r[5] == "1" && r[12] == "1", cwd: r[7], session: r[9], window: r[11],
 		}
+		p.looked = p.active && r[19] != "" && r[19] != "0"
 		if p.cwd == "" {
 			p.cwd = r[8]
 		}
 		p.w, _ = strconv.Atoi(r[13])
 		p.h, _ = strconv.Atoi(r[14])
+		stateAt, doneAt, seenAt, start := unix(r[15]), unix(r[16]), unix(r[17]), unix(r[18])
+		if p.row.Agent != "" {
+			p.row.Title = CleanTitle(r[20], host, p.row.Agent)
+		}
+		switch {
+		case stateAt > 0:
+			p.row.Since = time.Unix(stateAt, 0)
+		case start > 0:
+			p.row.Since = time.UnixMilli(start)
+		}
 		switch {
 		case r[6] == "1":
 			p.row.State = StateExited
@@ -214,10 +307,20 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 			p.row.State = StateShell
 		case r[4] == StateWorking:
 			p.row.State = StateWorking
+		case r[4] == StateBlocked:
+			p.row.State = StateBlocked
+		case doneAt > seenAt && !p.looked:
+			p.row.State = StateDone
 		default:
 			p.row.State = StateIdle
 		}
+		if p.looked && doneAt > seenAt {
+			seen = append(seen, tmux.Cmd{"set-option", "-p", "-q", "-t", p.row.ID, OptSeen, strconv.FormatInt(now.Unix(), 10)})
+		}
 		all = append(all, p)
+	}
+	if len(seen) > 0 {
+		_, _ = s.T.Run(ctx, seen...)
 	}
 	var panes []raw // this window's
 	for _, p := range all {
@@ -246,13 +349,12 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h}
+	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target
 	}
 
-	now := s.Now()
 	st, _ := state.Read()
 	if st == nil {
 		st = &state.State{}
@@ -282,12 +384,14 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	}
 	// Projects: one per session, the current one first, then by name.
 	bySession := map[string]*ProjectRow{}
+	cwdOf := map[string]string{}
 	var order []string
 	for _, p := range all {
 		pr := bySession[p.session]
 		if pr == nil {
 			pr = &ProjectRow{Session: p.session, Name: filepath.Base(p.cwd), Current: p.session == win.Session}
 			bySession[p.session] = pr
+			cwdOf[p.session] = p.cwd
 			order = append(order, p.session)
 		}
 		row := fill(p.row)
@@ -302,7 +406,13 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		return a.Name < b.Name
 	})
 	for _, name := range order {
-		m.Projects = append(m.Projects, *bySession[name])
+		pr := bySession[name]
+		if dir := cwdOf[name]; dir != "" && !pr.Current {
+			if gi := s.gitInfo(ctx, dir); gi.State == gitinfo.OK {
+				pr.Branch, pr.Dirty = gi.Branch, gi.StatusTotal > 0
+			}
+		}
+		m.Projects = append(m.Projects, *pr)
 	}
 
 	resolve := s.Resolve
@@ -328,6 +438,11 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		if gi.State == gitinfo.OK {
 			m.Git, m.Branch, m.Changed = true, gi.Branch, gi.StatusTotal
 			m.Changes = ParseStatus(gi.Status)
+			for i := range m.Projects {
+				if m.Projects[i].Current {
+					m.Projects[i].Branch, m.Projects[i].Dirty = gi.Branch, gi.StatusTotal > 0
+				}
+			}
 		}
 	}
 	return m, win, nil

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -55,18 +56,23 @@ func TestParse(t *testing.T) {
 }
 
 func model() Model {
+	now := testutil.FrozenTime
 	cur := []PaneRow{
-		{ID: "%1", Agent: "claude", Name: "backend fix", Label: "Claude · opus", State: StateWorking, Target: true},
-		{ID: "%2", Agent: "codex", Label: "Codex", State: StateIdle, Limited: "15:00"},
+		{ID: "%1", Agent: "claude", Name: "backend fix", Label: "Claude · opus", State: StateWorking, Since: now.Add(-30 * time.Second), Target: true},
+		{ID: "%2", Agent: "codex", Title: "og tags", Label: "Codex", State: StateIdle, Since: now.Add(-4 * time.Minute), Limited: "15:00"},
+		{ID: "%4", Agent: "antigravity", Label: "Antigravity", State: StateBlocked, Since: now.Add(-2 * time.Hour)},
 		{ID: "%3", State: StateShell},
 	}
 	return Model{
-		Project: "acme-api", CWD: "/home/test/acme-api", Branch: "main", Changed: 3, Git: true, Target: "%1",
+		Project: "acme-api", CWD: "/home/test/acme-api", Branch: "main", Changed: 3, Git: true, Target: "%1", Now: now,
 		Changes: []ChangeRow{{"M", "src/auth/redirect.ts"}, {"A", "test/auth.test.ts"}, {"?", "notes.md"}},
 		Panes:   cur,
 		Projects: []ProjectRow{
-			{Session: "acme-api-1a2b", Name: "acme-api", Current: true, Panes: cur},
-			{Session: "blog-3c4d", Name: "blog", Panes: []PaneRow{{ID: "%7", Agent: "antigravity", State: StateWorking}, {ID: "%8", State: StateShell}}},
+			{Session: "acme-api-1a2b", Name: "acme-api", Branch: "main", Dirty: true, Current: true, Panes: cur},
+			{Session: "blog-3c4d", Name: "blog", Branch: "master", Panes: []PaneRow{
+				{ID: "%7", Agent: "antigravity", Title: "blog pass", State: StateDone, Since: now.Add(-9 * time.Minute)},
+				{ID: "%8", Agent: "claude", State: StateIdle, Since: now.Add(-3 * 24 * time.Hour)},
+			}},
 		},
 		Agents: []AgentRow{
 			{ID: "claude", Name: "Claude", Vendor: "Anthropic", Key: "c", Installed: true, Current: true},
@@ -79,7 +85,7 @@ func model() Model {
 
 func TestRender(t *testing.T) {
 	i18n.SetLocale("en")
-	for _, w := range []int{22, 30, 44} {
+	for _, w := range []int{22, 34, 44} {
 		for _, h := range []int{0, 12, 20, 50} {
 			sc := Render(model(), w, h, NoItem)
 			if h > 0 && len(sc.Lines) != h {
@@ -87,29 +93,29 @@ func TestRender(t *testing.T) {
 			}
 			for _, l := range sc.Lines {
 				if n := utf8.RuneCountInString(Plain(l.Text)); n != w {
-					t.Errorf("width %d: line is %d columns: %q", w, n, Plain(l.Text))
+					t.Errorf("width %d height %d: line is %d columns: %q", w, h, n, Plain(l.Text))
 				}
 			}
 		}
 	}
-	sc := Render(model(), 30, 0, NoItem)
+	sc := Render(model(), 34, 0, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
-		"PROJECTS", "▌acme-api", "blog", "+ Open a project…",
-		"AGENTS", "▌● backend fix", "working", "Claude · opus", "◆ Codex", "limit 15:00", "· Shell", "+ New agent…",
-		"CHANGES · main", "M src/auth/redirect.ts", "A test/auth.test.ts", "? notes.md",
-		"MOVE THIS CHAT TO", "Antigravity", "Google", "Copilot", "not installed",
-		"✎ Rename", "⧉ History", "◔ Limits", "? Help", "^b b hide",
+		"Projects", " A  acme-api", "main ●", " B  blog", "master ●",
+		"Agents", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Shell",
+		"blog", "▲  blog pass", "9m ●", "✻  Claude", "3d ○",
+		"Continue this chat in", "▲ Antigravity", "◉ Copilot", "◎ Codex",
+		"✎ Rename", "± Changes 3", "⧉ History", "◔ Limits", "? Help",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sidebar lacks %q:\n%s", want, text)
 		}
 	}
-	// The current agent is not a place to move the chat to.
-	move := text[strings.Index(text, "MOVE THIS CHAT TO"):]
-	if strings.Contains(move[:strings.Index(move, "─")], "Claude") {
-		t.Errorf("the current agent is listed under MOVE:\n%s", move)
+	// The current agent is not a place to continue in.
+	cont := text[strings.Index(text, "Continue this chat in"):]
+	if strings.Contains(cont[:strings.Index(cont, "─")], "Claude") {
+		t.Errorf("the current agent is listed under Continue:\n%s", cont)
 	}
 	if strings.Contains(text, "⛔") {
 		t.Error("the sidebar must not use wide characters")
@@ -127,67 +133,116 @@ func TestRender(t *testing.T) {
 		row  string
 		want Action
 	}{
-		{"◆ Codex", Action{Kind: ActFocus, Pane: "%2"}},
-		{"Claude · opus", Action{Kind: ActFocus, Pane: "%1"}},
-		{"blog", Action{Kind: ActProject, Session: "blog-3c4d"}},
-		{"+ Open a project", Action{Kind: ActOpen}},
-		{"+ New agent", Action{Kind: ActNewAgent}},
-		{"M src/auth", Action{Kind: ActDiff, Path: "src/auth/redirect.ts", Status: "M"}},
-		{"? notes.md", Action{Kind: ActDiff, Path: "notes.md", Status: "?"}},
-		{"Antigravity", Action{Kind: ActSwitch, Agent: "antigravity"}},
+		{"og tags", Action{Kind: ActFocus, Pane: "%2"}},
+		{"blog pass", Action{Kind: ActFocus, Pane: "%7"}},
+		{" B  blog", Action{Kind: ActProject, Session: "blog-3c4d"}},
+		{"▲ Antigravity", Action{Kind: ActSwitch, Agent: "antigravity"}},
+		{"◎ Codex", Action{Kind: ActSwitch, Agent: "codex"}},
 		{"✎ Rename", Action{Kind: ActRename}},
+		{"± Changes", Action{Kind: ActChanges}},
 		{"⧉ History", Action{Kind: ActSessions}},
 		{"◔ Limits", Action{Kind: ActLimits}},
 		{"? Help", Action{Kind: ActKeys}},
 	} {
-		// Hit-test at the text's column: toolbar rows hold two buttons.
+		// Hit-test at the text's column: some rows hold several buttons.
 		l, x := find(sc, c.row)
 		if got := l.ActionAt(x); got != c.want {
 			t.Errorf("%q: %+v, want %+v", c.row, got, c.want)
 		}
 	}
-	if l, _ := find(sc, "PROJECTS"); l.Action.Kind != ActNone {
-		t.Error("headings must not be actions")
+	// The "+" of the headers.
+	if l, _ := find(sc, "Projects"); l.ActionAt(33) != (Action{Kind: ActOpen}) || l.ActionAt(3).Kind != ActNone {
+		t.Error("Projects +")
 	}
-	if l, _ := find(sc, "acme-api"); l.Action.Kind != ActNone {
-		t.Error("the current project is not an action")
+	if l, _ := find(sc, "Agents"); l.ActionAt(32) != (Action{Kind: ActNewAgent}) {
+		t.Error("Agents +")
+	}
+	if l, _ := find(sc, " A  acme-api"); l.Action.Kind != ActNone || !strings.Contains(l.Text, selBg) {
+		t.Error("the current project is highlighted, not an action")
+	}
+	if l, _ := find(sc, "backend fix"); !strings.HasPrefix(l.Text, selBg) {
+		t.Error("the target agent is highlighted")
+	}
+	// The spinner turns.
+	m := model()
+	m.Tick = 3
+	if !m.Animated() || !strings.Contains(screenText(Render(m, 34, 0, NoItem)), "<1m ⠸") {
+		t.Error("spinner frame")
 	}
 
-	// Short: changes, card details and other projects shrink; the toolbar
-	// stays at the bottom.
-	short := Render(model(), 30, 22, NoItem)
+	// Short: blank rows go, then other projects fold; the bottom blocks stay.
+	short := Render(model(), 34, 18, NoItem)
 	stext := screenText(short)
 	t.Logf("\n%s", stext)
-	for _, want := range []string{"AGENTS", "backend fix", "MOVE THIS CHAT TO", "✎ Rename", "? Help", "more"} {
+	for _, want := range []string{"Agents", "backend fix", "Continue this chat in", "✎ Rename", "? Help"} {
 		if !strings.Contains(stext, want) {
 			t.Errorf("short sidebar lacks %q:\n%s", want, stext)
 		}
 	}
-	// Tall: the toolbar is anchored to the bottom.
-	tall := Render(model(), 30, 50, NoItem)
-	if !strings.Contains(Plain(tall.Lines[49].Text), "^b b hide") || strings.TrimSpace(Plain(tall.Lines[40].Text)) != "" {
+	if strings.Contains(stext, "blog pass") {
+		t.Errorf("the other project should be folded:\n%s", stext)
+	}
+	// Tall: the bottom blocks are anchored to the bottom.
+	tall := Render(model(), 34, 50, NoItem)
+	if !strings.Contains(Plain(tall.Lines[49].Text), "? Help") || strings.TrimSpace(Plain(tall.Lines[30].Text)) != "" {
 		t.Errorf("toolbar not at the bottom:\n%s", screenText(tall))
 	}
+	// Narrow: pills become "!".
+	if n := screenText(Render(model(), 22, 0, NoItem)); strings.Contains(n, "Needs you") {
+		t.Errorf("narrow:\n%s", n)
+	}
 
-	// The keyboard selection is drawn in reverse video, a toolbar button
-	// on its own.
+	// The keyboard selection is drawn in reverse video, a button on its own.
 	items := sc.Items()
-	sel := Render(model(), 30, 0, items[1])
-	if !strings.HasPrefix(sel.Lines[items[1].Row].Text, rev) || strings.HasPrefix(sel.Lines[items[0].Row].Text, rev) {
+	if a := sc.ActionOf(items[0]); a.Kind != ActOpen {
+		t.Fatalf("first item %+v", a)
+	}
+	row := -1
+	for _, it := range items {
+		if it.Cell < 0 && sc.Lines[it.Row].Action.Kind == ActFocus {
+			row = it.Row
+			break
+		}
+	}
+	sel := Render(model(), 34, 0, Item{row, -1})
+	if !strings.HasPrefix(sel.Lines[row].Text, rev) {
 		t.Error("selection not highlighted")
 	}
 	last := items[len(items)-1]
-	if last.Cell != 1 || sc.ActionOf(last).Kind != ActKeys {
+	if last.Cell != 2 || sc.ActionOf(last).Kind != ActKeys {
 		t.Fatalf("last item %+v", last)
 	}
-	sel = Render(model(), 30, 0, last)
+	sel = Render(model(), 34, 0, last)
 	lt := sel.Lines[last.Row].Text
-	if strings.HasPrefix(lt, rev) || !strings.Contains(lt, rev) || utf8.RuneCountInString(Plain(lt)) != 30 {
+	if strings.HasPrefix(lt, rev) || !strings.Contains(lt, rev) || utf8.RuneCountInString(Plain(lt)) != 34 {
 		t.Errorf("button selection %q", lt)
 	}
 	f := Frame(sc, 10)
 	if !strings.HasPrefix(f, "\x1b[H") || !strings.HasSuffix(f, "\x1b[J") || strings.Count(f, "\r\n") != 9 {
 		t.Errorf("frame %q", f)
+	}
+}
+
+func TestCleanTitleAndAge(t *testing.T) {
+	for title, want := range map[string]string{
+		"✳ Fix login bug": "Fix login bug", "⠂ Refactor the parser": "Refactor the parser",
+		"macbook": "", "macbook.local": "", "MacBook": "", "claude": "", "Claude Code": "", "node": "",
+		"~/code/acme": "", "": "", "✳": "",
+	} {
+		if got := CleanTitle(title, "macbook.local", "claude"); got != want {
+			t.Errorf("CleanTitle(%q) = %q, want %q", title, got, want)
+		}
+	}
+	now := testutil.FrozenTime
+	for d, want := range map[time.Duration]string{
+		10 * time.Second: "<1m", 9 * time.Minute: "9m", 2 * time.Hour: "2h", 74 * time.Hour: "3d",
+	} {
+		if got := age(now, now.Add(-d)); got != want {
+			t.Errorf("age %v = %q, want %q", d, got, want)
+		}
+	}
+	if age(now, time.Time{}) != "" {
+		t.Error("unknown age")
 	}
 }
 
@@ -209,7 +264,7 @@ func TestParseStatus(t *testing.T) {
 
 func TestMoveWraps(t *testing.T) {
 	i18n.SetLocale("en")
-	s := &sidebar{screen: Render(model(), 30, 0, NoItem), sel: NoItem}
+	s := &sidebar{screen: Render(model(), 34, 0, NoItem), sel: NoItem}
 	rows := s.screen.Items()
 	s.move(1)
 	if s.sel != rows[0] {
@@ -325,7 +380,13 @@ func TestGatherRealTmux(t *testing.T) {
 		t.Fatal(err)
 	}
 	blogPane := strings.TrimSpace(out)
+	// It finished work nobody has looked at (Done) and set its title.
+	ended := strconv.FormatInt(now.Add(-time.Minute).Unix(), 10)
 	_, _ = c.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", blogPane, "@imux_agent", "antigravity"},
+		tmux.Cmd{"set-option", "-p", "-t", blogPane, OptState, StateIdle},
+		tmux.Cmd{"set-option", "-p", "-t", blogPane, OptStateAt, ended},
+		tmux.Cmd{"set-option", "-p", "-t", blogPane, OptDoneAt, ended},
+		tmux.Cmd{"select-pane", "-t", blogPane, "-T", "✳ Fix login bug"},
 		tmux.Cmd{"set-option", "-p", "-t", agentPane, OptName, "backend fix"})
 	m, _, _ = src.Gather(ctx, bar)
 	if len(m.Projects) != 2 || !m.Projects[0].Current || m.Projects[0].Name != "proj" ||
@@ -335,6 +396,17 @@ func TestGatherRealTmux(t *testing.T) {
 	}
 	if m.Panes[0].Name != "backend fix" || m.Projects[0].Panes[0].Name != "backend fix" {
 		t.Errorf("pane name %+v", m.Panes[0])
+	}
+	if p := m.Projects[1].Panes[0]; p.State != StateDone || p.Title != "Fix login bug" || !p.Since.Equal(now.Add(-time.Minute).Truncate(time.Second)) {
+		t.Errorf("done pane %+v", p)
+	}
+	if m.Projects[1].Branch != "main" || !m.Projects[1].Dirty {
+		t.Errorf("other project's git %+v", m.Projects[1])
+	}
+	// Looked at (seen after it ended): idle.
+	_, _ = c.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", blogPane, OptSeen, strconv.FormatInt(now.Unix(), 10)})
+	if m, _, _ = src.Gather(ctx, bar); m.Projects[1].Panes[0].State != StateIdle {
+		t.Errorf("seen pane %+v", m.Projects[1].Panes[0])
 	}
 	_, _ = c.Run(ctx, tmux.Cmd{"kill-session", "-t", "blog-1234"})
 	// Only the sidebar left: alone.

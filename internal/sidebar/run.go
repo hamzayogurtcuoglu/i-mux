@@ -48,6 +48,7 @@ type sidebar struct {
 var (
 	ClickDelay  = 350 * time.Millisecond
 	ClickIgnore = 400 * time.Millisecond
+	SpinEvery   = 120 * time.Millisecond
 )
 
 // Run draws the sidebar until its window has no other pane, stdin closes or
@@ -94,6 +95,10 @@ func Run(ctx context.Context, o Options) error {
 
 	tick := time.NewTicker(o.Safety)
 	defer tick.Stop()
+	// The spinner of working agents turns from the cached model: no tmux
+	// exec, only while one is shown.
+	spin := time.NewTicker(SpinEvery)
+	defer spin.Stop()
 	s.keepWidth(ctx)
 	if s.redraw(ctx) {
 		return nil
@@ -112,6 +117,12 @@ func Run(ctx context.Context, o Options) error {
 				return nil
 			}
 		case <-tick.C:
+		case <-spin.C:
+			if s.model.Animated() {
+				s.model.Tick++
+				s.draw()
+			}
+			continue
 		case a := <-s.clicks:
 			s.do(ctx, a)
 		case b, ok := <-input:
@@ -140,10 +151,16 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 	if w.Alone {
 		return true
 	}
+	m.Tick = s.model.Tick
 	s.model, s.win = m, w
-	s.screen = Render(m, w.Width, w.Height, s.sel)
-	_, _ = io.WriteString(s.o.Out, Frame(s.screen, w.Height))
+	s.draw()
 	return false
+}
+
+// draw renders the cached model.
+func (s *sidebar) draw() {
+	s.screen = Render(s.model, s.win.Width, s.win.Height, s.sel)
+	_, _ = io.WriteString(s.o.Out, Frame(s.screen, s.win.Height))
 }
 
 // keepWidth restores the sidebar's width after the window was resized,
@@ -211,6 +228,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.do(ctx, Action{Kind: ActRename})
 	case "o":
 		s.do(ctx, Action{Kind: ActOpen})
+	case "f":
+		s.do(ctx, Action{Kind: ActChanges})
 	default:
 		for _, a := range s.model.Agents {
 			if a.Key == ev.Key {
@@ -309,8 +328,8 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		}
 		s.prompt(ctx, client, i18n.T("prompt.rename"), cur,
 			"set-option -p -t "+target+" "+OptName+" \"%%%\" ; "+tmux.RunShell(s.o.Self, "__sidebar-refresh"))
-	case ActDiff:
-		s.diff(a, client)
+	case ActChanges:
+		s.spawn(append([]string{"__menu", "--changes"}, tgt...))
 	}
 }
 
@@ -341,27 +360,16 @@ func (s *sidebar) prompt(ctx context.Context, client, label, initial, template s
 	_, _ = s.t.Run(ctx, c)
 }
 
-// diff opens a popup with the changes of a file (the file itself when git
-// does not track it yet).
-func (s *sidebar) diff(a Action, client string) {
-	var sh string
-	if a.Status == "?" {
-		sh = tmux.ShJoin("less", "-R", "--", a.Path)
-	} else {
-		d := func(args ...string) string {
-			return tmux.ShJoin(append([]string{"git", "diff", "--color=always"}, args...)...)
-		}
-		sh = "{ " + d("HEAD", "--", a.Path) + " 2>/dev/null || " + d("--", a.Path) + "; } | less -R"
+// DiffShell is the sh command that shows a changed file's diff in a pager
+// (the file itself when git does not track it yet).
+func DiffShell(status, path string) string {
+	if status == "?" {
+		return tmux.ShJoin("less", "-R", "--", path)
 	}
-	c := tmux.Cmd{"display-popup"}
-	if client != "" {
-		c = append(c, "-c", client)
+	d := func(args ...string) string {
+		return tmux.ShJoin(append([]string{"git", "diff", "--color=always"}, args...)...)
 	}
-	c = append(c, "-E", "-w", "90%", "-h", "90%")
-	if s.model.CWD != "" {
-		c = append(c, "-d", s.model.CWD)
-	}
-	_ = s.t.Spawn(append(c, sh))
+	return "{ " + d("HEAD", "--", path) + " 2>/dev/null || " + d("--", path) + "; } | less -R"
 }
 
 // spawn starts imux with args without waiting for it.

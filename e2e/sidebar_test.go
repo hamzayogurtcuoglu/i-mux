@@ -38,6 +38,16 @@ func (h *H) startWithSidebar() (agentPane, bar string) {
 	return agentPane, bar
 }
 
+// plusOf returns the client screen position of the "+" of a section
+// header ("Projects", "Agents").
+func (h *H) plusOf(bar, title string) (x, y int) {
+	h.t.Helper()
+	_, y = h.rowOf(bar, " "+title+" ")
+	left, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_left}")))
+	w, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")))
+	return left + w - 1, y
+}
+
 // rowOf returns the client screen position (1-based) of the first sidebar
 // line containing text.
 func (h *H) rowOf(bar, text string) (x, y int) {
@@ -73,16 +83,17 @@ func TestSidebar(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "AGENTS", 10*time.Second)
-	if w := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")); w != "30" {
-		t.Errorf("sidebar width %s, want 30", w)
+	c.waitScreen(h, "Agents", 10*time.Second)
+	if w := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")); w != "34" {
+		t.Errorf("sidebar width %s, want 34", w)
 	}
 	if got := h.paneOpt(agentPane, "#{pane_active}"); got != "1" {
 		t.Errorf("the agent pane should keep the focus, active=%s", got)
 	}
 
-	// A click on "Antigravity" under MOVE THIS CHAT TO switches the agent pane.
-	x, y := h.rowOf(bar, "Antigravity")
+	// A click on "Antigravity" under "Continue this chat in" switches the
+	// agent pane.
+	x, y := h.rowOf(bar, "▲ Antigravity")
 	c.Click(0, x, y)
 	argv := h.run("antigravity", 1)
 	if len(argv) != 2 || argv[0] != "-i" || !strings.HasPrefix(argv[1], "[i-mux handoff · Claude Code → Antigravity CLI") ||
@@ -92,7 +103,7 @@ func TestSidebar(t *testing.T) {
 	h.waitFor("agent pane runs antigravity", 5*time.Second, func() bool { return h.paneOpt(agentPane, "#{@imux_agent}") == "antigravity" })
 	h.waitFor("sidebar shows the antigravity card", 5*time.Second, func() bool {
 		for _, l := range strings.Split(h.capture(bar), "\n") {
-			if strings.Contains(l, "▌") && strings.Contains(l, "Antigravity") {
+			if strings.Contains(l, "▲  Antigravity") {
 				return true
 			}
 		}
@@ -102,10 +113,10 @@ func TestSidebar(t *testing.T) {
 		t.Fatal("the sidebar must never run an agent")
 	}
 
-	// "+ New agent" asks which agent, then splits the wide agent pane side
+	// The "+" of Agents asks which agent, then splits the wide agent pane side
 	// by side. A person does not click twice within tmux's double-click time.
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.rowOf(bar, "New agent")
+	x, y = h.plusOf(bar, "Agents")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Split right: new pane with", 5*time.Second)
@@ -116,7 +127,7 @@ func TestSidebar(t *testing.T) {
 		panes = strings.Join(strings.Fields(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{@imux_role}:#{@imux_agent}")), " ")
 		return panes == "sidebar: :antigravity :codex"
 	})
-	h.rowOf(bar, "Codex") // its card
+	h.rowOf(bar, "◎  Codex") // its row
 
 	// prefix b hides the sidebar, and shows it again.
 	c.Write(keyPrefix + "b")
@@ -142,7 +153,7 @@ func TestSidebar(t *testing.T) {
 }
 
 // TestSidebarDoubleClick: people double-click buttons. A double click on
-// "+ New agent" opens the menu once, the menu stays open (tmux's late
+// the "+" of Agents opens the menu once, the menu stays open (tmux's late
 // DoubleClick1Pane must not close it) and the key typed next goes to the
 // menu, not to the sidebar, where "x" would switch the agent pane instead.
 func TestSidebarDoubleClick(t *testing.T) {
@@ -150,8 +161,8 @@ func TestSidebarDoubleClick(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "AGENTS", 10*time.Second)
-	x, y := h.rowOf(bar, "New agent")
+	c.waitScreen(h, "Agents", 10*time.Second)
+	x, y := h.plusOf(bar, "Agents")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	time.Sleep(80 * time.Millisecond)
@@ -197,12 +208,15 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
-	c.waitScreen(h, "AGENTS", 10*time.Second)
+	c.waitScreen(h, "Agents", 10*time.Second)
 
-	// CHANGES: a click shows the diff in a popup.
-	x, y := h.rowOf(bar, "M readme.md")
+	// "± Changes 1" lists the changed files; choosing one shows its diff.
+	x, y := h.rowOf(bar, "± Changes 1")
 	mark := c.Mark()
 	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "M  readme.md", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	c.Write("\r")
 	c.waitScreenAfter(h, mark, "+changed line for the diff", 5*time.Second)
 	c.Write("q") // less
 	time.Sleep(500 * time.Millisecond)
@@ -225,7 +239,7 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.rowOf(bar, "Open a project")
+	x, y = h.plusOf(bar, "Projects")
 	mark = c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Open project folder:", 5*time.Second)
@@ -258,4 +272,18 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	x, y = h.rowOf(newBar, " "+filepath.Base(h.Homes.Project)+" ")
 	c.Click(0, x, y)
 	h.waitFor("client back in the first project", 5*time.Second, func() bool { return session() == first })
+}
+
+// TestSidebarNeedsYou (T13.1): an agent that asks a question on a still
+// screen shows "Needs you" in the sidebar, on its row and its project.
+func TestSidebarNeedsYou(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	h.control("claude", "printf ' Do you want to proceed?\\n ❯ 1. Yes\\n   2. No\\n'\n")
+	_, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "Agents", 10*time.Second)
+	h.waitFor("Needs you on the agent and the project", 15*time.Second, func() bool {
+		return strings.Count(h.capture(bar), "Needs you") == 2
+	})
 }

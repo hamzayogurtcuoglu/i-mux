@@ -50,13 +50,13 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 			return keeper.Commands(panes)
 		},
 		OnTickFailed: keeper.Forget,
-		OnActivity: func(at time.Time, changed map[string]time.Time) {
+		OnActivity: func(at time.Time, changed map[string]time.Time, asking map[string]bool) {
 			a := &bus.Activity{At: at.UnixMilli(), Changed: map[string]int64{}}
 			for p, t := range changed {
 				a.Changed[p] = t.UnixMilli()
 			}
 			_ = bus.WriteActivity(a)
-			states.Apply(context.Background(), at, changed)
+			states.Apply(context.Background(), at, changed, asking)
 		},
 	}, tc, nil
 }

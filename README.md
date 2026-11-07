@@ -62,18 +62,19 @@ cd ~/code/my-project
 imux            # start the first installed agent (or: imux claude)
 ```
 
-The **sidebar** on the left shows your projects, the agents working in this one (● working,
-○ idle, ◆ limited), the project's git changes and everything you can do, all clickable:
+The **sidebar** on the left shows your projects (branch, uncommitted changes) and every agent
+working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks
+you something, a green dot when it finished while you were elsewhere, a ring when idle, and how
+long ago that changed. Everything is clickable:
 
 | Sidebar / key | What it does |
 |---|---|
-| click a project under **PROJECTS** | switch to it; **+ Open a project…** (or `o`) opens another folder next to this one |
-| click an agent under **AGENTS** | go to it; **+ New agent…** asks which agent and opens it in a new pane (or `prefix v` / `prefix -` for right / down) |
-| click a file under **CHANGES** | see its diff |
-| click an agent under **MOVE THIS CHAT TO** | the active pane continues in that agent, with the conversation (Claude is by Anthropic, Antigravity by Google, Codex by OpenAI, Copilot by GitHub) |
-| **✎ Rename** (or `n`) | give the agent a name of your own, like "backend fix" |
-| **⧉ History** (or `prefix S`) | continue any earlier conversation of the project |
-| **◔ Limits** · **? Help** | usage limits; every key at a glance |
+| click a project · **+** next to **Projects** (or `o`) | switch to it · open another folder next to this one |
+| click an agent · **+** next to **Agents** | go to it (in any project) · open a new agent in a pane (`prefix v` / `prefix -` for right / down) |
+| click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation |
+| **✎ Rename** (or `n`) | give the agent a name of your own, like "backend fix" (agents that title their terminal name themselves) |
+| **± Changes** (or `f`) | the changed files; pick one to see its diff |
+| **⧉ History** (or `prefix S`) · **◔ Limits** · **? Help** | earlier conversations · usage limits · every key |
 | `prefix b` | hide or show the sidebar |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` | the pane menu; continue in Claude / Antigravity / Copilot / Codex |
 

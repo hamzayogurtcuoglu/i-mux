@@ -24,6 +24,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -318,6 +319,13 @@ func optCmds(target string, te TrailEntry, trail Trail, cwd, label string) []tmu
 		}
 		return append(c, k, v)
 	}
+	unset := func(k string) tmux.Cmd {
+		c := tmux.Cmd{"set-option", "-p", "-u"}
+		if target != "" {
+			c = append(c, "-t", target)
+		}
+		return append(c, k)
+	}
 	return []tmux.Cmd{
 		set("remain-on-exit", "on"),
 		set(OptAgent, string(te.Agent)),
@@ -325,6 +333,8 @@ func optCmds(target string, te TrailEntry, trail Trail, cwd, label string) []tmu
 		set(OptCWD, cwd),
 		set(OptLabel, label),
 		set(OptTrail, trail.String()),
+		// The previous run's state does not carry over to the new one.
+		unset(sidebar.OptState), unset(sidebar.OptStateAt), unset(sidebar.OptDoneAt),
 	}
 }
 
