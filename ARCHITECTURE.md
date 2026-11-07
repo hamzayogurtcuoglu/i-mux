@@ -100,6 +100,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D21 | **Long-running imux processes restart themselves after an upgrade** (v0.8): the watcher and each sidebar compare the imux binary's size and mtime with the ones they started from and `exec` the new binary when it changed; the restarted watcher rewrites the tmux config. | The user saw an old version keep running after the one-line install ("0.5.0 shows up out of nowhere"): the daemon and the sidebars of sessions started earlier never restarted. |
 | D22 | **Folders are picked, not typed** (added 2026-11-07, v0.9): "open a project" shows a popup that filters as you type: recent projects first, then git repositories found under the home folder; a query starting with `/` or `~` browses folders, Tab completes. `imux` run in the home folder opens the same picker instead of making the home folder a project. | The user could not find paths in tmux's command prompt (Tab completes tmux commands there, not folders). Most projects are git repositories under the home folder, and most opens are of a recent one. |
 | D23 | **Projects and tabs close from the UI** (v0.9): a click on the current project (or a right-click on any) opens its menu with Close; the current tab has a **×**; both ask first. Closing the project the client shows moves the client to another project first. | Sessions outlive the terminal, so projects piled up in the sidebar ("why does i-mux show up on its own?") with no visible way to close them. The agents' own session files stay, so a closed conversation can be continued from History. |
+| D24 | **Projects reopen as they were** (added 2026-11-07, v0.10, at the user's request: "like VS Code, save what was open when I closed it"): the watcher snapshots every open project (tabs, names, layouts, each pane's agent, name and conversation) to `~/.imux/workspace.json`; closing a project snapshots it too. Opening a folder with a snapshot recreates its tabs and panes, each agent resuming its conversation natively. The picker shows **Recent** (with tabs, agents and age) above the other folders, and **Restore last session** after the tmux server went away (a reboot). | tmux sessions die with the machine and with Close, and the user had to rebuild tabs and find conversations again. The trail already records each run (agent, start, session id), so a snapshot is a list of trail entries; native resume (§8.6) brings each conversation back without a handoff. |
 
 ## 4. Components
 
@@ -1096,6 +1097,37 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   project first; without one it detaches.
 - **Close a tab:** the **×** after the current tab (`range=user|imux:close`) → confirm →
   `imux __close-tab`; the last tab closes the project as above.
+
+#### Recent and restore (v0.10)
+
+```
+ Open a project
+ > ▏
+ ─────────────────────────────────────────────
+ ↺ Restore last session · 2 projects
+ RECENT
+ ▸ ~/Documents/i-mux            open
+   ~/code/acme-api              3 tabs · 4 agents · 2h
+   ~/code/blog                  1 tab · 1 agent · 3d
+ ON THIS MAC
+   ~/Desktop/meshtopia          git
+```
+
+- **Snapshot** (`~/.imux/workspace.json`, 0600): per project folder: tabs in order (name, layout,
+  active), panes in order (agent, name, the current trail entry: agent, start, session id, file),
+  the tmux server it was open in (`#{pid}-#{start_time}`), open or closed, time. Written by the
+  watcher every 30 s while a client is attached (one `list-panes -a`), and by `CloseProject`
+  before the kill. Folders absent from the running server that were open in it become closed;
+  those of an earlier server stay "open" (they died with it). At most 30 projects.
+- **Restore** a project: a session in its folder; per tab a window, per agent pane a pane (the
+  first starts the tab, the rest split it), each agent resumed with the session `RefFor` finds
+  for its trail entry (fresh when none, or when the agent has no resume form); names and tab
+  names set; sidebars added; the saved layout applied when the pane count matches. Shell panes
+  are not restored. Opening a folder (picker, `imux open`, `imux` in the folder) restores its
+  snapshot when the project is not open.
+- **Picker:** with an empty query, sections: Restore last session (when projects of an earlier
+  server were open), RECENT (open projects, then snapshots and recent folders by time, with
+  "N tabs · M agents · age"), ON THIS MAC (git folders). Typing ranks all of them together.
 
 #### Agent bar
 

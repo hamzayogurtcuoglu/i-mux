@@ -617,6 +617,24 @@ in Open project is hard" (ARCHITECTURE D22, D23, §9.3 "Open and close projects"
   - AC: real-client tests: open a project by typing part of its name in the picker; close a
     project from its menu (the client lands on the other one); close a tab with ×; README.
 
+## M16: Recent projects and restore (added 2026-11-07)
+
+User request: a VS Code-like Recent list that reopens a project as it was last closed
+(ARCHITECTURE D24, §9.3 "Recent and restore").
+
+- [ ] **T16.1 Snapshots** · M
+  - AC: `workspace.json` written by the watcher (30 s, attached) and on Close; open/closed by
+    server identity; unit tests with a fake tmux.
+- [ ] **T16.2 Restore** · M · deps: T16.1
+  - AC: tabs, panes, names, layout and native resume per agent; fresh when no session; opening a
+    folder with a snapshot restores it; Restore last session restores every project of an earlier
+    server.
+- [ ] **T16.3 Picker sections** · S · deps: T16.1
+  - AC: Restore row, RECENT with details, ON THIS MAC; headers not selectable; golden tests.
+- [ ] **T16.4 E2E and docs** · M · deps: T16.2, T16.3
+  - AC: a project with two tabs and a named pane is closed, reopened from the picker and comes
+    back with both tabs, the name and each fake agent resumed with its session id; README.
+
 ---
 
 ## Testing strategy
