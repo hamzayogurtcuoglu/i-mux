@@ -95,6 +95,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D16 | **The UI is built only from tmux-native elements:** a clickable second status line (`status-format[1]` with `#[range=user\|…]` regions), `display-menu` (mouse and keyboard), `display-popup` and pane border labels. No TUI framework. | tmux draws everything and handles mouse and keys, so nothing of ours stays resident and the lightness budget holds. tmux 3.8 supports `range=user\|X` (verified in its man page): a click fires the `MouseDown1Status` binding with `X` in `#{mouse_status_range}`. |
 | D17 | **The primary UI is a sidebar pane on the left of each window** (added 2026-11-07, at the user's request, after the bottom agent bar): a small `imux __sidebar` process drawing with ANSI escapes and reading keys and SGR mouse events, no TUI library. The agent bar stays as an option (`tmux.agent_bar`). | A sidebar can show what a status line cannot: every pane's agent and state, the switch targets, split buttons and help, all clickable. A familiar agent-workspace layout, built on tmux. Cost: one resident process per window (~6 MB, no CPU while idle: it sleeps until a tmux hook or the watcher signals it). |
 | D18 | **The handoff stays in its file; the agent gets a two-line message pointing to it** (added 2026-11-07, v0.6): `[i-mux handoff · A → B · time]`, one sentence in the user's language and the file's path. The agent reads the file with its own tools; `--add-dir` lets Claude, Copilot and Antigravity read `~/.imux/handoffs` without asking. `handoff.deliver = "inline"` keeps the old behavior. | The user saw the whole 30 000-character document as their own first message: a wall of text in the pane. The file is 0600, so the document also leaves argv (no process-list exposure, no argv size limit). Cost: one file read by the agent. Chained handoffs follow the path back to the file. |
+| D19 | **The sidebar is a full agent workspace UI** (added 2026-11-07, v0.7, at the user's request; our extra is moving a chat to another CLI): Projects (letter avatar, branch, roll-up status) above Agents grouped by project (icon, name, time since the state changed, status), and a "Continue this chat in" block for the switch. States: **Needs you** (the agent asks something), **Done** (finished while you looked elsewhere), working (spinner), idle (ring). | The sidebar answers "what needs me?" at a glance, and adds what other agent workspaces lack: moving the chat. imux keeps reading the screen it already captures: a question on a still screen is "Needs you", a working → idle change the user has not looked at is "Done". |
 
 ## 4. Components
 
@@ -983,6 +984,62 @@ buttons made it hard to read.
   selection moves over buttons. Rename, History (the session picker), Limits, Help.
 - Rows that do not fit: CHANGES shrinks to 2 + "+N more", then cards lose their second line,
   then other projects shrink, then blank lines go.
+
+#### Sidebar v4: agent workspace (v0.7)
+
+Feedback on v0.6 (2026-11-07, with a reference screenshot): a full agent-workspace layout, with
+moving a session to another CLI as our extra. Drawn in the terminal with our own code.
+
+```
+ Projects                       +
+  W  website    main ● Needs you        ← current project: highlighted row
+  C  core       master ●    ●
+  P  plugins        main ⠹
+ ────────────────────────────────
+ Agents                         +
+ website
+  ✻ pricing page          <1m ⠹         ← target pane: highlighted row
+  ◎ og tags                4m ⠹
+  ▲ blog pass              9m ○
+  ✻ docs nav       <1m Needs you
+ core
+  ✻ doc comments          <1m ●
+
+ ────────────────────────────────
+ Continue this chat in
+  ▲ Antigravity     ◎ Codex
+  ◉ Copilot
+ ────────────────────────────────
+  ✎ Rename   ± 3 files
+  ⧉ History  ◔ Limits  ? Help
+```
+
+- **Projects:** a coloured letter avatar (colour from the name), the name, the branch, a yellow
+  dot when it has uncommitted changes, and the most urgent state of its agents
+  (Needs you > Done > working > idle). Click: switch to it. **+** (header): open a project.
+- **Agents:** every project's agent panes, grouped under the project's name. A row: the agent's
+  icon in its colour (Claude ✻, Antigravity ▲, Codex ◎, Copilot ◉, shell ›), the name, the time
+  since its state changed (`<1m`, `9m`, `2h`, `3d`) and the state. Click: go to it (switching
+  project if needed). **+** (header): new agent (split by the pane's shape).
+- **Names:** the pane's name (`@imux_name`), else the terminal title the agent sets (Claude Code
+  titles it after the task; spinner glyphs stripped; ignored when it is the host name or the
+  program name), else the agent's name.
+- **States:**
+  - working: a braille spinner, animated every 120 ms from the cached model (no tmux exec) while
+    a visible agent works;
+  - **Needs you:** a pill; the watcher sets `@imux_state = blocked` when an idle screen's last lines
+    ask a question (Claude's "Do you want to …", a numbered "1. Yes" choice, Codex's "Would you
+    like to run …", `(y/n)`, `[Y/n]`);
+  - **Done:** a green dot: the state went working → idle (`@imux_state_at`) after the user last
+    looked at the pane (`@imux_seen`, written by the sidebar for the active pane of the current
+    window of an attached session); looking at it makes it idle;
+  - idle: a dim ring; limited: a red pill with the reset time; exited: ✕.
+- **Continue this chat in:** the other agents as buttons (two per row): click switches the target
+  pane with the conversation. Not installed: dim (click shows the install hint); limited: red.
+- **Toolbar:** Rename, "± N files" (a menu of the changed files; each opens its diff), History,
+  Limits, Help.
+- Default width 32. When rows do not fit: blank lines go, then the other projects' agent groups
+  shrink to one row each, then rows are cut above the bottom blocks.
 
 #### Agent bar
 

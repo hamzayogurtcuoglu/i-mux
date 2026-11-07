@@ -29,13 +29,18 @@ const (
 	RoleSidebar = "sidebar"           // value of OptRole
 	OptPID      = "@imux_sidebar_pid" // pane: the sidebar process, signaled to redraw
 	OptLast     = "@imux_last"        // window: the agent pane actions apply to
-	OptState    = "@imux_state"       // pane: "working" or "idle", set by the watcher
+	OptState    = "@imux_state"       // pane: "working", "idle" or "blocked", set by the watcher
+	OptStateAt  = "@imux_state_at"    // pane: when the state last changed (unix seconds)
+	OptDoneAt   = "@imux_done_at"     // pane: when its work last ended (unix seconds)
+	OptSeen     = "@imux_seen"        // pane: when the user last looked at it (unix seconds)
 )
 
 // Pane states shown in the sidebar.
 const (
 	StateWorking = "working"
 	StateIdle    = "idle"
+	StateBlocked = "blocked" // the agent asks the user something: "Needs you"
+	StateDone    = "done"    // work ended while the user looked elsewhere
 	StateExited  = "exited"
 	StateShell   = "shell"
 )

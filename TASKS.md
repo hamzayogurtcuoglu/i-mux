@@ -562,6 +562,24 @@ an agent workspace with an agents section (ARCHITECTURE D18, §8.2b, §9.3 "Side
 - [x] **T12.4 E2E, docs, screenshots** · M · deps: T12.1–T12.3
   - AC: existing sidebar e2e tests pass on v3; README, CONFIG.md and screenshots updated.
 
+## M13: Agent workspace sidebar (added 2026-11-07)
+
+User request with a reference screenshot (ARCHITECTURE D19, §9.3 "Sidebar v4").
+
+- [ ] **T13.1 States: Needs you, Done, times** · M
+  - AC: the watcher writes `blocked` for an idle screen that asks a question (unit tests with
+    synthetic screens of each agent's prompt and of plain output) and `@imux_state_at` on every
+    change; the sidebar writes `@imux_seen` for the pane being looked at and shows Done until then.
+- [ ] **T13.2 Projects and Agents** · M
+  - AC: avatars, branches, dirty dots, roll-up states; agents of all projects grouped by project
+    with icons, names (pane name, agent title, agent), times and states; + buttons in the headers.
+- [ ] **T13.3 Continue block and toolbar** · M
+  - AC: switch buttons without the current agent; Rename, changed-files menu with diffs, History,
+    Limits, Help; spinner animation without tmux execs; golden tests.
+- [ ] **T13.4 E2E, docs, screenshots** · M · deps: T13.1–T13.3
+  - AC: the sidebar e2e tests on v4 (switch, new agent, rename, open project, diff via the files
+    menu, a Needs you state from a fake agent's question); README, CONFIG.md, screenshots.
+
 ---
 
 ## Testing strategy
