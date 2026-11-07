@@ -164,8 +164,8 @@ func TestRender(t *testing.T) {
 	if l, _ := find(sc, " A  acme-api"); l.Action != (Action{Kind: ActProjectMenu, Session: "acme-api-1a2b"}) || !strings.Contains(l.Text, selBg) {
 		t.Error("the current project is highlighted and opens its menu")
 	}
-	if l, _ := find(sc, "backend fix"); !strings.HasPrefix(l.Text, selBg) {
-		t.Error("the target agent is highlighted")
+	if l, _ := find(sc, "backend fix"); !strings.HasPrefix(l.Text, selBg) || l.Action != (Action{Kind: ActAgentMenu, Pane: "%1"}) {
+		t.Error("the target agent is highlighted and opens its menu")
 	}
 	// The spinner turns.
 	m := model()

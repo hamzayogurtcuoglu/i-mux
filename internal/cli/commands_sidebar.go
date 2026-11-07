@@ -129,6 +129,12 @@ func init() {
 		Run:    runCloseTab,
 	})
 	register(&command{
+		Name:   "__close-pane",
+		Args:   "--pane %N [--client C]",
+		Hidden: true,
+		Run:    runClosePane,
+	})
+	register(&command{
 		Name:   "__open-picker",
 		Args:   "[--client C]",
 		Hidden: true,
@@ -346,6 +352,30 @@ func runCloseTab(e *Env, args []string) error {
 		return err
 	}
 	if err := w.CloseTab(ctx, p); err != nil {
+		w.Message(ctx, *clientF, "", err.Error())
+		return err
+	}
+	return nil
+}
+
+// runClosePane closes the agent of --pane (the agent menu, confirmed).
+func runClosePane(e *Env, args []string) error {
+	fs := newFlags(e, "__close-pane")
+	paneF := fs.String("pane", "", "the agent's pane")
+	clientF := fs.String("client", "", "client for messages")
+	if _, err := parseFlags(fs, args); err != nil {
+		return err
+	}
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
+	w, _, err := newWorkspace(e, false)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	if err := w.CloseAgent(ctx, &workspace.Pane{ID: pane}); err != nil {
 		w.Message(ctx, *clientF, "", err.Error())
 		return err
 	}

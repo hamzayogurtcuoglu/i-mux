@@ -24,7 +24,7 @@ func init() {
 	})
 	register(&command{
 		Name:    "__menu",
-		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v | --keys | --limits | --changes | --tab | --project S | --close-project S | --close-tab]",
+		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v | --keys | --limits | --changes | --tab | --project S | --close-project S | --close-tab | --agent | --close-agent]",
 		Summary: "cmd.internal",
 		Hidden:  true,
 		Run:     runMenu,
@@ -69,6 +69,8 @@ func runMenu(e *Env, args []string) error {
 	projectF := fs.String("project", "", "menu of a project (session)")
 	closeProjectF := fs.String("close-project", "", "ask before closing a project (session)")
 	closeTabF := fs.Bool("close-tab", false, "ask before closing the pane's tab")
+	agentF := fs.Bool("agent", false, "menu of the pane's agent (go, rename, close)")
+	closeAgentF := fs.Bool("close-agent", false, "ask before closing the pane's agent")
 	if _, err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -102,6 +104,16 @@ func runMenu(e *Env, args []string) error {
 		}
 	case *closeProjectF != "":
 		if m, err = w.CloseProjectMenu(ctx, *closeProjectF, client, pane); err != nil {
+			w.Message(ctx, client, pane, err.Error())
+			return err
+		}
+	case *agentF:
+		if m, err = w.AgentMenu(ctx, p, client); err != nil {
+			w.Message(ctx, client, pane, err.Error())
+			return err
+		}
+	case *closeAgentF:
+		if m, err = w.CloseAgentMenu(ctx, p, client); err != nil {
 			w.Message(ctx, client, pane, err.Error())
 			return err
 		}

@@ -213,8 +213,11 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		if row < 0 || row >= len(s.screen.Lines) {
 			return
 		}
-		if a := s.screen.Lines[row].ActionAt(ev.X - 1); a.Kind == ActProject || a.Kind == ActProjectMenu {
+		switch a := s.screen.Lines[row].ActionAt(ev.X - 1); a.Kind {
+		case ActProject, ActProjectMenu:
 			s.do(ctx, Action{Kind: ActProjectMenu, Session: a.Session})
+		case ActFocus, ActAgentMenu:
+			s.do(ctx, Action{Kind: ActAgentMenu, Pane: a.Pane})
 		}
 		return
 	}
@@ -331,6 +334,13 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 			args = append(args, "--client", client)
 		}
 		_ = s.t.Spawn(append(c, "-E", "-w", "80%", "-h", "70%", tmux.ShJoin(args...)))
+		return
+	case ActAgentMenu:
+		args := []string{"__menu", "--agent", "--pane", a.Pane}
+		if client != "" {
+			args = append(args, "--client", client)
+		}
+		s.spawn(args)
 		return
 	case ActProjectMenu:
 		args := []string{"__menu", "--project", a.Session}

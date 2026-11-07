@@ -29,6 +29,7 @@ const (
 	ActNewAgent               // split the target pane (direction by its shape) with an agent chooser
 	ActChanges                // menu of the changed files, each opening its diff
 	ActProjectMenu            // menu of project Session (go to it, close it)
+	ActAgentMenu              // menu of agent Pane (go to it, rename it, close it)
 )
 
 // Action is a row's action.
@@ -378,7 +379,8 @@ func agentRow(p PaneRow, w int, now time.Time, tick int) Line {
 	left := " " + color + sym + reset + "  " + nameStyle + fit(name, nw) + reset
 	text := spread(left, 4+nw, right+" ", rw+1, w)
 	if p.Target {
-		text = withBg(text)
+		// The selected agent: a click opens its menu (go, rename, close).
+		return Line{Text: withBg(text), Action: Action{Kind: ActAgentMenu, Pane: p.ID}}
 	}
 	return Line{Text: text, Action: Action{Kind: ActFocus, Pane: p.ID}}
 }

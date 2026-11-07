@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-07
+
+### Added
+
+- **Agent menu:** right-click an agent in the sidebar (or click the one already selected) to go to
+  it, **rename** it or **close** it. The name stays when the chat moves to another CLI; an empty
+  name brings back the agent's own. Closing the last agent of a tab closes the tab; both ask first.
+
 ## [0.10.0] - 2026-11-07
 
 ### Added

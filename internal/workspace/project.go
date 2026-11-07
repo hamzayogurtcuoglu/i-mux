@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -184,6 +185,103 @@ func (w *WS) CloseTab(ctx context.Context, p *Pane) error {
 		return w.CloseProject(ctx, rows[0][0])
 	}
 	if _, err := w.T.Run(ctx, tmux.Cmd{"kill-window", "-t", rows[0][2]}); err != nil {
+		return err
+	}
+	w.RefreshSidebars(ctx)
+	return nil
+}
+
+// agentInfo describes pane p for the agent menus: its shown name and how
+// many agent panes its tab and project have.
+func (w *WS) agentInfo(ctx context.Context, pane string) (name string, tabPanes, windows int, err error) {
+	out, err := w.T.Run(ctx, tmux.Cmd{"list-panes", "-t", pane, "-F", "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_name}\t#{session_windows}"})
+	if err != nil {
+		return "", 0, 0, err
+	}
+	for _, r := range tmux.Rows(out, 5) {
+		if r[1] == sidebar.RoleSidebar {
+			continue
+		}
+		tabPanes++
+		windows, _ = strconv.Atoi(r[4])
+		if r[0] == pane {
+			name = r[3]
+			if name == "" && r[2] != "" {
+				name = session.ShortName(session.AgentID(r[2]))
+			}
+			if name == "" {
+				name = i18n.T("sidebar.shell")
+			}
+		}
+	}
+	return name, tabPanes, windows, nil
+}
+
+// AgentMenu is the menu of an agent pane in the sidebar: go to it, rename
+// it, close it.
+func (w *WS) AgentMenu(ctx context.Context, p *Pane, client string) (*Menu, error) {
+	name, _, _, err := w.agentInfo(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	cur := ""
+	if out, err := w.T.Run(ctx, tmux.Cmd{"show-options", "-pqv", "-t", p.ID, sidebar.OptName}); err == nil {
+		cur = strings.TrimSpace(out)
+	}
+	rename := "command-prompt"
+	if client != "" {
+		rename += " -t " + tmux.Quote(client)
+	}
+	rename += " -I " + tmux.Quote(cur) + " -p " + tmux.Quote(i18n.T("prompt.rename")) + " " +
+		tmux.Quote("set-option -p -t "+p.ID+" "+sidebar.OptName+" \"%%%\" ; "+w.ui("__sidebar-refresh"))
+	goTo := "select-pane -t " + p.ID
+	if client != "" {
+		goTo = "switch-client -c " + tmux.Quote(client) + " -t " + p.ID + " ; select-window -t " + p.ID + " ; " + goTo
+	}
+	return &Menu{
+		Title: name,
+		Items: []MenuItem{
+			{Name: i18n.T("agent.go"), Key: "g", Cmd: goTo},
+			{Name: i18n.T("agent.rename"), Key: "r", Cmd: rename},
+			{Name: i18n.T("agent.close"), Key: "x", Cmd: w.ui(append([]string{"__menu", "--close-agent"}, uiTarget(p.ID, client)...)...)},
+		},
+	}, nil
+}
+
+// CloseAgentMenu asks before closing agent pane p.
+func (w *WS) CloseAgentMenu(ctx context.Context, p *Pane, client string) (*Menu, error) {
+	name, tabPanes, windows, err := w.agentInfo(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	title := i18n.T("close.agent_title", name)
+	switch {
+	case tabPanes <= 1 && windows <= 1:
+		title = i18n.T("close.agent_last_project", name)
+	case tabPanes <= 1:
+		title = i18n.T("close.agent_last_tab", name)
+	}
+	return &Menu{
+		Title: title,
+		Items: []MenuItem{
+			{Name: i18n.T("close.yes_agent"), Key: "y", Cmd: w.ui(append([]string{"__close-pane"}, uiTarget(p.ID, client)...)...)},
+			{Name: i18n.T("click.cancel"), Key: "n"},
+		},
+	}, nil
+}
+
+// CloseAgent ends agent pane p. The last agent of a tab closes the tab (its
+// sidebar leaves with it); of the last tab, the project.
+func (w *WS) CloseAgent(ctx context.Context, p *Pane) error {
+	_, tabPanes, windows, err := w.agentInfo(ctx, p.ID)
+	if err != nil {
+		return err
+	}
+	if tabPanes <= 1 {
+		return w.CloseTab(ctx, p)
+	}
+	_ = windows
+	if _, err := w.T.Run(ctx, tmux.Cmd{"kill-pane", "-t", p.ID}); err != nil {
 		return err
 	}
 	w.RefreshSidebars(ctx)
