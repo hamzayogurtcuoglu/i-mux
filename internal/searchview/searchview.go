@@ -43,8 +43,10 @@ type Model struct {
 	Results []search.Match
 	Cut     bool // the search stopped at its limit
 	Busy    bool // a search is running
-	Sel     int  // index into Rows (a match row)
+	Sel     int  // index into Rows
 	Top     int
+	// Folded holds the files whose matches are hidden.
+	Folded map[string]bool
 }
 
 // Rows groups the results by file.
@@ -57,35 +59,62 @@ func (m *Model) Rows() []Row {
 			j++
 		}
 		out = append(out, Row{File: f, Count: j - i})
-		for k := i; k < j; k++ {
-			out = append(out, Row{File: f, Match: &m.Results[k]})
+		if !m.Folded[f] {
+			for k := i; k < j; k++ {
+				out = append(out, Row{File: f, Match: &m.Results[k]})
+			}
 		}
 		i = j
 	}
 	return out
 }
 
-// fix moves the selection onto a match row (searching in direction d).
-func (m *Model) fix(rows []Row, d int) {
+// fix keeps the selection on a row.
+func (m *Model) fix(rows []Row, _ int) {
 	if len(rows) == 0 {
 		m.Sel = 0
 		return
 	}
 	m.Sel = min(max(m.Sel, 0), len(rows)-1)
-	for range rows {
-		if rows[m.Sel].Match != nil {
+}
+
+// toggle folds or unfolds a file's matches, keeping the selection on its
+// header.
+func (m *Model) toggle(file string, fold bool) {
+	if m.Folded == nil {
+		m.Folded = map[string]bool{}
+	}
+	m.Folded[file] = fold
+	for i, r := range m.Rows() {
+		if r.Match == nil && r.File == file {
+			m.Sel = i
 			return
 		}
-		next := m.Sel + d
-		if next < 0 || next >= len(rows) {
-			d = -d
-			next = m.Sel + d
-			if next < 0 || next >= len(rows) {
-				return
-			}
-		}
-		m.Sel = next
 	}
+}
+
+// ToggleAll folds every file, or unfolds them all when all are folded.
+func (m *Model) ToggleAll() {
+	all := true
+	for _, r := range m.Rows() {
+		if r.Match == nil && !m.Folded[r.File] {
+			all = false
+		}
+	}
+	m.Folded = map[string]bool{}
+	m.Sel, m.Top = 1, 0 // unfolded: the first match
+	if !all {
+		for _, r := range m.Results {
+			m.Folded[r.Path] = true
+		}
+		m.Sel = 0
+	}
+}
+
+// Scroll moves the view by d rows (the mouse wheel).
+func (m *Model) Scroll(d int) {
+	rows := m.Rows()
+	m.Sel = min(max(m.Sel+d, 0), max(len(rows)-1, 0))
 }
 
 // Key applies a key. changed reports a new query; done with a match opens
@@ -111,6 +140,19 @@ func (m *Model) Key(k string) (choice *search.Match, done, changed bool) {
 			mt := *rows[m.Sel].Match
 			return &mt, true, false
 		}
+		if m.Sel < len(rows) {
+			m.toggle(rows[m.Sel].File, !m.Folded[rows[m.Sel].File])
+		}
+	case "left":
+		if m.Sel < len(rows) {
+			m.toggle(rows[m.Sel].File, true)
+		}
+	case "right":
+		if m.Sel < len(rows) {
+			m.toggle(rows[m.Sel].File, false)
+		}
+	case "tab":
+		m.ToggleAll()
 	case "backspace":
 		if r := []rune(m.Query); len(r) > 0 {
 			m.Query = string(r[:len(r)-1])
@@ -217,7 +259,15 @@ func (m *Model) Render(w, h int) []string {
 		r := rows[i]
 		if r.Match == nil {
 			c := strconv.Itoa(r.Count)
-			out = append(out, " "+bold+fit(r.File, w-3-len(c))+reset+" "+muted+c+reset+" ")
+			arrow := "▾ "
+			if m.Folded[r.File] {
+				arrow = "▸ "
+			}
+			line := " " + muted + arrow + reset + bold + fit(r.File, w-5-len(c)) + reset + " " + muted + c + reset + " "
+			if i == m.Sel {
+				line = selBg + strings.ReplaceAll(line, reset, reset+selBg) + reset
+			}
+			out = append(out, line)
 			continue
 		}
 		no := strconv.Itoa(r.Match.Line)
@@ -336,7 +386,8 @@ func Run(o Options) (*search.Match, error) {
 		case <-winch:
 		case r := <-results:
 			if r.gen == gen {
-				m.Results, m.Cut, m.Busy, m.Sel, m.Top = r.matches, r.cut, false, 0, 0
+				m.Results, m.Cut, m.Busy, m.Sel, m.Top = r.matches, r.cut, false, 1, 0 // the first match
+				m.Folded = nil
 			}
 		case b, ok := <-input:
 			if !ok {
@@ -345,11 +396,22 @@ func Run(o Options) (*search.Match, error) {
 			var evs []sidebar.Event
 			evs, pending = sidebar.Parse(append(pending, b...), true)
 			for _, ev := range evs {
+				if ev.Kind == sidebar.EvScroll {
+					if ev.Key == "up" {
+						m.Scroll(-3)
+					} else {
+						m.Scroll(3)
+					}
+					continue
+				}
 				if ev.Kind == sidebar.EvClick {
 					rows := m.Rows()
-					if i := m.Top + ev.Y - 4; ev.Y >= 4 && i < len(rows) && rows[i].Match != nil {
-						mt := *rows[i].Match
-						return &mt, nil
+					if i := m.Top + ev.Y - 4; ev.Y >= 4 && i < len(rows) {
+						if rows[i].Match != nil {
+							mt := *rows[i].Match
+							return &mt, nil
+						}
+						m.toggle(rows[i].File, !m.Folded[rows[i].File])
 					}
 					continue
 				}

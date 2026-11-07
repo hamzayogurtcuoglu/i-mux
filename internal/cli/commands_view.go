@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/diffview"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/searchview"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
@@ -29,6 +30,12 @@ func init() {
 		Run:    runSearch,
 	})
 	register(&command{
+		Name:   "__edit",
+		Args:   "[--line N] <path>",
+		Hidden: true,
+		Run:    runEdit,
+	})
+	register(&command{
 		Name:   "__view",
 		Args:   "[--line N] <path>",
 		Hidden: true,
@@ -41,6 +48,8 @@ func init() {
 // in a popup in the project folder.
 func runDiff(e *Env, args []string) error {
 	fs := newFlags(e, "__diff")
+	staged := fs.Bool("staged", false, "the staged side (index against HEAD)")
+	worktree := fs.Bool("worktree", false, "the unstaged side (work tree against the index)")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
@@ -57,7 +66,14 @@ func runDiff(e *Env, args []string) error {
 		}
 		lines = diffview.AllAdded(string(b))
 	} else {
-		lines = diffview.Parse(gitDiff(path))
+		mode := "head"
+		switch {
+		case *staged:
+			mode = "staged"
+		case *worktree:
+			mode = "worktree"
+		}
+		lines = diffview.Parse(gitDiff(path, mode))
 	}
 	w, _ := sidebar.Size(int(os.Stdout.Fd()))
 	rows, first := diffview.Render(lines, w, w >= 120)
@@ -74,15 +90,24 @@ func runDiff(e *Env, args []string) error {
 	if first >= 0 {
 		start = max(first+2-3, 1) // header lines; a little context above
 	}
-	return page(e, &b, "-R", "-S", "+"+strconv.Itoa(start))
+	return page(e, &b, "-R", "-S", "--mouse", "+"+strconv.Itoa(start))
 }
 
-// gitDiff is the file's whole-file diff against HEAD (against the index in a
-// repository without commits).
-func gitDiff(path string) string {
+func bytesBuffer(b []byte) *bytes.Buffer { return bytes.NewBuffer(b) }
+
+// gitDiff is the file's whole-file diff: against HEAD ("head"; against the
+// index in a repository without commits), the staged side or the work tree.
+func gitDiff(path, mode string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	for _, base := range [][]string{{"HEAD"}, {}} {
+	bases := [][]string{{"HEAD"}, {}}
+	switch mode {
+	case "staged":
+		bases = [][]string{{"--cached"}}
+	case "worktree":
+		bases = [][]string{{}}
+	}
+	for _, base := range bases {
 		args := append([]string{"diff", "--no-color", "--no-ext-diff", "-U1000000"}, base...)
 		out, err := exec.CommandContext(ctx, "git", append(args, "--", path)...).Output()
 		if err == nil {
@@ -90,6 +115,31 @@ func gitDiff(path string) string {
 		}
 	}
 	return ""
+}
+
+// runEdit opens a file in the editor (D27), at --line; without an editor it
+// shows the file.
+func runEdit(e *Env, args []string) error {
+	fs := newFlags(e, "__edit")
+	line := fs.Int("line", 0, "line to open at")
+	pos, err := parseFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return &UsageError{Msg: i18n.T("cli.usage", "__edit [--line N] <path>")}
+	}
+	cfg, err := loadConfig(e)
+	if err != nil {
+		return err
+	}
+	argv := editor.Command(editor.Choose(cfg.Editor), pos[0], *line)
+	if argv == nil {
+		return runView(e, args)
+	}
+	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	return cmd.Run()
 }
 
 // runView shows a file with line numbers, at --line: bat when installed,
@@ -112,10 +162,10 @@ func runView(e *Env, args []string) error {
 		}
 		out, err := exec.Command(bat, append(args, "--", pos[0])...).Output()
 		if err == nil {
-			return page(e, bytes.NewBuffer(out), "-R", "-S", start)
+			return page(e, bytes.NewBuffer(out), "-R", "-S", "--mouse", start)
 		}
 	}
-	return pageFile(e, pos[0], "-N", "-R", "-S", start)
+	return pageFile(e, pos[0], "-N", "-R", "-S", "--mouse", start)
 }
 
 // runSearch is the project search popup (D26); a chosen result opens in the
@@ -129,7 +179,7 @@ func runSearch(e *Env, args []string) error {
 	if err != nil || m == nil {
 		return err
 	}
-	return runView(e, []string{"--line", strconv.Itoa(m.Line), m.Path})
+	return runEdit(e, []string{"--line", strconv.Itoa(m.Line), m.Path})
 }
 
 // ViewArgs is how a view command for path at line is passed to a popup.
@@ -167,6 +217,11 @@ func pageFile(e *Env, path string, opts ...string) error {
 	}
 	cmd := exec.Command(less, append(opts, "--", path)...)
 	cmd.Env = append(os.Environ(), "LESS="+strings.TrimSpace(os.Getenv("LESS")+" -K"))
+	if cfg, err := loadConfig(e); err == nil {
+		if ed := editor.Choose(cfg.Editor); ed != nil {
+			cmd.Env = append(cmd.Env, "VISUAL="+strings.Join(ed, " ")) // less's v edits
+		}
+	}
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return cmd.Run()
 }

@@ -134,6 +134,7 @@ type Config struct {
 	OnLimit      string            `toml:"on_limit"` // ask | auto | off
 	OnExit       string            `toml:"on_exit"`  // shell | close
 	Locale       string            `toml:"locale"`
+	Editor       string            `toml:"editor"` // "" = micro, $VISUAL, $EDITOR, nano, vim
 	Handoff      Handoff           `toml:"handoff"`
 	Limits       Limits            `toml:"limits"`
 	Bus          Bus               `toml:"bus"`
@@ -220,7 +221,7 @@ func Default() *Config {
 			PickerKeyPrefix: "S",
 			AgentBar:        false,
 			Sidebar:         true,
-			SidebarWidth:    38,
+			SidebarWidth:    40,
 			SidebarKey:      "b",
 			SplitRightKey:   "v",
 			SplitDownKey:    "-",

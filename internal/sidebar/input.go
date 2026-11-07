@@ -75,6 +75,10 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 					key("up")
 				case 'B':
 					key("down")
+				case 'C':
+					key("right")
+				case 'D':
+					key("left")
 				case 'Z':
 					key("backtab")
 				}

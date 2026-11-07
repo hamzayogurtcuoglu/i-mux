@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
 
@@ -21,8 +22,12 @@ const (
 	OptView      = "@imux_view"
 )
 
-// railW is the activity rail's width.
-const railW = 3
+// railW is the activity rail's width: an emoji (2 columns) with room
+// around it, and a short label under it.
+const railW = 6
+
+// railTall is the height from which the rail shows labels.
+const railTall = 26
 
 // TreeRow is one entry of the explorer.
 type TreeRow struct {
@@ -168,105 +173,242 @@ func renderExplorer(m Model, w, h int) []Line {
 	return append(out, scrolled(rows, m.Scroll, n)...)
 }
 
-// renderChanges is the Source Control view: every changed file.
+// Fold names of the Source Control view (in @imux_fold).
+const (
+	SecStaged   = "staged"
+	SecUnstaged = "unstaged"
+	SecHistory  = "history"
+)
+
+// buttons lays out a row: a main cell (the rest of the width) and small
+// buttons on the right, each " x".
+func buttons(w int, main Cell, btns ...Cell) Line {
+	bw := 0
+	for _, b := range btns {
+		bw += b.W
+	}
+	main.X, main.W = 0, w-bw-1
+	cells := []Cell{main}
+	x := main.W
+	for _, b := range btns {
+		b.X = x
+		cells = append(cells, b)
+		x += b.W
+	}
+	return Line{Text: compose(cells, w), Cells: cells}
+}
+
+// btn is a 2-column button.
+func btn(sym, color string, a Action) Cell {
+	return Cell{W: 2, Text: " " + color + sym + reset, Action: a}
+}
+
+// scmRow is one changed file of the Source Control view with its buttons.
+func scmRow(c gitops.Change, staged bool, w int) Line {
+	cr := ChangeRow{Status: c.Status, Path: c.Path, Added: c.Added, Removed: c.Removed}
+	side := "worktree"
+	var bs []Cell
+	if staged {
+		side = "staged"
+		bs = append(bs, btn("−", muted, Action{Kind: ActGit, Section: "unstage", Path: c.Path}))
+	} else {
+		st := ""
+		if c.Untracked {
+			st = "?"
+		}
+		bs = append(bs, btn("↶", muted, Action{Kind: ActGitConfirm, Section: "discard", Path: c.Path, Status: st}),
+			btn("+", muted, Action{Kind: ActGit, Section: "stage", Path: c.Path}))
+	}
+	inner := changeRow(cr, w-2*len(bs)-1)
+	main := Cell{Text: inner.Text, Action: Action{Kind: ActDiff, Path: c.Path, Status: c.Status, Section: side}}
+	return buttons(w, main, bs...)
+}
+
+// renderChanges is the Source Control view, like an editor's (D27).
 func renderChanges(m Model, w, h int) []Line {
-	if !m.Git {
+	st := m.SCM
+	if st == nil {
 		return []Line{
 			{Text: title + fit(" "+i18n.T("sidebar.source_control"), w) + reset},
 			{Text: muted + fit("   "+i18n.T("sidebar.no_git"), w) + reset},
 		}
 	}
-	text := i18n.T("sidebar.source_control")
-	if m.Branch != "" {
-		text += " · " + m.Branch
+	folded := func(n string) bool { return m.Fold[n] }
+	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.source_control"), w-3) + reset},
+		Cell{W: 2, Text: " " + muted + "⟳" + reset, Action: Action{Kind: ActRefresh}})}
+
+	// Branch, ahead / behind, sync.
+	branch := st.Branch
+	if branch == "" {
+		branch = i18n.T("git.detached")
 	}
-	count := ""
-	if m.Changed > 0 {
-		count = strconv.Itoa(m.Changed) + " "
+	sync := ""
+	if st.Upstream != "" {
+		sync = "↑" + strconv.Itoa(st.Ahead) + " ↓" + strconv.Itoa(st.Behind)
 	}
-	l, r := text, count
-	out := []Line{{Text: " " + title + fit(l, w-1-runes(r)) + reset + muted + r + reset}}
+	syncBtns := []Cell{
+		{W: 3, Text: " " + muted + "↓" + reset + " ", Action: Action{Kind: ActGitPopup, Section: "pull"}},
+		{W: 3, Text: " " + muted + "↑" + reset + " ", Action: Action{Kind: ActGitPopup, Section: "push"}},
+		{W: 2, Text: " " + cyan + "⇅" + reset, Action: Action{Kind: ActGitPopup, Section: "sync"}},
+	}
+	// " ⎇ " name " " sync, in the w-9 columns left of the three buttons.
+	left := " " + cyan + "⎇" + reset + " " + fit(branch+" ▾", max(w-13-runes(sync), 4)) + " " + muted + sync + reset
+	out = append(out, buttons(w, Cell{Text: left, Action: Action{Kind: ActBranchMenu}}, syncBtns...))
+
+	// Commit button.
+	label := "✓ " + i18n.T("git.commit_button")
+	pad := max(w-2-runes(label), 0)
+	out = append(out, Line{
+		Text:   " " + "\x1b[48;5;24m\x1b[38;5;255m" + strings.Repeat(" ", pad/2) + label + strings.Repeat(" ", pad-pad/2) + reset + " ",
+		Action: Action{Kind: ActCommit},
+	})
+
 	var rows []Line
-	for _, c := range m.Changes {
-		rows = append(rows, changeRow(c, w))
+	section := func(name, text string, n int, btns ...Cell) {
+		arrow := "▾"
+		if folded(name) {
+			arrow = "▸"
+		}
+		head := Cell{
+			Text:   " " + muted + arrow + reset + " " + title + fit(text+"  "+strconv.Itoa(n), w-4-2*len(btns)) + reset,
+			Action: Action{Kind: ActFold, Section: name},
+		}
+		rows = append(rows, buttons(w, head, btns...))
 	}
-	if more := m.Changed - len(m.Changes); more > 0 {
-		rows = append(rows, Line{Text: muted + fit("   "+i18n.T("sidebar.more_files", more), w) + reset, Action: Action{Kind: ActChanges}})
+	if len(st.Staged) > 0 {
+		section(SecStaged, i18n.T("git.staged"), len(st.Staged), btn("−", muted, Action{Kind: ActGit, Section: "unstage-all"}))
+		if !folded(SecStaged) {
+			for _, c := range st.Staged {
+				rows = append(rows, scmRow(c, true, w))
+			}
+		}
 	}
-	if len(rows) == 0 {
-		rows = append(rows, Line{Text: muted + fit("   "+i18n.T("sidebar.no_changes"), w) + reset})
+	section(SecUnstaged, i18n.T("git.changes"), len(st.Changes),
+		btn("↶", muted, Action{Kind: ActGitConfirm, Section: "discard-all"}), btn("+", muted, Action{Kind: ActGit, Section: "stage-all"}))
+	if !folded(SecUnstaged) {
+		if len(st.Changes) == 0 {
+			rows = append(rows, Line{Text: muted + fit("   "+i18n.T("sidebar.no_changes"), w) + reset})
+		}
+		for _, c := range st.Changes {
+			rows = append(rows, scmRow(c, false, w))
+		}
+	}
+	if len(st.History) > 0 {
+		section(SecHistory, i18n.T("git.history"), len(st.History))
+		if !folded(SecHistory) {
+			for _, c := range st.History {
+				when := age(m.Now, c.When)
+				sw := max(w-12-runes(when), 1) // "   " hash " " subject " " when
+				rows = append(rows, Line{
+					Text:   "   " + yellow + fit(c.Hash, 7) + reset + " " + fit(c.Subject, sw) + " " + muted + when + reset,
+					Action: Action{Kind: ActGitPopup, Section: "show", Path: c.Hash},
+				})
+			}
+		}
 	}
 	n := 0
 	if h > 0 {
-		n = h - 1
+		n = h - len(out)
 	}
 	return append(out, scrolled(rows, m.Scroll, n)...)
 }
 
 // railItem is one icon of the activity rail.
 type railItem struct {
-	icon   string
+	icon   string // an emoji: 2 columns wide
+	label  string // i18n key of its label
 	view   string // the view it shows ("" for an action)
 	action Action
 }
 
-// railCell draws a rail icon (3 columns).
-func railCell(it railItem, m Model) Cell {
+// railItems are the rail's icons: the views at the top, then the bottom
+// buttons.
+func railItems() (top, bottom []railItem) {
+	return []railItem{
+		{icon: "🤖", label: "rail.agents", view: ViewAgents},
+		{icon: "📁", label: "rail.files", view: ViewExplorer},
+		{icon: "🔍", label: "rail.search", action: Action{Kind: ActSearch}},
+		{icon: "🔀", label: "rail.git", view: ViewChanges},
+	}, []railItem{
+		{icon: "📊", label: "rail.limits", action: Action{Kind: ActLimits}},
+		{icon: "❓", label: "rail.help", action: Action{Kind: ActKeys}},
+	}
+}
+
+// railCells draws a rail item: its icon row and its label row.
+func railCells(it railItem, m Model) (icon, label Cell) {
 	cur := m.View
 	if cur == "" {
 		cur = ViewAgents
 	}
 	active := it.view != "" && it.view == cur
-	icon := muted + it.icon + reset
-	third := " "
-	if it.view == ViewChanges && m.Changed > 0 {
-		icon = yellow + it.icon + reset
-		if m.Changed < 10 {
-			third = yellow + strconv.Itoa(m.Changed) + reset
-		} else {
-			third = yellow + "+" + reset
-		}
-	}
-	text := " " + icon + third
-	if active {
-		text = selBg + cyan + "▌" + reset + selBg + bold + it.icon + reset + selBg + " " + reset
-		if it.view == ViewChanges && m.Changed > 0 {
-			text = selBg + cyan + "▌" + reset + selBg + yellow + it.icon + reset + selBg + third + reset
-		}
-	}
 	a := it.action
 	if it.view != "" {
 		a = Action{Kind: ActView, Section: it.view}
 	}
-	return Cell{X: 0, W: railW, Text: text, Action: a}
+	text := i18n.T(it.label)
+	color := muted
+	if it.view == ViewChanges && m.Changed > 0 {
+		text += " " + strconv.Itoa(min(m.Changed, 99))
+		color = yellow
+	}
+	r := []rune(text)
+	if len(r) > railW {
+		r = r[:railW]
+	}
+	pad := railW - len(r)
+	lt := strings.Repeat(" ", pad/2) + string(r) + strings.Repeat(" ", pad-pad/2)
+	// "  🤖  ": the emoji takes 2 of the 6 columns.
+	if active {
+		return Cell{X: 0, W: railW, Text: selBg + cyan + "▌" + reset + selBg + " " + it.icon + "  " + reset, Action: a},
+			Cell{X: 0, W: railW, Text: selBg + bold + lt + reset, Action: a}
+	}
+	return Cell{X: 0, W: railW, Text: "  " + it.icon + "  ", Action: a},
+		Cell{X: 0, W: railW, Text: color + lt + reset, Action: a}
 }
 
 // withRail puts the activity rail on the left of the view's lines: the views
-// at the top, Limits and Help at the bottom.
+// at the top, Limits and Help at the bottom; labels under the icons when the
+// sidebar is tall enough.
 func withRail(content []Line, m Model, w, h int) []Line {
-	top := []railItem{
-		{icon: "✻", view: ViewAgents},
-		{icon: "▤", view: ViewExplorer},
-		{icon: "⌕", action: Action{Kind: ActSearch}},
-		{icon: "⑂", view: ViewChanges},
+	top, bottom := railItems()
+	tall := h == 0 || h >= railTall
+	step := 2
+	if tall {
+		step = 3
 	}
-	bottom := []railItem{{icon: "◔", action: Action{Kind: ActLimits}}, {icon: "?", action: Action{Kind: ActKeys}}}
 	rows := len(content)
 	if h > 0 {
 		rows = h
 	}
-	at := map[int]railItem{}
-	for i, it := range top {
-		at[i*2] = it
+	at := map[int]Cell{}
+	place := func(row int, it railItem) {
+		icon, label := railCells(it, m)
+		at[row] = icon
+		if tall {
+			at[row+1] = label
+		}
 	}
-	bottomAt := rows - 3
+	for i, it := range top {
+		place(i*step, it)
+	}
+	bottomAt := rows - len(bottom)*step + step - 2
+	if !tall {
+		bottomAt = rows - len(bottom)*step + 1
+	}
 	if h == 0 {
-		bottomAt = max(rows, len(top)*2+1)
+		bottomAt = max(rows, len(top)*step) + 1
 	}
 	for i, it := range bottom {
-		at[bottomAt+i*2] = it
+		place(bottomAt+i*step, it)
 	}
-	n := max(rows, bottomAt+len(bottom)*2-1)
+	n := rows
+	for r := range at {
+		n = max(n, r+1)
+	}
+	if h > 0 {
+		n = h
+	}
 	out := make([]Line, 0, n)
 	for i := 0; i < n; i++ {
 		var c Line
@@ -275,12 +417,11 @@ func withRail(content []Line, m Model, w, h int) []Line {
 		} else {
 			c = Line{Text: strings.Repeat(" ", w-railW)}
 		}
-		var cells []Cell
-		if it, ok := at[i]; ok {
-			cells = append(cells, railCell(it, m))
-		} else {
-			cells = append(cells, Cell{X: 0, W: railW, Text: strings.Repeat(" ", railW)})
+		cell, ok := at[i]
+		if !ok {
+			cell = Cell{X: 0, W: railW, Text: strings.Repeat(" ", railW)}
 		}
+		cells := []Cell{cell}
 		if len(c.Cells) == 0 {
 			cells = append(cells, Cell{X: railW, W: w - railW, Text: c.Text, Action: c.Action})
 		} else {

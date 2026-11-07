@@ -6,6 +6,29 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-08
+
+### Added
+
+- **Git like an editor's source control:** staged and unstaged changes, + stage, − unstage and
+  ↶ discard (asks first) per file and for all, **Commit…** (with nothing staged it commits every
+  change), pull / push / sync with ahead and behind counts, a branch menu (switch, new branch) and
+  the recent history (click a commit to see it).
+- **Editing:** a file opens in your editor (`editor` in the config, else micro, `$VISUAL`,
+  `$EDITOR`, nano, vim with the mouse on); right-click a file to view it or open it in VS Code;
+  search results open in the editor at the line.
+- Search results fold per file (click the file, ← →) and all at once (Tab).
+
+### Changed
+
+- **Bigger rail:** colored icons with their names under them (🤖 Agents, 📁 Files, 🔍 Search,
+  🔀 Git, 📊 Limits, ❓ Help); the default sidebar width is 40.
+- The mouse wheel scrolls in the file, diff and limits viewers and in the popups.
+
+### Fixed
+
+- Right-click menus in the sidebar no longer close as soon as they open.
+
 ## [0.15.0] - 2026-11-08
 
 ### Added

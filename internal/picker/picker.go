@@ -329,6 +329,12 @@ func Run(o Options) (folders.Cand, bool, error) {
 			var evs []sidebar.Event
 			evs, pending = sidebar.Parse(append(pending, b...), true)
 			for _, ev := range evs {
+				if ev.Kind == sidebar.EvScroll {
+					for range 3 {
+						m.Key(ev.Key)
+					}
+					continue
+				}
 				if ev.Kind == sidebar.EvClick {
 					// A click on a list row opens it.
 					list := m.List()

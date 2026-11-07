@@ -6,11 +6,14 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -211,8 +214,8 @@ func (s *sidebar) keepWidth(ctx context.Context) {
 func (s *sidebar) handle(ctx context.Context, ev Event) {
 	if ev.Kind == EvScroll {
 		n := len(s.model.Tree)
-		if s.model.View == ViewChanges {
-			n = len(s.model.Changes)
+		if s.model.View == ViewChanges && s.model.SCM != nil {
+			n = len(s.model.SCM.Staged) + len(s.model.SCM.Changes) + len(s.model.SCM.History) + 3
 		}
 		if ev.Key == "up" {
 			s.scroll = max(s.scroll-3, 0)
@@ -229,12 +232,20 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		if row < 0 || row >= len(s.screen.Lines) {
 			return
 		}
+		var menu Action
 		switch a := s.screen.Lines[row].ActionAt(ev.X - 1); a.Kind {
+		case ActOpenFile:
+			menu = Action{Kind: ActFileMenu, Path: a.Path}
 		case ActProject, ActProjectMenu:
-			s.do(ctx, Action{Kind: ActProjectMenu, Session: a.Session})
+			menu = Action{Kind: ActProjectMenu, Session: a.Session}
 		case ActFocus, ActAgentMenu:
-			s.do(ctx, Action{Kind: ActAgentMenu, Pane: a.Pane})
+			menu = Action{Kind: ActAgentMenu, Pane: a.Pane}
+		default:
+			return
 		}
+		// Like a left click: wait until the button is released, or the
+		// release closes the menu.
+		time.AfterFunc(ClickDelay, func() { s.clicks <- menu })
 		return
 	}
 	if ev.Kind == EvClick {
@@ -377,7 +388,32 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		}
 		return
 	case ActOpenFile:
-		s.popup(client, "90%", "90%", "__view", a.Path)
+		s.popup(client, "90%", "90%", "__edit", a.Path)
+		return
+	case ActFileMenu:
+		s.fileMenu(ctx, client, a.Path)
+		return
+	case ActGit:
+		s.spawn(s.gitArgs(a.Section, client, a.Status == "?", a.Path))
+		return
+	case ActGitConfirm:
+		s.confirmDiscard(ctx, client, a)
+		return
+	case ActCommit:
+		s.prompt(ctx, client, i18n.T("prompt.commit"), "",
+			"set-option -g @imux_git \"%%%\" ; "+tmux.RunShell(s.o.Self, s.gitArgs("commit", client, false)...)+"")
+		return
+	case ActBranchMenu:
+		s.branchMenu(ctx, client)
+		return
+	case ActGitPopup:
+		args := []string{"__git", a.Section, "--cwd", s.model.CWD}
+		if a.Path != "" {
+			args = append(args, "--", a.Path)
+		}
+		s.popup(client, "80%", "70%", args...)
+		return
+	case ActRefresh:
 		return
 	case ActSearch:
 		s.popup(client, "90%", "90%", "__search")
@@ -385,7 +421,7 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActFold:
 		// Fold or unfold a section in every sidebar (@imux_fold, global).
 		var names []string
-		for _, n := range []string{SecProjects, SecAgents, SecChanges} {
+		for _, n := range []string{SecProjects, SecAgents, SecChanges, SecStaged, SecUnstaged, SecHistory} {
 			if f := s.model.Fold[n]; f != (n == a.Section) {
 				names = append(names, n)
 			}
@@ -490,7 +526,107 @@ func (s *sidebar) diff(a Action, client string) {
 	if s.model.CWD != "" {
 		c = append(c, "-d", s.model.CWD)
 	}
-	_ = s.t.Spawn(append(c, DiffShell(s.o.Self, a.Status, a.Path)))
+	sh := DiffShell(s.o.Self, a.Status, a.Path)
+	if a.Section == "staged" || a.Section == "worktree" {
+		sh = tmux.ShJoin(s.o.Self, "__diff", "--"+a.Section, a.Status, a.Path)
+	}
+	_ = s.t.Spawn(append(c, sh))
+}
+
+// gitArgs is `imux __git op` for the project folder (and paths).
+func (s *sidebar) gitArgs(op, client string, untracked bool, paths ...string) []string {
+	args := []string{"__git", op, "--cwd", s.model.CWD}
+	if client != "" {
+		args = append(args, "--client", client)
+	}
+	if op == "commit" || op == "new-branch" {
+		args = append(args, "--from-option")
+	}
+	if untracked {
+		args = append(args, "--untracked")
+	}
+	if len(paths) > 0 {
+		args = append(append(args, "--"), paths...)
+	}
+	return args
+}
+
+// menu shows a display-menu on client.
+func (s *sidebar) menu(ctx context.Context, client, title string, items ...string) {
+	c := tmux.Cmd{"display-menu"}
+	if client != "" {
+		c = append(c, "-c", client)
+	}
+	c = append(append(c, "-T", tmux.EscapeFormat(title), "-x", "C", "-y", "C", "--"), items...)
+	_ = s.t.Spawn(c)
+}
+
+// confirmDiscard asks before throwing changes away (they cannot be had back).
+func (s *sidebar) confirmDiscard(ctx context.Context, client string, a Action) {
+	title := i18n.T("git.discard_all_title")
+	var args []string
+	if a.Section == "discard-all" {
+		args = s.gitArgs("discard-all", client, false)
+	} else {
+		title = i18n.T("git.discard_title", a.Path)
+		args = s.gitArgs("discard", client, a.Status == "?", a.Path)
+	}
+	s.menu(ctx, client, title,
+		tmux.EscapeFormat(i18n.T("git.discard_yes")), "y", tmux.RunShell(s.o.Self, args...),
+		tmux.EscapeFormat(i18n.T("click.cancel")), "n", "")
+}
+
+// branchMenu lists the local branches (checkout) and New branch.
+func (s *sidebar) branchMenu(ctx context.Context, client string) {
+	bs, cur, err := gitops.Branches(ctx, s.model.CWD)
+	if err != nil {
+		return
+	}
+	var items []string
+	for i, b := range bs {
+		if i >= 20 {
+			break
+		}
+		name := "  " + b
+		cmd := tmux.RunShell(s.o.Self, append(s.gitArgs("checkout", client, false), b)...)
+		if b == cur {
+			name, cmd = "✓ "+b, ""
+		}
+		items = append(items, tmux.EscapeFormat(name), "", cmd)
+	}
+	newCmd := "command-prompt"
+	if client != "" {
+		newCmd += " -t " + tmux.Quote(client)
+	}
+	newCmd += " -p " + tmux.Quote(i18n.T("prompt.branch")) + " " +
+		tmux.Quote("set-option -g @imux_git \"%%%\" ; "+tmux.RunShell(s.o.Self, s.gitArgs("new-branch", client, false)...))
+	items = append(items, "", tmux.EscapeFormat("+ "+i18n.T("git.new_branch")), "n", newCmd)
+	s.menu(ctx, client, i18n.T("git.branches"), items...)
+}
+
+// fileMenu is the right-click menu of an explorer file.
+func (s *sidebar) fileMenu(ctx context.Context, client, path string) {
+	popup := func(args ...string) string {
+		c := "display-popup"
+		if client != "" {
+			c += " -c " + tmux.Quote(client)
+		}
+		c += " -E -w 90% -h 90%"
+		if s.model.CWD != "" {
+			c += " -d " + tmux.Quote(s.model.CWD)
+		}
+		return c + " " + tmux.Quote(tmux.ShJoin(append([]string{s.o.Self}, args...)...))
+	}
+	items := []string{
+		tmux.EscapeFormat(i18n.T("file.edit")), "e", popup("__edit", path),
+		tmux.EscapeFormat(i18n.T("file.view")), "v", popup("__view", path),
+	}
+	if code := editor.VSCode(); code != "" {
+		abs := filepath.Join(s.model.CWD, path)
+		items = append(items, tmux.EscapeFormat(i18n.T("file.vscode")), "c",
+			"run-shell -b "+tmux.Quote(tmux.ShJoin(code, "-g", abs)+" >/dev/null 2>&1 || true"))
+	}
+	s.menu(ctx, client, path, items...)
 }
 
 // popup runs an imux command in a popup in the project folder.

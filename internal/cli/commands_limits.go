@@ -48,7 +48,7 @@ func runLimits(e *Env, args []string) error {
 	if less, err := exec.LookPath("less"); err == nil {
 		// Only -R on the command line: BusyBox less (Alpine) rejects -X and
 		// -K and would exit at once; it ignores $LESS, which GNU less reads.
-		cmd := exec.Command(less, "-R")
+		cmd := exec.Command(less, "-R", "--mouse")
 		cmd.Env = append(os.Environ(), "LESS="+strings.TrimSpace(os.Getenv("LESS")+" -X -K"))
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = &buf, os.Stdout, os.Stderr
 		return cmd.Run()

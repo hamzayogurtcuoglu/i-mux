@@ -15,6 +15,7 @@ line number.
 | `on_limit` | `"ask"` | What happens when an agent hits its usage limit: ask  = show a "continue in ..." menu (default) auto = switch to the first installed, non-limited agent in `order` off  = only show the limit in the status bar |
 | `on_exit` | `"shell"` | What a pane does when its agent exits: "shell" (drop to your login shell) or "close". |
 | `locale` | `""` | UI language: "" = from IMUX_LANG / LANG; "en" or "tr". |
+| `editor` | `""` | Editor files open in from the sidebar and search ("micro", "vim", "code" ...). "" = micro, then $VISUAL, $EDITOR, nano, vim. |
 | `handoff.budget_chars` | `30000` | Size of the handoff document in characters (runes). |
 | `handoff.max_arg_bytes` | `102400` | Upper bound for the handoff when passed as a command-line argument. |
 | `handoff.inject` | `"argv"` | "argv" passes the handoff as the agent's initial prompt; "paste" pastes it into the agent after it started (hides it from `ps`). |
@@ -42,7 +43,7 @@ line number.
 | `tmux.menu_key_prefix` | `"a"` | prefix + key opens the pane menu. |
 | `tmux.picker_key_prefix` | `"S"` | prefix + key opens the session picker. |
 | `tmux.sidebar` | `true` | Sidebar on the left of each window: panes, agents to continue in, split buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3). |
-| `tmux.sidebar_width` | `38` |  |
+| `tmux.sidebar_width` | `40` |  |
 | `tmux.sidebar_key_prefix` | `"b"` | prefix + key shows or hides the sidebar. |
 | `tmux.split_right_key_prefix` | `"v"` | prefix + key splits the active pane (asks which agent to start). |
 | `tmux.split_down_key_prefix` | `"-"` |  |
@@ -99,6 +100,10 @@ on_exit       = "shell"
 
 # UI language: "" = from IMUX_LANG / LANG; "en" or "tr".
 locale        = ""
+
+# Editor files open in from the sidebar and search ("micro", "vim", "code" ...).
+# "" = micro, then $VISUAL, $EDITOR, nano, vim.
+editor        = ""
 
 [handoff]
 # Size of the handoff document in characters (runes).
@@ -170,7 +175,7 @@ picker_key_prefix = "S"
 # Sidebar on the left of each window: panes, agents to continue in, split
 # buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3).
 sidebar           = true
-sidebar_width     = 38
+sidebar_width     = 40
 # prefix + key shows or hides the sidebar.
 sidebar_key_prefix = "b"
 # prefix + key splits the active pane (asks which agent to start).

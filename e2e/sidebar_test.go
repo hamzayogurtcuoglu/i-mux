@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
@@ -73,7 +73,7 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 	h.waitFor("sidebar width", 10*time.Second, func() bool {
 		f := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width} #{window_width}"))
 		ww, _ := strconv.Atoi(f[1])
-		return f[0] == "38" || ww < 54
+		return f[0] == "40" || ww < 54
 	})
 	width, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")))
 	var lines []string
@@ -81,7 +81,7 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 		lines = strings.Split(h.screen(bar), "\n")
 		// Drawn for this width: the "+" of Projects is in the last but one
 		// column (a capture right after a resize still shows the old frame).
-		if len(lines) == 0 || utf8.RuneCountInString(strings.TrimRight(lines[0], " ")) != width-1 {
+		if len(lines) == 0 || sidebar.DisplayWidth(strings.TrimRight(lines[0], " ")) != width-1 {
 			return false
 		}
 		for _, l := range lines {
@@ -99,7 +99,7 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 	}
 	for i, l := range lines {
 		if j := strings.Index(l, text); j >= 0 {
-			return left + utf8.RuneCountInString(l[:j]) + 1, top + i + 1
+			return left + sidebar.DisplayWidth(l[:j]) + 1, top + i + 1
 		}
 	}
 	return 0, 0
@@ -117,8 +117,8 @@ func TestSidebar(t *testing.T) {
 	c, _ := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
 	// A bigger client grows the panes; the sidebar takes its width back.
-	h.waitFor("sidebar width 38", 5*time.Second, func() bool {
-		return strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")) == "38"
+	h.waitFor("sidebar width 40", 5*time.Second, func() bool {
+		return strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")) == "40"
 	})
 	if got := h.paneOpt(agentPane, "#{pane_active}"); got != "1" {
 		t.Errorf("the agent pane should keep the focus, active=%s", got)
@@ -245,7 +245,7 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 
 	// Source Control (⑂ on the rail) lists the changed file with its line
 	// counts; a click shows the whole file with the change marked.
-	x, y := h.rowOf(bar, "⑂")
+	x, y := h.rowOf(bar, "🔀")
 	c.Click(0, x, y)
 	x, y = h.rowOf(bar, "M  readme.md")
 	if l := h.lineOf(bar, "M  readme.md"); !strings.Contains(l, "+1") {
@@ -257,7 +257,7 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	c.waitScreenAfter(h, mark, "1   hello", 5*time.Second) // the unchanged line too
 	c.Write("q")                                           // less
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.rowOf(bar, "✻")
+	x, y = h.rowOf(bar, "🤖")
 	c.Click(0, x, y) // back to the Agents view
 	h.rowOf(bar, "AGENTS")
 	time.Sleep(500 * time.Millisecond)

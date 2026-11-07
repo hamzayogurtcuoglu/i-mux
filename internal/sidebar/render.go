@@ -36,6 +36,13 @@ const (
 	ActToggleDir              // open or close folder Path in the explorer
 	ActOpenFile               // show file Path
 	ActSearch                 // the project search popup
+	ActGit                    // run git action Section on Path (Status "?" = untracked)
+	ActGitConfirm             // ask, then run git action Section (discards)
+	ActCommit                 // ask for a commit message and commit
+	ActBranchMenu             // the branch menu (checkout, new branch)
+	ActGitPopup               // run git action Section in a popup (push, pull, sync, show Path)
+	ActFileMenu               // the menu of file Path (edit, view, VS Code)
+	ActRefresh                // redraw
 )
 
 // Action is a row's action.
@@ -640,7 +647,7 @@ func Render(m Model, w, h int, sel Item) Screen {
 		content = renderAgents(m, cw, h)
 	}
 	sc := Screen{Lines: withRail(content, m, w, h)}
-	highlight(sc, sel)
+	highlight(sc, sel, w)
 	return sc
 }
 
@@ -672,7 +679,7 @@ func renderAgents(m Model, w, h int) []Line {
 }
 
 // highlight draws the keyboard selection in reverse video.
-func highlight(sc Screen, sel Item) {
+func highlight(sc Screen, sel Item, w int) {
 	if sel.Row < 0 || sel.Row >= len(sc.Lines) {
 		return
 	}
@@ -689,7 +696,7 @@ func highlight(sc Screen, sel Item) {
 	}
 	cells := append([]Cell{}, l.Cells...)
 	cells[sel.Cell].Text = revd(cells[sel.Cell].Text)
-	l.Text = compose(cells, runes(Plain(l.Text)))
+	l.Text = compose(cells, w)
 }
 
 // compose lays out cells on a w-column row.
@@ -755,4 +762,19 @@ func Plain(s string) string {
 		b.WriteByte(s[i])
 	}
 	return b.String()
+}
+
+// DisplayWidth counts the terminal columns of plain text: the rail's emoji
+// take two.
+func DisplayWidth(s string) int {
+	n := 0
+	for _, r := range s {
+		switch {
+		case r >= 0x1F000, r == 0x2753:
+			n += 2
+		default:
+			n++
+		}
+	}
+	return n
 }

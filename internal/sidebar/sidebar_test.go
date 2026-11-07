@@ -17,6 +17,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
@@ -89,20 +90,20 @@ func model() Model {
 
 func TestRender(t *testing.T) {
 	i18n.SetLocale("en")
-	for _, w := range []int{25, 38, 48} {
+	for _, w := range []int{28, 40, 50} {
 		for _, h := range []int{0, 12, 20, 50} {
 			sc := Render(model(), w, h, NoItem)
 			if h > 0 && len(sc.Lines) != h {
 				t.Errorf("width %d height %d: %d rows", w, h, len(sc.Lines))
 			}
 			for _, l := range sc.Lines {
-				if n := utf8.RuneCountInString(Plain(l.Text)); n != w {
+				if n := DisplayWidth(Plain(l.Text)); n != w {
 					t.Errorf("width %d height %d: line is %d columns: %q", w, h, n, Plain(l.Text))
 				}
 			}
 		}
 	}
-	sc := Render(model(), 38, 0, NoItem)
+	sc := Render(model(), 40, 0, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
@@ -110,7 +111,7 @@ func TestRender(t *testing.T) {
 		"▾ AGENTS", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Terminal",
 		"blog", "▲  blog pass", "9m ●", "✻  Claude", "3d ○",
 		"Continue this chat in", "▲ Antigravity", "◉ Copilot", "◎ Codex",
-		"✎ Rename", "⧉ History", "▌✻", "▤", "⌕", "⑂3", "◔", "?",
+		"✎ Rename", "⧉ History", "▌ 🤖", "Agents", "📁", "Files", "🔍", "Search", "🔀", "Git 3", "📊", "Limits", "❓", "Help",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sidebar lacks %q:\n%s", want, text)
@@ -152,16 +153,16 @@ func TestRender(t *testing.T) {
 		}
 	}
 	// The "+" of the headers.
-	if l, _ := find(sc, "PROJECTS"); l.ActionAt(37) != (Action{Kind: ActOpen}) || l.ActionAt(6) != (Action{Kind: ActFold, Section: SecProjects}) {
+	if l, _ := find(sc, "PROJECTS"); l.ActionAt(39) != (Action{Kind: ActOpen}) || l.ActionAt(9) != (Action{Kind: ActFold, Section: SecProjects}) {
 		t.Error("Projects +")
 	}
-	if l, _ := find(sc, "AGENTS"); l.ActionAt(36) != (Action{Kind: ActNewAgent}) {
+	if l, _ := find(sc, "AGENTS"); l.ActionAt(38) != (Action{Kind: ActNewAgent}) {
 		t.Error("Agents +")
 	}
-	if l, _ := find(sc, " A  acme-api"); l.ActionAt(6) != (Action{Kind: ActProjectMenu, Session: "acme-api-1a2b"}) || !strings.Contains(l.Text, selBg) {
+	if l, _ := find(sc, " A  acme-api"); l.ActionAt(9) != (Action{Kind: ActProjectMenu, Session: "acme-api-1a2b"}) || !strings.Contains(l.Text, selBg) {
 		t.Error("the current project is highlighted and opens its menu")
 	}
-	if l, _ := find(sc, "backend fix"); !strings.Contains(l.Text, selBg) || l.ActionAt(6) != (Action{Kind: ActAgentMenu, Pane: "%1"}) {
+	if l, _ := find(sc, "backend fix"); !strings.Contains(l.Text, selBg) || l.ActionAt(9) != (Action{Kind: ActAgentMenu, Pane: "%1"}) {
 		t.Error("the target agent is highlighted and opens its menu")
 	}
 	// The rail: views and the bottom buttons.
@@ -171,12 +172,12 @@ func TestRender(t *testing.T) {
 	// The spinner turns.
 	m := model()
 	m.Tick = 3
-	if !m.Animated() || !strings.Contains(screenText(Render(m, 38, 0, NoItem)), "<1m ⠸") {
+	if !m.Animated() || !strings.Contains(screenText(Render(m, 40, 0, NoItem)), "<1m ⠸") {
 		t.Error("spinner frame")
 	}
 
 	// Short: blank rows go, then other projects fold; the bottom blocks stay.
-	short := Render(model(), 38, 16, NoItem)
+	short := Render(model(), 40, 16, NoItem)
 	stext := screenText(short)
 	t.Logf("\n%s", stext)
 	for _, want := range []string{"AGENTS", "backend fix", "Continue this chat in", "✎ Rename"} {
@@ -188,8 +189,8 @@ func TestRender(t *testing.T) {
 		t.Errorf("the other project should be folded:\n%s", stext)
 	}
 	// Tall: the toolbar and the rail's Help are on the last row.
-	tall := Render(model(), 38, 50, NoItem)
-	if last := Plain(tall.Lines[49].Text); !strings.Contains(last, "⧉ History") || !strings.HasPrefix(last, " ?") ||
+	tall := Render(model(), 40, 50, NoItem)
+	if last := Plain(tall.Lines[49].Text); !strings.Contains(last, "⧉ History") || !strings.HasPrefix(last, " Help") ||
 		strings.TrimSpace(Plain(tall.Lines[30].Text)) != "" {
 		t.Errorf("toolbar not at the bottom:\n%s", screenText(tall))
 	}
@@ -211,8 +212,8 @@ func TestRender(t *testing.T) {
 			break
 		}
 	}
-	sel := Render(model(), 38, 0, focus)
-	if lt := sel.Lines[focus.Row].Text; !strings.Contains(lt, rev) || utf8.RuneCountInString(Plain(lt)) != 38 {
+	sel := Render(model(), 40, 0, focus)
+	if lt := sel.Lines[focus.Row].Text; !strings.Contains(lt, rev) || DisplayWidth(Plain(lt)) != 40 {
 		t.Errorf("selection %q", lt)
 	}
 	last := items[len(items)-1]
@@ -253,15 +254,15 @@ func TestExplorer(t *testing.T) {
 	m.View, m.Tree = ViewExplorer, tree
 	for _, w := range []int{25, 38} {
 		for _, l := range Render(m, w, 12, NoItem).Lines {
-			if n := utf8.RuneCountInString(Plain(l.Text)); n != w {
+			if n := DisplayWidth(Plain(l.Text)); n != w {
 				t.Errorf("width %d: %d columns: %q", w, n, Plain(l.Text))
 			}
 		}
 	}
-	sc := Render(m, 38, 12, NoItem)
+	sc := Render(m, 40, 12, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
-	for _, want := range []string{"EXPLORER · acme-api", "⌕", "▸ docs", "▾ src", "▸ auth", "main.ts", "README.md", "▌▤"} {
+	for _, want := range []string{"EXPLORER · acme-api", "⌕", "▸ docs", "▾ src", "▸ auth", "main.ts", "README.md", "▌ 📁"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("explorer lacks %q", want)
 		}
@@ -291,31 +292,93 @@ func TestExplorer(t *testing.T) {
 	}
 	// Scrolling keeps the title and moves the list.
 	m.Scroll = 2
-	if text := screenText(Render(m, 38, 3, NoItem)); !strings.Contains(text, "EXPLORER") || !strings.Contains(text, "auth") || strings.Contains(text, "docs") {
+	if text := screenText(Render(m, 40, 3, NoItem)); !strings.Contains(text, "EXPLORER") || !strings.Contains(text, "auth") || strings.Contains(text, "docs") {
 		t.Errorf("scrolled:\n%s", text)
 	}
 }
 
-// The Source Control view lists every change; without git it says so.
+// The Source Control view: branch and sync, Commit, staged and unstaged
+// changes with their buttons, history; without git it says so.
 func TestChangesView(t *testing.T) {
 	i18n.SetLocale("en")
 	m := model()
 	m.View = ViewChanges
-	for _, l := range Render(m, 38, 12, NoItem).Lines {
-		if n := utf8.RuneCountInString(Plain(l.Text)); n != 38 {
+	m.SCM = &gitops.Status{
+		Branch: "main", Upstream: "origin/main", Ahead: 1,
+		Staged:  []gitops.Change{{Status: "M", Path: "a.go", Added: 3, Removed: 1}},
+		Changes: []gitops.Change{{Status: "M", Path: "b.go", Added: 1}, {Status: "?", Path: "c.txt", Untracked: true}},
+		History: []gitops.LogEntry{{Hash: "a1b2c3d", Subject: "feat: login", When: m.Now.Add(-2 * time.Hour)}},
+	}
+	for _, l := range Render(m, 40, 30, NoItem).Lines {
+		if n := DisplayWidth(Plain(l.Text)); n != 40 {
 			t.Errorf("%d columns: %q", n, Plain(l.Text))
 		}
 	}
-	sc := Render(m, 38, 0, NoItem)
+	sc := Render(m, 40, 0, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
-	for _, want := range []string{"SOURCE CONTROL · main", "M  src/auth/redirect.ts", "+12 −3", "A  test/auth.test.ts", "▌⑂3"} {
+	for _, want := range []string{
+		"SOURCE CONTROL", "⟳", "⎇ main ▾", "↑1 ↓0", "⇅", "✓ Commit…", "▾ STAGED CHANGES  1", "M  a.go", "+3 −1",
+		"▾ CHANGES  2", "M  b.go", "?  c.txt", "▾ HISTORY  1", "a1b2c3d feat: login", "2h", "▌ 🔀",
+	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("lacks %q", want)
 		}
 	}
-	m.Git = false
-	if text := screenText(Render(m, 38, 0, NoItem)); !strings.Contains(text, "Not a git repository") {
+	// Each button acts on its file.
+	at := func(sub string, dx int) Action {
+		for _, l := range sc.Lines {
+			p := Plain(l.Text)
+			if i := strings.Index(p, sub); i >= 0 {
+				return l.ActionAt(DisplayWidth(p[:i]) + dx)
+			}
+		}
+		t.Fatalf("no %q", sub)
+		return Action{}
+	}
+	lineEnd := func(sub string) Line {
+		for _, l := range sc.Lines {
+			if strings.Contains(Plain(l.Text), sub) {
+				return l
+			}
+		}
+		t.Fatalf("no %q", sub)
+		return Line{}
+	}
+	if a := at("a.go", 0); a != (Action{Kind: ActDiff, Path: "a.go", Status: "M", Section: "staged"}) {
+		t.Errorf("staged row %+v", a)
+	}
+	if a := lineEnd("a.go").ActionAt(38); a != (Action{Kind: ActGit, Section: "unstage", Path: "a.go"}) {
+		t.Errorf("unstage button %+v", a)
+	}
+	if a := lineEnd("b.go").ActionAt(38); a != (Action{Kind: ActGit, Section: "stage", Path: "b.go"}) {
+		t.Errorf("stage button %+v", a)
+	}
+	if a := lineEnd("c.txt").ActionAt(36); a != (Action{Kind: ActGitConfirm, Section: "discard", Path: "c.txt", Status: "?"}) {
+		t.Errorf("discard button %+v", a)
+	}
+	if a := lineEnd("CHANGES  2").ActionAt(38); a != (Action{Kind: ActGit, Section: "stage-all"}) {
+		t.Errorf("stage all %+v", a)
+	}
+	if a := at("Commit…", 0); a.Kind != ActCommit {
+		t.Errorf("commit %+v", a)
+	}
+	if a := at("⎇ main", 0); a.Kind != ActBranchMenu {
+		t.Errorf("branch %+v", a)
+	}
+	if a := at("⇅", 0); a != (Action{Kind: ActGitPopup, Section: "sync"}) {
+		t.Errorf("sync %+v", a)
+	}
+	if a := at("a1b2c3d", 0); a != (Action{Kind: ActGitPopup, Section: "show", Path: "a1b2c3d"}) {
+		t.Errorf("history %+v", a)
+	}
+	// Folding a section hides its rows.
+	m.Fold = map[string]bool{SecUnstaged: true}
+	if text := screenText(Render(m, 40, 0, NoItem)); strings.Contains(text, "b.go") || !strings.Contains(text, "▸ CHANGES  2") {
+		t.Errorf("folded:\n%s", text)
+	}
+	m.SCM = nil
+	if text := screenText(Render(m, 40, 0, NoItem)); !strings.Contains(text, "Not a git repository") {
 		t.Errorf("no git:\n%s", text)
 	}
 }
@@ -361,7 +424,7 @@ func TestParseStatus(t *testing.T) {
 
 func TestMoveWraps(t *testing.T) {
 	i18n.SetLocale("en")
-	s := &sidebar{screen: Render(model(), 38, 0, NoItem), sel: NoItem}
+	s := &sidebar{screen: Render(model(), 40, 0, NoItem), sel: NoItem}
 	rows := s.screen.Items()
 	s.move(1)
 	if s.sel != rows[0] {
@@ -519,7 +582,7 @@ func TestFold(t *testing.T) {
 	i18n.SetLocale("en")
 	m := model()
 	m.Fold = map[string]bool{SecProjects: true, SecChanges: true}
-	text := screenText(Render(m, 38, 0, NoItem))
+	text := screenText(Render(m, 40, 0, NoItem))
 	t.Logf("\n%s", text)
 	lineWith := func(sub string) string {
 		for _, l := range strings.Split(text, "\n") {
@@ -539,19 +602,6 @@ func TestFold(t *testing.T) {
 		if strings.Contains(text, gone) {
 			t.Errorf("folded section shows %q", gone)
 		}
-	}
-	// More files than rows: "+N more" opens the full list.
-	m = model()
-	m.View = ViewChanges
-	m.Changed = 14
-	sc := Render(m, 38, 0, NoItem)
-	for _, l := range sc.Lines {
-		if strings.Contains(Plain(l.Text), "+11 more files") && l.ActionAt(6).Kind != ActChanges {
-			t.Error("+N more opens the changes menu")
-		}
-	}
-	if !strings.Contains(screenText(sc), "+11 more files") {
-		t.Errorf("more row:\n%s", screenText(sc))
 	}
 }
 

@@ -20,6 +20,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
@@ -154,6 +155,7 @@ type Model struct {
 	Fold     map[string]bool // folded sections (@imux_fold)
 	View     string          // the view on the activity rail (@imux_view)
 	Tree     []TreeRow       // the explorer's rows (Explorer view)
+	SCM      *gitops.Status  // the Source Control view's repository (nil outside git)
 	Scroll   int             // first row of the view's list
 }
 
@@ -525,6 +527,12 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	}
 	if m.View == ViewExplorer && cwd != "" {
 		m.Tree = BuildTree(cwd, s.Expanded, m.Changes)
+	}
+	if m.View == ViewChanges && cwd != "" {
+		// Read at every redraw: actions change it, and they signal a redraw.
+		if st, err := gitops.Read(ctx, cwd); err == nil {
+			m.SCM = st
+		}
 	}
 	return m, win, nil
 }

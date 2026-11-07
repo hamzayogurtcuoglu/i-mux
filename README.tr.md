@@ -56,20 +56,24 @@ cd ~/code/projem
 imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
+Dosyalar editöründe açılır: config'teki `editor`, yoksa micro (terminalde en kolayı: `brew install
+micro`), `$VISUAL`, `$EDITOR`, nano, vim. Fare tekerleği her yerde kaydırır.
+
 `imux`'u ana klasöründe çalıştırırsan hangi projeyi açacağını sorar: adının birkaç harfini yaz.
 **Son kullanılanlar** en üstte gelir ve bıraktığın gibi açılır: aynı sekmeler, adlar ve agent'lar,
 her agent kendi sohbetine döner. Bilgisayar yeniden başladıysa **Son oturumu geri yükle** açık olan
 bütün projeleri geri getirir.
 
-Soldaki **kenar panel** bir kod editörününki gibi çalışır: en soldaki simgeler görünümü değiştirir.
+Soldaki **kenar panel** bir kod editörününki gibi çalışır: en soldaki simgeler (altlarında adları)
+görünümü değiştirir.
 
 | Simge | Görünüm |
 |---|---|
-| ✻ | **Agent'lar:** projelerin (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan bütün agent'lar, her birinin ne yaptığıyla: çalışırken dönen bir işaret, sana bir şey sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve bunun ne kadar önce olduğu |
-| ▤ | **Gezgin:** projenin dosyaları; klasöre tıklayınca açılır, dosyaya tıklayınca satır numaralarıyla okunur; değişen dosyalar renklidir |
-| ⌕ | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar; Enter dosyayı o satırda açar |
-| ⑂ | **Kaynak kontrolü:** değişen dosyalar, eklenen / silinen satır sayılarıyla; tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
-| ◔ · ? | kullanım limitleri · bütün tuşlar |
+| 🤖 | **Agent'lar:** projelerin (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan bütün agent'lar, her birinin ne yaptığıyla: çalışırken dönen bir işaret, sana bir şey sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve bunun ne kadar önce olduğu |
+| 📁 | **Dosyalar:** projenin dosyaları; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir (sağ tık: görüntüle ya da VS Code'da aç); değişen dosyalar renklidir |
+| 🔍 | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar, dosya dosya (dosyaya tıkla ya da Tab'a bas: daralt); Enter dosyayı o satırda açar |
+| 🔀 | **Git:** editördeki kaynak kontrolü gibi: hazırlanan ve hazırlanmayan değişiklikler, her dosyada ve hepsi için + (hazırla), − (geri al), ↶ (at, önce sorar); **Commit…**; ↑↓ sayılarıyla pull / push / senkron; dal menüsü (değiştir, yeni dal); geçmiş. Dosyaya tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
+| 📊 · ❓ | kullanım limitleri · bütün tuşlar |
 
 | Kenar panel / tuş | Ne yapar |
 |---|---|

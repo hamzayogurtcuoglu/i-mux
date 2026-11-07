@@ -62,20 +62,24 @@ cd ~/code/my-project
 imux            # start the first installed agent (or: imux claude)
 ```
 
+Files open in your editor: `editor` in the config, else micro (the easiest in a terminal: `brew
+install micro`), `$VISUAL`, `$EDITOR`, nano, vim. The mouse wheel scrolls everywhere.
+
 Run `imux` in your home folder and it asks which project to open: type a few letters of its name.
 **Recent** projects come first and reopen as you left them: the same tabs, names and agents, each
 agent back in its own conversation. After a restart, **Restore last session** brings back every
 project that was open.
 
-The **sidebar** on the left works like an editor's: a column of icons switches its view.
+The **sidebar** on the left works like an editor's: a column of icons (with their names under
+them) switches its view.
 
 | Icon | View |
 |---|---|
-| ✻ | **Agents:** your projects (branch, uncommitted changes) and every agent working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks you something, a green dot when it finished while you were elsewhere, a ring when idle, and how long ago that changed |
-| ▤ | **Explorer:** the project's files; click a folder to open it, a file to read it with line numbers; changed files are colored |
-| ⌕ | **Search:** every file of the project, results as you type; Enter opens the file at the line |
-| ⑂ | **Source control:** the changed files with their added / removed lines; a click shows the whole file with the changes highlighted, side by side when the window is wide |
-| ◔ · ? | usage limits · every key |
+| 🤖 | **Agents:** your projects (branch, uncommitted changes) and every agent working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks you something, a green dot when it finished while you were elsewhere, a ring when idle, and how long ago that changed |
+| 📁 | **Files:** the project's files; click a folder to open it, a file to edit it (right-click: view, or open in VS Code); changed files are colored |
+| 🔍 | **Search:** every file of the project, results as you type, grouped by file (click a file or press Tab to fold); Enter opens the file at the line |
+| 🔀 | **Git:** like an editor's source control: staged and unstaged changes with + (stage), − (unstage), ↶ (discard, asks first) on each file and for all; **Commit…**; pull / push / sync with ↑↓ counts; the branch menu (switch, new branch); the history. A click on a file shows the whole file with the changes highlighted, side by side when the window is wide |
+| 📊 · ❓ | usage limits · every key |
 
 | Sidebar / key | What it does |
 |---|---|
