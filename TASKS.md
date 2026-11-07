@@ -657,6 +657,24 @@ User request: the + menus should offer a plain shell too (ARCHITECTURE §9.3, pl
     `imux tab shell` open the shell in the project folder with a sidebar for a new tab; unit
     tests for the menus; an e2e test opens a shell tab and a shell split from the menus.
 
+## M19: Folding sidebar, source control, clear limits (added 2026-11-07)
+
+User feedback with a screenshot (ARCHITECTURE D25, §9.3 "Sidebar v5").
+
+- [ ] **T19.1 Folding and contrast** · S
+  - AC: section titles fold / unfold on click, shared through `@imux_fold`; brighter colors;
+    golden tests.
+- [ ] **T19.2 SOURCE CONTROL** · M
+  - AC: branch, changed files with +/− lines, diff on click, "+N more" opens the full menu; the
+    Changes button is gone; unit tests for numstat parsing.
+- [ ] **T19.3 Claude percentages** · M
+  - AC: `--settings=` for Claude launches; `imux __statusline claude` records `rate_limits` and
+    chains the user's status line; unit tests with synthetic status-line input (both timestamp
+    forms, missing windows).
+- [ ] **T19.4 Limits panel** · S · deps: T19.3
+  - AC: bars and percentages per window for Claude and Codex, plain words for the others;
+    golden test; README.
+
 ---
 
 ## Testing strategy

@@ -101,6 +101,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D22 | **Folders are picked, not typed** (added 2026-11-07, v0.9): "open a project" shows a popup that filters as you type: recent projects first, then git repositories found under the home folder; a query starting with `/` or `~` browses folders, Tab completes. `imux` run in the home folder opens the same picker instead of making the home folder a project. | The user could not find paths in tmux's command prompt (Tab completes tmux commands there, not folders). Most projects are git repositories under the home folder, and most opens are of a recent one. |
 | D23 | **Projects and tabs close from the UI** (v0.9): a click on the current project (or a right-click on any) opens its menu with Close; the current tab has a **×**; both ask first. Closing the project the client shows moves the client to another project first. | Sessions outlive the terminal, so projects piled up in the sidebar ("why does i-mux show up on its own?") with no visible way to close them. The agents' own session files stay, so a closed conversation can be continued from History. |
 | D24 | **Projects reopen as they were** (added 2026-11-07, v0.10, at the user's request: "like VS Code, save what was open when I closed it"): the watcher snapshots every open project (tabs, names, layouts, each pane's agent, name and conversation) to `~/.imux/workspace.json`; closing a project snapshots it too. Opening a folder with a snapshot recreates its tabs and panes, each agent resuming its conversation natively. The picker shows **Recent** (with tabs, agents and age) above the other folders, and **Restore last session** after the tmux server went away (a reboot). | tmux sessions die with the machine and with Close, and the user had to rebuild tabs and find conversations again. The trail already records each run (agent, start, session id), so a snapshot is a list of trail entries; native resume (§8.6) brings each conversation back without a handoff. |
+| D25 | **Plan percentages come from the CLIs themselves** (added 2026-11-07, v0.13): Claude Code gives its status-line command `rate_limits.five_hour` / `seven_day` (`used_percentage`, `resets_at`; Pro/Max, after the first reply), so imux starts Claude with `--settings=~/.imux/claude-settings.json` whose `statusLine` is `imux __statusline claude`: it records the numbers in `~/.imux/usage/claude.json` and prints the user's own status line (from their settings, highest precedence first) or a short usage line. Codex already writes `rate_limits` in its rollouts. Copilot and Antigravity expose none: the panel says so. | The user found the limits panel unreadable and asked for percentages per window. No credentials are read and no request is sent: the numbers are the ones each CLI already has. The user's settings files are never written. |
 
 ## 4. Components
 
@@ -1138,6 +1139,32 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Picker:** with an empty query, sections: Restore last session (when projects of an earlier
   server were open), RECENT (open projects, then snapshots and recent folders by time, with
   "N tabs · M agents · age"), ON THIS MAC (git folders). Typing ranks all of them together.
+
+#### Sidebar v5: folding, source control, contrast (v0.13)
+
+```
+ ▾ PROJECTS                        +
+  O  opcua-qtclient       main ●
+ ▾ AGENTS                          +
+  opcua-qtclient
+  ✻  Claude                 1h ○
+ ▾ SOURCE CONTROL · main          5
+   M  src/app.py          +12 −3
+   A  tests/test_x.py        +40
+   ?  notes.md
+ ▸ (folded sections show only their header and a count)
+```
+
+- **Folding:** a click on a section's title folds or unfolds it (`▾` / `▸`); the state is the
+  global tmux option `@imux_fold` (folded section names), shared by every sidebar.
+- **SOURCE CONTROL** replaces the toolbar's "Changes N" button: the branch and the changed files
+  with their added / removed lines (`git diff --numstat HEAD`, cached with the status), at most
+  10 rows and "+N more" (the full menu); a click shows the file's diff.
+- **Contrast:** titles bold and bright (252), secondary text 247, dim text 244; the terminal's
+  font size is the user's (Cmd + / Cmd − in most terminals).
+- **Limits panel** (`imux limits`, ◔ Limits): one block per agent with a bar per window:
+  `5-hour ███████░░░ 72% · resets 15:00`, `weekly ██░░░░░░░░ 18% · resets Mon 09:00`; a limit seen
+  on screen in red; "not reported by <agent>" for Copilot and Antigravity, with their local counts.
 
 #### Agent bar
 
