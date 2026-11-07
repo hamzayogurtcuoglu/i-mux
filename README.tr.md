@@ -56,19 +56,18 @@ cd ~/code/projem
 imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
-Soldaki **kenar panel** projelerini ve agent'larını (● çalışıyor, ○ boşta, ◆ limitli), projenin git
-değişikliklerini ve yapabileceğin her şeyi gösterir; hepsi tıklanabilir:
+Soldaki **kenar panel** projelerini, bu projede çalışan agent'ları (● çalışıyor, ○ boşta,
+◆ limitli), projenin git değişikliklerini ve yapabileceğin her şeyi gösterir; hepsi tıklanabilir:
 
 | Kenar panel / tuş | Ne yapar |
 |---|---|
-| **GEÇ** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder (Claude: Anthropic, Antigravity: Google, Codex: OpenAI, Copilot: GitHub) |
-| **PROJELER** altındaki bir agent'a tıkla | ona geç; başka bir projeye tıklarsan o projeye geçersin |
-| **+ Proje aç…** (ya da `o`) | başka bir klasörü yanına proje olarak aç |
+| **PROJELER** altındaki bir projeye tıkla | o projeye geç; **+ Proje aç…** (ya da `o`) başka bir klasörü yanına açar |
+| **AGENT'LAR** altındaki bir agent'a tıkla | ona geç; **+ Yeni agent…** hangi agent diye sorar ve yeni pane'de açar (sağa / aşağı için `prefix v` / `prefix -`) |
 | **DEĞİŞİKLİKLER** altındaki bir dosyaya tıkla | farkını (diff) gör |
-| **✎ Bu pane'e isim ver** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver |
-| **Sağa böl** / **Aşağı böl** (ya da `prefix v` / `prefix -`) | hangi agent diye sorar, yeni pane'de açar |
-| **Eski konuşmalar…** (ya da `prefix S`) | projenin önceki bir konuşmasını sürdür |
-| **Tuşlar** | bütün tuşlar tek bakışta |
+| **SOHBETİ AKTAR** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder (Claude: Anthropic, Antigravity: Google, Codex: OpenAI, Copilot: GitHub) |
+| **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver |
+| **⧉ Geçmiş** (ya da `prefix S`) | projenin önceki bir konuşmasını sürdür |
+| **◔ Limitler** · **? Yardım** | kullanım limitleri; bütün tuşlar tek bakışta |
 | `prefix b` | kenar paneli gizle ya da göster |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` | pane menüsü; Claude / Antigravity / Copilot / Codex'te sürdür |
 
@@ -85,9 +84,11 @@ değişikliklerini ve yapabileceğin her şeyi gösterir; hepsi tıklanabilir:
   </tr>
 </table>
 
-Geçişten sonra yeni agent konuşmayı okur, bağlamı aldığını tek cümleyle söyler ve seni bekler:
-kendiliğinden işe girişmez, boşuna token harcamaz. Yarım kalan işe hemen devam etmesini istersen
-`[handoff] on_arrival = "continue"` yaz.
+Geçişte bütün konuşmayı değil, tek bir kısa mesaj görürsün: i-mux konuşmayı `~/.imux/handoffs`
+içine kaydeder ve yeni agent'a o dosyayı okumasını söyler. Agent dosyayı okur, bağlamı aldığını
+tek cümleyle söyler ve seni bekler: kendiliğinden işe girişmez, boşuna token harcamaz. Belgenin
+tamamının mesaj olarak gitmesini istersen `[handoff] deliver = "inline"`, yarım kalan işe hemen
+devam etmesini istersen `[handoff] on_arrival = "continue"` yaz.
 
 Bölmede daha önce çalışmış bir agent'a geri dönmek, o agent'ın kendi oturumunu sürdürür ve ona
 yalnızca aradaki gelişmeleri anlatır. Komut satırı için `imux help` (`switch`, `split`, `ls`,

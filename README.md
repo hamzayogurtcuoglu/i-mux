@@ -62,19 +62,18 @@ cd ~/code/my-project
 imux            # start the first installed agent (or: imux claude)
 ```
 
-The **sidebar** on the left shows your projects and their agents (● working, ○ idle, ◆ limited),
-the project's git changes and everything you can do, all clickable:
+The **sidebar** on the left shows your projects, the agents working in this one (● working,
+○ idle, ◆ limited), the project's git changes and everything you can do, all clickable:
 
 | Sidebar / key | What it does |
 |---|---|
-| click an agent under **SWITCH TO** | the active pane continues in that agent, with the conversation (Claude is by Anthropic, Antigravity by Google, Codex by OpenAI, Copilot by GitHub) |
-| click an agent under **PROJECTS** | focus it; click another project to switch to it |
-| **+ Open a project…** (or `o`) | open another folder as a project, next to this one |
+| click a project under **PROJECTS** | switch to it; **+ Open a project…** (or `o`) opens another folder next to this one |
+| click an agent under **AGENTS** | go to it; **+ New agent…** asks which agent and opens it in a new pane (or `prefix v` / `prefix -` for right / down) |
 | click a file under **CHANGES** | see its diff |
-| **✎ Name this pane** (or `n`) | give the agent a name of your own, like "backend fix" |
-| **Split right** / **Split down** (or `prefix v` / `prefix -`) | asks which agent, then opens it in a new pane |
-| **Sessions…** (or `prefix S`) | continue any earlier conversation of the project |
-| **Keys** | every key at a glance |
+| click an agent under **MOVE THIS CHAT TO** | the active pane continues in that agent, with the conversation (Claude is by Anthropic, Antigravity by Google, Codex by OpenAI, Copilot by GitHub) |
+| **✎ Rename** (or `n`) | give the agent a name of your own, like "backend fix" |
+| **⧉ History** (or `prefix S`) | continue any earlier conversation of the project |
+| **◔ Limits** · **? Help** | usage limits; every key at a glance |
 | `prefix b` | hide or show the sidebar |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` | the pane menu; continue in Claude / Antigravity / Copilot / Codex |
 
@@ -91,9 +90,11 @@ the project's git changes and everything you can do, all clickable:
   </tr>
 </table>
 
-After a switch the new agent reads the conversation, says in one sentence that it has the
-context, and waits for you: it does not start working (or spend tokens) on its own. Set
-`[handoff] on_arrival = "continue"` to let it carry on with an unfinished request right away.
+After a switch you see one short message, not the whole conversation: i-mux saves it in
+`~/.imux/handoffs` and tells the new agent to read that file. The agent reads it, says in one
+sentence that it has the context, and waits for you: it does not start working (or spend tokens) on
+its own. Set `[handoff] deliver = "inline"` to send the whole document as the message instead,
+and `[handoff] on_arrival = "continue"` to let it carry on with an unfinished request right away.
 
 Switching back to an agent that already ran in the pane resumes its own session and tells it only
 what happened in the meantime. Run `imux help` for the command line (`switch`, `split`, `ls`,

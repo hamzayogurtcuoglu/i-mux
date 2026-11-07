@@ -194,3 +194,17 @@ func TestProbeVersionTimesOutOnHangingBinary(t *testing.T) {
 		t.Fatalf("probe took %v; the timeout did not stop it", d)
 	}
 }
+
+func TestReadDirArgs(t *testing.T) {
+	for id, want := range map[session.AgentID]string{
+		session.Claude: "--add-dir=/h", session.Copilot: "--add-dir=/h", session.Antigravity: "--add-dir=/h", session.Codex: "",
+	} {
+		got := strings.Join(ReadDirArgs(id, "/h"), " ")
+		if got != want {
+			t.Errorf("%s: %q, want %q", id, got, want)
+		}
+	}
+	if ReadDirArgs(session.Claude, "") != nil || ReadDirArgs("nope", "/h") != nil {
+		t.Fatal("empty dir or unknown agent")
+	}
+}

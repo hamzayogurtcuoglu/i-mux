@@ -26,6 +26,7 @@ const (
 	ActOpen                // ask for a folder and open it as a project
 	ActRename              // ask for a name for the target pane
 	ActDiff                // show the diff of Path
+	ActNewAgent            // split the target pane (direction by its shape) with an agent chooser
 )
 
 // Action is a row's action.
@@ -51,26 +52,74 @@ const (
 	cyan   = "\x1b[36m"
 )
 
-// Line is one rendered row: its text with escapes, and its action.
+// Line is one rendered row: its text with escapes, and its action. A row of
+// side-by-side buttons (the toolbar) has Cells instead of one Action.
 type Line struct {
 	Text   string
 	Action Action
+	Cells  []Cell
 }
+
+// Cell is one button of a row: columns [X, X+W) of the line.
+type Cell struct {
+	X, W   int
+	Text   string // exactly W columns, with escapes
+	Action Action
+}
+
+// ActionAt is the action of column x (0-based) of the line.
+func (l Line) ActionAt(x int) Action {
+	if len(l.Cells) == 0 {
+		return l.Action
+	}
+	for _, c := range l.Cells {
+		if x >= c.X && x < c.X+c.W {
+			return c.Action
+		}
+	}
+	return Action{}
+}
+
+// Item is one selectable thing: a row (Cell -1) or a button of a row.
+type Item struct{ Row, Cell int }
+
+// NoItem selects nothing.
+var NoItem = Item{Row: -1, Cell: -1}
 
 // Screen is a rendered sidebar.
 type Screen struct {
 	Lines []Line
 }
 
-// Selectable returns the indexes of rows with an action.
-func (s Screen) Selectable() []int {
-	var out []int
+// Items returns what the keyboard can select, top to bottom.
+func (s Screen) Items() []Item {
+	var out []Item
 	for i, l := range s.Lines {
+		if len(l.Cells) > 0 {
+			for j, c := range l.Cells {
+				if c.Action.Kind != ActNone {
+					out = append(out, Item{i, j})
+				}
+			}
+			continue
+		}
 		if l.Action.Kind != ActNone {
-			out = append(out, i)
+			out = append(out, Item{i, -1})
 		}
 	}
 	return out
+}
+
+// ActionOf is the action of a selected item.
+func (s Screen) ActionOf(it Item) Action {
+	if it.Row < 0 || it.Row >= len(s.Lines) {
+		return Action{}
+	}
+	l := s.Lines[it.Row]
+	if it.Cell >= 0 && it.Cell < len(l.Cells) {
+		return l.Cells[it.Cell].Action
+	}
+	return l.Action
 }
 
 // runes counts display columns. The sidebar uses only narrow characters
@@ -115,7 +164,7 @@ func cols(left, right string, w int) (string, string) {
 	return fit(left, w-rw-1) + " ", right
 }
 
-// stateText is the label of a pane state.
+// stateText is the label of a pane state ("" for a shell).
 func stateText(st string) string {
 	switch st {
 	case StateWorking:
@@ -123,7 +172,7 @@ func stateText(st string) string {
 	case StateExited:
 		return i18n.T("sidebar.state.exited")
 	case StateShell:
-		return i18n.T("sidebar.state.shell")
+		return ""
 	}
 	return i18n.T("sidebar.state.idle")
 }
@@ -143,58 +192,211 @@ func dot(p PaneRow) (string, string) {
 	return "○", dim
 }
 
-// Render draws the sidebar for w columns and h rows (0 = no limit). sel is
-// the selected row (keyboard), or -1. When the rows do not fit, changes and
-// other projects shrink to a "+N more" row first; the buttons always stay.
-func Render(m Model, w, h, sel int) Screen {
+// layout says how much of the sidebar is drawn; Render shrinks it until it
+// fits the height.
+type layout struct {
+	changes int  // change rows shown (-1 = all)
+	detail  bool // second line of agent cards
+	others  int  // other projects shown (-1 = all)
+	blanks  bool // blank lines between sections
+}
+
+// Render draws the sidebar for w columns and h rows (0 = no limit) with sel
+// selected (keyboard; NoItem for none). Sections (§9.3 "Sidebar v3"):
+// PROJECTS, AGENTS, CHANGES, MOVE THIS CHAT TO, then the toolbar anchored to
+// the bottom. When the rows do not fit, changes shrink first, then agent
+// cards lose their second line, then other projects, then blank lines go.
+func Render(m Model, w, h int, sel Item) Screen {
+	lay := layout{changes: -1, detail: true, others: -1, blanks: true}
+	lines := build(m, w, lay)
+	if h > 0 {
+		steps := []func(){
+			func() { lay.changes = min(2, len(m.Changes)) },
+			func() { lay.detail = false },
+			func() { lay.others = 0 },
+			func() { lay.blanks = false },
+			func() { lay.changes = 0 },
+		}
+		for _, step := range steps {
+			if len(lines) <= h {
+				break
+			}
+			step()
+			lines = build(m, w, lay)
+		}
+		if len(lines) > h {
+			// Still too long: keep the toolbar, cut the content.
+			tb := toolbar(w)
+			keep := max(h-len(tb), 0)
+			lines = append(lines[:min(keep, len(lines)-len(tb))], tb...)
+			if len(lines) > h {
+				lines = lines[len(lines)-h:]
+			}
+		} else {
+			// Anchor the toolbar to the bottom.
+			tb := len(toolbar(w))
+			fill := make([]Line, h-len(lines))
+			for i := range fill {
+				fill[i] = Line{Text: strings.Repeat(" ", w)}
+			}
+			body := append(append([]Line{}, lines[:len(lines)-tb]...), fill...)
+			lines = append(body, lines[len(lines)-tb:]...)
+		}
+	}
+	sc := Screen{Lines: lines}
+	highlight(sc, sel)
+	return sc
+}
+
+// highlight draws the keyboard selection in reverse video.
+func highlight(sc Screen, sel Item) {
+	if sel.Row < 0 || sel.Row >= len(sc.Lines) {
+		return
+	}
+	l := &sc.Lines[sel.Row]
+	revd := func(t string) string { return rev + strings.ReplaceAll(t, reset, reset+rev) + reset }
+	if len(l.Cells) == 0 {
+		if l.Action.Kind != ActNone {
+			l.Text = revd(l.Text)
+		}
+		return
+	}
+	if sel.Cell < 0 || sel.Cell >= len(l.Cells) {
+		return
+	}
+	cells := append([]Cell{}, l.Cells...)
+	cells[sel.Cell].Text = revd(cells[sel.Cell].Text)
+	l.Text = compose(cells, runes(Plain(l.Text)))
+}
+
+// compose lays out cells on a w-column row.
+func compose(cells []Cell, w int) string {
+	var b strings.Builder
+	at := 0
+	for _, c := range cells {
+		if c.X > at {
+			b.WriteString(strings.Repeat(" ", c.X-at))
+		}
+		b.WriteString(c.Text)
+		at = c.X + c.W
+	}
+	if w > at {
+		b.WriteString(strings.Repeat(" ", w-at))
+	}
+	return b.String()
+}
+
+// toolbar is the bottom block: a rule, two rows of two buttons, the hint.
+func toolbar(w int) []Line {
+	cw := (w - 2) / 2
+	btn := func(x int, icon, label string, a Action) Cell {
+		return Cell{X: x, W: cw, Text: " " + dim + icon + reset + " " + fit(label, cw-3), Action: a}
+	}
+	row := func(a, b Cell) Line {
+		cells := []Cell{a, b}
+		return Line{Text: compose(cells, w), Cells: cells}
+	}
+	return []Line{
+		{Text: dim + strings.Repeat("─", w) + reset},
+		row(btn(1, "✎", i18n.T("sidebar.rename"), Action{Kind: ActRename}),
+			btn(1+cw, "⧉", i18n.T("sidebar.history"), Action{Kind: ActSessions})),
+		row(btn(1, "◔", i18n.T("sidebar.limits"), Action{Kind: ActLimits}),
+			btn(1+cw, "?", i18n.T("sidebar.help"), Action{Kind: ActKeys})),
+		{Text: dim + fit(" "+i18n.T("sidebar.footer"), w) + reset},
+	}
+}
+
+// build draws every section with layout lay; the toolbar comes last.
+func build(m Model, w int, lay layout) []Line {
 	plain := func(style, s string) string { return style + fit(s, w) + reset }
-	sepLine := Line{Text: dim + strings.Repeat("─", w) + reset}
-	heading := func(text string) Line { return Line{Text: plain(dim+bold, " "+text)} }
-	button := func(key, label string, a Action) Line {
-		return Line{Text: " " + dim + fit(key, 1) + reset + " " + fit(label, w-4) + " ", Action: a}
+	heading := func(left, right string) Line {
+		l, r := cols(" "+left, right, w-1)
+		return Line{Text: bold + dim + l + reset + dim + r + reset + " "}
+	}
+	add := func(label string, a Action) Line {
+		return Line{Text: "   " + cyan + "+" + reset + " " + fit(label, w-5), Action: a}
+	}
+	var out []Line
+	blank := func() {
+		if lay.blanks && len(out) > 0 {
+			out = append(out, Line{Text: strings.Repeat(" ", w)})
+		}
 	}
 
-	// PROJECTS: the current project expanded, the others one row each.
-	var cur, others []Line
-	for _, pr := range m.Projects {
+	// PROJECTS: one row each, with the state dots of their agents.
+	out = append(out, heading(i18n.T("sidebar.projects"), ""))
+	var cur *ProjectRow
+	shown, limit := 0, lay.others
+	if limit >= 0 && len(m.Projects)-1-limit == 1 {
+		limit++ // "+1 more" would take the row the project takes
+	}
+	for i := range m.Projects {
+		pr := &m.Projects[i]
 		if pr.Current {
-			l, r := cols("▾ "+pr.Name, i18n.T("sidebar.current_project"), w-1)
-			cur = append(cur, Line{Text: " " + bold + l + reset + dim + r + reset})
-			for _, p := range pr.Panes {
-				cur = append(cur, paneLine(p, w))
+			cur = pr
+		} else {
+			if limit >= 0 && shown >= limit {
+				continue
 			}
-			continue
+			shown++
 		}
 		var dots strings.Builder
-		shown := min(len(pr.Panes), 4)
-		for _, p := range pr.Panes[:shown] {
+		n := min(len(pr.Panes), 4)
+		for _, p := range pr.Panes[:n] {
 			sym, color := dot(p)
 			dots.WriteString(color + sym + reset)
 		}
-		count := strconv.Itoa(len(pr.Panes))
-		name := fit("▸ "+pr.Name, w-1-shown-1-runes(count)-1)
-		others = append(others, Line{
-			Text:   " " + name + " " + dots.String() + " " + dim + count + reset,
-			Action: Action{Kind: ActProject, Session: pr.Session},
+		extra := ""
+		if len(pr.Panes) > n {
+			extra = dim + "+" + strconv.Itoa(len(pr.Panes)-n) + reset
+		}
+		dw := n + runes(Plain(extra))
+		mark, style, a := " ", "", Action{Kind: ActProject, Session: pr.Session}
+		if pr.Current {
+			mark, style, a = cyan+"▌"+reset, bold, Action{}
+		}
+		out = append(out, Line{
+			Text:   " " + mark + style + fit(pr.Name, w-3-dw-1) + reset + " " + dots.String() + extra + " ",
+			Action: a,
 		})
 	}
-	if len(m.Projects) == 0 {
-		cur = append(cur, Line{Text: plain(dim, "  "+i18n.T("sidebar.no_panes"))})
+	if hidden := len(m.Projects) - 1 - shown; cur != nil && hidden > 0 {
+		out = append(out, Line{Text: plain(dim, "   "+i18n.T("sidebar.more_projects", hidden))})
 	}
-	open := button("o", "+ "+i18n.T("sidebar.open_project"), Action{Kind: ActOpen})
+	out = append(out, add(i18n.T("sidebar.open_project"), Action{Kind: ActOpen}))
+
+	// AGENTS: the current project's panes as cards.
+	blank()
+	out = append(out, heading(i18n.T("sidebar.agents"), ""))
+	if cur == nil || len(cur.Panes) == 0 {
+		out = append(out, Line{Text: plain(dim, "   "+i18n.T("sidebar.no_panes"))})
+	} else {
+		for _, p := range cur.Panes {
+			out = append(out, card(p, w, lay.detail)...)
+		}
+	}
+	out = append(out, add(i18n.T("sidebar.new_agent"), Action{Kind: ActNewAgent}))
 
 	// CHANGES (git only).
-	var changes []Line
-	if m.Git {
+	if m.Git && lay.changes != 0 {
+		blank()
 		title := i18n.T("sidebar.changes")
 		if m.Branch != "" {
 			title += " · " + m.Branch
 		}
-		changes = append(changes, heading(title))
-		if len(m.Changes) == 0 {
-			changes = append(changes, Line{Text: plain(dim, "  "+i18n.T("sidebar.no_changes"))})
+		count := ""
+		if m.Changed > 0 {
+			count = strconv.Itoa(m.Changed)
 		}
-		for _, c := range m.Changes {
+		out = append(out, heading(title, count))
+		if len(m.Changes) == 0 {
+			out = append(out, Line{Text: plain(dim, "   "+i18n.T("sidebar.no_changes"))})
+		}
+		changes := m.Changes
+		if lay.changes > 0 && len(changes) > lay.changes {
+			changes = changes[:lay.changes]
+		}
+		for _, c := range changes {
 			color := yellow
 			switch c.Status {
 			case "A":
@@ -206,122 +408,89 @@ func Render(m Model, w, h, sel int) Screen {
 			case "R":
 				color = cyan
 			}
-			changes = append(changes, Line{
-				Text:   "  " + color + fit(c.Status, 1) + reset + " " + fitLeft(c.Path, w-5) + " ",
+			out = append(out, Line{
+				Text:   "   " + color + fit(c.Status, 1) + reset + " " + fitLeft(c.Path, w-6) + " ",
 				Action: Action{Kind: ActDiff, Path: c.Path, Status: c.Status},
 			})
 		}
+		if hidden := m.Changed - len(changes); hidden > 0 {
+			out = append(out, Line{Text: plain(dim, "   "+i18n.T("sidebar.more", hidden))})
+		}
 	}
 
-	// SWITCH TO: the agents, with their maker when nothing else is shown.
-	agents := []Line{heading(i18n.T("sidebar.continue"))}
+	// MOVE THIS CHAT TO: the other agents, with their maker.
+	var moves []Line
 	for _, a := range m.Agents {
+		if a.Current {
+			continue
+		}
 		right, style, rstyle := a.Vendor, "", dim
 		switch {
-		case a.Current:
-			right, style, rstyle = i18n.T("sidebar.current"), bold, bold
 		case !a.Installed:
 			right, style, rstyle = i18n.T("sidebar.not_installed"), dim, dim
 		case a.Limited != "":
-			right, style, rstyle = i18n.T("sidebar.limited", a.Limited), red, red
+			right, rstyle = i18n.T("sidebar.limited", a.Limited), red
 		}
 		l, r := cols(a.Name, right, w-4)
-		key := dim + a.Key + reset
-		if !a.Installed {
-			key = " "
-		}
-		agents = append(agents, Line{
-			Text:   " " + key + " " + style + l + reset + rstyle + r + reset + " ",
+		moves = append(moves, Line{
+			Text:   "   " + style + l + reset + rstyle + r + reset + " ",
 			Action: Action{Kind: ActSwitch, Agent: a.ID},
 		})
 	}
-
-	buttons := []Line{
-		button("n", "✎ "+i18n.T("sidebar.rename"), Action{Kind: ActRename}),
-		button("v", "→ "+i18n.T("sidebar.split_right"), Action{Kind: ActSplitH}),
-		button("-", "↓ "+i18n.T("sidebar.split_down"), Action{Kind: ActSplitV}),
-		button("s", "⧉ "+i18n.T("sidebar.sessions"), Action{Kind: ActSessions}),
-		button("l", "◔ "+i18n.T("sidebar.limits"), Action{Kind: ActLimits}),
-		button("?", "≡ "+i18n.T("sidebar.keys"), Action{Kind: ActKeys}),
+	if len(moves) > 0 && m.Target != "" {
+		blank()
+		out = append(out, heading(i18n.T("sidebar.move_to"), ""))
+		out = append(out, moves...)
 	}
-	footer := Line{Text: plain(dim, " "+i18n.T("sidebar.footer"))}
-
-	assemble := func(others, changes []Line) []Line {
-		out := []Line{heading(i18n.T("sidebar.projects"))}
-		out = append(out, cur...)
-		out = append(out, others...)
-		out = append(out, open, sepLine)
-		if len(changes) > 0 {
-			out = append(out, changes...)
-			out = append(out, sepLine)
-		}
-		out = append(out, agents...)
-		out = append(out, sepLine)
-		out = append(out, buttons...)
-		return append(out, sepLine, footer)
+	if lay.blanks {
+		out = append(out, Line{Text: strings.Repeat(" ", w)})
 	}
-	more := func(n int, key string) Line { return Line{Text: plain(dim, "  "+i18n.T(key, n))} }
-
-	// git status was capped; say how many more files changed.
-	hidden := m.Changed - len(m.Changes)
-	lines := assemble(others, changes)
-	if h > 0 && len(lines) > h && len(changes) > 2 {
-		keep := max(len(changes)-(len(lines)-h)-1, 2)
-		hidden += len(changes) - keep
-		changes = changes[:keep]
-	}
-	if hidden > 0 && len(changes) > 0 {
-		changes = append(changes, more(hidden, "sidebar.more"))
-	}
-	lines = assemble(others, changes)
-	if h > 0 && len(lines) > h && len(others) > 0 {
-		keep := max(len(others)-(len(lines)-h)-1, 0)
-		trimmed := append(append([]Line{}, others[:keep]...), more(len(others)-keep, "sidebar.more_projects"))
-		lines = assemble(trimmed, changes)
-	}
-	if h > 0 && len(lines) > h {
-		lines = lines[:len(lines)-2] // separator and footer
-	}
-
-	sc := Screen{Lines: lines}
-	if sel >= 0 && sel < len(sc.Lines) && sc.Lines[sel].Action.Kind != ActNone {
-		// Reverse video for the keyboard selection, without inner resets.
-		t := strings.ReplaceAll(sc.Lines[sel].Text, reset, reset+rev)
-		sc.Lines[sel].Text = rev + t + reset
-	}
-	return sc
+	return append(out, toolbar(w)...)
 }
 
-// paneLine draws one pane of the current project: its name (or agent), and
-// the agent when it is named, else its state.
-func paneLine(p PaneRow, w int) Line {
-	mark := " "
+// card draws one agent pane of the current project: its name (or agent) and
+// state, and with detail a dim second line with the agent (and model) when
+// the name does not say it already.
+func card(p PaneRow, w int, detail bool) []Line {
+	mark, style := " ", ""
 	if p.Target {
-		mark = cyan + "▌" + reset
+		mark, style = cyan+"▌"+reset, bold
 	}
 	sym, color := dot(p)
-	name, right, rcolor := p.Label, stateText(p.State), color
-	if name == "" {
+	short := session.ShortName(p.Agent)
+	name, sub := short, ""
+	switch {
+	case p.Agent == "":
 		name = i18n.T("sidebar.shell")
+	case p.Label != "" && p.Label != short:
+		sub = strings.TrimPrefix(p.Label, short+" · ")
 	}
 	if p.Name != "" {
-		name, right, rcolor = p.Name, session.ShortName(p.Agent), dim
+		name, sub = p.Name, p.Label
 		if p.Agent == "" {
-			right = i18n.T("sidebar.shell")
+			sub = i18n.T("sidebar.shell")
 		}
+		if sub == "" {
+			sub = short
+		}
+	}
+	right, rcolor := stateText(p.State), color
+	if p.State == StateIdle {
+		rcolor = dim
 	}
 	if p.Limited != "" {
 		right, rcolor = i18n.T("sidebar.limited", p.Limited), red
 	}
+	a := Action{Kind: ActFocus, Pane: p.ID}
 	l, r := cols(name, right, w-5)
-	style := ""
-	if p.Target {
-		style = bold
-	}
-	return Line{
+	out := []Line{{
 		Text:   " " + mark + color + sym + reset + " " + style + l + reset + rcolor + r + reset + " ",
-		Action: Action{Kind: ActFocus, Pane: p.ID},
+		Action: a,
+	}}
+	if detail && sub != "" {
+		out = append(out, Line{Text: "     " + dim + fit(sub, w-6) + reset + " ", Action: a})
 	}
+	return out
 }
 
 // Frame turns a screen into the bytes that draw it on an h-row terminal:

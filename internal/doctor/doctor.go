@@ -105,7 +105,7 @@ func Run(ctx context.Context, o Options) *Report {
 			r.add(Info, "doctor.watcher_stopped")
 		}
 	}
-	if o.Cfg.Handoff.Inject == "argv" {
+	if o.Cfg.Handoff.Inject == "argv" && o.Cfg.Handoff.Deliver == "inline" {
 		users := o.Users
 		if users == nil {
 			users = otherUsers

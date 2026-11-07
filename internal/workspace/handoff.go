@@ -32,6 +32,7 @@ type HandoffResult struct {
 	// Reconstructed is set when no session file was found and the pane's
 	// scrollback was used instead.
 	Reconstructed bool
+	Limit         bool // the source hit its usage limit
 }
 
 // ErrNoSource means neither a session file nor the scrollback had anything.
@@ -99,7 +100,7 @@ func (w *WS) BuildHandoff(ctx context.Context, f *sources.Finder, req HandoffReq
 	if err != nil {
 		return nil, err
 	}
-	res.Doc = doc
+	res.Doc, res.Limit = doc, reason.Limit
 	return res, nil
 }
 

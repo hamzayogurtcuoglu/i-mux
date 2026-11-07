@@ -69,13 +69,15 @@ other() {
 	last=""
 	for x in "$@"; do last="$x"; done
 	if [ -n "$last" ]; then
-		dim "> $(printf '%s\n' "$last" | head -n 1)"
-		printf '%s\n' "$last" | sed -n '2,14p' | fold -s -w 92 | head -n 14 | while IFS= read -r l; do dim "  $l"; done
-		dim "  … ($(printf %s "$last" | wc -c | tr -d ' ') bytes)"
+		# The short handoff message (handoff.deliver = "file"): show it as
+		# the user's message, then read the file it names.
+		printf '%s\n' "$last" | sed 's#[^ ]*/\.imux/#~/.imux/#' | fold -s -w 66 | sed -n '1,6p' | while IFS= read -r l; do dim "> $l"; done
 		echo
+		file=$(printf '%s\n' "$last" | tail -n 1)
+		[ -f "$file" ] && step "Read $(printf %s "$file" | sed 's#.*/\.imux/#~/.imux/#')  ($(wc -l <"$file" | tr -d ' ') lines)"
 	fi
-	printf '\033[35m✦\033[0m %s\n' "Picking up from Claude: the redirect fix is in and one OAuth test fails."
-	step "Read src/auth/oauth.ts"
+	printf '\033[35m✦\033[0m %s\n' "Picking up from Claude: redirect fix done, one OAuth test fails."
+	echo "  I have the context and I am waiting for your next message."
 }
 
 case "$agent" in

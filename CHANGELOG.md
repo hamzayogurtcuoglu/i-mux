@@ -6,6 +6,25 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-07
+
+### Changed
+
+- **A switch shows one short message instead of the whole conversation.** i-mux saves the handoff
+  in `~/.imux/handoffs` and the new agent gets three lines: who it continues from, a sentence in
+  your language, and the file to read. Claude, Copilot and Antigravity get `--add-dir` for that
+  folder so reading it asks nothing. The document no longer appears in the process list either.
+  `[handoff] deliver = "inline"` restores the old behavior.
+- **New sidebar layout:** PROJECTS, AGENTS (cards with name, state and model), CHANGES and MOVE THIS
+  CHAT TO (without the agent already in use), separated by space instead of lines; a small toolbar
+  (Rename, History, Limits, Help) stays at the bottom. **+ New agent…** opens a pane side by side
+  or below, whichever suits the pane's shape.
+
+### Fixed
+
+- Chained handoffs (A → B → C) keep the original request when the middle agent got the short
+  message: i-mux follows it back to the saved file.
+
 ## [0.5.0] - 2026-11-07
 
 ### Added

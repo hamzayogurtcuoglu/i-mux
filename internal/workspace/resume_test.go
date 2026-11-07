@@ -2,6 +2,8 @@ package workspace
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -61,15 +63,24 @@ func TestSwitchResumesWithDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(s.Args) != 3 || s.Args[0] != "--resume" || s.Args[1] != claudeA || !strings.Contains(s.Args[2], "Welcome back") ||
-		!strings.Contains(s.Args[2], "codex wrote the tests") || strings.Contains(s.Args[2], "claude original task") {
+	// The agent gets a short message; the delta itself is in the file.
+	if len(s.Args) != 4 || !strings.HasPrefix(s.Args[0], "--add-dir=") || s.Args[1] != "--resume" || s.Args[2] != claudeA ||
+		!strings.Contains(s.Args[3], "Welcome back") || strings.Count(s.Args[3], "\n") != 2 {
 		t.Fatalf("resume argv %.300q", s.Args)
+	}
+	lines := strings.Split(s.Args[3], "\n")
+	delta, err := os.ReadFile(lines[2])
+	if err != nil || s.Args[0] != "--add-dir="+filepath.Dir(lines[2]) {
+		t.Fatalf("handoff file %q: %v", lines[2], err)
+	}
+	if !strings.Contains(string(delta), "codex wrote the tests") || strings.Contains(string(delta), "claude original task") {
+		t.Fatalf("delta %.300q", delta)
 	}
 	fb, err := launch.Read(fallback, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(fb.Args) != 3 || fb.Args[0] != "--session-id" || !strings.HasPrefix(fb.Args[2], "[i-mux handoff · Codex CLI → Claude Code") || fb.Pane != "%1" {
+	if len(fb.Args) != 4 || fb.Args[1] != "--session-id" || !strings.HasPrefix(fb.Args[3], "[i-mux handoff · Codex CLI → Claude Code") || fb.Pane != "%1" {
 		t.Fatalf("fallback argv %.200q", fb.Args)
 	}
 	if !strings.Contains(joined, `"r":true`) || !strings.Contains(joined, `"id":"`+claudeA+`"`) {

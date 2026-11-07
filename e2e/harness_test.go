@@ -85,6 +85,15 @@ func newH(t *testing.T, extraConfig string) *H {
 		// and the agent bar; sidebar tests configure [tmux] themselves.
 		cfg.WriteString("[tmux]\nsidebar = false\nagent_bar = true\n\n")
 	}
+	// The tests written before short handoff messages (v0.6) read the
+	// handoff in argv; the ones for v0.6 set handoff.deliver themselves.
+	if !strings.Contains(tables, "deliver") {
+		if strings.Contains(tables, "[handoff]\n") {
+			tables = strings.Replace(tables, "[handoff]\n", "[handoff]\ndeliver = \"inline\"\n", 1)
+		} else {
+			cfg.WriteString("[handoff]\ndeliver = \"inline\"\n\n")
+		}
+	}
 	if !strings.Contains(tables, "[limits]") {
 		// A fast watcher keeps tests short; it still has to see a screen
 		// twice before it acts.

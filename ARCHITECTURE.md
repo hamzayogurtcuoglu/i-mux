@@ -1741,6 +1741,13 @@ only file names, key names, type names, counts and CLI help text were inspected.
   the user and assistant turns, and no terminal chrome or account e-mail (the scrollback fallback
   carried both).
 
+**2026-11-07, `--add-dir` (D18):** checked with help output only (no session started).
+`claude --add-dir=/tmp mcp --help` prints the `mcp` subcommand's help: the `=` form takes one value.
+`claude --add-dir /tmp mcp --help` prints the root help: the space form swallows the following
+arguments (it is variadic). `copilot --add-dir=/tmp --help` and `agy --add-dir=/tmp --help` accept
+the `=` form. Whether each agent reads the file without asking in a real session is a USER check
+(T9.6).
+
 ## 22. Prior art (studied, not copied)
 
 | Project | Language | Relevant takeaway |

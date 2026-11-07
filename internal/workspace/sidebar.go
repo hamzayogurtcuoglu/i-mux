@@ -168,7 +168,7 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal bool) *Menu {
 // KeysMenu lists the keys (help).
 func (w *WS) KeysMenu() *Menu {
 	m := &Menu{Title: i18n.T("keys.title")}
-	for _, k := range []string{"keys.menu", "keys.switch", "keys.split", "keys.sidebar", "keys.sessions", "keys.panes", "", "keys.prefix"} {
+	for _, k := range []string{"keys.menu", "keys.switch", "keys.split", "keys.sidebar", "keys.sessions", "keys.panes", "keys.in_sidebar", "", "keys.prefix"} {
 		if k == "" {
 			m.Items = append(m.Items, Separator())
 			continue

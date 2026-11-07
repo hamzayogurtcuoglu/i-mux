@@ -69,6 +69,7 @@ func TestDoctor(t *testing.T) {
 	claudeBin := script(t, bin, "claude", "#!/bin/sh\necho \"$@\" >> "+log+"\ncase \"$1\" in --version) echo 1.0.110;; --help) echo 'usage: claude --resume';; esac\n")
 	copilotBin := script(t, bin, "copilot", "#!/usr/bin/env node\nconsole.log('x')\n")
 	cfg := config.Default()
+	cfg.Handoff.Deliver = "inline" // the handoff in argv: visible to other users
 	res := map[session.AgentID]agent.Resolved{
 		"claude":  {Agent: "claude", Installed: true, Path: claudeBin, PathEnv: bin, Version: "1.0.110"},
 		"copilot": {Agent: "copilot", Installed: true, Path: copilotBin, PathEnv: bin, Version: "1.0.0"},

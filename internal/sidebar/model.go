@@ -88,6 +88,8 @@ type Model struct {
 	Panes    []PaneRow    // the current window's panes (also inside Projects)
 	Agents   []AgentRow
 	Target   string // pane id actions apply to; "" when the window has none
+	TargetW  int    // its size in cells (+ New agent picks the split direction)
+	TargetH  int
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -103,7 +105,7 @@ type Window struct {
 	Last    string
 }
 
-const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}"
+const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}"
 
 // OptName is the user's name for a pane.
 const OptName = "@imux_name"
@@ -184,9 +186,10 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		cwd     string
 		session string
 		window  string
+		w, h    int
 	}
 	var all []raw
-	for _, r := range tmux.Rows(sec["panes"], 13) {
+	for _, r := range tmux.Rows(sec["panes"], 15) {
 		if r[1] == RoleSidebar {
 			continue
 		}
@@ -197,6 +200,8 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		if p.cwd == "" {
 			p.cwd = r[8]
 		}
+		p.w, _ = strconv.Atoi(r[13])
+		p.h, _ = strconv.Atoi(r[14])
 		switch {
 		case r[6] == "1":
 			p.row.State = StateExited
@@ -236,7 +241,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID}
+	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target

@@ -161,7 +161,7 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 			return nil, err
 		}
 		res.Handoff, res.Runes = path, built.Doc.Runes
-		l.Prompt, l.Handoff = built.Doc.Text, path
+		l.Prompt, l.Handoff = w.firstMessage(built.Doc.Text, path, built.From, req.To, built.Limit, false), path
 		if req.From == nil && built.Ref.Path != "" {
 			trail = recordSource(trail, built.Ref)
 		}
@@ -183,7 +183,7 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 				return nil, err
 			}
 			if built != nil {
-				spec, _, err := w.Spec(Launch{Agent: req.To, CWD: p.CWD, Prompt: built.Doc.Text, Handoff: res.Handoff, Pane: p.ID})
+				spec, _, err := w.Spec(Launch{Agent: req.To, CWD: p.CWD, Prompt: w.firstMessage(built.Doc.Text, res.Handoff, built.From, req.To, built.Limit, false), Handoff: res.Handoff, Pane: p.ID})
 				if err != nil {
 					return nil, err
 				}
@@ -198,7 +198,7 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 				if err != nil {
 					return nil, err
 				}
-				l.Prompt, l.Handoff = delta.Text, path
+				l.Prompt, l.Handoff = w.firstMessage(delta.Text, path, res.From, req.To, false, true), path
 				res.Handoff, res.Runes, res.Delta = path, delta.Runes, true
 			}
 		}
@@ -346,4 +346,14 @@ func SwitchError(to session.AgentID, err error) string {
 		return err.Error()
 	}
 	return i18n.T("switch.failed", session.ShortName(to), err.Error())
+}
+
+// firstMessage is what the new agent receives for a saved handoff: a short
+// message pointing to its file (handoff.deliver = "file", §8.2b), or the
+// document itself ("inline").
+func (w *WS) firstMessage(doc, path string, from, to session.AgentID, limit, delta bool) string {
+	if w.Cfg.Handoff.Deliver == "inline" || path == "" {
+		return doc
+	}
+	return handoff.Message{From: from, To: to, At: w.Now(), Path: path, Limit: limit, Delta: delta}.Text()
 }

@@ -33,6 +33,10 @@ inject              = "argv"
 # and wait for your next message (starts no work, spends no extra tokens);
 # "continue" = carry on with the unfinished request at once.
 on_arrival          = "wait"
+# "file" = the agent gets a two-line message pointing to the saved handoff
+# file and reads it itself (you do not see the whole document); "inline" =
+# the whole document is the agent's first message.
+deliver             = "file"
 # Best-effort removal of API keys, tokens and private keys.
 redact_secrets      = true
 # Include branch, `git status --short` and `git diff --stat`.

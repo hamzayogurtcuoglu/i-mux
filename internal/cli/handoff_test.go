@@ -82,7 +82,10 @@ func TestHandoffExecsTarget(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, errOut)
 	}
-	if got == nil || got.Bin != fake || len(got.Args) != 2 || got.Args[0] != "-i" || !strings.HasPrefix(got.Args[1], "[i-mux handoff · Claude Code → Antigravity CLI") {
+	// A short message pointing to the saved file, which agy may read.
+	if got == nil || got.Bin != fake || len(got.Args) != 3 || got.Args[0] != "--add-dir="+paths.Handoffs() || got.Args[1] != "-i" ||
+		!strings.HasPrefix(got.Args[2], "[i-mux handoff · Claude Code → Antigravity CLI") || strings.Count(got.Args[2], "\n") != 2 ||
+		!strings.HasPrefix(strings.Split(got.Args[2], "\n")[2], paths.Handoffs()) {
 		t.Fatalf("spec %+v", got)
 	}
 	if got.Dir != h.Project || !strings.HasPrefix(got.Env["PATH"], filepath.Dir(fake)) {

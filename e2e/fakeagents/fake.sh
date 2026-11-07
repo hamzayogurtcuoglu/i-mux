@@ -73,6 +73,17 @@ opt() { # opt NAME ARGS... → value after NAME
 pane="${TMUX_PANE:-none}"
 req="fake $agent request $n from pane $pane"
 reply="fake $agent reply $n"
+# $IMUX_FAKE_LOG/A.handoff-as-request: an i-mux handoff in the last argument
+# becomes the first user message, as with a real agent (chained handoffs).
+last=""
+for a in "$@"; do last="$a"; done
+if [ -e "$log/$agent.handoff-as-request" ]; then
+	case "$last" in
+	"[i-mux handoff"*)
+		req=$(printf '%s' "$last" | awk 'BEGIN { ORS = "" } { gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); if (NR > 1) printf "\\n"; print }')
+		;;
+	esac
+fi
 ts=$(now)
 session=""
 
@@ -142,8 +153,6 @@ EOF
 write_session "$@"
 
 echo "fake $agent ready (run $n, pane $pane)"
-last=""
-for a in "$@"; do last="$a"; done
 echo "argc $# · last argument $(printf %s "$last" | wc -c | tr -d ' ') bytes"
 
 # shellcheck disable=SC1090

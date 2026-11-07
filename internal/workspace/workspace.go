@@ -270,7 +270,11 @@ func (w *WS) Spec(l Launch) (*launch.Spec, TrailEntry, error) {
 	if l.ResumeID != "" {
 		tpl, vars.ID = ac.ResumeArgs, l.ResumeID
 	}
-	argv := append(append([]string{}, ac.Args...), agent.Expand(tpl, vars)...)
+	var argv []string
+	if l.Handoff != "" && w.Cfg.Handoff.Deliver != "inline" {
+		argv = agent.ReadDirArgs(l.Agent, filepath.Dir(l.Handoff)) // the agent reads the file itself
+	}
+	argv = append(append(argv, ac.Args...), agent.Expand(tpl, vars)...)
 	te := TrailEntry{Agent: l.Agent, Start: w.Now().UnixMilli(), Handoff: l.Handoff, Resumed: l.ResumeID != ""}
 	switch {
 	case l.ResumeID != "":

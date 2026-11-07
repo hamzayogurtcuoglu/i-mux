@@ -131,9 +131,15 @@ func TestSpecNewResumeAndMissing(t *testing.T) {
 	if !reflect.DeepEqual(s.Args, []string{"--resume", "abc", "delta"}) || te.SessionID != "abc" || !te.Resumed {
 		t.Fatalf("resume: %q %+v", s.Args, te)
 	}
-	s, te, _ = w.Spec(Launch{Agent: "antigravity", CWD: h.Project, Prompt: "hand\noff", Handoff: "/h.md"})
-	if !reflect.DeepEqual(s.Args, []string{"-i", "hand\noff"}) || te.SessionID != "" || te.Handoff != "/h.md" {
+	// With a handoff file the agent may read its directory (deliver = file).
+	s, te, _ = w.Spec(Launch{Agent: "antigravity", CWD: h.Project, Prompt: "hand\noff", Handoff: "/h/handoffs/x.md"})
+	if !reflect.DeepEqual(s.Args, []string{"--add-dir=/h/handoffs", "-i", "hand\noff"}) || te.SessionID != "" || te.Handoff != "/h/handoffs/x.md" {
 		t.Fatalf("antigravity: %q %+v", s.Args, te)
+	}
+	w.Cfg.Handoff.Deliver = "inline"
+	s, _, _ = w.Spec(Launch{Agent: "antigravity", CWD: h.Project, Prompt: "hand\noff", Handoff: "/h/handoffs/x.md"})
+	if !reflect.DeepEqual(s.Args, []string{"-i", "hand\noff"}) {
+		t.Fatalf("antigravity inline: %q", s.Args)
 	}
 	var ni *NotInstalledError
 	if _, _, err := w.Spec(Launch{Agent: "codex"}); !errors.As(err, &ni) || !strings.Contains(err.Error(), "npm i -g @openai/codex") {

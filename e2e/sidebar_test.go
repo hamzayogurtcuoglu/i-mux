@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
@@ -55,8 +56,8 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 	left, _ := strconv.Atoi(pos[0])
 	top, _ := strconv.Atoi(pos[1])
 	for i, l := range lines {
-		if strings.Contains(l, text) {
-			return left + 3, top + i + 1
+		if j := strings.Index(l, text); j >= 0 {
+			return left + utf8.RuneCountInString(l[:j]) + 1, top + i + 1
 		}
 	}
 	return 0, 0
@@ -72,7 +73,7 @@ func TestSidebar(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "SWITCH TO", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 	if w := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")); w != "30" {
 		t.Errorf("sidebar width %s, want 30", w)
 	}
@@ -80,8 +81,8 @@ func TestSidebar(t *testing.T) {
 		t.Errorf("the agent pane should keep the focus, active=%s", got)
 	}
 
-	// A click on "Antigravity" under CONTINUE HERE IN switches the agent pane.
-	x, y := h.rowOf(bar, "a Antigravity")
+	// A click on "Antigravity" under MOVE THIS CHAT TO switches the agent pane.
+	x, y := h.rowOf(bar, "Antigravity")
 	c.Click(0, x, y)
 	argv := h.run("antigravity", 1)
 	if len(argv) != 2 || argv[0] != "-i" || !strings.HasPrefix(argv[1], "[i-mux handoff · Claude Code → Antigravity CLI") ||
@@ -89,9 +90,9 @@ func TestSidebar(t *testing.T) {
 		t.Fatalf("antigravity argv %.300q", argv)
 	}
 	h.waitFor("agent pane runs antigravity", 5*time.Second, func() bool { return h.paneOpt(agentPane, "#{@imux_agent}") == "antigravity" })
-	h.waitFor("sidebar shows antigravity as current", 5*time.Second, func() bool {
+	h.waitFor("sidebar shows the antigravity card", 5*time.Second, func() bool {
 		for _, l := range strings.Split(h.capture(bar), "\n") {
-			if strings.Contains(l, "Antigravity") && strings.Contains(l, "current") {
+			if strings.Contains(l, "▌") && strings.Contains(l, "Antigravity") {
 				return true
 			}
 		}
@@ -101,20 +102,21 @@ func TestSidebar(t *testing.T) {
 		t.Fatal("the sidebar must never run an agent")
 	}
 
-	// "Split right" asks which agent, then splits the agent pane. A person
-	// does not click twice within tmux's double-click time.
+	// "+ New agent" asks which agent, then splits the wide agent pane side
+	// by side. A person does not click twice within tmux's double-click time.
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.rowOf(bar, "Split right")
+	x, y = h.rowOf(bar, "New agent")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Split right: new pane with", 5*time.Second)
 	c.Write("x")
 	h.run("codex", 1)
-	h.rowOf(bar, "Codex")
-	panes := strings.Split(strings.TrimSpace(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{@imux_role}:#{@imux_agent}")), "\n")
-	if strings.Join(panes, " ") != "sidebar: :antigravity :codex" {
-		t.Fatalf("window panes %q", panes)
-	}
+	var panes string
+	h.waitFor("codex pane next to antigravity", 5*time.Second, func() bool {
+		panes = strings.Join(strings.Fields(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{@imux_role}:#{@imux_agent}")), " ")
+		return panes == "sidebar: :antigravity :codex"
+	})
+	h.rowOf(bar, "Codex") // its card
 
 	// prefix b hides the sidebar, and shows it again.
 	c.Write(keyPrefix + "b")
@@ -140,7 +142,7 @@ func TestSidebar(t *testing.T) {
 }
 
 // TestSidebarDoubleClick: people double-click buttons. A double click on
-// "Split right" opens the menu once, the menu stays open (tmux's late
+// "+ New agent" opens the menu once, the menu stays open (tmux's late
 // DoubleClick1Pane must not close it) and the key typed next goes to the
 // menu, not to the sidebar, where "x" would switch the agent pane instead.
 func TestSidebarDoubleClick(t *testing.T) {
@@ -148,8 +150,8 @@ func TestSidebarDoubleClick(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "SWITCH TO", 10*time.Second)
-	x, y := h.rowOf(bar, "Split right")
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	x, y := h.rowOf(bar, "New agent")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	time.Sleep(80 * time.Millisecond)
@@ -195,7 +197,7 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
-	c.waitScreen(h, "SWITCH TO", 10*time.Second)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
 
 	// CHANGES: a click shows the diff in a popup.
 	x, y := h.rowOf(bar, "M readme.md")
@@ -206,7 +208,7 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Name this pane: the prompt's answer becomes the name, quotes and all.
-	x, y = h.rowOf(bar, "Name this pane")
+	x, y = h.rowOf(bar, "Rename")
 	mark = c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Name for this pane:", 5*time.Second)
@@ -253,7 +255,7 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 		t.Fatal("the opened project has no sidebar")
 	}
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.rowOf(newBar, "▸ "+filepath.Base(h.Homes.Project))
+	x, y = h.rowOf(newBar, " "+filepath.Base(h.Homes.Project)+" ")
 	c.Click(0, x, y)
 	h.waitFor("client back in the first project", 5*time.Second, func() bool { return session() == first })
 }

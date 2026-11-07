@@ -194,8 +194,8 @@ func (f *Finder) Build(ctx context.Context, req BuildRequest) (*handoff.Doc, err
 	if req.Budget > 0 {
 		opt.Budget = req.Budget
 	}
-	if cfg.Handoff.Inject == "paste" {
-		opt.MaxArgBytes = 1 << 30 // no argv limit when pasting
+	if cfg.Handoff.Inject == "paste" || cfg.Handoff.Deliver != "inline" {
+		opt.MaxArgBytes = 1 << 30 // no argv limit when pasting or pointing to the file
 	}
 	if cfg.Handoff.IncludeGit && req.CWD != "" {
 		g := gitinfo.Collect(ctx, req.CWD)

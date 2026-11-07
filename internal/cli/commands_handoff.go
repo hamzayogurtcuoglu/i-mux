@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -184,7 +185,12 @@ func runHandoff(e *Env, args []string) error {
 		return errors.New(i18n.T("agent.not_installed", agent.MustGet(to).Name, agent.MustGet(to).InstallHint))
 	}
 	ac := cfg.Agent(string(to))
-	argv := append(append([]string{}, ac.Args...), agent.Expand(ac.NewArgs, agent.Vars{Prompt: doc.Text, UUID: agent.NewUUID()})...)
+	prompt, argv := doc.Text, []string(nil)
+	if cfg.Handoff.Deliver != "inline" {
+		prompt = handoff.Message{From: from, To: to, At: now(), Path: path, Limit: reason.Limit, Delta: !since.IsZero()}.Text()
+		argv = agent.ReadDirArgs(to, filepath.Dir(path))
+	}
+	argv = append(append(argv, ac.Args...), agent.Expand(ac.NewArgs, agent.Vars{Prompt: prompt, UUID: agent.NewUUID()})...)
 	if !agent.HasPrompt(ac.NewArgs) {
 		fmt.Fprintln(e.Stderr, i18n.T("handoff.no_prompt_flag", path))
 	}

@@ -31,12 +31,15 @@ type Info struct {
 	Bin         string // default binary name
 	Vendor      string // who makes it: "Anthropic"
 	InstallHint string
+	// ReadDirFlag lets the agent read files in another directory without
+	// asking ("" when it needs nothing: Codex reads any path).
+	ReadDirFlag string
 }
 
 var registry = []Info{
-	{ID: session.Claude, Key: "c", Bin: "claude", Vendor: "Anthropic", InstallHint: "npm i -g @anthropic-ai/claude-code"},
-	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash"},
-	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot"},
+	{ID: session.Claude, Key: "c", Bin: "claude", Vendor: "Anthropic", InstallHint: "npm i -g @anthropic-ai/claude-code", ReadDirFlag: "--add-dir"},
+	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", ReadDirFlag: "--add-dir"},
+	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot", ReadDirFlag: "--add-dir"},
 	{ID: session.Codex, Key: "x", Bin: "codex", Vendor: "OpenAI", InstallHint: "npm i -g @openai/codex"},
 }
 
@@ -85,6 +88,18 @@ func Ordered(cfg *config.Config) []Info {
 		}
 	}
 	return out
+}
+
+// ReadDirArgs are the arguments that let agent id read the files in dir
+// without asking (a handoff file, §8.2b). They use the "--flag=value" form:
+// Claude's --add-dir takes several values and would swallow the next
+// argument otherwise.
+func ReadDirArgs(id session.AgentID, dir string) []string {
+	a, ok := Get(id)
+	if !ok || a.ReadDirFlag == "" || dir == "" {
+		return nil
+	}
+	return []string{a.ReadDirFlag + "=" + dir}
 }
 
 // Vars are the template placeholders.

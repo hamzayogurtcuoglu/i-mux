@@ -33,7 +33,7 @@ type sidebar struct {
 	model  Model
 	win    Window
 	screen Screen
-	sel    int // keyboard selection (row index), -1 = none
+	sel    Item // keyboard selection, NoItem = none
 
 	clicks    chan Action // click actions, delivered after ClickDelay
 	lastClick time.Time
@@ -57,7 +57,7 @@ func Run(ctx context.Context, o Options) error {
 	if o.Safety <= 0 {
 		o.Safety = 15 * time.Second
 	}
-	s := &sidebar{o: o, t: o.Source.T, sel: -1, clicks: make(chan Action, 4)}
+	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4)}
 	restore, err := rawMode(int(o.In.Fd()))
 	if err == nil {
 		defer restore()
@@ -180,8 +180,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			return
 		}
 		s.lastClick = now
-		s.sel = -1
-		a := s.screen.Lines[row].Action
+		s.sel = NoItem
+		a := s.screen.Lines[row].ActionAt(ev.X - 1)
 		time.AfterFunc(ClickDelay, func() { s.clicks <- a })
 		return
 	}
@@ -193,11 +193,9 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 	case "backtab":
 		s.move(-1)
 	case "enter":
-		if s.sel >= 0 && s.sel < len(s.screen.Lines) {
-			s.do(ctx, s.screen.Lines[s.sel].Action)
-		}
+		s.do(ctx, s.screen.ActionOf(s.sel))
 	case "esc", "q":
-		s.sel = -1
+		s.sel = NoItem
 		s.focusTarget(ctx)
 	case "v":
 		s.do(ctx, Action{Kind: ActSplitH})
@@ -225,7 +223,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 
 // move steps the keyboard selection over the rows that have an action.
 func (s *sidebar) move(d int) {
-	rows := s.screen.Selectable()
+	rows := s.screen.Items()
 	if len(rows) == 0 {
 		return
 	}
@@ -288,6 +286,14 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.spawn(append([]string{"__menu", "--split", "h"}, tgt...))
 	case ActSplitV:
 		s.spawn(append([]string{"__menu", "--split", "v"}, tgt...))
+	case ActNewAgent:
+		// Side by side when the pane is wide (a cell is about twice as
+		// tall as wide), else one above the other.
+		dir := "v"
+		if s.model.TargetW >= 2*s.model.TargetH {
+			dir = "h"
+		}
+		s.spawn(append([]string{"__menu", "--split", dir}, tgt...))
 	case ActSessions:
 		s.spawn(append([]string{"__menu", "--sessions"}, tgt...))
 	case ActLimits:
