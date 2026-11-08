@@ -821,6 +821,22 @@ in History was not found.
   - AC: "📌 Pin or unpin…" (p) in the picker opens the rows for pinning; aligned agent column;
     `<pasted_content>` tags out of previews; unit and e2e tests.
 
+## M31: Icons that draw, Settings, updates (added 2026-11-08)
+
+User report: a friend's terminal drew "?" for the icons; "Config" should be "Settings"; people
+should not have to update by hand.
+
+- [ ] **T31.1 Icons** · S
+  - AC: `auto` from the terminal's actual font (Terminal.app, iTerm2, VS Code; Ghostty, WezTerm,
+    kitty); `@imux_terminal`; unit tests with sample profiles.
+- [ ] **T31.2 Rail** · S
+  - AC: 9-column rail, "Settings"; default width 43; tests.
+- [ ] **T31.3 Updates** · M
+  - AC: `imux update [--check]`; the watcher's daily check (`update_check`); the rail and the
+    Settings row show a newer release; unit tests without network.
+- [ ] **T31.4 Releases** · S
+  - AC: GoReleaser from the module proxy in the release workflow.
+
 ---
 
 ## Testing strategy

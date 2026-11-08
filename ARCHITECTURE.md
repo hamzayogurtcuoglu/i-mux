@@ -1382,6 +1382,25 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   (1.566.0) starts in the profile and asks for the sign-in.
 - Settings shows "Sign in to GitHub Copilot…" while it is on. Turning it off keeps the profile.
 
+#### Icons, Settings on the rail, updates (v0.27)
+
+- **Icons `auto`** picks the editor's icons only when the terminal draws them: Ghostty, WezTerm
+  and kitty bring the symbols; Terminal.app and iTerm2 when their default profile's font is a
+  Nerd Font (its name has "Nerd", or "NF" / "NFM" / "NFP" as a word); VS Code's terminal when
+  `terminal.integrated.fontFamily` names one. Else emoji. The terminal is `TERM_PROGRAM` of the
+  shell that ran `imux`, kept in the global option `@imux_terminal`. Before, a Nerd Font file
+  anywhere in the font folders was enough, and a terminal using another font drew "?" boxes.
+- **Rail:** 9 columns (an 8-column item and the line), so "Settings" fits; the default sidebar
+  width is 43 (the view keeps its 34 columns).
+- **Updates:** `imux update` installs the latest release with the release's own installer
+  (`releases/download/<tag>/install.sh --version <tag> --prefix <imux's folder>`); `--check`
+  only tells. The watcher asks GitHub once a day (`update_check = true`; the latest tag from the
+  `releases/latest` redirect, kept in `state.json`). When a newer one is out, the rail's Settings
+  turns yellow and Settings starts with "Update i-mux: A → B" (u); else "Update i-mux… (A)". The
+  watcher and the sidebars restart with the new binary on their own.
+- **Releases** build GoReleaser from the Go module proxy (`go install …/goreleaser/v2`), not a
+  GitHub download: three releases (0.24.0–0.25.1) failed on a 504 from that download.
+
 #### Commit message suggestions (v0.23, D29)
 
 ```
