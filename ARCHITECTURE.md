@@ -610,6 +610,13 @@ provider, no quota; synthetic prompts only).
   creates a session with that id: it must start with "ses"); resume: `--session <id> --prompt
   <delta>`. The handoff file is read without a prompt (external directories are allowed by
   default in v2).
+- **Round trips** (verified for v0.20 with the real TUI and a fake model, both `deliver` modes):
+  Claude → OpenCode (new session with imux's id; it reads the handoff file) → Claude (Claude's own
+  session resumes with OpenCode's part) → OpenCode (its own session resumes, reads the welcome-back
+  file) → Codex (the original request, OpenCode's replies and the meanwhile block). E2E tests with
+  the fake OpenCode cover the same with Antigravity, Copilot and Codex as the other side.
+- **Keys:** `/connect` in OpenCode adds a provider key (NVIDIA and Groq are in its list) to
+  `~/.local/share/opencode/auth.json`; `/models` picks the model new sessions use. No account.
 - **Limits:** OpenCode has no plan of its own; the provider's limits apply. On-screen patterns:
   "rate limit", "429", "quota exceeded", "insufficient credits". The panel shows the last 5 hours'
   tokens from `session_v2`.
@@ -685,6 +692,12 @@ Details:
   - its "Earlier history" + "Conversation" become this document's "Earlier history"
     (truncated from the *oldest* end, within its budget);
   - the handoff message itself is not shown as a user message.
+- **Later handoffs** (v0.20): a handoff further down a session is the "Welcome back" its agent got
+  when it resumed. It is not a user message: the conversation shows "**Meanwhile the user
+  continued in X:**" with that handoff's conversation indented under it (at most 2 500 characters),
+  and "Where it stopped" takes the last request and reply from there unless later turns follow.
+  Without this, a round trip (Claude → OpenCode → Claude → Codex) carried the whole welcome-back
+  document, instructions included, as the user's last request.
 - **Reason line:** "hit its usage limit (resets HH:MM)" | "the user switched manually".
   The reason comes from `--reason`, the watcher's detected text, or the source session's last `APIError`.
 - **Excluded:** API error messages, the limit message itself, sidechains, meta lines, thinking blocks.
@@ -722,6 +735,9 @@ Claude Code hit its usage limit, so we continue here. First read this file in fu
   `handoffs` directory, at most 4 MiB) and parses that. A pruned file leaves From/To/At only.
 - `deliver = "inline"` passes the whole document as before (argv or paste). Doctor's argv-exposure
   warning applies only to inline.
+- Reading the handoff file (a read tool, or `cat` / `sed -n` / `head` ... of it in a shell) is how
+  the agent got its context, not work: the summarizer skips it (no conversation line, not in Files
+  touched, not among the tool names) (v0.20).
 
 ### 8.3 Budget allocation
 
