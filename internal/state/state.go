@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"slices"
 	"syscall"
 	"time"
 
@@ -55,12 +56,15 @@ type State struct {
 	BusSends map[string][]int64 `json:"bus_sends,omitempty"`
 	// Recent holds the project folders started most recently, newest first.
 	Recent []Recent `json:"recent,omitempty"`
+	// Pinned holds the conversations pinned in History ("agent:id"), the
+	// newest pin first.
+	Pinned []string `json:"pinned,omitempty"`
 
 	extra map[string]json.RawMessage
 }
 
 // known lists the JSON keys of typed fields.
-var known = []string{"version", "limits", "bins", "notices", "bus_sends", "recent"}
+var known = []string{"version", "limits", "bins", "notices", "bus_sends", "recent", "pinned"}
 
 type plain State // no methods: avoids recursion
 
@@ -229,6 +233,23 @@ func (s *State) SetNotice(key string) {
 		s.Notices = map[string]bool{}
 	}
 	s.Notices[key] = true
+}
+
+// IsPinned reports whether conversation key ("agent:id") is pinned.
+func (s *State) IsPinned(key string) bool { return slices.Contains(s.Pinned, key) }
+
+// Pin puts key first among the pinned conversations.
+func (s *State) Pin(key string) {
+	s.Unpin(key)
+	s.Pinned = append([]string{key}, s.Pinned...)
+}
+
+// Unpin removes key from the pinned conversations.
+func (s *State) Unpin(key string) {
+	s.Pinned = slices.DeleteFunc(s.Pinned, func(k string) bool { return k == key })
+	if len(s.Pinned) == 0 {
+		s.Pinned = nil
+	}
 }
 
 // Recent is a project folder and when it was last started.

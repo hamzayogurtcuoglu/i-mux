@@ -100,7 +100,7 @@ them) switches its view.
 | click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation |
 | **✎ Rename** (or `n`) | give the agent a name of your own, like "backend fix" (agents that title their terminal name themselves) |
 | a section title (PROJECTS, AGENTS) | fold or unfold it |
-| **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
+| **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations (pin one to the top from its menu: `t`) · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
 | the **tab bar** at the top · its **+** (or `prefix c`) · **×** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab |
 | `prefix b` | hide or show the sidebar |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode |

@@ -36,11 +36,22 @@ func (w *WS) pickerAgents() []session.AgentID {
 }
 
 // PickerMenu builds page `page` (0-based) of the session picker for pane p:
-// conversations of every installed agent for @imux_cwd, newest first. Only
-// the shown rows are read for their preview. It returns nil when there is
-// nothing to show.
+// conversations of every installed agent for @imux_cwd, the pinned ones
+// first (§9.3 "Pinned conversations"), then newest first. Only the shown
+// rows are read for their preview. It returns nil when there is nothing to
+// show.
 func (w *WS) PickerMenu(ctx context.Context, f *sources.Finder, p *Pane, client string, page int) *Menu {
-	refs := f.Find(ctx, w.pickerAgents(), session.Query{CWD: p.CWD, Limit: PickerCandidates})
+	pinned := w.pinnedRefs(ctx, f, p.CWD)
+	isPinned := map[string]bool{}
+	for _, r := range pinned {
+		isPinned[r.Key()] = true
+	}
+	refs := pinned
+	for _, r := range f.Find(ctx, w.pickerAgents(), session.Query{CWD: p.CWD, Limit: PickerCandidates}) {
+		if !isPinned[r.Key()] {
+			refs = append(refs, r)
+		}
+	}
 	if len(refs) == 0 {
 		return nil
 	}
@@ -62,6 +73,13 @@ func (w *WS) PickerMenu(ctx context.Context, f *sources.Finder, p *Pane, client 
 			preview = i18n.T("picker.no_preview")
 		}
 		name := pad(session.ShortName(r.Agent), 8) + " " + pad(textfmt.Ago(now, r.UpdatedAt), 12) + " " + preview
+		if len(pinned) > 0 {
+			mark := "   " // the width of "📌 ", so the columns line up
+			if isPinned[r.Key()] {
+				mark = "📌 "
+			}
+			name = mark + name
+		}
 		m.Items = append(m.Items, MenuItem{
 			Name: name, Key: strconv.Itoa(i + 1),
 			Cmd: w.ui(append([]string{"__menu", "--session", r.Key()}, tgt...)...),
@@ -75,6 +93,26 @@ func (w *WS) PickerMenu(ctx context.Context, f *sources.Finder, p *Pane, client 
 		})
 	}
 	return m
+}
+
+// pinnedRefs looks up the pinned conversations of folder cwd by their ids,
+// the newest pin first; ones that are gone or of agents not installed are
+// left out.
+func (w *WS) pinnedRefs(ctx context.Context, f *sources.Finder, cwd string) []session.Ref {
+	var out []session.Ref
+	for _, k := range w.State().Pinned {
+		a, id, ok := strings.Cut(k, ":")
+		if !ok || !session.Known(a) || !w.Installed(session.AgentID(a)) {
+			continue
+		}
+		for _, r := range f.Find(ctx, []session.AgentID{session.AgentID(a)}, session.Query{CWD: cwd, ID: id, Limit: 1}) {
+			if r.ID == id {
+				out = append(out, r)
+				break
+			}
+		}
+	}
+	return out
 }
 
 // SessionMenu is the second-level menu for a picked conversation: resume it
@@ -120,6 +158,11 @@ func (w *WS) SessionMenu(ref session.Ref, p *Pane, client string) *Menu {
 			Cmd: w.ui(append([]string{"split", string(a.ID), "-h", "--from-session", key}, tgt...)...),
 		})
 	}
+	pin, args := i18n.T("picker.pin"), []string{"__pin", key}
+	if w.State().IsPinned(key) {
+		pin, args = i18n.T("picker.unpin"), append(args, "--unpin")
+	}
+	m.Items = append(m.Items, Separator(), MenuItem{Name: pin, Key: "t", Cmd: w.ui(append(args, tgt...)...)})
 	return m
 }
 

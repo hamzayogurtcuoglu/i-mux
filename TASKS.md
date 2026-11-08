@@ -786,10 +786,10 @@ User request: like the editor's "generate commit message" (ARCHITECTURE D29).
 
 ## M28: Pinned conversations (added 2026-11-08)
 
-- [ ] **T28.1 Pins** · S
+- [x] **T28.1 Pins** · S
   - AC: `state.pinned`; Pin to the top / Unpin in a conversation's menu; the picker lists the
     folder's pinned conversations first (📌, looked up by id), then the rest; unit tests.
-- [ ] **T28.2 E2E and docs** · S · deps: T28.1
+- [x] **T28.2 E2E and docs** · S · deps: T28.1
   - AC: pin an old conversation from the menu, it comes first; unpin; README.
 
 ## M29: Settings and AI completion in the editor (added 2026-11-08)

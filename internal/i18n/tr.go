@@ -204,6 +204,8 @@ var tr = map[string]string{
 	"picker.title":             "Oturumlar · %s",
 	"picker.no_preview":        "(metin yok)",
 	"picker.more":              "Daha fazla…",
+	"picker.pin":               "En üste sabitle",
+	"picker.unpin":             "Sabitlemeyi kaldır",
 	"picker.none":              "%s için sohbet bulunamadı",
 	"picker.session_title":     "%s · %s",
 	"picker.resume":            "%s içinde sürdür (kaldığı yerden)",

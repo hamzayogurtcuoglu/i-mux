@@ -203,6 +203,8 @@ var en = map[string]string{
 	"picker.title":             "Sessions · %s",
 	"picker.no_preview":        "(no text)",
 	"picker.more":              "More…",
+	"picker.pin":               "Pin to the top",
+	"picker.unpin":             "Unpin",
 	"picker.none":              "No conversations found for %s",
 	"picker.session_title":     "%s · %s",
 	"picker.resume":            "Continue in %s (resume)",

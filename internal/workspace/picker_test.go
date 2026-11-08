@@ -91,7 +91,7 @@ func TestSessionMenu(t *testing.T) {
 		names = append(names, it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "Continue in Antigravity (resume)|Continue in Claude (with context)||Preview handoff||New pane: Antigravity (resume)|New pane: Claude (with context)"
+	want := "Continue in Antigravity (resume)|Continue in Claude (with context)||Preview handoff||New pane: Antigravity (resume)|New pane: Claude (with context)||Pin to the top"
 	if got != want {
 		t.Fatalf("items\n got %s\nwant %s", got, want)
 	}
@@ -101,9 +101,65 @@ func TestSessionMenu(t *testing.T) {
 		!strings.Contains(m.Items[6].Cmd, "split claude -h --from-session antigravity:g-1") {
 		t.Fatalf("commands %+v", m.Items)
 	}
+	if pin := m.Items[len(m.Items)-1]; pin.Key != "t" || !strings.Contains(pin.Cmd, "__pin antigravity:g-1 --pane %4 --client c1") {
+		t.Fatalf("pin item %+v", pin)
+	}
 	// No native resume when the agent's resume is off.
 	w.Cfg.Agents["antigravity"].Resume = false
 	if m := w.SessionMenu(ref, &Pane{ID: "%4"}, ""); strings.Contains(m.Items[0].Name, "resume") {
 		t.Fatal("resume offered although disabled")
+	}
+}
+
+// TestPickerPinned: pinned conversations come first (📌), looked up by id
+// even past the newest PickerCandidates; the menu offers Unpin for them.
+func TestPickerPinned(t *testing.T) {
+	w, _, h := testWS(t)
+	f := sources.New(config.Default())
+	now := testutil.FrozenTime
+	var ids []string
+	for i := 0; i < PickerCandidates+5; i++ {
+		id := fmt.Sprintf("11111111-0000-4000-8000-%012d", i)
+		ids = append(ids, id)
+		writeClaudeSession(t, h, id, fmt.Sprintf("claude task %02d", i), now.Add(-time.Duration(i)*time.Hour))
+	}
+	oldest := "claude:" + ids[len(ids)-1]
+	w.State().Pin("claude:" + ids[3])
+	w.State().Pin(oldest)
+	w.State().Pin("claude:gone-0000") // deleted by the agent: not shown
+	p := &Pane{ID: "%1", Agent: "claude", CWD: h.Project}
+	m := w.PickerMenu(context.Background(), f, p, "", 0)
+	if m == nil || len(m.Items) < 3 {
+		t.Fatalf("menu %+v", m)
+	}
+	if !strings.HasPrefix(m.Items[0].Name, "📌 Claude") || !strings.Contains(m.Items[0].Name, fmt.Sprintf("claude task %02d", len(ids)-1)) ||
+		!strings.HasPrefix(m.Items[1].Name, "📌 Claude") || !strings.Contains(m.Items[1].Name, "claude task 03") ||
+		!strings.HasPrefix(m.Items[2].Name, "   Claude") || !strings.Contains(m.Items[2].Name, "claude task 00") {
+		t.Fatalf("pinned first:\n%s\n%s\n%s", m.Items[0].Name, m.Items[1].Name, m.Items[2].Name)
+	}
+	n := 0
+	for pg := 0; ; pg++ {
+		mm := w.PickerMenu(context.Background(), f, p, "", pg)
+		for _, it := range mm.Items {
+			if strings.Contains(it.Name, "claude task 03") {
+				n++
+			}
+		}
+		if !strings.Contains(mm.Title, fmt.Sprintf("(%d/", pg+2)) {
+			break
+		}
+	}
+	if n != 1 {
+		t.Fatalf("a pinned conversation listed %d times", n)
+	}
+	sm := w.SessionMenu(session.Ref{Agent: "claude", ID: ids[len(ids)-1]}, p, "")
+	if last := sm.Items[len(sm.Items)-1]; last.Name != "Unpin" || !strings.Contains(last.Cmd, "__pin "+oldest+" --unpin") {
+		t.Fatalf("unpin item %+v", last)
+	}
+	w.State().Unpin(oldest)
+	w.State().Unpin("claude:" + ids[3])
+	w.State().Unpin("claude:gone-0000")
+	if m := w.PickerMenu(context.Background(), f, p, "", 0); !strings.HasPrefix(m.Items[0].Name, "Claude") {
+		t.Fatalf("no pins: no indent: %q", m.Items[0].Name)
 	}
 }
