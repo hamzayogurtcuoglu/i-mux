@@ -1160,6 +1160,11 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   History"). Closing the last agent of a tab closes the tab; of the last tab, the project (the
   client moves first). The name belongs to the pane, so it stays when the chat moves to another
   CLI.
+- **Renaming is on the agent's row only** (v0.26): the toolbar's Rename is gone. It named the
+  window's current pane, not the row the user had in mind, so naming "Claude" could name the
+  OpenCode pane instead. A click on a row of another tab goes there; on the selected agent (or
+  a right-click anywhere) it opens the menu with Rename…. The sidebar key `n` still names the
+  current pane.
 - **Close a tab:** the **×** after the current tab (`range=user|imux:close`) → confirm →
   `imux __close-tab`; the last tab closes the project as above.
 
@@ -1320,6 +1325,11 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 
 - In History (the session picker) a conversation's menu has **Pin to the top** / **Unpin** (key
   `t`); after it the list opens again.
+- The list itself ends with **📌 Pin or unpin…** (key `p`, v0.26): the same conversations, each
+  marked 📌 when pinned; choosing one pins or unpins it and the list opens again. (In v0.24 the
+  pin was only in the second menu, and users did not find it.)
+- Rows line up: the agent's name is padded to the longest one (Antigravity), and a preview drops
+  the `<pasted_content …>` tags some agents wrap pasted text in.
 - Pins are kept in `state.json` (`pinned`: `agent:id`, the newest pin first). The picker lists the
   folder's pinned conversations first, marked 📌, each looked up by its id (so an old one shows
   even when it is not among the 50 newest), then the others, newest first. Unpinned rows get the
