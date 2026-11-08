@@ -76,6 +76,8 @@ if [ -n "$headless" ]; then
 		echo "codex: thinking" >&2
 		printf '%s\n' "$msg" >"$out"
 	else
+		# The backticks are a code fence, as agents often reply.
+		# shellcheck disable=SC2016
 		printf 'Here is a commit message:\n\n```\n%s\n```\n' "$msg"
 	fi
 	exit 0
