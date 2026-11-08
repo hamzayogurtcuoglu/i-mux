@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/completion"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/diffview"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -133,13 +135,26 @@ func runEdit(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	argv := editor.Command(editor.Choose(cfg.Editor), pos[0], *line)
+	argv, env := editorCmd(cfg, pos[0], *line)
 	if argv == nil {
 		return runView(e, args)
 	}
 	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Env = append(os.Environ(), env...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return cmd.Run()
+}
+
+// editorCmd is the editor argv and extra environment for path at line:
+// Neovim with Copilot when AI completion is on and set up (D30), else the
+// configured editor.
+func editorCmd(cfg *config.Config, path string, line int) ([]string, []string) {
+	if cfg.Completion.Enabled {
+		if argv, env := completion.Editor(path, line); argv != nil {
+			return argv, env
+		}
+	}
+	return editor.Command(editor.Choose(cfg.Editor), path, line), nil
 }
 
 // runView shows a file with line numbers, at --line: bat when installed,
@@ -228,7 +243,9 @@ func pageFile(e *Env, path string, opts ...string) error {
 	cmd := exec.Command(less, append(opts, "--", path)...)
 	cmd.Env = lessEnv("-K")
 	if cfg, err := loadConfig(e); err == nil {
-		if ed := editor.Choose(cfg.Editor); ed != nil {
+		if v := completion.Visual(); cfg.Completion.Enabled && v != "" {
+			cmd.Env = append(cmd.Env, "VISUAL="+v) // less's v edits, with Copilot
+		} else if ed := editor.Choose(cfg.Editor); ed != nil {
 			cmd.Env = append(cmd.Env, "VISUAL="+strings.Join(ed, " ")) // less's v edits
 		}
 	}

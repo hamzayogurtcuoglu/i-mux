@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
@@ -50,5 +52,33 @@ func TestSnippetCommandWritesNothing(t *testing.T) {
 	}
 	if _, _, code := runCLI(t, "snippet", "vim"); code != ExitUsage {
 		t.Fatalf("unknown target: exit %d", code)
+	}
+}
+
+func TestSetSetting(t *testing.T) {
+	testutil.Isolate(t)
+	if err := setSetting("icons", "nerd"); err != nil {
+		t.Fatal(err)
+	}
+	if err := setSetting("completion", "on"); err != nil {
+		t.Fatal(err)
+	}
+	if err := setSetting("on_limit", "off"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, err := config.Load(paths.Config())
+	if err != nil || cfg.Tmux.Icons != "nerd" || !cfg.Completion.Enabled || cfg.OnLimit != "off" {
+		t.Fatalf("config %v %+v", err, cfg)
+	}
+	for _, bad := range [][2]string{{"icons", "big"}, {"nope", "x"}, {"commit_agent", "someone"}} {
+		if err := setSetting(bad[0], bad[1]); err == nil {
+			t.Errorf("%s=%s accepted", bad[0], bad[1])
+		}
+	}
+	if err := setSetting("completion", "off"); err != nil {
+		t.Fatal(err)
+	}
+	if cfg, _, _ := config.Load(paths.Config()); cfg.Completion.Enabled {
+		t.Fatal("still on")
 	}
 }

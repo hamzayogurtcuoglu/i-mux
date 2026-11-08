@@ -61,6 +61,13 @@ gösterir (`brew install --cask font-jetbrains-mono-nerd-font`, sonra terminalin
 yoksa emojileri. Açık görünümün simgesine tıklamak, editördeki gibi şeridin yanındaki paneli
 kapatır ve yeri ajana bırakır; herhangi bir görünümün simgesine tıklamak onu yeniden açar.
 
+Şeritteki **🔧 Ayar** (ya da `imux settings`, ya da kenar çubuğunda `,`) Ayarlar'ı açar: editörde
+yapay zekâ tamamlama, simgeler, commit mesajlarını kimin yazacağı, geçişten sonra yeni ajanın ne
+yapacağı, limitte ne olacağı ve ayar dosyası. **Editörde yapay zekâ tamamlama** VS Code'daki Copilot
+gibi çalışır: oradan açınca düzenlediğin dosyalar GitHub'ın Copilot eklentili Neovim'inde açılır (Tab
+öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
+GitHub Copilot'a bir kez giriş yaptırır.
+
 **OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
 Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):
 diğerleri limite takılınca devam etmek için kullanışlı bir yer. `brew install opencode` ile kur;

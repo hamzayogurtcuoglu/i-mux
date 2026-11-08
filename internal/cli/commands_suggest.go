@@ -11,7 +11,6 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/commitmsg"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -129,13 +128,13 @@ func editMessage(ctx context.Context, e *Env, w *workspace.WS, cfg *config.Confi
 	defer os.Remove(f.Name())
 	fmt.Fprintf(f, "%s\n\n%s\n", strings.TrimSpace(out), i18n.T("git.edit_help"))
 	f.Close()
-	ed := editor.Choose(cfg.Editor)
-	if ed == nil {
+	argv, env := editorCmd(cfg, f.Name(), 1)
+	if argv == nil {
 		say(i18n.T("git.no_editor"))
 		return nil
 	}
-	argv := editor.Command(ed, f.Name(), 1)
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd.Env = append(os.Environ(), env...)
 	cmd.Dir = filepath.Clean(cwd)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, e.Stdout, e.Stderr
 	if err := cmd.Run(); err != nil {

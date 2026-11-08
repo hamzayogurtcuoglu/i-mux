@@ -44,6 +44,7 @@ const (
 	ActFileMenu               // the menu of file Path (edit, view, VS Code)
 	ActRefresh                // redraw
 	ActSuggest                // an agent writes a commit message (D29)
+	ActSettings               // the Settings menu
 )
 
 // Action is a row's action.

@@ -116,6 +116,11 @@ type Git struct {
 	CommitModel string `toml:"commit_model"` // "" = the agent's default
 }
 
+// Completion is the [completion] section: AI completion in the editor (D30).
+type Completion struct {
+	Enabled bool `toml:"enabled"`
+}
+
 // Tmux is the [tmux] section.
 type Tmux struct {
 	MenuKeyRoot     string `toml:"menu_key_root"`
@@ -147,6 +152,7 @@ type Config struct {
 	Limits       Limits            `toml:"limits"`
 	Bus          Bus               `toml:"bus"`
 	Git          Git               `toml:"git"`
+	Completion   Completion        `toml:"completion"`
 	Tmux         Tmux              `toml:"tmux"`
 	Agents       map[string]*Agent `toml:"agents"`
 }

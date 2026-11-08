@@ -797,16 +797,16 @@ User request: like the editor's "generate commit message" (ARCHITECTURE D29).
 User request: a Settings place next to Help with switches, and Copilot-like completion while
 editing a file (ARCHITECTURE D30).
 
-- [ ] **T29.1 Config writer** · S
+- [x] **T29.1 Config writer** · S
   - AC: set one key in config.toml keeping comments and other lines; creates the file from the
     commented default; sidebars and the watcher reload a changed config; unit tests.
-- [ ] **T29.2 Settings menu** · M · deps: T29.1
+- [x] **T29.2 Settings menu** · M · deps: T29.1
   - AC: ⚙ on the rail and `imux settings`; rows with values; cycling and the commit-agent
     submenu; reopens; i18n; unit tests.
-- [ ] **T29.3 AI completion** · M
+- [x] **T29.3 AI completion** · M
   - AC: `[completion]`; the imux-nvim profile and copilot.vim setup with Neovim / Node.js checks
     and the sign-in; edits open Neovim in the profile when on; unit tests with fake commands.
-- [ ] **T29.4 E2E and docs** · M · deps: T29.2, T29.3
+- [x] **T29.4 E2E and docs** · M · deps: T29.2, T29.3
   - AC: real clicks: Settings toggles icons and the arrival mode in the file; with completion on
     an edit runs nvim with the profile (a fake nvim); the real Neovim loads copilot.vim; README.
 

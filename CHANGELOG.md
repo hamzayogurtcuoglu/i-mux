@@ -6,6 +6,19 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-08
+
+### Added
+
+- **Settings** (🔧 Config on the rail, `imux settings`, `,` in the sidebar): AI completion in the
+  editor, icons, who writes commit messages, what a new agent does after a handoff, what happens at
+  a limit, and the config file. A row changes only its line in `~/.imux/config.toml`; sidebars and
+  the watcher pick the change up at once.
+- **AI completion in the editor**, like Copilot in VS Code: when it is on, files you edit open in
+  Neovim with GitHub's copilot.vim, in a profile i-mux keeps (`imux-nvim`; your own Neovim setup is
+  not touched). Tab accepts a suggestion, Ctrl+S saves, Ctrl+Q quits. Turning it on installs Neovim
+  (Homebrew) and the plugin when missing and offers the one-time GitHub sign-in.
+
 ## [0.24.0] - 2026-11-08
 
 ### Added

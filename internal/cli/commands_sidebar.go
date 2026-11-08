@@ -62,7 +62,7 @@ func runSidebar(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	src := &sidebar.Source{T: tmux.New(paths.TmuxConf()), Cfg: cfg, Now: time.Now}
+	src := &sidebar.Source{T: tmux.New(paths.TmuxConf()), Cfg: cfg, CfgPath: paths.Config(), Now: time.Now}
 	return sidebar.Run(context.Background(), sidebar.Options{
 		Source: src, Self: self, Pane: pane, Width: cfg.Tmux.SidebarWidth, In: os.Stdin, Out: os.Stdout,
 	})

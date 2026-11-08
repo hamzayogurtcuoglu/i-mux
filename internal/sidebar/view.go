@@ -330,11 +330,11 @@ const (
 )
 
 // railIcons are the rail's icons per theme: agents, files, search, git,
-// limits, help. Nerd Font codicons (v3): hubot, files, search,
-// source_control, dashboard, question.
-var railIcons = map[string][6]string{
-	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32"},
-	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓"},
+// limits, help, settings. Nerd Font codicons (v3): hubot, files, search,
+// source_control, dashboard, question, settings-gear.
+var railIcons = map[string][7]string{
+	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51"},
+	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧"},
 }
 
 // railItems are the rail's icons: the views at the top, then the bottom
@@ -351,6 +351,7 @@ func railItems(theme string) (top, bottom []railItem) {
 		{icon: ic[3], label: "rail.git", view: ViewChanges},
 	}, []railItem{
 		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
+		{icon: ic[6], label: "rail.settings", action: Action{Kind: ActSettings}},
 		{icon: ic[5], label: "rail.help", action: Action{Kind: ActKeys}},
 	}
 }

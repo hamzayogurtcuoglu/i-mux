@@ -1,0 +1,7 @@
+#!/bin/sh
+# Fake Neovim for the AI completion e2e test: it logs how it was started.
+log="${IMUX_FAKE_LOG:-${TMPDIR:-/tmp}/imux-fake}"
+mkdir -p "$log"
+printf '%s\0' "$@" >"$log/nvim.argv"
+echo "NVIM_APPNAME=${NVIM_APPNAME:-}" >"$log/nvim.env"
+echo "fake nvim $*"

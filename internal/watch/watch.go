@@ -20,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -256,12 +257,14 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	logger.Printf("started (poll %v, idle %v)", poll, idle)
 	stamp := selfexec.Take()
-	d := &Daemon{T: tc, Tick: tk, PollInterval: poll, IdleInterval: idle, Log: logger, Wake: wake, Stop: stop, Upgraded: stamp.Changed}
+	cfgMod := config.ModTime(paths.Config())
+	changed := func() bool { return stamp.Changed() || !config.ModTime(paths.Config()).Equal(cfgMod) }
+	d := &Daemon{T: tc, Tick: tk, PollInterval: poll, IdleInterval: idle, Log: logger, Wake: wake, Stop: stop, Upgraded: changed}
 	err = d.Loop(context.Background())
 	if errors.Is(err, ErrUpgraded) {
 		// A new imux binary: restart with it (the lock goes with this
 		// process's file; the new one takes it again).
-		logger.Printf("imux binary replaced; restarting with it")
+		logger.Printf("imux binary or config changed; restarting with it")
 		f.Close()
 		return stamp.Exec(os.Args)
 	}

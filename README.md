@@ -67,6 +67,13 @@ The rail shows the editor's icons when your terminal uses a [Nerd Font](https://
 emoji otherwise. A click on the open view's icon closes the panel beside the rail, as in the
 editor, and gives the agent the room; a click on any view's icon opens it again.
 
+**🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: AI completion
+in the editor, icons, who writes commit messages, what a new agent does after a handoff, what happens
+at a limit, and the config file. **AI completion in the editor** works like Copilot in VS Code: turn it
+on there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
+Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
+in to GitHub Copilot once.
+
 **OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
 NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
 when the others hit their limits. Install it with `brew install opencode`; `imux doctor` checks

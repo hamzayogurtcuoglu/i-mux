@@ -41,6 +41,7 @@ line number.
 | `bus.rate_per_minute` | `20` | Messages per minute per sending pane (stops agent ping-pong loops). |
 | `git.commit_agent` | `"auto"` | Who writes a suggested commit message (✨ in Source Control): "auto" = the agent of the pane the sidebar follows (else the first installed), or one of claude, antigravity, copilot, codex, opencode. It gets the changes once, without its UI; nothing is committed until you choose Commit. |
 | `git.commit_model` | `""` | Model for commit_agent when it names an agent ("" = that agent's default), e.g. "haiku" for claude or "groq/llama-3.3-70b-versatile" for opencode. |
+| `completion.enabled` | `false` | Copilot-like suggestions while you edit a file (Tab accepts): files open in Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim). Turn it on in Settings (⚙ on the rail), which sets it up and signs you in. |
 | `tmux.menu_key_root` | `'C-\'` | Key that opens the pane menu without the prefix. "" disables it. |
 | `tmux.menu_key_prefix` | `"a"` | prefix + key opens the pane menu. |
 | `tmux.picker_key_prefix` | `"S"` | prefix + key opens the session picker. |
@@ -180,6 +181,12 @@ commit_agent      = "auto"
 # Model for commit_agent when it names an agent ("" = that agent's default),
 # e.g. "haiku" for claude or "groq/llama-3.3-70b-versatile" for opencode.
 commit_model      = ""
+
+[completion]
+# Copilot-like suggestions while you edit a file (Tab accepts): files open in
+# Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim).
+# Turn it on in Settings (⚙ on the rail), which sets it up and signs you in.
+enabled           = false
 
 [tmux]
 # Key that opens the pane menu without the prefix. "" disables it.

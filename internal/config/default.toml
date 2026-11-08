@@ -95,6 +95,12 @@ commit_agent      = "auto"
 # e.g. "haiku" for claude or "groq/llama-3.3-70b-versatile" for opencode.
 commit_model      = ""
 
+[completion]
+# Copilot-like suggestions while you edit a file (Tab accepts): files open in
+# Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim).
+# Turn it on in Settings (⚙ on the rail), which sets it up and signs you in.
+enabled           = false
+
 [tmux]
 # Key that opens the pane menu without the prefix. "" disables it.
 menu_key_root     = 'C-\'

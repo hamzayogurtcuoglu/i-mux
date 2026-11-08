@@ -1351,13 +1351,16 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - The profile `~/.config/imux-nvim/init.lua` is written by i-mux: mouse, line numbers, starts in
   insert mode, Ctrl+S saves, Ctrl+Q quits, Tab accepts a suggestion (copilot.vim's own key), the
   status line names these keys, and `g:copilot_node_command` is the Node.js i-mux found (PATH,
-  then `~/.nvm/versions/node/*`, then Homebrew). copilot.vim lives in
+  then `~/.nvm/versions/node/*`, then Homebrew). Neovim is `$IMUX_NVIM` when set (one outside the
+  PATH; the e2e tests' fake), else the PATH, else Homebrew's. copilot.vim lives in
   `~/.local/share/imux-nvim/site/pack/imux/start/copilot.vim`.
 - **Setup** (`imux __completion setup`, a popup, when Settings turns it on): Neovim (offers
   `brew install neovim` when Homebrew is there, else names the package command), Node.js (the
   version copilot.vim asks for), `git clone --depth 1 https://github.com/github/copilot.vim` (or
   `git pull`), the profile; then it offers the one-time sign-in (`nvim +"Copilot setup"`: a
-  GitHub device code in the browser). Only a finished setup turns `enabled` on.
+  GitHub device code in the browser). Only a finished setup turns `enabled` on. Verified on
+  macOS with Neovim 0.12.6, Node.js 22 and copilot.vim 1.59.0: the Copilot language server
+  (1.566.0) starts in the profile and asks for the sign-in.
 - Settings shows "Sign in to GitHub Copilot…" while it is on. Turning it off keeps the profile.
 
 #### Commit message suggestions (v0.23, D29)

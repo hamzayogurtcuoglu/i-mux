@@ -185,7 +185,10 @@ const OptName = "@imux_name"
 type Source struct {
 	T   *tmux.Client
 	Cfg *config.Config
-	Now func() time.Time
+	// CfgPath is the config file Reload watches ("" = never reload).
+	CfgPath string
+	cfgMod  time.Time
+	Now     func() time.Time
 	// Resolve reports installed agents; nil = agent.ResolveAll.
 	Resolve func(cfg *config.Config, st *state.State) map[session.AgentID]agent.Resolved
 	// Git reads a directory's repository state; nil = gitinfo.Collect.
@@ -647,6 +650,25 @@ func ParseNumstat(out string) map[string][2]int {
 		m[path] = [2]int{a, r}
 	}
 	return m
+}
+
+// Reload reads the config again when its file changed (Settings); it
+// reports whether it did.
+func (s *Source) Reload() bool {
+	if s.CfgPath == "" {
+		return false
+	}
+	mod := config.ModTime(s.CfgPath)
+	if mod.Equal(s.cfgMod) {
+		return false
+	}
+	s.cfgMod = mod
+	cfg, _, err := config.Load(s.CfgPath)
+	if err != nil || cfg == nil {
+		return false
+	}
+	s.Cfg = cfg
+	return true
 }
 
 // iconTheme is the rail's icon theme: the configured one, or for "auto" the

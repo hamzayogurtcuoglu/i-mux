@@ -166,6 +166,10 @@ func Run(ctx context.Context, o Options) error {
 // redraw gathers and draws; it reports whether the sidebar should exit (its
 // window has no other pane).
 func (s *sidebar) redraw(ctx context.Context) bool {
+	// Settings changed the config: read it again (icons, width ...).
+	if s.o.Source.Reload() && s.o.Source.Cfg.Tmux.SidebarWidth > 0 {
+		s.o.Width = s.o.Source.Cfg.Tmux.SidebarWidth
+	}
 	m, w, err := s.o.Source.Gather(ctx, s.o.Pane)
 	if err != nil {
 		return false // keep the last frame; tmux may be busy
@@ -296,6 +300,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.do(ctx, Action{Kind: ActLimits})
 	case "?":
 		s.do(ctx, Action{Kind: ActKeys})
+	case ",":
+		s.do(ctx, Action{Kind: ActSettings})
 	case "n":
 		s.do(ctx, Action{Kind: ActRename})
 	case "o":
@@ -435,6 +441,16 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActCommit:
 		s.prompt(ctx, client, i18n.T("prompt.commit"), "",
 			"set-option -g @imux_git \"%%%\" ; "+tmux.RunShell(s.o.Self, s.gitArgs("commit", client, false)...)+"")
+		return
+	case ActSettings:
+		args := []string{"__settings", "menu"}
+		if client != "" {
+			args = append(args, "--client", client)
+		}
+		if s.model.Target != "" {
+			args = append(args, "--pane", s.model.Target)
+		}
+		s.spawn(args)
 		return
 	case ActSuggest:
 		args := s.gitArgs("suggest", client, false)
