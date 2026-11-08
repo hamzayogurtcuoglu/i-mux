@@ -852,6 +852,21 @@ User request: notifications on every platform i-mux supports, switchable in Sett
     works then stops → the command gets the title; Linux without a desktop → OSC 777 on the
     client; README.
 
+## M33: Pasting images (added 2026-11-08)
+
+User request: Ctrl+V a copied screenshot into any agent, every time, on macOS, Linux and WSL.
+
+- [ ] **T33.1 Clipboard** · M
+  - AC: images (and copied image files) from macOS, Wayland, X11 and WSL; a new file per paste;
+    unit tests with fake tools; a real X11 clipboard in the Linux container; macOS for real.
+- [ ] **T33.2 Keys and delivery** · M · deps: T33.1
+  - AC: Ctrl+V / Alt+V bindings that fall through outside agent panes or without an image;
+    📎 in the sidebar; bracketed paste of the path (`@path` for Antigravity); `[paste] images`
+    in Settings; doctor line.
+- [ ] **T33.3 E2E and docs** · S · deps: T33.2
+  - AC: e2e with a fake clipboard tool: Ctrl+V twice gives two files in the agent's input; no
+    image passes Ctrl+V through; README.
+
 ---
 
 ## Testing strategy

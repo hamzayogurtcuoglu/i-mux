@@ -1404,6 +1404,32 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Releases** build GoReleaser from the Go module proxy (`go install …/goreleaser/v2`), not a
   GitHub download: three releases (0.24.0–0.25.1) failed on a 504 from that download.
 
+#### Pasting images (v0.29)
+
+- **Why:** a copied screenshot is image data on the clipboard; a terminal's Cmd+V / Ctrl+V pastes
+  only text, so the agents never got it. The agent CLIs take images as files (Codex `--image`,
+  Copilot `--attachment`, a path dragged into the window: Claude Code, Codex, Copilot, OpenCode;
+  `@path` in Antigravity).
+- **Keys:** `Ctrl+V` and `Alt+V` in an agent pane (Windows Terminal keeps Ctrl+V for itself;
+  Alt+V gets through) and 📎 in the sidebar's toolbar run `imux __paste-image --pane P`. In any
+  other pane, or when the clipboard holds no image, the key goes to the pane as before.
+- **Reading the clipboard**, by platform:
+  - macOS: `osascript` writes `the clipboard as «class PNGf»` to the file; a Finder copy of image
+    files (`«class furl»`) gives their paths;
+  - Linux, Wayland (`WAYLAND_DISPLAY`): `wl-paste --list-types`, then `wl-paste --type image/png`
+    (or the first `image/*`); `text/uri-list` for copied files;
+  - Linux, X11 (`DISPLAY`): `xclip -selection clipboard -t TARGETS -o`, then `-t image/png -o`;
+  - WSL (`/proc/version` names Microsoft, or `WSL_DISTRO_NAME`): `powershell.exe -STA` reads the
+    Windows clipboard (`System.Windows.Forms.Clipboard`: an image as base64 PNG, or the copied
+    files, turned into WSL paths with `wslpath -u`).
+- **Each paste is a new file:** `~/.imux/images/<YYYYMMDD-HHMMSS>-<n>.png` (0600); files older than
+  30 days go. Copied image files are used where they are.
+- **Into the agent:** the path, as a bracketed paste (`tmux paste-buffer -p`), as if the file
+  were dropped on the window; Antigravity gets `@path`. A space follows, so the next paste or the
+  text goes after it.
+- `[paste] images = true` (Settings: "Paste images with Ctrl+V"). `imux doctor` says what reads
+  the clipboard here (or what to install: `wl-clipboard`, `xclip`).
+
 #### Notifications (v0.28)
 
 - **When:** an agent pane goes from working to idle after working at least 10 s ("Claude
