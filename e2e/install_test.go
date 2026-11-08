@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
@@ -138,5 +139,44 @@ func TestInstallScriptWithoutTmux(t *testing.T) {
 	if !strings.Contains(out, "imux needs tmux") || !strings.Contains(out, "Install tmux with your package manager") ||
 		strings.Contains(out, "sudo") || strings.Contains(out, "is not on your PATH") {
 		t.Fatalf("output:\n%s", out)
+	}
+}
+
+// TestInstallScriptAsksForTmux: with Homebrew but without --yes and without
+// a terminal to ask on (the release smoke job on Intel macOS, a script), the
+// installer skips tmux and never runs brew.
+func TestInstallScriptAsksForTmux(t *testing.T) {
+	bin := imuxBin(t)
+	if _, err := exec.LookPath("curl"); err != nil {
+		t.Skip("curl not installed")
+	}
+	testutil.Isolate(t)
+	tools := t.TempDir()
+	for _, name := range []string{"sh", "curl", "tar", "gzip", "sha256sum", "shasum", "mkdir", "cp", "chmod", "mv", "sed", "awk", "cut", "head", "uname", "mktemp", "rm", "id", "cat", "basename", "dirname", "grep", "tr"} {
+		if p, err := exec.LookPath(name); err == nil {
+			_ = os.Symlink(p, filepath.Join(tools, name))
+		}
+	}
+	ran := filepath.Join(t.TempDir(), "brew-ran")
+	testutil.WriteFile(t, filepath.Join(tools, "brew"), []byte("#!/bin/sh\ntouch '"+ran+"'\n"))
+	if err := os.Chmod(filepath.Join(tools, "brew"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	prefix := filepath.Join(t.TempDir(), "bin")
+	cmd := exec.Command("sh", filepath.Join(testutil.ModuleRoot(t), "install.sh"), "--prefix", prefix, "--version", "v9.9.9", "--no-modify-path")
+	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+fakeRelease(t, bin, false), "PATH="+tools+":"+prefix)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} // no terminal to ask on
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("install: %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "Installing it runs: brew install tmux") || !strings.Contains(string(out), "Skipped.") {
+		t.Fatalf("output:\n%s", out)
+	}
+	if _, err := os.Stat(ran); err == nil {
+		t.Fatal("brew ran without --yes and without a terminal")
+	}
+	if _, err := os.Stat(filepath.Join(prefix, "imux")); err != nil {
+		t.Fatal("imux not installed")
 	}
 }

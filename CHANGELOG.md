@@ -6,6 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-11-08
+
+### Changed
+
+- On an Intel Mac the installer says that Homebrew builds tmux from source there (10-30 minutes),
+  so the wait does not look like a hang.
+- Release checks: the Intel macOS job no longer waits 25-50 minutes for Homebrew to build tmux
+  (it tests the Intel archive, the installer and PATH), and every check has a time limit.
+
 ## [0.30.1] - 2026-11-08
 
 ### Fixed

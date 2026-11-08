@@ -248,6 +248,10 @@ else
 		else
 			say "Installing it runs: ${pm}"
 		fi
+		if [ "${pm%% *}" = "brew" ] && [ "$os" = darwin ] && [ "$(uname -m)" = x86_64 ]; then
+			# Homebrew has no Intel macOS builds of tmux: it compiles it.
+			say "On an Intel Mac Homebrew builds tmux and its libraries from source: this can take 10-30 minutes."
+		fi
 		if confirm "Install tmux now?"; then
 			# shellcheck disable=SC2086 # word splitting of the command is intended
 			if [ "${pm%% *}" = "apt-get" ]; then ${sudo}apt-get update -q; fi

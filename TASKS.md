@@ -447,6 +447,9 @@ get the "continue in …" prompt, and switch manually or automatically with cont
     (arm64 and Intel, zsh), Ubuntu (x86_64 and arm64, bash) and Debian, Ubuntu 22.04, Fedora, Alpine
     and Arch containers; a new shell finds `imux` on PATH; `imux version` and `imux doctor --ci`
     (which skips the agent checks) pass.
+  - Note (2026-11-08): on Intel macOS the job installs without tmux. Homebrew has no Intel bottles
+    of tmux and its libraries and built them from source, 25-50 minutes every release; the job
+    keeps testing the darwin_amd64 archive, the installer and PATH. Every smoke job has a timeout.
 
 ## M8: Docs and README
 
