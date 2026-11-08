@@ -106,6 +106,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D27 | **The sidebar's source control works like an editor's** (added 2026-11-08, v0.16): staged and unstaged changes, per-file stage / unstage / discard, stage / unstage / discard all, commit (a prompt; with nothing staged it stages everything first), push / pull / sync with ahead and behind counts, branch checkout and creation, and the recent history. Git runs in the project folder; discards ask first; network commands run in a popup so their output and any password prompt show. Files open in an editor (micro, $VISUAL/$EDITOR, nano, vim with the mouse on) or VS Code. | The user asked for the editor's source control "with every feature", and to edit files, not only read them. imux stays a thin layer over git and the user's editor: no git library, no editor of its own. |
 | D28 | **OpenCode is the fifth agent** (added 2026-11-08, v0.18, at the user's request; taken out in v0.19, back in v0.20: its `/connect` adds an NVIDIA or Groq key without an account): an open-source coding CLI that works with any model endpoint (OpenAI-compatible APIs, Anthropic, Ollama, NVIDIA's and Groq's free tiers ...). imux supports it like the others: launch with a session id imux chooses, native resume, sessions read for handoffs, the picker and limits. | The user wants to code with free or self-hosted endpoints too. Writing an agent of our own would be a separate project (§17 Q32); OpenCode already does it well, so the cheap path is to support it. |
 | D29 | **Commit messages are written by the user's own agents, run once without a UI** (added 2026-11-08, v0.23, at the user's request): the ✨ button in Source Control sends the changes to the agent of the pane the sidebar follows (or `git.commit_agent`) in its print mode and offers the reply; it never commits by itself. | Like the editor's "generate commit message", without an API or key of imux's own: the user's plans and keys (Claude, Codex, Copilot, Antigravity, or OpenCode with a free NVIDIA / Groq key) already pay for it. |
+| D30 | **AI completion in the editor is Neovim with GitHub's copilot.vim, in a profile i-mux manages** (added 2026-11-08, v0.25, at the user's request): when Settings turns it on, file edits open `nvim` with `NVIM_APPNAME=imux-nvim`; i-mux writes that profile's `init.lua` (mouse, Ctrl+S / Ctrl+Q, Tab accepts) and keeps copilot.vim in it. | Inline suggestions are an editor feature, and i-mux edits in an external terminal editor. Neovim with the official plugin gives the editor's Copilot suggestions with the user's Copilot plan; micro has no such plugin; our own editor would be a project of its own. A separate profile leaves the user's own Neovim setup untouched. |
 
 ## 4. Components
 
@@ -1309,6 +1310,55 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - `emoji`: ➕ ➖ ⏪ 🔄 ⏬ ⏫ 🔃 ✅ 🌿 📝 📜 🔍, which every font draws at full size (2 columns; the width
   table counts these BMP emoji as wide); folds keep ▾ ▸.
 - The tab bar's × takes 3 columns (" × "), like its +.
+
+#### Pinned conversations (v0.24)
+
+- In History (the session picker) a conversation's menu has **Pin to the top** / **Unpin** (key
+  `t`); after it the list opens again.
+- Pins are kept in `state.json` (`pinned`: `agent:id`, the newest pin first). The picker lists the
+  folder's pinned conversations first, marked 📌, each looked up by its id (so an old one shows
+  even when it is not among the 50 newest), then the others, newest first. Unpinned rows get the
+  same indent, so the columns line up.
+- i-mux never deletes conversations; a pinned one the agent deleted itself (Claude Code's
+  `cleanupPeriodDays`) is simply not shown.
+
+#### Settings (v0.25)
+
+```
+ i-mux · Settings
+ AI completion in the editor: Off            a
+ Icons: Auto                                 i
+ Commit messages by: Auto (the pane's agent) m
+ After a handoff the new agent: waits        w
+ When an agent hits its limit: ask           l
+ ──────────────
+ Open the config file…                       o
+```
+
+- **⚙ Settings** on the rail (bottom, above Help; codicon settings-gear U+EB51, emoji 🔧) and
+  `imux settings` open the menu; each row shows the current value.
+- Choosing a row changes `~/.imux/config.toml` (written from the commented default when missing;
+  only that key's line changes, comments stay) and opens the menu again. Enums cycle (icons:
+  auto → nerd → emoji; limits: ask → auto → off); "Commit messages by" opens a submenu of `auto`
+  and the installed agents.
+- It applies at once: commands read the config each time; sidebars and the watcher reload it
+  when its modification time changes.
+
+#### AI completion in the editor (v0.25, D30)
+
+- `[completion] enabled = false` (default). When on, a file opened for editing (explorer, search,
+  Edit…) opens in Neovim with `NVIM_APPNAME=imux-nvim`; when off, the configured editor as before.
+- The profile `~/.config/imux-nvim/init.lua` is written by i-mux: mouse, line numbers, starts in
+  insert mode, Ctrl+S saves, Ctrl+Q quits, Tab accepts a suggestion (copilot.vim's own key), the
+  status line names these keys, and `g:copilot_node_command` is the Node.js i-mux found (PATH,
+  then `~/.nvm/versions/node/*`, then Homebrew). copilot.vim lives in
+  `~/.local/share/imux-nvim/site/pack/imux/start/copilot.vim`.
+- **Setup** (`imux __completion setup`, a popup, when Settings turns it on): Neovim (offers
+  `brew install neovim` when Homebrew is there, else names the package command), Node.js (the
+  version copilot.vim asks for), `git clone --depth 1 https://github.com/github/copilot.vim` (or
+  `git pull`), the profile; then it offers the one-time sign-in (`nvim +"Copilot setup"`: a
+  GitHub device code in the browser). Only a finished setup turns `enabled` on.
+- Settings shows "Sign in to GitHub Copilot…" while it is on. Turning it off keeps the profile.
 
 #### Commit message suggestions (v0.23, D29)
 
