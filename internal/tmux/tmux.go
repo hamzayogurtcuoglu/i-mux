@@ -527,3 +527,28 @@ func EscapeFormat(s string) string { return strings.ReplaceAll(s, "#", "##") }
 func EscapeMessage(s string) string {
 	return strings.NewReplacer("#", "##", "%", "%%").Replace(s)
 }
+
+// menuMouse caches whether this process's tmux takes display-menu -M.
+var menuMouse struct {
+	sync.Once
+	ok bool
+}
+
+// MenuMinVersion is the first tmux whose menus answer the mouse when they
+// were not opened by a mouse binding (display-menu -M); older ones take keys
+// only there.
+var MenuMinVersion = [2]int{3, 5}
+
+// Menu is a display-menu command: with -M -O where tmux has them, so a menu
+// i-mux opens is clicked like the editor's (it stays open until a click; a
+// click outside closes it).
+func (c *Client) Menu(ctx context.Context) Cmd {
+	menuMouse.Do(func() {
+		v, err := c.BinVersion(ctx)
+		menuMouse.ok = err == nil && v.AtLeast(MenuMinVersion[0], MenuMinVersion[1])
+	})
+	if menuMouse.ok {
+		return Cmd{"display-menu", "-M", "-O"}
+	}
+	return Cmd{"display-menu"}
+}

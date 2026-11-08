@@ -37,6 +37,9 @@ func TestParse(t *testing.T) {
 		// Left press at column 5, row 7; its release and wheel events are
 		// ignored; a right press is a right click.
 		{"\x1b[<0;5;7M\x1b[<0;5;7m\x1b[<64;5;7M\x1b[<2;1;1M", true, []Event{{Kind: EvClick, X: 5, Y: 7}, {Kind: EvScroll, Key: "up", X: 5, Y: 7}, {Kind: EvRightClick, X: 1, Y: 1}}, ""},
+		// Motion with no button (35) and with the left one held (32) moves
+		// the hover; a report at column 0 is the pointer leaving.
+		{"\x1b[<35;9;3M\x1b[<32;10;3M\x1b[<35;0;0M", true, []Event{{Kind: EvMove, X: 9, Y: 3}, {Kind: EvMove, X: 10, Y: 3}, {Kind: EvMove}}, ""},
 		// An incomplete sequence is kept for the next read.
 		{"x\x1b[<0;12", true, []Event{{Key: "x"}}, "\x1b[<0;12"},
 		{"\x1b[", true, nil, "\x1b["},
@@ -801,5 +804,151 @@ func TestWideText(t *testing.T) {
 	}
 	if DisplayWidth("é") != 1 || DisplayWidth("👍🏽") != 2 || DisplayWidth("❤️") != 1 {
 		t.Errorf("combining marks, skin tones, variation selectors: %d %d %d", DisplayWidth("é"), DisplayWidth("👍🏽"), DisplayWidth("❤️"))
+	}
+}
+
+// TestHoverAndSelection (T34.1): the item under the pointer gets the hover
+// background, a rail item's icon and label together; the edges are no
+// item; the selected explorer row keeps the selection background.
+func TestHoverAndSelection(t *testing.T) {
+	i18n.SetLocale("en")
+	m := model()
+	m.View = ViewExplorer
+	m.Tree = []TreeRow{{Path: "docs", Name: "docs", Dir: true}, {Path: "main.go", Name: "main.go"}, {Path: "x.go", Name: "x.go"}}
+	m.Selected = "main.go"
+	w, h := 41, 30
+	sc := Render(m, w, h, NoItem)
+	rowOf := func(sub string) int {
+		for i, l := range sc.Lines {
+			if strings.Contains(Plain(l.Text), sub) {
+				return i
+			}
+		}
+		t.Fatalf("no %q", sub)
+		return -1
+	}
+	if r := rowOf("main.go"); !strings.Contains(sc.Lines[r].Text, selectBg) {
+		t.Errorf("selected row without the selection background: %q", sc.Lines[r].Text)
+	}
+	if r := rowOf("x.go"); strings.Contains(sc.Lines[r].Text, selectBg) {
+		t.Error("an unselected row selected")
+	}
+
+	// The x.go row: hovered from its middle, nothing on the edges.
+	y := rowOf("x.go") + 1
+	it := sc.HoverAt(20, y, w)
+	if it == NoItem {
+		t.Fatal("no item under the pointer")
+	}
+	for _, x := range []int{1, w} {
+		if sc.HoverAt(x, y, w) != NoItem {
+			t.Errorf("an item on edge column %d", x)
+		}
+	}
+	if sc.HoverAt(20, h+5, w) != NoItem {
+		t.Error("an item below the screen")
+	}
+	Paint(sc, it, hoverBg, w)
+	if l := sc.Lines[y-1].Text; !strings.Contains(l, hoverBg) || DisplayWidth(Plain(l)) != w {
+		t.Errorf("hovered row %q", l)
+	}
+	if strings.Contains(sc.Lines[rowOf("docs")].Text, hoverBg) {
+		t.Error("the hover spilled onto another row")
+	}
+
+	// A rail item: its icon and label light up together.
+	sc = Render(m, w, h, NoItem)
+	icon := -1
+	for i, l := range sc.Lines {
+		if a := l.ActionAt(3); a.Kind == ActView && a.Section == ViewChanges {
+			icon = i
+			break
+		}
+	}
+	if icon < 0 {
+		t.Fatal("no Source Control item on the rail")
+	}
+	Paint(sc, sc.HoverAt(4, icon+1, w), hoverBg, w)
+	lit := 0
+	for _, l := range sc.Lines {
+		if strings.Contains(l.Text, hoverBg) {
+			lit++
+		}
+	}
+	if lit != 2 {
+		t.Errorf("%d rail rows lit, want the icon and its label", lit)
+	}
+}
+
+// TestLeaving (T34.1): a pointer that stopped right after a step that,
+// repeated, leaves the sidebar was on its way out; one at rest inside was
+// not.
+func TestLeaving(t *testing.T) {
+	cases := []struct {
+		px, py, x, y int
+		want         bool
+	}{
+		{27, 5, 37, 5, true},   // fast to the right, 10 columns a report
+		{38, 5, 40, 5, true},   // slowly, at the last columns
+		{20, 5, 21, 5, false},  // slowly, in the middle
+		{12, 5, 4, 5, true},    // to the left, out of the terminal
+		{20, 3, 20, 1, true},   // up, to a status line on top
+		{20, 30, 20, 34, true}, // down
+		{20, 5, 20, 5, false},  // a report without a move
+		{0, 0, 20, 5, false},   // the first report
+	}
+	for _, c := range cases {
+		if got := Leaving(c.px, c.py, c.x, c.y, 41, 35); got != c.want {
+			t.Errorf("%+v: %v", c, got)
+		}
+	}
+}
+
+// TestFileMenus (T34.2): the explorer's menus have the editor's items, only
+// those that apply, and no path in their commands.
+func TestFileMenus(t *testing.T) {
+	i18n.SetLocale("en")
+	names := func(items []string) string {
+		var out []string
+		for i := 0; i < len(items); {
+			if items[i] == "" {
+				out = append(out, "-")
+				i++
+				continue
+			}
+			out = append(out, items[i])
+			if strings.Contains(items[i+2], "/home/") {
+				t.Errorf("a path in the command of %q: %s", items[i], items[i+2])
+			}
+			i += 3
+		}
+		return strings.Join(out, "|")
+	}
+	st := MenuState{Kind: MenuFile, Agent: true, Path: "/home/u/p/a.go", Reveal: "file.reveal_finder", VSCode: true}
+	got := names(FileMenuItems("/bin/imux", "/dev/ttys1", "%3", st))
+	want := "Open|Open to the Side|Open in VS Code|View|-|Reveal in Finder|Open in Terminal|Add to Agent|-|Select for Compare|-|Cut|Copy|-|Copy Path|Copy Relative Path|-|Rename…|Delete"
+	if got != want {
+		t.Errorf("file menu\n got %s\nwant %s", got, want)
+	}
+	st.Clip, st.Compare = true, "/home/u/p/b.go"
+	if got := names(FileMenuItems("/bin/imux", "", "%3", st)); !strings.Contains(got, "Compare with 'b.go'") || !strings.Contains(got, "Paste") {
+		t.Errorf("with a clip and a compare: %s", got)
+	}
+	st = MenuState{Kind: MenuFolder, Path: "/home/u/p/src"}
+	if got := names(FileMenuItems("/bin/imux", "", "%3", st)); got != "New File…|New Folder…|-|Open in Terminal|Find in Folder…|-|Cut|Copy|-|Copy Path|Copy Relative Path|-|Rename…|Delete" {
+		t.Errorf("folder menu %s", got)
+	}
+	st = MenuState{Kind: MenuRoot, Clip: true, Agent: true, Path: "/home/u/p"}
+	items := FileMenuItems("/bin/imux", "", "", st)
+	if got := names(items); got != "New File…|New Folder…|-|Find in Folder…|-|Paste|-|Copy Path|-|Collapse Folders" {
+		t.Errorf("root menu %s", got)
+	}
+	if x, y := MenuAt(5, 7); x != "#{e|+:#{popup_pane_left},4}" || y != "#{e|+:#{popup_pane_top},6}" {
+		t.Errorf("position %s %s", x, y)
+	}
+	for _, it := range FileMenuItems("/bin/imux", "/dev/ttys1", "%3", MenuState{Kind: MenuFile}) {
+		if strings.Contains(it, "__file") && !strings.Contains(it, "--client /dev/ttys1 --pane %3") {
+			t.Errorf("command without its client and pane: %s", it)
+		}
 	}
 }

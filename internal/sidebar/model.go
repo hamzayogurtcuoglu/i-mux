@@ -163,6 +163,7 @@ type Model struct {
 	SCM      *gitops.Status  // the Source Control view's repository (nil outside git)
 	Icons    string          // the rail's icon theme (IconsNerd, IconsEmoji)
 	Scroll   int             // first row of the view's list
+	Selected string          // the explorer's selected row (a path relative to CWD)
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -176,6 +177,7 @@ type Window struct {
 	Session string
 	Alone   bool // no other pane is left in the window
 	Last    string
+	Reveal  string // OptReveal: a path to reveal in the explorer
 }
 
 const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}\t#{@imux_state_at}\t#{@imux_done_at}\t#{@imux_seen}\t#{@imux_start}\t#{session_attached}\t#{pane_title}"
@@ -335,7 +337,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}\t#{client_termname}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -347,11 +349,12 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	fold := map[string]bool{}
 	view := ViewAgents
 	closed, program := false, ""
-	if rows := tmux.Rows(sec["me"], 12); len(rows) > 0 {
+	if rows := tmux.Rows(sec["me"], 13); len(rows) > 0 {
 		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges {
 			view = v
 		}
 		closed, program = rows[0][10] == "1", rows[0][11]
+		win.Reveal = rows[0][12]
 		r := rows[0]
 		tabAuto, tabState = r[6], r[7]
 		for _, f := range strings.Split(r[8], ",") {

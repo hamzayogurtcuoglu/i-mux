@@ -6,6 +6,27 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-08
+
+### Added
+
+- **The explorer's right-click menus are the editor's.** On a file: Open, Open to the Side, Open
+  in VS Code, View, Add to Agent, Reveal in Finder / File Explorer (WSL) / Open Containing Folder
+  (Linux), Open in Terminal, Select for Compare / Compare with Selected, Cut, Copy, Paste, Copy
+  Path, Copy Relative Path, Rename…, Delete (to the Trash, where it can be restored). On a folder:
+  New File…, New Folder…, Find in Folder… and the rest; on empty space: also Collapse Folders.
+  New, renamed and pasted files are revealed and selected; a taken name gets " copy".
+- **Hover:** whatever a click would act on, in every view, lights up under the pointer; the
+  explorer's selected file keeps a blue background.
+- **Menus take the mouse** on tmux 3.5 and later: an item lights up under the pointer, a click
+  chooses it, a click outside closes the menu. On older tmux, a menu item's letter or ↑↓ and
+  Enter.
+
+### Fixed
+
+- A project folder with "#" in its name opened popups (files, search, git) in the wrong folder:
+  tmux reads a popup's folder as a format.
+
 ## [0.29.1] - 2026-11-08
 
 ### Fixed

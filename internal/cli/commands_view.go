@@ -3,9 +3,11 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -52,6 +54,7 @@ func runDiff(e *Env, args []string) error {
 	fs := newFlags(e, "__diff")
 	staged := fs.Bool("staged", false, "the staged side (index against HEAD)")
 	worktree := fs.Bool("worktree", false, "the unstaged side (work tree against the index)")
+	compare := fs.Bool("compare", false, "compare two files: <a> <b>")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
@@ -61,7 +64,10 @@ func runDiff(e *Env, args []string) error {
 	}
 	status, path := pos[0], pos[1]
 	var lines []diffview.Line
-	if status == "?" {
+	if *compare {
+		lines = diffview.Parse(compareDiff(status, path))
+		path = filepath.Base(status) + " ↔ " + filepath.Base(path)
+	} else if status == "?" {
 		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -113,6 +119,24 @@ func gitDiff(path, mode string) string {
 		args := append([]string{"diff", "--no-color", "--no-ext-diff", "-U1000000"}, base...)
 		out, err := exec.CommandContext(ctx, "git", append(args, "--", path)...).Output()
 		if err == nil {
+			return string(out)
+		}
+	}
+	return ""
+}
+
+// compareDiff is the whole-file diff of two files (Compare with Selected):
+// `git diff --no-index`, else `diff -u`. Both exit 1 when the files differ.
+func compareDiff(a, b string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	for _, argv := range [][]string{
+		{"git", "diff", "--no-index", "--no-color", "--no-ext-diff", "-U1000000", "--", a, b},
+		{"diff", "-U1000000", a, b},
+	} {
+		out, err := exec.CommandContext(ctx, argv[0], argv[1:]...).Output()
+		var ee *exec.ExitError
+		if err == nil || errors.As(err, &ee) && ee.ExitCode() == 1 {
 			return string(out)
 		}
 	}

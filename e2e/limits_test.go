@@ -65,7 +65,8 @@ func TestLimitAsk(t *testing.T) {
 	var found bool
 	for _, r := range h.records() {
 		a := strings.Join(r.Args, " ")
-		if strings.Contains(a, "display-menu -c "+client+" -t "+pane+" -T Claude hit its limit") {
+		// display-menu, with -M -O where tmux has them (3.5).
+		if strings.Contains(a, " display-menu ") && strings.Contains(a, "-c "+client+" -t "+pane+" -T Claude hit its limit") {
 			found = true
 		}
 	}

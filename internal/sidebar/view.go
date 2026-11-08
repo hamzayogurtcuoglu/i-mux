@@ -118,8 +118,9 @@ func gitColor(st string) string {
 	return yellow
 }
 
-// treeRow draws one explorer entry.
-func treeRow(r TreeRow, w int, ic Icons) Line {
+// treeRow draws one explorer entry; the selected one on the selection's
+// background.
+func treeRow(r TreeRow, w int, ic Icons, selected bool) Line {
 	indent := strings.Repeat("  ", min(r.Depth, 8))
 	color := gitColor(r.Git)
 	mark := "  "
@@ -145,7 +146,11 @@ func treeRow(r TreeRow, w int, ic Icons) Line {
 	} else {
 		text += "  "
 	}
-	return Line{Text: text + " ", Action: a}
+	text += " "
+	if selected {
+		text = onBg(text, selectBg)
+	}
+	return Line{Text: text, Action: a}
 }
 
 // scrolled keeps rows [scroll, scroll+n) of list (scroll clamped).
@@ -164,7 +169,7 @@ func renderExplorer(m Model, w, h int) []Line {
 	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.explorer")+" · "+m.Project, w-search.W) + reset}, search)}
 	var rows []Line
 	for _, r := range m.Tree {
-		rows = append(rows, treeRow(r, w, m.icons()))
+		rows = append(rows, treeRow(r, w, m.icons(), r.Path == m.Selected))
 	}
 	if len(rows) == 0 {
 		rows = append(rows, Line{Text: muted + fit("   "+i18n.T("sidebar.empty_folder"), w) + reset})

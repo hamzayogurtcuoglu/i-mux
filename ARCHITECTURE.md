@@ -1441,14 +1441,22 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Hover:** whatever a click would act on (a row, a button, a rail icon, in every view) gets a
   background while the pointer is over it, as in the editor. The sidebar asks for every mouse
   motion (`\e[?1003h`; tmux forwards motion to a pane that asks for it) and redraws only when the
-  thing under the pointer changes. tmux sends nothing when the pointer leaves a pane, so the hover
-  goes when the pointer is on the sidebar's first or last column, and on a motion over a pane
-  border (`MouseMoveBorder` runs `imux __sidebar-leave`, which sends every sidebar a motion
-  report outside it). Colors: hover 256-color 238, selection 24 (the editor's dark blue).
+  thing under the pointer changes. tmux sends nothing when the pointer leaves a pane, and has no
+  key for motion to bind (no `MouseMove…` key in 3.2a, 3.4 or 3.8), so the sidebar works it out:
+  the hover goes on the first and last column, and when no motion follows for 150 ms and the last
+  step, repeated, would land outside the sidebar (the pointer was on its way out). A pointer at
+  rest inside keeps it. Colors: hover 256-color 238, selection 24 (the editor's dark blue).
 - **Selection:** the explorer row last clicked, right-clicked, created, renamed or pasted keeps
   the selection background, so it is clear which file a menu or popup is about.
 - **Right-click menus** (`display-menu` at the pointer), as in the editor; items that do not
-  apply are left out:
+  apply are left out. The position is `-x '#{e|+:#{popup_pane_left},X}' -y
+  '#{e|+:#{popup_pane_top},Y}'`: tmux's own variables, in its own coordinates (the terminal's up
+  to 3.7, the window's from 3.8, where the status line is not counted; `popup_pane_top` already
+  holds the menu's height, as `-y` is the menu's bottom line).
+- **Clicking a menu:** a menu i-mux opens is not opened by a mouse key binding, so tmux gives it
+  the keys only, unless `display-menu -M` (tmux 3.5+): every i-mux menu then has `-M -O`, so it
+  is clicked like the editor's (the pointer highlights an item, a click chooses it, a click
+  outside closes it). tmux 3.2–3.4 (Ubuntu 22.04 / 24.04): the item's letter, or ↑↓ and Enter.
   - **file:** Open (the editor popup, as a click) · Open to the Side (the editor in a new pane
     beside the target) · Open in VS Code · View · Add to Agent (its path, as a bracketed paste,
     into the target agent) · Reveal in Finder (macOS) / Reveal in File Explorer (WSL) / Open

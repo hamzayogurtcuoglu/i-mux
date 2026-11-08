@@ -716,6 +716,76 @@ func highlight(sc Screen, sel Item, w int) {
 	l.Text = compose(cells, w)
 }
 
+// Backgrounds of the item under the pointer and of the explorer's selected
+// row (D31): the editor's hover grey and selection blue.
+const (
+	hoverBg  = "\x1b[48;5;238m"
+	selectBg = "\x1b[48;5;24m"
+)
+
+// onBg draws text on background bg (kept across its resets).
+func onBg(t, bg string) string { return bg + strings.ReplaceAll(t, reset, reset+bg) + reset }
+
+// HoverAt is the item under the pointer at column x, row y (1-based, as
+// reported) of a w-column sidebar: one with an action. The first and last
+// columns are the edges the pointer leaves by: nothing there.
+func (s Screen) HoverAt(x, y, w int) Item {
+	row := y - 1
+	if x <= 1 || x >= w || row < 0 || row >= len(s.Lines) {
+		return NoItem
+	}
+	l := s.Lines[row]
+	if len(l.Cells) == 0 {
+		if l.Action.Kind != ActNone {
+			return Item{Row: row, Cell: -1}
+		}
+		return NoItem
+	}
+	for j, c := range l.Cells {
+		if x-1 >= c.X && x-1 < c.X+c.W && c.Action.Kind != ActNone {
+			return Item{Row: row, Cell: j}
+		}
+	}
+	return NoItem
+}
+
+// Paint draws item it on background bg. The cells right above and below
+// with the same action and place go with it: a rail item is its icon and
+// its label.
+func Paint(sc Screen, it Item, bg string, w int) {
+	if it.Row < 0 || it.Row >= len(sc.Lines) {
+		return
+	}
+	l := &sc.Lines[it.Row]
+	if len(l.Cells) == 0 {
+		if l.Action.Kind != ActNone {
+			l.Text = onBg(l.Text, bg)
+		}
+		return
+	}
+	if it.Cell < 0 || it.Cell >= len(l.Cells) {
+		return
+	}
+	c := l.Cells[it.Cell]
+	for _, r := range []int{it.Row - 1, it.Row, it.Row + 1} {
+		if r < 0 || r >= len(sc.Lines) {
+			continue
+		}
+		ln := &sc.Lines[r]
+		cells := append([]Cell{}, ln.Cells...)
+		changed := false
+		for j := range cells {
+			if cells[j].X == c.X && cells[j].W == c.W && cells[j].Action == c.Action {
+				cells[j].Text = onBg(cells[j].Text, bg)
+				changed = true
+			}
+		}
+		if changed {
+			ln.Cells, ln.Text = cells, compose(cells, w)
+		}
+	}
+}
+
 // compose lays out cells on a w-column row.
 func compose(cells []Cell, w int) string {
 	var b strings.Builder

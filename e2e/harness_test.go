@@ -59,6 +59,9 @@ func newH(t *testing.T, extraConfig string) *H {
 	t.Setenv("IMUX_TMUX_SOCKET", h.Socket)
 	t.Setenv("IMUX_TMUX_RECORD", h.Rec)
 	t.Setenv("IMUX_FAKE_LOG", h.Log)
+	// Never the real Trash or clipboard (explorer menus).
+	t.Setenv("IMUX_TRASH_DIR", filepath.Join(h.Log, "trash"))
+	t.Setenv("IMUX_COPY_COMMAND", "cat > '"+filepath.Join(h.Log, "copied")+"'")
 	t.Setenv("TMUX", "")
 	t.Setenv("TMUX_PANE", "")
 	t.Setenv("SHELL", "/bin/sh")

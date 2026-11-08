@@ -6,13 +6,12 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
@@ -44,6 +43,18 @@ type sidebar struct {
 	clicks     chan Action // click actions, delivered after ClickDelay
 	lastClick  time.Time
 	lastClickY int // row of the last click
+
+	hx, hy     int // the pointer (1-based; hx 0: not over the sidebar)
+	px, py     int // the motion report before it
+	moves      int // motion reports so far (the way-out check's turn)
+	idle       chan int
+	selected   string // the explorer's selected path (relative)
+	menuX      int    // where the last right-click was (the menu opens there)
+	menuY      int
+	revealKey  string // i18n key of "Reveal in Finder" & co., "" for none
+	lastReveal string // OptReveal as last seen
+	revealSeen bool
+	revealRow  string // a revealed path to scroll to
 }
 
 // ClickDelay holds a click's action until tmux's double-click window (300 ms)
@@ -66,16 +77,17 @@ func Run(ctx context.Context, o Options) error {
 	if o.Safety <= 0 {
 		o.Safety = 15 * time.Second
 	}
-	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4)}
+	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), revealKey: (&fileops.System{}).Reveal()}
 	restore, err := rawMode(int(o.In.Fd()))
 	if err == nil {
 		defer restore()
 	} else {
 		restore = nil
 	}
-	// Alternate screen, no cursor, SGR mouse reports for button presses.
-	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h")
-	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
+	// Alternate screen, no cursor, SGR mouse reports for presses and every
+	// motion (the hover, D31).
+	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h")
+	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?1003l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 
 	_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", o.Pane, OptRole, RoleSidebar},
 		tmux.Cmd{"set-option", "-p", "-t", o.Pane, OptPID, strconv.Itoa(os.Getpid())},
@@ -145,6 +157,12 @@ func Run(ctx context.Context, o Options) error {
 				s.draw()
 			}
 			continue
+		case n := <-s.idle:
+			// No motion since: was the pointer on its way out?
+			if n == s.moves && s.hx != 0 && Leaving(s.px, s.py, s.hx, s.hy, s.win.Width, s.win.Height) {
+				s.hover(0, 0)
+			}
+			continue
 		case a := <-s.clicks:
 			s.do(ctx, a)
 		case b, ok := <-input:
@@ -153,8 +171,15 @@ func Run(ctx context.Context, o Options) error {
 			}
 			var evs []Event
 			evs, pending = Parse(append(pending, b...), true)
+			gather := false
 			for _, ev := range evs {
+				if ev.Kind != EvMove {
+					gather = true
+				}
 				s.handle(ctx, ev)
+			}
+			if !gather {
+				continue // the pointer moved: drawn from the model, no tmux
 			}
 		}
 		if s.redraw(ctx) {
@@ -182,16 +207,65 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 	if want := s.width(m.Closed); want > 0 && w.Width != want && w.WinW >= want+20 {
 		_, _ = s.t.Run(ctx, tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(want)})
 	}
+	if s.reveal(w.Reveal) {
+		// Folders opened for a new, renamed or pasted path: list them.
+		if m2, w2, err := s.o.Source.Gather(ctx, s.o.Pane); err == nil {
+			m, w = m2, w2
+		}
+	}
 	m.Tick, m.Scroll = s.model.Tick, s.scroll
 	s.model, s.win = m, w
+	s.keepVisible()
 	s.draw()
 	return false
 }
 
 // draw renders the cached model.
 func (s *sidebar) draw() {
+	s.model.Selected = s.selected
 	s.screen = Render(s.model, s.win.Width, s.win.Height, s.sel)
+	if it := s.screen.HoverAt(s.hx, s.hy, s.win.Width); it != NoItem && it != s.sel {
+		Paint(s.screen, it, hoverBg, s.win.Width)
+	}
 	_, _ = io.WriteString(s.o.Out, Frame(s.screen, s.win.Width, s.win.Height))
+}
+
+// LeaveAfter is how long the pointer may rest before the way-out check.
+var LeaveAfter = 150 * time.Millisecond
+
+// Leaving reports whether a pointer that moved from (px, py) to (x, y) and
+// stopped was on its way out of a w×h sidebar: the same step again lands
+// outside. tmux reports no motion outside the pane, so a fast exit ends on
+// a report inside it.
+func Leaving(px, py, x, y, w, h int) bool {
+	if px == 0 {
+		return false
+	}
+	nx, ny := x+(x-px), y+(y-py)
+	return nx < 1 || nx > w || ny < 1 || ny > h
+}
+
+// moved records a motion report and schedules the way-out check.
+func (s *sidebar) moved(x, y int) {
+	s.px, s.py = s.hx, s.hy
+	s.moves++
+	n := s.moves
+	time.AfterFunc(LeaveAfter, func() {
+		select {
+		case s.idle <- n:
+		default:
+		}
+	})
+	s.hover(x, y)
+}
+
+// hover follows the pointer; it redraws only when the item under it changes.
+func (s *sidebar) hover(x, y int) {
+	before := s.screen.HoverAt(s.hx, s.hy, s.win.Width)
+	s.hx, s.hy = x, y
+	if s.screen.HoverAt(x, y, s.win.Width) != before {
+		s.draw()
+	}
 }
 
 // width is the sidebar's width: the configured one, or the rail's while the
@@ -227,6 +301,10 @@ func (s *sidebar) keepWidth(ctx context.Context) {
 
 // handle reacts to one key or click.
 func (s *sidebar) handle(ctx context.Context, ev Event) {
+	if ev.Kind == EvMove {
+		s.moved(ev.X, ev.Y)
+		return
+	}
 	if ev.Kind == EvScroll {
 		n := len(s.model.Tree)
 		if s.model.View == ViewChanges && s.model.SCM != nil {
@@ -250,13 +328,27 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		var menu Action
 		switch a := s.screen.Lines[row].ActionAt(ev.X - 1); a.Kind {
 		case ActOpenFile:
-			menu = Action{Kind: ActFileMenu, Path: a.Path}
+			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFile}
+			s.selected = a.Path
+		case ActToggleDir:
+			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
+			s.selected = a.Path
+		case ActNone, ActSearch:
+			// The explorer's empty space and title: the project folder.
+			if s.model.View != ViewExplorer || s.model.Closed || ev.X <= railW {
+				return
+			}
+			menu = Action{Kind: ActFileMenu, Section: MenuRoot}
 		case ActProject, ActProjectMenu:
 			menu = Action{Kind: ActProjectMenu, Session: a.Session}
 		case ActFocus, ActAgentMenu:
 			menu = Action{Kind: ActAgentMenu, Pane: a.Pane}
 		default:
 			return
+		}
+		s.menuX, s.menuY = ev.X, ev.Y
+		if menu.Kind == ActFileMenu {
+			s.draw() // the row the menu is about, selected
 		}
 		// Like a left click: wait until the button is released, or the
 		// release closes the menu.
@@ -275,6 +367,9 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.lastClick, s.lastClickY = now, ev.Y
 		s.sel = NoItem
 		a := s.screen.Lines[row].ActionAt(ev.X - 1)
+		if a.Kind == ActOpenFile || a.Kind == ActToggleDir {
+			s.selected = a.Path
+		}
 		time.AfterFunc(ClickDelay, func() { s.clicks <- a })
 		return
 	}
@@ -430,7 +525,7 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.popup(client, "90%", "90%", "__edit", a.Path)
 		return
 	case ActFileMenu:
-		s.fileMenu(ctx, client, a.Path)
+		s.fileMenu(ctx, client, a, s.menuX, s.menuY)
 		return
 	case ActGit:
 		s.spawn(s.gitArgs(a.Section, client, a.Status == "?", a.Path))
@@ -588,7 +683,7 @@ func (s *sidebar) diff(a Action, client string) {
 	}
 	c = append(c, "-E", "-w", "95%", "-h", "90%")
 	if s.model.CWD != "" {
-		c = append(c, "-d", s.model.CWD)
+		c = append(c, "-d", tmux.EscapeFormat(s.model.CWD)) // -d is a format
 	}
 	sh := DiffShell(s.o.Self, a.Status, a.Path)
 	if a.Section == "staged" || a.Section == "worktree" {
@@ -617,7 +712,7 @@ func (s *sidebar) gitArgs(op, client string, untracked bool, paths ...string) []
 
 // menu shows a display-menu on client.
 func (s *sidebar) menu(ctx context.Context, client, title string, items ...string) {
-	c := tmux.Cmd{"display-menu"}
+	c := s.t.Menu(ctx)
 	if client != "" {
 		c = append(c, "-c", client)
 	}
@@ -668,31 +763,6 @@ func (s *sidebar) branchMenu(ctx context.Context, client string) {
 	s.menu(ctx, client, i18n.T("git.branches"), items...)
 }
 
-// fileMenu is the right-click menu of an explorer file.
-func (s *sidebar) fileMenu(ctx context.Context, client, path string) {
-	popup := func(args ...string) string {
-		c := "display-popup"
-		if client != "" {
-			c += " -c " + tmux.Quote(client)
-		}
-		c += " -E -w 90% -h 90%"
-		if s.model.CWD != "" {
-			c += " -d " + tmux.Quote(s.model.CWD)
-		}
-		return c + " " + tmux.Quote(tmux.ShJoin(append([]string{s.o.Self}, args...)...))
-	}
-	items := []string{
-		tmux.EscapeFormat(i18n.T("file.edit")), "e", popup("__edit", path),
-		tmux.EscapeFormat(i18n.T("file.view")), "v", popup("__view", path),
-	}
-	if code := editor.VSCode(); code != "" {
-		abs := filepath.Join(s.model.CWD, path)
-		items = append(items, tmux.EscapeFormat(i18n.T("file.vscode")), "c",
-			"run-shell -b "+tmux.Quote(tmux.ShJoin(code, "-g", abs)+" >/dev/null 2>&1 || true"))
-	}
-	s.menu(ctx, client, path, items...)
-}
-
 // popup runs an imux command in a popup in the project folder.
 func (s *sidebar) popup(client, w, h string, args ...string) {
 	c := tmux.Cmd{"display-popup"}
@@ -701,7 +771,7 @@ func (s *sidebar) popup(client, w, h string, args ...string) {
 	}
 	c = append(c, "-E", "-w", w, "-h", h)
 	if s.model.CWD != "" {
-		c = append(c, "-d", s.model.CWD)
+		c = append(c, "-d", tmux.EscapeFormat(s.model.CWD)) // -d is a format
 	}
 	_ = s.t.Spawn(append(c, tmux.ShJoin(append([]string{s.o.Self}, args...)...)))
 }

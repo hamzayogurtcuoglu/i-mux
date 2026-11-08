@@ -105,7 +105,7 @@ görünümü değiştirir.
 | Simge | Görünüm |
 |---|---|
 | 🤖 | **Agent'lar:** projelerin (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan bütün agent'lar, her birinin ne yaptığıyla: çalışırken dönen bir işaret, sana bir şey sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve bunun ne kadar önce olduğu |
-| 📁 | **Dosyalar:** projenin dosyaları; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir (sağ tık: görüntüle ya da VS Code'da aç); değişen dosyalar renklidir |
+| 📁 | **Dosyalar:** projenin dosyaları; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir; değişen dosyalar renklidir. **Sağ tık** editördeki menüyü açar: Yeni dosya / Yeni klasör, Yeniden adlandır, Sil (Çöp Sepeti'ne), Kes / Kopyala / Yapıştır, Yolu / Göreli yolu kopyala, Finder'da göster, Terminalde aç, Yanda aç, Klasörde ara, Karşılaştır, Ajana ekle. İmlecin üzerindeki şey parlar; seçili dosya işaretli kalır |
 | 🔍 | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar, dosya dosya (dosyaya tıkla ya da Tab'a bas: daralt); Enter dosyayı o satırda açar |
 | 🔀 | **Git:** editördeki kaynak kontrolü gibi: hazırlanan ve hazırlanmayan değişiklikler, her dosyada ve hepsi için hazırla, geri al ve at (önce sorar); **Commit…** ve yanında **✨**: ajanın (ya da `git.commit_agent`, örneğin ücretsiz Groq anahtarıyla OpenCode) değişikliklerden mesajı yazar, sen commit eder, düzenler ya da başkasını istersin; ↑↓ sayılarıyla pull / push / senkron; dal menüsü (değiştir, yeni dal); geçmiş. Dosyaya tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
 | 📊 · ❓ | kullanım limitleri · bütün tuşlar |

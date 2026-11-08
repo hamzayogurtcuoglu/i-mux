@@ -15,6 +15,7 @@ const (
 	EvClick                       // left button press at X, Y (1-based)
 	EvRightClick                  // right button press at X, Y
 	EvScroll                      // mouse wheel at X, Y: Key "up" or "down"
+	EvMove                        // the pointer moved to X, Y (X 0: it left the sidebar)
 )
 
 // Event is one key press or mouse click.
@@ -133,8 +134,9 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 	return evs, nil
 }
 
-// mouse decodes the body "b;x;y" of an SGR report; only a left-button press
-// (b == 0, final 'M') is a click.
+// mouse decodes the body "b;x;y" of an SGR report: a left-button press
+// (b == 0, final 'M') is a click, a right one a right-click; a motion (32 +
+// the button, 35 with none) moves the hover.
 func mouse(body string, final byte) (Event, bool) {
 	var f [3]int
 	n := 0
@@ -155,6 +157,9 @@ func mouse(body string, final byte) (Event, bool) {
 	}
 	if n != 3 || final != 'M' {
 		return Event{}, false
+	}
+	if f[0]&32 != 0 && f[0]&64 == 0 {
+		return Event{Kind: EvMove, X: f[1], Y: f[2]}, true
 	}
 	switch f[0] {
 	case 0:
