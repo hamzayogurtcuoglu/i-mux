@@ -136,6 +136,12 @@ func agentByDisplayName(n string) AgentID {
 	return AgentID(strings.ToLower(n))
 }
 
+// IsHandoffFile reports whether p names a saved handoff: an absolute path to
+// a file named like one inside a "handoffs" directory.
+func IsHandoffFile(p string) bool {
+	return filepath.IsAbs(p) && filepath.Base(filepath.Dir(p)) == "handoffs" && handoffFileName.MatchString(filepath.Base(p))
+}
+
 // handoffFileName is the name of a saved handoff (handoff.FileName).
 var handoffFileName = regexp.MustCompile(`^\d{8}-\d{6}-[a-z]+-to-[a-z]+(-\d+)?\.md$`)
 
@@ -147,7 +153,7 @@ const maxHandoffFile = 4 << 20
 func readHandoffFile(msg string) string {
 	lines := strings.Split(strings.TrimSpace(msg), "\n")
 	p := strings.TrimSpace(lines[len(lines)-1])
-	if !filepath.IsAbs(p) || filepath.Base(filepath.Dir(p)) != "handoffs" || !handoffFileName.MatchString(filepath.Base(p)) {
+	if !IsHandoffFile(p) {
 		return ""
 	}
 	fi, err := os.Stat(p)

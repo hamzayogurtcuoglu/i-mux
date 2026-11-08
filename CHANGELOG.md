@@ -14,6 +14,14 @@ All notable changes to i-mux are listed here. The format follows
   their context, it resumes its own sessions, and its sessions are in History. Add an NVIDIA or
   Groq key inside OpenCode with `/connect` (no account needed) and pick the model with `/models`.
 
+### Fixed
+
+- After a round trip (for example Claude → OpenCode → Claude → Codex) the next handoff carried the
+  whole "Welcome back" document, instructions included, as the user's last request. It now shows
+  what happened meanwhile in the other agent as a short block, and the last request is a real one.
+- Reading the handoff file no longer shows up as work in the next handoff ("Files touched", a
+  conversation line).
+
 ## [0.19.0] - 2026-11-08
 
 ### Removed

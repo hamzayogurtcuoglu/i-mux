@@ -103,6 +103,9 @@ func summarize(tc session.ToolCall, cwd string) Summary {
 	}
 	// 4. shell commands
 	if cmd := commandArg(args); cmd != "" {
+		if readsHandoff(cmd) {
+			return Summary{Skip: true}
+		}
 		return Summary{Line: "$ " + firstLine(cmd, 120)}
 	} else if reShell.MatchString(name) {
 		if s := firstScalar(args, 120); s != "" {
@@ -119,8 +122,12 @@ func summarize(tc session.ToolCall, cwd string) Summary {
 	if p != "" && reWrite.MatchString(name) {
 		return Summary{Line: "wrote " + dp, Files: []File{{dp, KindCreated}}}
 	}
-	// 7. reads
+	// 7. reads; reading imux's handoff file is how the agent got its
+	// context, not work on the project
 	if p != "" && reRead.MatchString(name) {
+		if session.IsHandoffFile(p) {
+			return Summary{Skip: true}
+		}
 		return Summary{Line: "read " + dp, Files: []File{{dp, KindRead}}}
 	}
 	// 11 (before 8, which would also match "search"). web search
@@ -202,6 +209,26 @@ func patchFiles(patch, cwd string) []File {
 
 // commandArg returns a shell command from "command" or "cmd" (string or
 // argv; [sh, -c|-lc, X] yields X).
+// readsHandoff reports whether a shell command only prints imux's handoff
+// file (cat, sed -n, head ...).
+func readsHandoff(cmd string) bool {
+	f := strings.Fields(strings.TrimSpace(cmd))
+	if len(f) < 2 {
+		return false
+	}
+	switch filepath.Base(f[0]) {
+	case "cat", "sed", "head", "tail", "less", "more", "bat", "nl":
+	default:
+		return false
+	}
+	for _, w := range f[1:] {
+		if session.IsHandoffFile(strings.Trim(w, `"'`)) {
+			return true
+		}
+	}
+	return false
+}
+
 func commandArg(args map[string]any) string {
 	for _, k := range []string{"command", "cmd"} {
 		switch v := args[k].(type) {

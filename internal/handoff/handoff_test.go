@@ -193,6 +193,41 @@ func TestGoldenDelta(t *testing.T) {
 	}
 }
 
+// TestMeanwhile: a session that resumed with a "Welcome back" (a handoff
+// after its start) hands off what happened in the other agent as a short
+// block, not the document with its instructions; the last user request is
+// the one made there.
+func TestMeanwhile(t *testing.T) {
+	g := &session.Session{Ref: session.Ref{Agent: session.Antigravity, ID: "g", CWD: cwd}, Entries: []session.Entry{
+		user(30, "rename the helper"), asst(31, "Renamed to parseNext."),
+	}}
+	o := opts()
+	o.From, o.To, o.Delta = session.Antigravity, session.Claude, true
+	welcome := build(t, []*session.Session{g}, o).Text
+	s := shortSession()
+	s.Entries = append(s.Entries, session.Entry{Role: session.RoleUser, At: at(40), Text: welcome}, asst(41, "Got it: the helper is parseNext now."))
+	o = opts()
+	o.From, o.To = session.Claude, session.Codex
+	d := build(t, []*session.Session{s}, o).Text
+	golden(t, "meanwhile", d)
+	for _, want := range []string{
+		"**Meanwhile the user continued in Antigravity CLI:**", "  **User:** rename the helper", "  **Assistant:** Renamed to parseNext.",
+		"Last user request: rename the helper", "Last assistant message: Got it: the helper is parseNext now.",
+	} {
+		if !strings.Contains(d, want) {
+			t.Fatalf("missing %q:\n%s", want, d)
+		}
+	}
+	for _, absent := range []string{"Welcome back", "## What to do now\nDo not start working yet. Reply with one short sentence in the user's language saying you have\nthe context and what was last being worked on, then wait for the user's next message.\n\n**"} {
+		if strings.Contains(d, absent) {
+			t.Fatalf("the resume's handoff leaked (%q):\n%s", absent, d)
+		}
+	}
+	if strings.Count(d, "[i-mux handoff ·") != 1 {
+		t.Fatal("nested marker leaked into the document")
+	}
+}
+
 func TestGoldenEmptyAndNonGit(t *testing.T) {
 	o := opts()
 	o.Git = &gitinfo.Info{State: gitinfo.NotRepo}

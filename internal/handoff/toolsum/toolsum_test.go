@@ -125,3 +125,29 @@ func FuzzSummarize(f *testing.F) {
 		}
 	})
 }
+
+// TestHandoffFileReads: reading imux's own handoff file is how the agent got
+// its context; it is neither a conversation line nor a file read.
+func TestHandoffFileReads(t *testing.T) {
+	hf := "/home/test/.imux/handoffs/20261108-093139-claude-to-opencode.md"
+	for _, tc := range []session.ToolCall{
+		{Name: "read", Args: A{"file_path": hf}},
+		{Name: "Read", Args: A{"file_path": hf}},
+		{Name: "shell", Args: A{"command": []any{"bash", "-lc", "cat " + hf}}},
+		{Name: "run_shell_command", Args: A{"command": "sed -n '1,200p' '" + hf + "'"}},
+	} {
+		if s := Summarize(tc, cwd); !s.Skip || s.Line != "" || len(s.Files) != 0 {
+			t.Errorf("%s %v: %+v", tc.Name, tc.Args, s)
+		}
+	}
+	// A file merely named like one, or not in a handoffs folder, is work.
+	for _, p := range []string{"/home/test/proj/handoffs/notes.md", "/home/test/proj/20261108-093139-claude-to-opencode.md"} {
+		if s := Summarize(session.ToolCall{Name: "read", Args: A{"file_path": p}}, cwd); s.Skip || s.Line == "" {
+			t.Errorf("%s skipped: %+v", p, s)
+		}
+	}
+	fa := Activity([]session.Entry{{Tools: []session.ToolCall{{Name: "read", Args: A{"file_path": hf}}, {Name: "read", Args: A{"file_path": cwd + "/a.go"}}}}}, cwd)
+	if fa.ReadCount != 1 || len(fa.Read) != 1 || fa.Read[0] != "a.go" {
+		t.Errorf("activity %+v", fa)
+	}
+}

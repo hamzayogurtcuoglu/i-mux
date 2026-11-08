@@ -36,6 +36,7 @@ const (
 	capLastAssistant = 4000
 	capEntryUser     = 1500
 	capEntryAsst     = 1200
+	capMeanwhile     = 2500
 	maxToolLines     = 12
 	origFraction     = 0.12
 	historyFraction  = 0.25
@@ -201,9 +202,22 @@ func conversationBlocks(s *session.Session, cwd string) []string {
 	var bs []*blk
 	for _, e := range s.Entries {
 		if e.Kind == session.KindHandoff {
-			continue
+			continue // the chained handoff: "Earlier history"
 		}
 		text := strings.TrimSpace(e.Text)
+		if laterHandoff(e) {
+			// The "Welcome back" the agent got when it resumed: what
+			// happened in the other agent meanwhile, without the document's
+			// instructions.
+			if c := session.ParseChained(text); c != nil {
+				head := "**Meanwhile the user continued in " + session.DisplayName(c.From) + ":**"
+				if h := strings.TrimSpace(c.History); h != "" {
+					head += "\n" + indent(clean.Truncate(h, capMeanwhile), "  ")
+				}
+				bs = append(bs, &blk{head: head})
+			}
+			continue
+		}
 		if text != "" || len(bs) == 0 && len(e.Tools) > 0 {
 			var head string
 			switch e.Role {
@@ -243,6 +257,17 @@ func conversationBlocks(s *session.Session, cwd string) []string {
 		out = append(out, sb.String())
 	}
 	return out
+}
+
+// laterHandoff reports whether e is a handoff an agent got after the start
+// of its session (a resume's "Welcome back"), not a request of the user.
+func laterHandoff(e session.Entry) bool {
+	return e.Role == session.RoleUser && e.Kind == session.KindMessage && session.IsHandoff(e.Text)
+}
+
+// indent prefixes every line of s.
+func indent(s, prefix string) string {
+	return prefix + strings.ReplaceAll(s, "\n", "\n"+prefix)
 }
 
 // render produces the document. convBudget < 0 means "everything left".
@@ -389,8 +414,8 @@ func (r *renderer) toolNames() string {
 	for _, s := range r.src {
 		for _, e := range s.Entries {
 			for _, tc := range e.Tools {
-				if tc.Name == "" || seen[tc.Name] || len(names) == 3 {
-					continue
+				if tc.Name == "" || seen[tc.Name] || len(names) == 3 || toolsum.Summarize(tc, r.opt.CWD).Line == "" {
+					continue // not in the record
 				}
 				seen[tc.Name] = true
 				names = append(names, tc.Name)
@@ -608,6 +633,19 @@ func (r *renderer) whereStopped() string {
 	for _, s := range r.src {
 		for _, e := range s.Entries {
 			t := strings.TrimSpace(e.Text)
+			if laterHandoff(e) {
+				// The last turns of the agent the user continued in meanwhile.
+				if c := session.ParseChained(t); c != nil {
+					for _, l := range strings.Split(c.History, "\n") {
+						if u, ok := strings.CutPrefix(l, "**User:** "); ok {
+							lastUser = strings.TrimSpace(u)
+						} else if a, ok := strings.CutPrefix(l, "**Assistant:** "); ok {
+							lastAsst = strings.TrimSpace(a)
+						}
+					}
+				}
+				continue
+			}
 			if t == "" || e.Kind == session.KindHandoff {
 				continue
 			}
