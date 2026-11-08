@@ -841,13 +841,13 @@ should not have to update by hand.
 
 User request: notifications on every platform i-mux supports, switchable in Settings.
 
-- [ ] **T32.1 Events** · S
+- [x] **T32.1 Events** · S
   - AC: finished (after ≥ 10 s of work) and needs-you transitions; not while the user looks
     at the pane; one per pane per 30 s; unit tests.
-- [ ] **T32.2 Delivery** · M
+- [x] **T32.2 Delivery** · M
   - AC: command, osascript, notify-send, gdbus, terminal OSC 9 / 777 with tmux message; argument
     escaping; unit tests per platform with fake commands.
-- [ ] **T32.3 Settings and e2e** · S · deps: T32.1, T32.2
+- [x] **T32.3 Settings and e2e** · S · deps: T32.1, T32.2
   - AC: `[notify] enabled, sound, command`; Settings rows; e2e on macOS and Linux: a fake agent
     works then stops → the command gets the title; Linux without a desktop → OSC 777 on the
     client; README.

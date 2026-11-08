@@ -51,6 +51,8 @@ var settingKeys = map[string]settingKey{
 	"on_arrival":   {"handoff", "on_arrival", []string{"wait", "continue"}, true},
 	"on_limit":     {"", "on_limit", []string{"ask", "auto", "off"}, true},
 	"completion":   {"completion", "enabled", []string{"on", "off"}, false},
+	"notify":       {"notify", "enabled", []string{"on", "off"}, false},
+	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane

@@ -90,3 +90,23 @@ func TestClosePanel(t *testing.T) {
 		t.Fatalf("switching the view changed the width to %d", w)
 	}
 }
+
+// openView clicks a rail icon until the sidebar shows that view: a click
+// right after a client attached can land while the sidebar takes its width
+// back, and is lost.
+func (h *H) openView(c *Client, bar, icon, view string) {
+	h.t.Helper()
+	for attempt := 0; attempt < 3; attempt++ {
+		x, y := h.rowOf(bar, icon)
+		c.Click(0, x, y)
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			if h.paneOpt(bar, "#{@imux_view}") == view {
+				return
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		time.Sleep(500 * time.Millisecond) // past the double-click window
+	}
+	h.t.Fatalf("the %s view did not open", view)
+}

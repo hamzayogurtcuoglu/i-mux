@@ -6,6 +6,16 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-08
+
+### Added
+
+- **Notifications** when an agent finishes (after working 10 s or more) or asks you something,
+  unless you are looking at it: macOS's notification center, the Linux desktop's (`notify-send`,
+  else D-Bus), or, with no desktop (SSH, a server), the terminal's own (OSC 9 for iTerm2, OSC 777
+  for Ghostty, WezTerm, kitty, foot and GNOME Terminal). They come with the terminal closed too.
+  Settings turns them and their sound on or off; `[notify] command` sends them anywhere.
+
 ## [0.27.3] - 2026-11-08
 
 ### Fixed

@@ -88,6 +88,18 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 			Cmd: w.popupCmd("90%", "80%", append([]string{"__completion", "setup"}, tgt...)...),
 		})
 	}
+	onOff := func(on bool) (string, string) {
+		if on {
+			return i18n.T("settings.on_plain"), "off"
+		}
+		return i18n.T("settings.off"), "on"
+	}
+	label, flip := onOff(cfg.Notify.Enabled)
+	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify", label), Key: "n", Cmd: set("notify", flip)})
+	if cfg.Notify.Enabled {
+		label, flip = onOff(cfg.Notify.Sound)
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify_sound", label), Key: "d", Cmd: set("notify_sound", flip)})
+	}
 	icons := cfg.Tmux.Icons
 	if icons == "" {
 		icons = "auto"

@@ -74,6 +74,12 @@ on there and files you edit open in Neovim with GitHub's Copilot plugin (Tab acc
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
 
+**Notifications:** when an agent finishes (after working 10 s or more) or asks you something and you
+are not looking at it, a notification comes: macOS's notification center, the Linux desktop's
+(`notify-send`), or, over SSH or on a server, your terminal's own (iTerm2, Ghostty, WezTerm, kitty,
+GNOME Terminal …). It works with the terminal closed too. Turn it and its sound off in Settings, or set
+`[notify] command` to send it anywhere (a push to your phone).
+
 **OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
 NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
 when the others hit their limits. Install it with `brew install opencode`; `imux doctor` checks

@@ -68,6 +68,12 @@ gibi çalışır: oradan açınca düzenlediğin dosyalar GitHub'ın Copilot ekl
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
 GitHub Copilot'a bir kez giriş yaptırır.
 
+**Bildirimler:** bir ajan işini bitirince (en az 10 saniye çalıştıktan sonra) ya da sana bir şey
+sorunca, o sırada ona bakmıyorsan bildirim gelir: macOS'un bildirim merkezi, Linux masaüstününki
+(`notify-send`), SSH'ta ya da sunucuda ise terminalinin kendi bildirimi (iTerm2, Ghostty, WezTerm,
+kitty, GNOME Terminal …). Terminal kapalıyken de çalışır. Bildirimi ve sesini Ayarlar'dan kapatabilir,
+`[notify] command` ile istediğin yere (örneğin telefonuna) gönderebilirsin.
+
 **OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
 Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):
 diğerleri limite takılınca devam etmek için kullanışlı bir yer. `brew install opencode` ile kur;

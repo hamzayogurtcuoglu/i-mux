@@ -50,7 +50,7 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	}
 	actor := &watch.Actor{W: w, Log: logger}
 	keeper := &watch.StatusKeeper{W: w}
-	states := &watch.PaneStates{T: tc}
+	states := &watch.PaneStates{T: tc, Notify: newNotifier(cfg.Notify, tc).Send}
 	var lastSnap time.Time
 	return &watch.Detector{
 		T: tc, Patterns: set, Cfg: cfg.Limits, Now: time.Now, Log: logger,
@@ -58,7 +58,8 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 		OnTick: func(_ context.Context, panes []watch.PaneRow, _ []watch.Client) []tmux.Cmd {
 			return keeper.Commands(panes)
 		},
-		OnTickFailed: keeper.Forget,
+		OnTickFailed:  keeper.Forget,
+		WatchDetached: cfg.Notify.Enabled,
 		OnActivity: func(at time.Time, changed map[string]time.Time, asking map[string]bool) {
 			a := &bus.Activity{At: at.UnixMilli(), Changed: map[string]int64{}}
 			for p, t := range changed {

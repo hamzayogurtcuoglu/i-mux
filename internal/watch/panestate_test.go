@@ -86,3 +86,33 @@ func TestAsking(t *testing.T) {
 		}
 	}
 }
+
+// TestPaneEvents: finished after at least MinWork of work, needs-you when an
+// idle pane starts asking; nothing for short work or for a pane the watcher
+// just met.
+func TestPaneEvents(t *testing.T) {
+	s := &PaneStates{}
+	t0 := time.Unix(1_800_000_000, 0)
+	tick := func(at time.Time, changed map[string]time.Time, asking map[string]bool) []PaneEvent {
+		s.Commands(at, changed, asking)
+		return append([]PaneEvent{}, s.events...)
+	}
+	// %1 works 12 s, %2 works 4 s.
+	tick(t0, map[string]time.Time{"%1": t0, "%2": t0}, nil)
+	tick(t0.Add(4*time.Second), map[string]time.Time{"%1": t0.Add(4 * time.Second), "%2": t0.Add(4 * time.Second)}, nil)
+	tick(t0.Add(12*time.Second), map[string]time.Time{"%1": t0.Add(12 * time.Second), "%2": t0.Add(4 * time.Second)}, nil)
+	ev := tick(t0.Add(16*time.Second), map[string]time.Time{"%1": t0.Add(12 * time.Second), "%2": t0.Add(4 * time.Second)}, nil)
+	if len(ev) != 1 || ev[0] != (PaneEvent{Pane: "%1", Kind: EventFinished}) {
+		t.Fatalf("finished: %+v", ev)
+	}
+	// %2 starts asking.
+	ev = tick(t0.Add(20*time.Second), map[string]time.Time{"%1": t0.Add(12 * time.Second), "%2": t0.Add(4 * time.Second)}, map[string]bool{"%2": true})
+	if len(ev) != 1 || ev[0] != (PaneEvent{Pane: "%2", Kind: EventNeedsYou}) {
+		t.Fatalf("needs you: %+v", ev)
+	}
+	// A watcher that just started meets %3 asking: no news.
+	ev = tick(t0.Add(24*time.Second), map[string]time.Time{"%3": t0}, map[string]bool{"%3": true})
+	if len(ev) != 0 {
+		t.Fatalf("a pane just met: %+v", ev)
+	}
+}

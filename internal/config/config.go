@@ -116,6 +116,14 @@ type Git struct {
 	CommitModel string `toml:"commit_model"` // "" = the agent's default
 }
 
+// Notify is the [notify] section: notifications when an agent finishes or
+// needs the user.
+type Notify struct {
+	Enabled bool   `toml:"enabled"`
+	Sound   bool   `toml:"sound"`
+	Command string `toml:"command"` // run with the title and message instead; "" = the system's
+}
+
 // Completion is the [completion] section: AI completion in the editor (D30).
 type Completion struct {
 	Enabled bool `toml:"enabled"`
@@ -154,6 +162,7 @@ type Config struct {
 	Bus          Bus               `toml:"bus"`
 	Git          Git               `toml:"git"`
 	Completion   Completion        `toml:"completion"`
+	Notify       Notify            `toml:"notify"`
 	Tmux         Tmux              `toml:"tmux"`
 	Agents       map[string]*Agent `toml:"agents"`
 }
@@ -233,7 +242,8 @@ func Default() *Config {
 			DefaultExpiry:    D(5 * time.Hour),
 			ClaudeStatusline: true,
 		},
-		Git: Git{CommitAgent: "auto"},
+		Git:    Git{CommitAgent: "auto"},
+		Notify: Notify{Enabled: true, Sound: true},
 		Bus: Bus{
 			Enabled:         true,
 			IdleAfter:       D(5 * time.Second),

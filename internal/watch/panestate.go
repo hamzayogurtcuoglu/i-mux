@@ -22,7 +22,26 @@ const WorkingFor = 3 * time.Second
 type PaneStates struct {
 	T    *tmux.Client
 	last map[string]string
+	// Notify gets the changes worth a notification (§9.3 "Notifications").
+	Notify func(ctx context.Context, events []PaneEvent)
+	since  map[string]time.Time // when each working pane started working
+	events []PaneEvent
 }
+
+// PaneEvent is a change a notification is about.
+type PaneEvent struct {
+	Pane string
+	Kind string // EventFinished or EventNeedsYou
+}
+
+// Event kinds.
+const (
+	EventFinished = "finished"
+	EventNeedsYou = "needs"
+)
+
+// MinWork is how long an agent must have worked for its stop to be news.
+const MinWork = 10 * time.Second
 
 // Commands returns the set-option commands for states that changed. An idle
 // screen that asks a question is blocked ("Needs you").
@@ -30,6 +49,10 @@ func (s *PaneStates) Commands(at time.Time, changed map[string]time.Time, asking
 	if s.last == nil {
 		s.last = map[string]string{}
 	}
+	if s.since == nil {
+		s.since = map[string]time.Time{}
+	}
+	s.events = s.events[:0]
 	panes := make([]string, 0, len(changed))
 	for p := range changed {
 		panes = append(panes, p)
@@ -52,6 +75,20 @@ func (s *PaneStates) Commands(at time.Time, changed map[string]time.Time, asking
 			continue
 		}
 		s.last[p] = st
+		// prev "" is a pane the watcher just met (it started, or restarted
+		// for a new config): no news then.
+		switch {
+		case st == sidebar.StateWorking:
+			s.since[p] = changed[p]
+		case prev == sidebar.StateWorking && st == sidebar.StateIdle:
+			if start, ok := s.since[p]; ok && changed[p].Sub(start) >= MinWork {
+				s.events = append(s.events, PaneEvent{Pane: p, Kind: EventFinished})
+			}
+			delete(s.since, p)
+		case st == sidebar.StateBlocked && prev != "":
+			s.events = append(s.events, PaneEvent{Pane: p, Kind: EventNeedsYou})
+			delete(s.since, p)
+		}
 		set := func(k, v string) tmux.Cmd { return tmux.Cmd{"set-option", "-p", "-q", "-t", p, k, v} }
 		cmds = append(cmds, set(sidebar.OptState, st), set(sidebar.OptStateAt, stamp))
 		if prev == sidebar.StateWorking && st == sidebar.StateIdle {
@@ -61,6 +98,7 @@ func (s *PaneStates) Commands(at time.Time, changed map[string]time.Time, asking
 	for p := range s.last {
 		if !seen[p] {
 			delete(s.last, p) // the pane is gone
+			delete(s.since, p)
 		}
 	}
 	return cmds
@@ -77,4 +115,7 @@ func (s *PaneStates) Apply(ctx context.Context, at time.Time, changed map[string
 		return
 	}
 	sidebar.RefreshAll(ctx, s.T)
+	if s.Notify != nil && len(s.events) > 0 {
+		s.Notify(ctx, append([]PaneEvent{}, s.events...))
+	}
 }

@@ -63,6 +63,10 @@ type Detector struct {
 	// screen last changed (the bus uses it for idle/busy) and which screens
 	// ask the user something (Asking).
 	OnActivity func(at time.Time, changed map[string]time.Time, asking map[string]bool)
+	// WatchDetached keeps reading the agents' screens with no client
+	// attached (at the idle interval), for notifications: a closed terminal
+	// is when they matter most. Limit lines are scanned only when attached.
+	WatchDetached bool
 	// OnEvent runs for each new limit or warn line outside grace and
 	// cooldown. It reports whether it prompted or acted, which starts the
 	// pane's cooldown.
@@ -145,7 +149,8 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	if nudge {
 		extra = append(extra, reapNudge)
 	}
-	if len(clients) == 0 || len(agents) == 0 {
+	detached := len(clients) == 0
+	if len(agents) == 0 || detached && !d.WatchDetached {
 		if len(extra) > 0 {
 			if _, err := d.T.Run(ctx, extra...); err != nil {
 				d.tickFailed()
@@ -166,7 +171,7 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 		if len(extra) > 0 {
 			d.tickFailed()
 		}
-		return true, err
+		return !detached, err
 	}
 	sec = tmux.Sections(out)
 	for _, p := range agents {
@@ -186,12 +191,14 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 			d.asking = map[string]bool{}
 		}
 		d.asking[p.ID] = Asking(screen)
-		d.scan(ctx, p, screen, clients)
+		if !detached {
+			d.scan(ctx, p, screen, clients)
+		}
 	}
 	if d.OnActivity != nil {
 		d.OnActivity(d.Now(), d.changed, d.asking)
 	}
-	return true, nil
+	return !detached, nil
 }
 
 // scan matches the lines of one changed screen.

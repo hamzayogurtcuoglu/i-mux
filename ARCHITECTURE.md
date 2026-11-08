@@ -1409,7 +1409,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **When:** an agent pane goes from working to idle after working at least 10 s ("Claude
   finished"), or starts asking ("Claude needs you"). Not when the user is looking at it: a client
   whose terminal has the focus (`client_flags` has `focused`; `focus-events on`) shows the pane's
-  window. At most one per pane per 30 s.
+  window. At most one of each kind per pane per 30 s (a question right after "finished" still
+  comes). With notifications on, the watcher reads the agents' screens with no client attached
+  too (at the idle interval): a closed terminal is when they matter most.
 - **Text:** title "Claude finished · opcua-qtclient" (the pane's name when it has one, else the
   agent; the project folder); the message is the tab and what to do ("Click the tab to look").
 - **How**, in order, the first that works:
