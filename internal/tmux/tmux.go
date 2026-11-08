@@ -552,3 +552,9 @@ func (c *Client) Menu(ctx context.Context) Cmd {
 	}
 	return Cmd{"display-menu"}
 }
+
+// MenuTakesMouse reports whether Menu's menus answer the mouse (and ignore
+// a button's release).
+func (c *Client) MenuTakesMouse(ctx context.Context) bool {
+	return len(c.Menu(ctx)) > 1
+}

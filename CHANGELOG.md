@@ -6,6 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.30.1] - 2026-11-08
+
+### Fixed
+
+- The explorer's right-click menu opened slowly (about 0.4 s) and showed up behind the panel
+  first. On tmux 3.5 and later it opens on the press (about 30 ms), and the sidebar no longer
+  redraws an unchanged screen: a dozen redraws went over an open menu each time, and the whole
+  sidebar redraws less often everywhere.
+
 ## [0.30.0] - 2026-11-08
 
 ### Added

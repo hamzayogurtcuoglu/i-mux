@@ -1457,6 +1457,13 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   the keys only, unless `display-menu -M` (tmux 3.5+): every i-mux menu then has `-M -O`, so it
   is clicked like the editor's (the pointer highlights an item, a click chooses it, a click
   outside closes it). tmux 3.2–3.4 (Ubuntu 22.04 / 24.04): the item's letter, or ↑↓ and Enter.
+- **Opening at once:** with `-O` the menu ignores the right button's release, so on tmux 3.5+ a
+  right-click opens its menu on the press (about 30 ms); older tmux waits for the release
+  (`ClickDelay`), which would close a menu that takes keys only.
+- **Nothing drawn under an open menu:** a right-click and opening a menu gather nothing, and the
+  sidebar writes a frame only when it differs from the last one. Hooks (a menu moves the focus)
+  ask for redraws; before, each rewrote the whole pane and tmux drew it over the menu, which
+  showed the menu behind the panel first.
   - **file:** Open (the editor popup, as a click) · Open to the Side (the editor in a new pane
     beside the target) · Open in VS Code · View · Add to Agent (its path, as a bracketed paste,
     into the target agent) · Reveal in Finder (macOS) / Reveal in File Explorer (WSL) / Open

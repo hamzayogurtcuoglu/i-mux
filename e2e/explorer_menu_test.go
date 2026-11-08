@@ -109,8 +109,10 @@ func (h *H) menu(c *Client, bar, text string, x, y int) int {
 	}
 	time.Sleep(400 * time.Millisecond) // past the double-click window
 	mark := c.Mark()
+	start := time.Now()
 	c.Click(2, x, y)
 	c.waitScreenAfter(h, mark, "Copy Path", 5*time.Second)
+	h.t.Logf("menu on screen after %v", time.Since(start).Round(time.Millisecond))
 	time.Sleep(200 * time.Millisecond)
 	return mark
 }

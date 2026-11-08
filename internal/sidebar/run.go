@@ -55,6 +55,7 @@ type sidebar struct {
 	lastReveal string // OptReveal as last seen
 	revealSeen bool
 	revealRow  string // a revealed path to scroll to
+	lastFrame  string // the frame last written
 }
 
 // ClickDelay holds a click's action until tmux's double-click window (300 ms)
@@ -145,6 +146,7 @@ func Run(ctx context.Context, o Options) error {
 			case syscall.SIGUSR1:
 				upgrade()
 			case syscall.SIGWINCH:
+				s.lastFrame = "" // the pane was resized: draw it whole
 				s.keepWidth(ctx)
 			default:
 				return nil
@@ -165,6 +167,9 @@ func Run(ctx context.Context, o Options) error {
 			continue
 		case a := <-s.clicks:
 			s.do(ctx, a)
+			if isMenu(a.Kind) {
+				continue // nothing changed yet; a redraw would only draw under the menu
+			}
 		case b, ok := <-input:
 			if !ok {
 				return nil
@@ -173,7 +178,9 @@ func Run(ctx context.Context, o Options) error {
 			evs, pending = Parse(append(pending, b...), true)
 			gather := false
 			for _, ev := range evs {
-				if ev.Kind != EvMove {
+				// The pointer moving and a right-click (its menu) change
+				// nothing to gather.
+				if ev.Kind != EvMove && ev.Kind != EvRightClick {
 					gather = true
 				}
 				s.handle(ctx, ev)
@@ -227,7 +234,23 @@ func (s *sidebar) draw() {
 	if it := s.screen.HoverAt(s.hx, s.hy, s.win.Width); it != NoItem && it != s.sel {
 		Paint(s.screen, it, hoverBg, s.win.Width)
 	}
-	_, _ = io.WriteString(s.o.Out, Frame(s.screen, s.win.Width, s.win.Height))
+	f := Frame(s.screen, s.win.Width, s.win.Height)
+	if f == s.lastFrame {
+		// The same frame again (a refresh after a hook): writing it would
+		// make tmux draw the pane again, over an open menu too.
+		return
+	}
+	s.lastFrame = f
+	_, _ = io.WriteString(s.o.Out, f)
+}
+
+// isMenu reports actions that open a menu.
+func isMenu(k ActionKind) bool {
+	switch k {
+	case ActFileMenu, ActProjectMenu, ActAgentMenu, ActBranchMenu, ActSettings:
+		return true
+	}
+	return false
 }
 
 // LeaveAfter is how long the pointer may rest before the way-out check.
@@ -350,8 +373,13 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		if menu.Kind == ActFileMenu {
 			s.draw() // the row the menu is about, selected
 		}
-		// Like a left click: wait until the button is released, or the
-		// release closes the menu.
+		if s.t.MenuTakesMouse(ctx) {
+			// The menu ignores the button's release (-O): open it now.
+			s.do(ctx, menu)
+			return
+		}
+		// Older tmux: wait until the button is released, or the release
+		// closes the menu.
 		time.AfterFunc(ClickDelay, func() { s.clicks <- menu })
 		return
 	}
