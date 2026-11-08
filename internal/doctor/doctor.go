@@ -249,15 +249,16 @@ func checkAgents(ctx context.Context, r *Report, o Options) {
 				ver = v
 			}
 		}
+		if ver != "" && a.ID == session.OpenCode && compareVersions(ver, OpenCodeMin) < 0 {
+			r.add(Fail, "doctor.opencode_v1", ver)
+			continue // no ✓ for a version that cannot start a tab
+		}
 		if ver == "" {
 			r.add(Warn, "doctor.agent_noversion", a.Name, x.Path)
 		} else {
 			r.add(OK, "doctor.agent_ok", a.Name, ver, paths.Shorten(x.Path))
 			if min, ok := MinVersions[a.ID]; ok && compareVersions(ver, min) < 0 {
 				r.add(Warn, "doctor.agent_outdated", a.Name, ver, min, a.InstallHint)
-			}
-			if a.ID == session.OpenCode && compareVersions(ver, OpenCodeMin) < 0 {
-				r.add(Fail, "doctor.opencode_v1", ver)
 			}
 		}
 		if needsNode(x.Path) && !hasNode(x) {

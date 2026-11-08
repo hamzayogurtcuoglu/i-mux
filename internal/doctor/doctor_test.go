@@ -172,6 +172,10 @@ func TestDoctorOpenCode1(t *testing.T) {
 	if x == nil || x.Level != Fail || !strings.Contains(x.Msg, "opencode upgrade --major") || !r.Failed() {
 		t.Fatalf("opencode 1: %+v", r.Results)
 	}
+	// Only the failure: no ✓ line for a version that cannot start a tab.
+	if x := find(r, "OpenCode 1.19.5 ("); x != nil {
+		t.Fatalf("opencode 1 also reported OK: %+v", r.Results)
+	}
 
 	// Upgraded since the cache was written: the binary says 2.x, no failure.
 	testutil.WriteFile(t, verFile, []byte("opencode v2.2.6\n"))
