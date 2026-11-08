@@ -111,7 +111,7 @@ func TestRender(t *testing.T) {
 		"▾ AGENTS", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Terminal",
 		"blog", "▲  blog pass", "9m ●", "✻  Claude", "3d ○",
 		"Continue this chat in", "▲ Antigravity", "◉ Copilot", "◎ Codex",
-		"📜 History", "▌ 🤖", "Agents", "📁", "Files", "🔍", "Search", "🔀", "Git 3", "📊", "Limits", "❓", "Help",
+		"📜 History", "▌  🤖", "Agents", "📁", "Files", "🔍", "Search", "🔀", "Git 3", "📊", "Limits", "❓", "Help",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sidebar lacks %q:\n%s", want, text)
@@ -189,7 +189,7 @@ func TestRender(t *testing.T) {
 	}
 	// Tall: the toolbar and the rail's Help are on the last row.
 	tall := Render(model(), 41, 50, NoItem)
-	if last := Plain(tall.Lines[49].Text); !strings.Contains(last, "📜 History") || !strings.HasPrefix(last, " Help │") ||
+	if last := Plain(tall.Lines[49].Text); !strings.Contains(last, "📜 History") || !strings.HasPrefix(last, "  Help  │") ||
 		strings.Trim(Plain(tall.Lines[30].Text), " │") != "" {
 		t.Errorf("toolbar not at the bottom:\n%s", screenText(tall))
 	}
@@ -261,7 +261,7 @@ func TestExplorer(t *testing.T) {
 	sc := Render(m, 41, 12, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
-	for _, want := range []string{"EXPLORER · acme-api", "🔍", "▸ docs", "▾ src", "▸ auth", "main.ts", "README.md", "▌ 📁"} {
+	for _, want := range []string{"EXPLORER · acme-api", "🔍", "▸ docs", "▾ src", "▸ auth", "main.ts", "README.md", "▌  📁"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("explorer lacks %q", want)
 		}
@@ -318,7 +318,7 @@ func TestChangesView(t *testing.T) {
 	t.Logf("\n%s", text)
 	for _, want := range []string{
 		"SOURCE CONTROL", "🔄", "🌿 main ▾", "↑1 ↓0", "🔃", "✅ Commit…", "▾ STAGED CHANGES  1", "M  a.go", "+3 −1",
-		"▾ CHANGES  2", "M  b.go", "?  c.txt", "▾ HISTORY  1", "a1b2c3d feat: login", "2h", "▌ 🔀",
+		"▾ CHANGES  2", "M  b.go", "?  c.txt", "▾ HISTORY  1", "a1b2c3d feat: login", "2h", "▌  🔀",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("lacks %q", want)
@@ -638,27 +638,26 @@ func TestRailThemes(t *testing.T) {
 		}
 	}
 
-	dir := t.TempDir()
-	if HasNerdFont([]string{dir}) {
-		t.Fatal("empty dir")
-	}
-	if err := os.MkdirAll(filepath.Join(dir, "JetBrainsMono"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "JetBrainsMono", "JetBrainsMonoNerdFontMono-Regular.ttf"), nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if !HasNerdFont([]string{dir}) {
-		t.Fatal("nerd font in a subfolder")
-	}
 	s := &Source{Cfg: config.Default()}
 	s.Cfg.Tmux.Icons = "emoji"
-	if s.iconTheme("xterm-ghostty") != IconsEmoji {
+	if s.iconTheme("xterm-ghostty", "") != IconsEmoji {
 		t.Error("configured emoji wins")
 	}
 	s.Cfg.Tmux.Icons = "auto"
-	if s.iconTheme("xterm-ghostty") != IconsNerd || s.iconTheme("xterm-kitty") != IconsNerd {
+	if s.iconTheme("xterm-ghostty", "") != IconsNerd || s.iconTheme("xterm-kitty", "") != IconsNerd {
 		t.Error("terminals with Nerd Font symbols")
+	}
+	// Terminal.app: the icons follow its font, asked once.
+	old := NerdFontFor
+	defer func() { NerdFontFor = old }()
+	asked := 0
+	NerdFontFor = func(p string) bool { asked++; return p == "Apple_Terminal" }
+	first := s.iconTheme("xterm-256color", "Apple_Terminal")
+	if first != IconsNerd || s.iconTheme("xterm-256color", "Apple_Terminal") != IconsNerd || asked != 1 {
+		t.Errorf("Terminal.app with a Nerd Font (asked %d)", asked)
+	}
+	if s.iconTheme("xterm-256color", "vscode") != IconsEmoji || s.iconTheme("xterm-256color", "") != IconsEmoji {
+		t.Error("no Nerd Font: emoji")
 	}
 }
 

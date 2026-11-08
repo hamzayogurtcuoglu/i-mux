@@ -27,7 +27,7 @@ const (
 
 // railW is the activity rail's width: an icon with room around it and a
 // short label under it (6 columns), then the separator line.
-const railW = 7
+const railW = 9
 
 // ClosedWidth is the sidebar's width while the panel is closed: the rail's
 // item without its line (the pane border is the line).
@@ -373,6 +373,10 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 		text += " " + strconv.Itoa(min(m.Changed, 99))
 		color = yellow
 	}
+	alert := it.action.Kind == ActSettings && m.Update != "" // a newer i-mux is out
+	if alert {
+		color = yellow
+	}
 	const iw = railW - 1 // the item's columns; the last one is the line
 	r := []rune(text)
 	if len(r) > iw {
@@ -380,24 +384,26 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 	}
 	pad := iw - len(r)
 	lt := strings.Repeat(" ", pad/2) + string(r) + strings.Repeat(" ", pad-pad/2)
-	// "  X   ": an emoji takes 2 columns, a Nerd Font icon 1 (drawn wider).
-	gap := "  "
-	if DisplayWidth(it.icon) == 1 {
-		gap = "   "
-	}
+	// The icon centered as 2 columns: an emoji takes 2, a Nerd Font icon 1
+	// (drawn wider, into the next).
+	left := (iw - 2) / 2
+	gap := strings.Repeat(" ", iw-2-left+2-DisplayWidth(it.icon))
 	iconColor := ""
 	if !active {
 		iconColor = muted
+	}
+	if alert {
+		iconColor = yellow
 	}
 	line, cw := faint+"│"+reset, railW
 	if m.Closed {
 		line, cw = "", ClosedWidth
 	}
 	if active {
-		return Cell{X: 0, W: cw, Text: selBg + cyan + "▌" + reset + selBg + " " + bold + it.icon + reset + selBg + gap + reset + line, Action: a},
+		return Cell{X: 0, W: cw, Text: selBg + cyan + "▌" + reset + selBg + strings.Repeat(" ", left-1) + bold + it.icon + reset + selBg + gap + reset + line, Action: a},
 			Cell{X: 0, W: cw, Text: selBg + bold + lt + reset + line, Action: a}
 	}
-	return Cell{X: 0, W: cw, Text: "  " + iconColor + it.icon + reset + gap + line, Action: a},
+	return Cell{X: 0, W: cw, Text: strings.Repeat(" ", left) + iconColor + it.icon + reset + gap + line, Action: a},
 		Cell{X: 0, W: cw, Text: color + lt + reset + line, Action: a}
 }
 

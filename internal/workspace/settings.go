@@ -5,6 +5,8 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
+	upd "github.com/hamzayogurtcuoglu/i-mux/internal/update"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 )
 
 // Settings rows cycle through these values (§9.3 "Settings").
@@ -70,6 +72,12 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 		return w.ui(append([]string{"__settings", "set", key, value}, tgt...)...)
 	}
 	m := &Menu{Title: i18n.T("settings.title")}
+	cur := version.Version
+	row := MenuItem{Name: i18n.T("settings.update", cur), Key: "u", Cmd: w.popupCmd("80%", "60%", "update", "--popup")}
+	if latest := w.State().Latest; upd.Newer(latest, cur) {
+		row.Name = i18n.T("settings.update_available", cur, latest)
+	}
+	m.Items = append(m.Items, row, Separator())
 	if cfg.Completion.Enabled {
 		m.Items = append(m.Items,
 			MenuItem{Name: i18n.T("settings.completion", i18n.T("settings.on")), Key: "a", Cmd: set("completion", "off")},

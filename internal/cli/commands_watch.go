@@ -88,6 +88,9 @@ func runWatch(e *Env, args []string) error {
 			if err != nil {
 				return nil, nil, 0, 0, err
 			}
+			if cfg.UpdateCheck {
+				go checkUpdates(context.Background())
+			}
 			tk, tc, err := newTicker(cfg, logger)
 			return tk, tc, cfg.Limits.PollInterval.Duration, cfg.Limits.IdleInterval.Duration, err
 		})

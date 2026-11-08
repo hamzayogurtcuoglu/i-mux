@@ -21,11 +21,17 @@ jobs:
           go-version-file: go.mod
       - name: Unit tests
         run: go test -count=1 ./...
+      # GoReleaser from the Go module proxy, not a GitHub download: three
+      # releases failed on a 504 from that download (0.24.0-0.25.1).
+      - name: Install GoReleaser
+        run: |
+          for i in 1 2 3; do
+            go install github.com/goreleaser/goreleaser/v2@latest && break
+            sleep 20
+          done
+          goreleaser --version
       - name: GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --clean
+        run: goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # A token that can push to hamzayogurtcuoglu/homebrew-tap (T7.4).

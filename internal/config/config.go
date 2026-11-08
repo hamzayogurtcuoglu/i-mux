@@ -146,6 +146,7 @@ type Config struct {
 	DefaultAgent string            `toml:"default_agent"`
 	OnLimit      string            `toml:"on_limit"` // ask | auto | off
 	OnExit       string            `toml:"on_exit"`  // shell | close
+	UpdateCheck  bool              `toml:"update_check"`
 	Locale       string            `toml:"locale"`
 	Editor       string            `toml:"editor"` // "" = micro, $VISUAL, $EDITOR, nano, vim
 	Handoff      Handoff           `toml:"handoff"`
@@ -206,9 +207,10 @@ func defaultAgents() map[string]*Agent {
 // Default returns the built-in defaults (§16 of ARCHITECTURE.md).
 func Default() *Config {
 	return &Config{
-		Order:   slices.Clone(AgentIDs),
-		OnLimit: "ask",
-		OnExit:  "shell",
+		Order:       slices.Clone(AgentIDs),
+		OnLimit:     "ask",
+		OnExit:      "shell",
+		UpdateCheck: true,
 		Handoff: Handoff{
 			BudgetChars:       30000,
 			MaxArgBytes:       102400,
@@ -244,7 +246,7 @@ func Default() *Config {
 			PickerKeyPrefix: "S",
 			AgentBar:        false,
 			Sidebar:         true,
-			SidebarWidth:    41,
+			SidebarWidth:    43,
 			SidebarKey:      "b",
 			SplitRightKey:   "v",
 			SplitDownKey:    "-",

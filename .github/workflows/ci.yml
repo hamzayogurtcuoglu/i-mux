@@ -106,8 +106,11 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Install GoReleaser (from the Go module proxy, like the release)
+        run: |
+          for i in 1 2 3; do
+            go install github.com/goreleaser/goreleaser/v2@latest && break
+            sleep 20
+          done
       - name: GoReleaser snapshot
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --snapshot --clean
+        run: goreleaser release --snapshot --clean

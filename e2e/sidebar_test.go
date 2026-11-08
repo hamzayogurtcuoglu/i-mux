@@ -73,7 +73,7 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 	h.waitFor("sidebar width", 10*time.Second, func() bool {
 		f := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width} #{window_width}"))
 		ww, _ := strconv.Atoi(f[1])
-		return f[0] == "41" || ww < 54
+		return f[0] == "43" || ww < 56
 	})
 	width, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")))
 	var lines []string
@@ -118,7 +118,7 @@ func TestSidebar(t *testing.T) {
 	c.waitScreen(h, "AGENTS", 10*time.Second)
 	// A bigger client grows the panes; the sidebar takes its width back.
 	h.waitFor("sidebar width 41", 5*time.Second, func() bool {
-		return strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")) == "41"
+		return strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")) == "43"
 	})
 	if got := h.paneOpt(agentPane, "#{pane_active}"); got != "1" {
 		t.Errorf("the agent pane should keep the focus, active=%s", got)

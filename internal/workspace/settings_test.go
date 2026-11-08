@@ -16,7 +16,7 @@ func TestSettingsMenu(t *testing.T) {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "a AI completion in the editor: Off|i Icons: Auto|m Commit messages by: Auto (the pane's agent)|" +
+	want := "u Update i-mux… (dev)| |a AI completion in the editor: Off|i Icons: Auto|m Commit messages by: Auto (the pane's agent)|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
@@ -45,6 +45,9 @@ func TestSettingsMenu(t *testing.T) {
 		t.Error("setup and editing run in popups")
 	}
 
+	if c := cmd("u"); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, "update --popup") {
+		t.Errorf("update row %q", c)
+	}
 	// Values change the rows; completion on offers turning off and signing in.
 	w.Cfg.Completion.Enabled = true
 	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival, w.Cfg.Git.CommitAgent = "emoji", "off", "continue", "opencode"
@@ -62,10 +65,10 @@ func TestSettingsMenu(t *testing.T) {
 			t.Errorf("menu lacks %q:\n%s", want, got)
 		}
 	}
-	if c := m.Items[0].Cmd; !strings.Contains(c, "__settings set completion off") {
+	if c := m.Items[2].Cmd; !strings.Contains(c, "__settings set completion off") {
 		t.Errorf("turning off: %q", c)
 	}
-	if c := m.Items[2].Cmd; !strings.Contains(c, "__settings set icons auto") {
+	if c := m.Items[4].Cmd; !strings.Contains(c, "__settings set icons auto") {
 		t.Errorf("icons cycle back to auto: %q", c)
 	}
 

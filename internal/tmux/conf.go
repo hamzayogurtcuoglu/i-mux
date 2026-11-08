@@ -39,8 +39,8 @@ func (in *ConfInput) Clickable() bool {
 
 // TabFormat is the tab bar (status-format[0] with tmux.tabs): the session's
 // windows as tabs " <n> <name> <state> ", the current one highlighted, each
-// a window range (a click selects it), then a "+" (range=user|imux:tab)
-// and status-right (§9.3 "Tabs").
+// a window range (a click selects it), then a "+" (range=user|imux:tab).
+// Nothing on the right: the agents' states and limits are in the sidebar.
 func TabFormat() string {
 	// The state glyph always takes its column (a space when idle), so the
 	// × and the next tabs do not move when an agent starts or stops.
@@ -55,8 +55,7 @@ func TabFormat() string {
 		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange] " +
 		"#[range=user|imux:close]#[bg=colour236 fg=colour245 nobold] × #[norange default] " +
 		"}" +
-		"#[range=user|imux:tab]#[fg=colour245] + #[norange default]" +
-		"#[align=right]#{T:status-right}"
+		"#[range=user|imux:tab]#[fg=colour245] + #[norange default]"
 }
 
 // Silent is appended to every shell command imux's bindings, hooks and menu

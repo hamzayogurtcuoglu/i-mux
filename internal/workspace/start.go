@@ -184,6 +184,11 @@ func (w *WS) AttachArgv(name string) []string {
 // ExecAttach replaces the process with `tmux attach`. TMUX is cleared so that
 // attaching from inside another tmux works (nesting is intentional then).
 func (w *WS) ExecAttach(name string) error {
+	// The terminal this client runs in: the sidebars pick their icons for
+	// it (termfont). Inside tmux TERM_PROGRAM is tmux's, not the terminal's.
+	if prog := os.Getenv("TERM_PROGRAM"); prog != "" && os.Getenv("TMUX") == "" && prog != "tmux" {
+		_, _ = w.T.Run(context.Background(), tmux.Cmd{"set-option", "-g", "@imux_terminal", prog})
+	}
 	argv := w.AttachArgv(name)
 	bin, err := exec.LookPath(argv[0])
 	if err != nil {

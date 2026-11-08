@@ -1101,8 +1101,11 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 #### Tabs (v0.8)
 
 ```
-  1 backend fix ●   2 tests !   3 Claude    +                    Codex ⛔15:00 · 12:30
+  1 backend fix ●   2 tests !   3 Claude    +
 ```
+
+- (v0.27) Nothing on the right of the tab bar: the agents' states and limits it listed, and the
+  clock, are in the sidebar (the user asked it gone).
 
 - The status line moves to the top (`tmux.tabs = true`, default) and shows the session's windows as
   tabs: ` <n> <name> <state> `; the current tab on a dark background. A click selects it (tmux's

@@ -73,6 +73,9 @@ func newH(t *testing.T, extraConfig string) *H {
 	} else if i := strings.Index(extraConfig, "\n["); i >= 0 {
 		top, tables = extraConfig[:i+1], extraConfig[i+1:]
 	}
+	if !strings.Contains(top, "update_check") {
+		top = "update_check = false\n" + top // never the network in tests
+	}
 	cfg.WriteString(top + "\n")
 	for _, a := range []string{"claude", "antigravity", "copilot", "codex", "opencode"} {
 		if strings.Contains(tables, "[agents."+a+"]") {

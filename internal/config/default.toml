@@ -18,6 +18,9 @@ on_limit      = "ask"
 # What a pane does when its agent exits: "shell" (drop to your login shell) or "close".
 on_exit       = "shell"
 
+# Ask GitHub once a day whether a newer i-mux is out (Settings then offers it).
+update_check  = true
+
 # UI language: "" = from IMUX_LANG / LANG; "en" or "tr".
 locale        = ""
 
@@ -111,7 +114,7 @@ picker_key_prefix = "S"
 # Sidebar on the left of each window: panes, agents to continue in, split
 # buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3).
 sidebar           = true
-sidebar_width     = 41
+sidebar_width     = 43
 # prefix + key shows or hides the sidebar.
 sidebar_key_prefix = "b"
 # prefix + key splits the active pane (asks which agent to start).

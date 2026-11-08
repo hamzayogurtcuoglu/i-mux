@@ -23,8 +23,11 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/update"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 )
 
 // tmux options of the sidebar.
@@ -155,6 +158,7 @@ type Model struct {
 	Fold     map[string]bool // folded sections (@imux_fold)
 	View     string          // the view on the activity rail (@imux_view)
 	Closed   bool            // the panel is closed: only the rail shows (@imux_collapsed)
+	Update   string          // a newer i-mux release ("0.27.0"), "" when up to date
 	Tree     []TreeRow       // the explorer's rows (Explorer view)
 	SCM      *gitops.Status  // the Source Control view's repository (nil outside git)
 	Icons    string          // the rail's icon theme (IconsNerd, IconsEmoji)
@@ -229,6 +233,7 @@ type Source struct {
 	// CfgPath is the config file Reload watches ("" = never reload).
 	CfgPath string
 	cfgMod  time.Time
+	nerd    map[string]bool // terminal program → it draws Nerd Font icons
 	Now     func() time.Time
 	// Resolve reports installed agents; nil = agent.ResolveAll.
 	Resolve func(cfg *config.Config, st *state.State) map[session.AgentID]agent.Resolved
@@ -330,7 +335,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}\t#{client_termname}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -341,12 +346,12 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	var tabAuto, tabState string
 	fold := map[string]bool{}
 	view := ViewAgents
-	closed := false
-	if rows := tmux.Rows(sec["me"], 11); len(rows) > 0 {
+	closed, program := false, ""
+	if rows := tmux.Rows(sec["me"], 12); len(rows) > 0 {
 		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges {
 			view = v
 		}
-		closed = rows[0][10] == "1"
+		closed, program = rows[0][10] == "1", rows[0][11]
 		r := rows[0]
 		tabAuto, tabState = r[6], r[7]
 		for _, f := range strings.Split(r[8], ",") {
@@ -457,7 +462,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term)}
+	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program)}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target
@@ -466,6 +471,9 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	st, _ := state.Read()
 	if st == nil {
 		st = &state.State{}
+	}
+	if update.Newer(st.Latest, version.Version) {
+		m.Update = st.Latest
 	}
 	limited := func(id session.AgentID) string {
 		l := st.ActiveLimit(string(id), now)
@@ -713,9 +721,11 @@ func (s *Source) Reload() bool {
 }
 
 // iconTheme is the rail's icon theme: the configured one, or for "auto" the
-// editor's icons when a Nerd Font is installed or the terminal brings Nerd
-// Font symbols itself (Ghostty, WezTerm, kitty), else emoji.
-func (s *Source) iconTheme(term string) string {
+// editor's icons when the terminal draws them (termfont: Ghostty, WezTerm,
+// kitty, or Terminal.app / iTerm2 / VS Code with a Nerd Font), else emoji.
+// term is the client's terminal name, program the TERM_PROGRAM imux was
+// started from (@imux_terminal).
+func (s *Source) iconTheme(term, program string) string {
 	cfg := ""
 	if s.Cfg != nil {
 		cfg = s.Cfg.Tmux.Icons
@@ -724,66 +734,28 @@ func (s *Source) iconTheme(term string) string {
 	case IconsNerd, IconsEmoji:
 		return cfg
 	}
-	t := strings.ToLower(term)
-	if strings.Contains(t, "ghostty") || strings.Contains(t, "wezterm") || strings.Contains(t, "kitty") {
-		return IconsNerd
-	}
-	if nerdFontInstalled() {
+	if termfont.NerdFont(term) || s.nerdProgram(program) {
 		return IconsNerd
 	}
 	return IconsEmoji
 }
 
-var (
-	nerdOnce  sync.Once
-	nerdFound bool
-)
-
-// FontDirs are where installed fonts are looked for.
-var FontDirs = func() []string {
-	home, _ := os.UserHomeDir()
-	return []string{
-		filepath.Join(home, "Library", "Fonts"), "/Library/Fonts",
-		filepath.Join(home, ".local", "share", "fonts"), filepath.Join(home, ".fonts"),
-		"/usr/share/fonts", "/usr/local/share/fonts",
+// nerdProgram is termfont.NerdFont(program), asked once per program (it
+// reads the terminal's preferences).
+func (s *Source) nerdProgram(program string) bool {
+	if program == "" {
+		return false
 	}
+	if s.nerd == nil {
+		s.nerd = map[string]bool{}
+	}
+	v, ok := s.nerd[program]
+	if !ok {
+		v = NerdFontFor(program)
+		s.nerd[program] = v
+	}
+	return v
 }
 
-// nerdFontInstalled reports whether a Nerd Font file is installed (looked up
-// once per process).
-func nerdFontInstalled() bool {
-	nerdOnce.Do(func() { nerdFound = HasNerdFont(FontDirs()) })
-	return nerdFound
-}
-
-// HasNerdFont reports whether a font file with "Nerd" (or the "NF" suffix of
-// Nerd Fonts) in its name is in dirs (two levels deep).
-func HasNerdFont(dirs []string) bool {
-	match := func(n string) bool {
-		l := strings.ToLower(n)
-		if !strings.HasSuffix(l, ".ttf") && !strings.HasSuffix(l, ".otf") {
-			return false
-		}
-		return strings.Contains(l, "nerd") || strings.Contains(n, "NF-") || strings.Contains(n, "NFM-") || strings.Contains(n, "NerdFont")
-	}
-	for _, d := range dirs {
-		ents, err := os.ReadDir(d)
-		if err != nil {
-			continue
-		}
-		for _, e := range ents {
-			if match(e.Name()) {
-				return true
-			}
-			if e.IsDir() {
-				sub, _ := os.ReadDir(filepath.Join(d, e.Name()))
-				for _, f := range sub {
-					if match(f.Name()) {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
+// NerdFontFor is termfont.NerdFont; tests replace it.
+var NerdFontFor = termfont.NerdFont

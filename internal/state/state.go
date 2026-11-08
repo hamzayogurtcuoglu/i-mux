@@ -59,12 +59,16 @@ type State struct {
 	// Pinned holds the conversations pinned in History ("agent:id"), the
 	// newest pin first.
 	Pinned []string `json:"pinned,omitempty"`
+	// Latest is the newest i-mux release the watcher saw ("0.27.0") and
+	// LatestChecked when it asked (unix seconds).
+	Latest        string `json:"latest,omitempty"`
+	LatestChecked int64  `json:"latest_checked,omitempty"`
 
 	extra map[string]json.RawMessage
 }
 
 // known lists the JSON keys of typed fields.
-var known = []string{"version", "limits", "bins", "notices", "bus_sends", "recent", "pinned"}
+var known = []string{"version", "limits", "bins", "notices", "bus_sends", "recent", "pinned", "latest", "latest_checked"}
 
 type plain State // no methods: avoids recursion
 

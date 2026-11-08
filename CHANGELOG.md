@@ -6,6 +6,25 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-08
+
+### Added
+
+- **Update from Settings:** "Update i-mux" installs the newest release (or `imux update`). i-mux
+  looks once a day whether a newer one is out; then Settings on the rail turns yellow and its
+  first row says which version.
+
+### Changed
+
+- **Icons draw everywhere:** the editor's icons are used only when your terminal's font has
+  them (Terminal.app, iTerm2 and VS Code with a Nerd Font; Ghostty, WezTerm, kitty); otherwise
+  emoji. Before, an installed Nerd Font was enough, and a terminal using another font showed "?".
+- The rail says **Settings** (it is 2 columns wider; the default sidebar width is 43).
+- The top right of the tab bar is empty: the agents' states and the clock were already in the
+  sidebar.
+- Releases no longer fail when GitHub's download of the release tool times out (0.24.0, 0.25.0
+  and 0.25.1 were never published; their changes are in this release).
+
 ## [0.26.1] - 2026-11-08
 
 ### Fixed
