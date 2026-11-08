@@ -9,18 +9,18 @@ import (
 )
 
 // TestUnknownAgentPane: a pane left by a version that knew an agent this one
-// does not (0.18 had OpenCode) still shows in the sidebar, and switching it
-// to a known agent works.
+// does not (one a later version added, or one taken out) still shows in the
+// sidebar, and switching it to a known agent works.
 func TestUnknownAgentPane(t *testing.T) {
 	h := newH(t, sidebarConfig)
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
-	h.mustTmux("set-option", "-p", "-t", agentPane, "@imux_agent", "opencode", ";",
-		"set-option", "-p", "-t", agentPane, "@imux_label", "OpenCode", ";",
-		"set-option", "-p", "-t", agentPane, "@imux_trail", `[{"a":"opencode","s":1794089033463,"id":"ses_imux0123"}]`)
+	h.mustTmux("set-option", "-p", "-t", agentPane, "@imux_agent", "oldagent", ";",
+		"set-option", "-p", "-t", agentPane, "@imux_label", "Old Agent", ";",
+		"set-option", "-p", "-t", agentPane, "@imux_trail", `[{"a":"oldagent","s":1794089033463,"id":"0123"}]`)
 	h.mustImux("__sidebar-refresh")
 	h.waitFor("sidebar lists the pane", 5*time.Second, func() bool {
-		return strings.Contains(strings.ToLower(h.screen(bar)), "opencode")
+		return strings.Contains(strings.ToLower(h.screen(bar)), "oldagent")
 	})
 
 	h.mustImux("switch", "codex", "--pane", agentPane)

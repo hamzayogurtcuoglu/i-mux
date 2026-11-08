@@ -168,7 +168,7 @@ func TestReportTableAndJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(b.String()), &back); err != nil {
 		t.Fatal(err)
 	}
-	if len(back.Agents) != 4 || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
+	if len(back.Agents) != 5 || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
 		back.Agents[1].Agent != "antigravity" || back.Agents[1].Usage.Window != "today" || back.Agents[1].Usage.Replies != 2 ||
 		back.Agents[3].Status != "warn" {
 		t.Fatalf("json %+v\n%s", back, b.String())

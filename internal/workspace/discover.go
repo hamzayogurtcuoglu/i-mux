@@ -106,8 +106,9 @@ func (w *WS) Discover(ctx context.Context, f *sources.Finder, p *Pane, all []*Pa
 		return session.Ref{}, err
 	}
 	var cands []session.Ref
+	shared := session.SharedStore(cur.Agent) // one database: the path says nothing
 	for _, r := range refs {
-		if !claimedFile[r.Path] && !claimedID[r.ID] {
+		if (shared || !claimedFile[r.Path]) && !claimedID[r.ID] {
 			cands = append(cands, r)
 		}
 	}

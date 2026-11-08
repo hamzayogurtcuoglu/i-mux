@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-08
+
+### Added
+
+- **OpenCode is back** as the fifth agent (key `e`), as in 0.18: chats move to and from it with
+  their context, it resumes its own sessions, and its sessions are in History. Add an NVIDIA or
+  Groq key inside OpenCode with `/connect` (no account needed) and pick the model with `/models`.
+
 ## [0.19.0] - 2026-11-08
 
 ### Removed

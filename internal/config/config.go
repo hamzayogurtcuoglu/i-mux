@@ -17,7 +17,7 @@ import (
 )
 
 // AgentIDs are the agents imux knows, in default order.
-var AgentIDs = []string{"claude", "antigravity", "copilot", "codex"}
+var AgentIDs = []string{"claude", "antigravity", "copilot", "codex", "opencode"}
 
 // RemovedAgents were supported once. A config that still names one loads
 // with a warning instead of an error.
@@ -177,6 +177,13 @@ func defaultAgents() map[string]*Agent {
 		"codex": {
 			NewArgs:    []string{"{prompt}"},
 			ResumeArgs: []string{"resume", "{id}", "{prompt}"},
+			Resume:     true,
+		},
+		// OpenCode: --session creates a session with the id imux chooses
+		// (it must start with "ses") or continues it.
+		"opencode": {
+			NewArgs:    []string{"--session", "ses_imux{uuid}", "--prompt", "{prompt}"},
+			ResumeArgs: []string{"--session", "{id}", "--prompt", "{prompt}"},
 			Resume:     true,
 		},
 	}

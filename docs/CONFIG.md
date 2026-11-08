@@ -10,7 +10,7 @@ line number.
 
 | Key | Default | Description |
 |---|---|---|
-| `order` | `["claude", "antigravity", "copilot", "codex"]` | Agent order: menu order, agent bar order and auto-switch priority. |
+| `order` | `["claude", "antigravity", "copilot", "codex", "opencode"]` | Agent order: menu order, agent bar order and auto-switch priority. |
 | `default_agent` | `""` | Agent started by a plain `imux`. "" = first installed agent in `order`. |
 | `on_limit` | `"ask"` | What happens when an agent hits its usage limit: ask  = show a "continue in ..." menu (default) auto = switch to the first installed, non-limited agent in `order` off  = only show the limit in the status bar |
 | `on_exit` | `"shell"` | What a pane does when its agent exits: "shell" (drop to your login shell) or "close". |
@@ -71,6 +71,9 @@ line number.
 | `agents.codex.new_args` | `["{prompt}"]` | Template for a new session; the handoff goes in {prompt}. |
 | `agents.codex.resume_args` | `["resume", "{id}", "{prompt}"]` | Template for resuming a native session ({id}) with a delta handoff. |
 | `agents.codex.home` | `""` | Where the agent keeps its sessions. "" = $CODEX_HOME or ~/.codex |
+| `agents.opencode.new_args` | `["--session", "ses_imux{uuid}", "--prompt", "{prompt}"]` | Template for a new session; the handoff goes in {prompt}. |
+| `agents.opencode.resume_args` | `["--session", "{id}", "--prompt", "{prompt}"]` | Template for resuming a native session ({id}) with a delta handoff. |
+| `agents.opencode.home` | `""` | Where the agent keeps its sessions. "" = $XDG_DATA_HOME/opencode or ~/.local/share/opencode |
 
 Agent ids are `claude`, `antigravity`, `copilot` and `codex`. Launch templates use the placeholders
 `{prompt}` (the handoff, at most once), `{id}` (the session to resume) and `{uuid}` (a new id).
@@ -85,7 +88,7 @@ A placeholder with an empty value is dropped together with the flag before it.
 # Regex patterns use TOML literal strings ('...'), so backslashes need no escaping.
 
 # Agent order: menu order, agent bar order and auto-switch priority.
-order         = ["claude", "antigravity", "copilot", "codex"]
+order         = ["claude", "antigravity", "copilot", "codex", "opencode"]
 
 # Agent started by a plain `imux`. "" = first installed agent in `order`.
 default_agent = ""
@@ -244,6 +247,18 @@ args                     = []
 new_args                 = ["{prompt}"]
 resume_args              = ["resume", "{id}", "{prompt}"]
 home                     = ""   # "" = $CODEX_HOME or ~/.codex
+resume                   = true
+patterns                 = []
+replace_default_patterns = false
+
+# OpenCode: works with any model endpoint you configure in OpenCode itself
+# (OpenAI-compatible APIs, Anthropic, Ollama, NVIDIA, Groq ...).
+[agents.opencode]
+bin                      = ""
+args                     = []
+new_args                 = ["--session", "ses_imux{uuid}", "--prompt", "{prompt}"]
+resume_args              = ["--session", "{id}", "--prompt", "{prompt}"]
+home                     = ""   # "" = $XDG_DATA_HOME/opencode or ~/.local/share/opencode
 resume                   = true
 patterns                 = []
 replace_default_patterns = false

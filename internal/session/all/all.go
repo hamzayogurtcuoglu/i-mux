@@ -6,4 +6,5 @@ import (
 	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/claude"      // Claude Code
 	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/codex"       // Codex CLI
 	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/copilot"     // Copilot CLI
+	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/opencode"    // OpenCode
 )

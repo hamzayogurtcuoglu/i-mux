@@ -90,6 +90,15 @@ func Collect(ctx context.Context, cfg *config.Config, st *state.State, installed
 			}
 		case session.Codex:
 			row.Usage = &Usage{Window: "latest", RateLimits: CodexLimits(ctx, f)}
+		case session.OpenCode:
+			row.Usage = &Usage{Window: "opencode", From: now.Add(-5 * time.Hour)}
+			if p, ok := f.Provider(session.OpenCode).(interface {
+				Tokens(context.Context, time.Time) (int64, int64, int, error)
+			}); ok {
+				if in, out, n, err := p.Tokens(ctx, now.Add(-5*time.Hour)); err == nil {
+					row.Usage.InputTokens, row.Usage.OutputTokens, row.Usage.Sessions = in, out, n
+				}
+			}
 		}
 		r.Agents = append(r.Agents, row)
 	}
@@ -166,6 +175,8 @@ func (r *Report) Table(w io.Writer) error {
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.pct_later_codex"), reset)
 		case row.Agent == session.Copilot:
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.pct_later_copilot"), reset)
+		case row.Agent == session.OpenCode:
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.opencode"), reset)
 		default:
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.no_pct", name), reset)
 		}
@@ -254,6 +265,8 @@ func usageText(row Row, now time.Time) string {
 		return i18n.T("limits.copilot", strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", u.PremiumRequests), "0"), "."))
 	case "latest":
 		return "" // Codex: its windows are drawn as bars
+	case "opencode":
+		return i18n.T("limits.opencode_tokens", short(u.InputTokens), short(u.OutputTokens), u.Sessions)
 	}
 	return ""
 }
