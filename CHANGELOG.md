@@ -6,10 +6,10 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
-## [0.27.1] - 2026-11-08
+## [0.27.2] - 2026-11-08
 
-0.27.0 was tagged, but its build could not find the release tool it had just built; it was
-never released. This release holds the same changes.
+0.27.0 and 0.27.1 were tagged, but their builds could not build the release tool (it needs a
+newer Go than the runner had); they were never released. This release holds the same changes.
 
 ### Added
 
