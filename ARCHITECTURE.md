@@ -106,6 +106,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D27 | **The sidebar's source control works like an editor's** (added 2026-11-08, v0.16): staged and unstaged changes, per-file stage / unstage / discard, stage / unstage / discard all, commit (a prompt; with nothing staged it stages everything first), push / pull / sync with ahead and behind counts, branch checkout and creation, and the recent history. Git runs in the project folder; discards ask first; network commands run in a popup so their output and any password prompt show. Files open in an editor (micro, $VISUAL/$EDITOR, nano, vim with the mouse on) or VS Code. | The user asked for the editor's source control "with every feature", and to edit files, not only read them. imux stays a thin layer over git and the user's editor: no git library, no editor of its own. |
 | D28 | **OpenCode is the fifth agent** (added 2026-11-08, v0.18, at the user's request; taken out in v0.19, back in v0.20: its `/connect` adds an NVIDIA or Groq key without an account): an open-source coding CLI that works with any model endpoint (OpenAI-compatible APIs, Anthropic, Ollama, NVIDIA's and Groq's free tiers ...). imux supports it like the others: launch with a session id imux chooses, native resume, sessions read for handoffs, the picker and limits. | The user wants to code with free or self-hosted endpoints too. Writing an agent of our own would be a separate project (§17 Q32); OpenCode already does it well, so the cheap path is to support it. |
 | D29 | **Commit messages are written by the user's own agents, run once without a UI** (added 2026-11-08, v0.23, at the user's request): the ✨ button in Source Control sends the changes to the agent of the pane the sidebar follows (or `git.commit_agent`) in its print mode and offers the reply; it never commits by itself. | Like the editor's "generate commit message", without an API or key of imux's own: the user's plans and keys (Claude, Codex, Copilot, Antigravity, or OpenCode with a free NVIDIA / Groq key) already pay for it. |
+| D31 | **The sidebar draws backgrounds for hover and selection, and asks for every mouse motion** (added 2026-11-08, v0.30, at the user's request): a row or button under the pointer gets a background, the selected explorer row another; explorer menus follow the editor's. | The user could not tell which row the pointer or a menu was on. The "foreground colors only" rule (any theme keeps its background) gives way where the editor itself uses backgrounds; the sidebar's text colors already assume a dark theme. Motion reports cost a redraw only when the item under the pointer changes. |
 | D30 | **AI completion in the editor is Neovim with GitHub's copilot.vim, in a profile i-mux manages** (added 2026-11-08, v0.25, at the user's request): when Settings turns it on, file edits open `nvim` with `NVIM_APPNAME=imux-nvim`; i-mux writes that profile's `init.lua` (mouse, Ctrl+S / Ctrl+Q, Tab accepts) and keeps copilot.vim in it. | Inline suggestions are an editor feature, and i-mux edits in an external terminal editor. Neovim with the official plugin gives the editor's Copilot suggestions with the user's Copilot plan; micro has no such plugin; our own editor would be a project of its own. A separate profile leaves the user's own Neovim setup untouched. |
 
 ## 4. Components
@@ -1434,6 +1435,58 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   text goes after it.
 - `[paste] images = true` (Settings: "Paste images with Ctrl+V"). `imux doctor` says what reads
   the clipboard here (or what to install: `wl-clipboard`, `xclip`).
+
+#### Explorer menus and hover (v0.30, D31)
+
+- **Hover:** whatever a click would act on (a row, a button, a rail icon, in every view) gets a
+  background while the pointer is over it, as in the editor. The sidebar asks for every mouse
+  motion (`\e[?1003h`; tmux forwards motion to a pane that asks for it) and redraws only when the
+  thing under the pointer changes. tmux sends nothing when the pointer leaves a pane, so the hover
+  goes when the pointer is on the sidebar's first or last column, and on a motion over a pane
+  border (`MouseMoveBorder` runs `imux __sidebar-leave`, which sends every sidebar a motion
+  report outside it). Colors: hover 256-color 238, selection 24 (the editor's dark blue).
+- **Selection:** the explorer row last clicked, right-clicked, created, renamed or pasted keeps
+  the selection background, so it is clear which file a menu or popup is about.
+- **Right-click menus** (`display-menu` at the pointer), as in the editor; items that do not
+  apply are left out:
+  - **file:** Open (the editor popup, as a click) · Open to the Side (the editor in a new pane
+    beside the target) · Open in VS Code · View · Add to Agent (its path, as a bracketed paste,
+    into the target agent) · Reveal in Finder (macOS) / Reveal in File Explorer (WSL) / Open
+    Containing Folder (Linux with a desktop) · Open in Terminal (a shell pane in its folder) ·
+    Select for Compare / Compare with Selected · Cut · Copy · Paste (into its folder) · Copy
+    Path · Copy Relative Path · Rename… · Delete;
+  - **folder:** New File… · New Folder… · Reveal / Open Containing Folder · Open in Terminal ·
+    Find in Folder… (the search popup in that folder) · Add to Agent · Cut · Copy · Paste ·
+    Copy Path · Copy Relative Path · Rename… · Delete;
+  - **empty space and the title:** New File… · New Folder… · Reveal · Open in Terminal · Find in
+    Folder… · Paste · Copy Path · Collapse Folders.
+- **Operations** run `imux __file <op>`; the item's path is not in the menu's commands but in the
+  global options `@imux_file` (absolute) and `@imux_file_root` (the project), set just before the
+  menu opens, so any character in a name is safe. Names typed in a prompt arrive through
+  `@imux_file_name` (`command-prompt` with `"%%%"`).
+  - New File / New Folder: in the folder (a file's: its folder); `a/b.txt` makes the folders on
+    the way; an existing name is an error message. A new file opens in the editor.
+  - Rename: the prompt starts with the current name; the target must not exist.
+  - Delete: a confirm menu, then the Trash: macOS `NSFileManager trashItemAtURL` (osascript JXA;
+    Put Back works); Linux `gio trash`, else the freedesktop home Trash
+    (`$XDG_DATA_HOME/Trash/files` + `.trashinfo`). When the Trash cannot take it (another disk), a
+    second menu offers Delete Permanently. `IMUX_TRASH_DIR` replaces the Trash (tests).
+  - Cut / Copy / Paste: `@imux_file_clip` = `cut|copy` and the path (every sidebar shares it, as
+    in the editor). Paste copies (folders recursively) or moves (rename; another disk: copy, then
+    remove) into the folder; a taken name becomes `name copy.ext`, `name copy 2.ext` …; a folder
+    is never pasted into itself. A cut is pasted once.
+  - Copy Path / Copy Relative Path: the system clipboard (`pbcopy`; `wl-copy`; `xclip -selection
+    clipboard`; WSL `clip.exe` through PowerShell `Set-Clipboard` for non-ASCII) and always the
+    tmux buffer with `set-buffer -w` (OSC 52: the terminal's clipboard, over SSH too).
+    `IMUX_COPY_COMMAND` replaces the system clipboard (tests).
+  - Reveal: `open -R` (macOS); `explorer.exe /select,<wslpath -w>` (WSL); D-Bus
+    `org.freedesktop.FileManager1.ShowItems`, else `xdg-open` on the folder (Linux).
+  - Compare: Select for Compare keeps `@imux_compare`; Compare with Selected shows `imux __diff
+    --compare A B` (`git diff --no-index`, else `diff -u`, drawn like the other diffs).
+  - Open in Terminal: `split-window -v -l 30%` beside the target pane, in the folder, the user's
+    shell. Open to the Side: `split-window -h` running the editor.
+  - Every change redraws the sidebars and reveals the result: `@imux_reveal` (a counter and the
+    path) makes each sidebar of that project open the folders above it and select it.
 
 #### Notifications (v0.28)
 

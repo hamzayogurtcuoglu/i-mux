@@ -867,6 +867,25 @@ User request: Ctrl+V a copied screenshot into any agent, every time, on macOS, L
   - AC: e2e with a fake clipboard tool: Ctrl+V twice gives two files in the agent's input; no
     image passes Ctrl+V through; README.
 
+## M34: Explorer like the editor's (added 2026-11-08)
+
+User request: right-click on files and folders gives the editor's menu (paths, relative paths,
+everything similar); what the pointer is over lights up.
+
+- [ ] **T34.1 Hover and selection** · M
+  - AC: motion reports (`?1003h`) parsed; the item under the pointer drawn with a background in
+    every view, redrawn only on change; cleared on the edge columns and on `MouseMoveBorder`
+    (`imux __sidebar-leave`); the selected explorer row kept; unit tests on parsing and painting.
+- [ ] **T34.2 Menus and file operations** · L · deps: T34.1
+  - AC: file, folder and empty-space menus at the pointer with the items of §9.3 "Explorer
+    menus"; `imux __file` (new-file, new-folder, rename, delete → Trash, cut / copy / paste,
+    copy-path, copy-relative-path, reveal, terminal, side, compare, add-to-agent, collapse); paths
+    through options; `@imux_reveal`; `__diff --compare`; unit tests with temp folders.
+- [ ] **T34.3 E2E and docs** · M · deps: T34.2
+  - AC: e2e on macOS and Linux: hover background on a row and gone on the border; right-click
+    menus list the items; New File, Rename, Delete (into `IMUX_TRASH_DIR`), Copy / Paste, Copy
+    Relative Path (`IMUX_COPY_COMMAND` and the tmux buffer) do what they say; README.
+
 ---
 
 ## Testing strategy
