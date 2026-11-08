@@ -47,12 +47,13 @@ func TabFormat() string {
 	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }"
 	// Every range is followed by a cell outside any range: tmux 3.4 makes a
 	// range one cell longer than drawn, so a range right after another loses
-	// its first cell (the current tab took the click on its ×).
+	// its first cell (the current tab took the click on its ×). The × takes
+	// 3 columns, like the +.
 	return "#[align=left] " +
 		"#{W:" +
 		"#[range=window|#{window_index}]#[fg=colour245]" + tab + " #[norange default] ," +
 		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange] " +
-		"#[range=user|imux:close]#[bg=colour236 fg=colour245 nobold]× #[norange default] " +
+		"#[range=user|imux:close]#[bg=colour236 fg=colour245 nobold] × #[norange default] " +
 		"}" +
 		"#[range=user|imux:tab]#[fg=colour245] + #[norange default]" +
 		"#[align=right]#{T:status-right}"

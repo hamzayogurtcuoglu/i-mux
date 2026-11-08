@@ -760,10 +760,10 @@ without an account.
 
 ## M26: Buttons you can see and hit (added 2026-11-08)
 
-- [ ] **T26.1 Icons and sizes** · S
+- [x] **T26.1 Icons and sizes** · S
   - AC: every sidebar button uses the theme's icon (codicons or emoji) and takes ≥ 3 columns;
     lines keep their width in both themes; unit tests.
-- [ ] **T26.2 Tab bar and e2e** · S · deps: T26.1
+- [x] **T26.2 Tab bar and e2e** · S · deps: T26.1
   - AC: the tab's × takes 3 columns (tmux 3.4 gap kept); goldens; e2e clicks still stage,
     discard and close; README.
 

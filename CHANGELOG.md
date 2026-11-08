@@ -6,6 +6,16 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-08
+
+### Changed
+
+- **Buttons you can see and hit.** The sidebar's buttons use the rail's icons: with a Nerd Font the
+  editor's own (add, discard, refresh, pull, push, sync, check, branch, chevrons, edit, history,
+  search),
+  otherwise emoji that every font draws at full size. Each takes at least 3 columns; before, they
+  were 1-column signs (⟳ ↶ ⇅ ⌕ + −) in 2-column cells. The tab bar's × takes 3 columns too.
+
 ## [0.21.0] - 2026-11-08
 
 ### Added

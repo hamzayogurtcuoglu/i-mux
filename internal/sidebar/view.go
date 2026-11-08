@@ -119,16 +119,13 @@ func gitColor(st string) string {
 }
 
 // treeRow draws one explorer entry.
-func treeRow(r TreeRow, w int) Line {
+func treeRow(r TreeRow, w int, ic Icons) Line {
 	indent := strings.Repeat("  ", min(r.Depth, 8))
 	color := gitColor(r.Git)
 	mark := "  "
 	a := Action{Kind: ActOpenFile, Path: r.Path}
 	if r.Dir {
-		mark = muted + "▸ " + reset
-		if r.Open {
-			mark = muted + "▾ " + reset
-		}
+		mark = muted + ic.fold(!r.Open) + " " + reset
 		a = Action{Kind: ActToggleDir, Path: r.Path}
 	}
 	right, rw := "", 0
@@ -163,12 +160,11 @@ func scrolled(list []Line, scroll, n int) []Line {
 // renderExplorer is the Explorer view: a title with the search button and
 // the project's tree.
 func renderExplorer(m Model, w, h int) []Line {
-	cells := []Cell{{X: 0, W: w - 3, Text: title + fit(" "+i18n.T("sidebar.explorer")+" · "+m.Project, w-3) + reset}}
-	cells = append(cells, Cell{X: w - 3, W: 3, Text: muted + " ⌕ " + reset, Action: Action{Kind: ActSearch}})
-	out := []Line{{Text: compose(cells, w), Cells: cells}}
+	search := button(m.icons().Search, muted, Action{Kind: ActSearch})
+	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.explorer")+" · "+m.Project, w-search.W) + reset}, search)}
 	var rows []Line
 	for _, r := range m.Tree {
-		rows = append(rows, treeRow(r, w))
+		rows = append(rows, treeRow(r, w, m.icons()))
 	}
 	if len(rows) == 0 {
 		rows = append(rows, Line{Text: muted + fit("   "+i18n.T("sidebar.empty_folder"), w) + reset})
@@ -187,14 +183,14 @@ const (
 	SecHistory  = "history"
 )
 
-// buttons lays out a row: a main cell (the rest of the width) and small
-// buttons on the right, each " x".
+// buttons lays out a row: a main cell (the rest of the width) and the
+// buttons on the right.
 func buttons(w int, main Cell, btns ...Cell) Line {
 	bw := 0
 	for _, b := range btns {
 		bw += b.W
 	}
-	main.X, main.W = 0, w-bw-1
+	main.X, main.W = 0, w-bw
 	cells := []Cell{main}
 	x := main.W
 	for _, b := range btns {
@@ -205,28 +201,23 @@ func buttons(w int, main Cell, btns ...Cell) Line {
 	return Line{Text: compose(cells, w), Cells: cells}
 }
 
-// btn is a 2-column button.
-func btn(sym, color string, a Action) Cell {
-	return Cell{W: 2, Text: " " + color + sym + reset, Action: a}
-}
-
 // scmRow is one changed file of the Source Control view with its buttons.
-func scmRow(c gitops.Change, staged bool, w int) Line {
+func scmRow(c gitops.Change, staged bool, w int, ic Icons) Line {
 	cr := ChangeRow{Status: c.Status, Path: c.Path, Added: c.Added, Removed: c.Removed}
 	side := "worktree"
 	var bs []Cell
 	if staged {
 		side = "staged"
-		bs = append(bs, btn("−", muted, Action{Kind: ActGit, Section: "unstage", Path: c.Path}))
+		bs = append(bs, button(ic.Remove, muted, Action{Kind: ActGit, Section: "unstage", Path: c.Path}))
 	} else {
 		st := ""
 		if c.Untracked {
 			st = "?"
 		}
-		bs = append(bs, btn("↶", muted, Action{Kind: ActGitConfirm, Section: "discard", Path: c.Path, Status: st}),
-			btn("+", muted, Action{Kind: ActGit, Section: "stage", Path: c.Path}))
+		bs = append(bs, button(ic.Discard, muted, Action{Kind: ActGitConfirm, Section: "discard", Path: c.Path, Status: st}),
+			button(ic.Add, muted, Action{Kind: ActGit, Section: "stage", Path: c.Path}))
 	}
-	inner := changeRow(cr, w-2*len(bs)-1)
+	inner := changeRow(cr, w-width(bs))
 	main := Cell{Text: inner.Text, Action: Action{Kind: ActDiff, Path: c.Path, Status: c.Status, Section: side}}
 	return buttons(w, main, bs...)
 }
@@ -241,8 +232,9 @@ func renderChanges(m Model, w, h int) []Line {
 		}
 	}
 	folded := func(n string) bool { return m.Fold[n] }
-	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.source_control"), w-3) + reset},
-		Cell{W: 2, Text: " " + muted + "⟳" + reset, Action: Action{Kind: ActRefresh}})}
+	ic := m.icons()
+	refresh := button(ic.Refresh, muted, Action{Kind: ActRefresh})
+	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.source_control"), w-refresh.W) + reset}, refresh)}
 
 	// Branch, ahead / behind, sync.
 	branch := st.Branch
@@ -254,17 +246,18 @@ func renderChanges(m Model, w, h int) []Line {
 		sync = "↑" + strconv.Itoa(st.Ahead) + " ↓" + strconv.Itoa(st.Behind)
 	}
 	syncBtns := []Cell{
-		{W: 3, Text: " " + muted + "↓" + reset + " ", Action: Action{Kind: ActGitPopup, Section: "pull"}},
-		{W: 3, Text: " " + muted + "↑" + reset + " ", Action: Action{Kind: ActGitPopup, Section: "push"}},
-		{W: 2, Text: " " + cyan + "⇅" + reset, Action: Action{Kind: ActGitPopup, Section: "sync"}},
+		button(ic.Pull, muted, Action{Kind: ActGitPopup, Section: "pull"}),
+		button(ic.Push, muted, Action{Kind: ActGitPopup, Section: "push"}),
+		button(ic.Sync, cyan, Action{Kind: ActGitPopup, Section: "sync"}),
 	}
-	// " ⎇ " name " " sync, in the w-9 columns left of the three buttons.
-	left := " " + cyan + "⎇" + reset + " " + fit(branch+" ▾", max(w-13-runes(sync), 4)) + " " + muted + sync + reset
+	// " ⎇ " name " " sync, left of the three buttons.
+	nw := max(w-width(syncBtns)-(DisplayWidth(ic.Branch)+2)-1-runes(sync), 4)
+	left := " " + cyan + ic.Branch + reset + " " + fit(branch+" "+ic.Open, nw) + " " + muted + sync + reset
 	out = append(out, buttons(w, Cell{Text: left, Action: Action{Kind: ActBranchMenu}}, syncBtns...))
 
 	// Commit button.
-	label := "✓ " + i18n.T("git.commit_button")
-	pad := max(w-2-runes(label), 0)
+	label := ic.Commit + " " + i18n.T("git.commit_button")
+	pad := max(w-2-DisplayWidth(label), 0)
 	out = append(out, Line{
 		Text:   " " + "\x1b[48;5;24m\x1b[38;5;255m" + strings.Repeat(" ", pad/2) + label + strings.Repeat(" ", pad-pad/2) + reset + " ",
 		Action: Action{Kind: ActCommit},
@@ -272,32 +265,29 @@ func renderChanges(m Model, w, h int) []Line {
 
 	var rows []Line
 	section := func(name, text string, n int, btns ...Cell) {
-		arrow := "▾"
-		if folded(name) {
-			arrow = "▸"
-		}
+		arrow := ic.fold(folded(name))
 		head := Cell{
-			Text:   " " + muted + arrow + reset + " " + title + fit(text+"  "+strconv.Itoa(n), w-4-2*len(btns)) + reset,
+			Text:   " " + muted + arrow + reset + " " + title + fit(text+"  "+strconv.Itoa(n), w-3-width(btns)) + reset,
 			Action: Action{Kind: ActFold, Section: name},
 		}
 		rows = append(rows, buttons(w, head, btns...))
 	}
 	if len(st.Staged) > 0 {
-		section(SecStaged, i18n.T("git.staged"), len(st.Staged), btn("−", muted, Action{Kind: ActGit, Section: "unstage-all"}))
+		section(SecStaged, i18n.T("git.staged"), len(st.Staged), button(ic.Remove, muted, Action{Kind: ActGit, Section: "unstage-all"}))
 		if !folded(SecStaged) {
 			for _, c := range st.Staged {
-				rows = append(rows, scmRow(c, true, w))
+				rows = append(rows, scmRow(c, true, w, ic))
 			}
 		}
 	}
 	section(SecUnstaged, i18n.T("git.changes"), len(st.Changes),
-		btn("↶", muted, Action{Kind: ActGitConfirm, Section: "discard-all"}), btn("+", muted, Action{Kind: ActGit, Section: "stage-all"}))
+		button(ic.Discard, muted, Action{Kind: ActGitConfirm, Section: "discard-all"}), button(ic.Add, muted, Action{Kind: ActGit, Section: "stage-all"}))
 	if !folded(SecUnstaged) {
 		if len(st.Changes) == 0 {
 			rows = append(rows, Line{Text: muted + fit("   "+i18n.T("sidebar.no_changes"), w) + reset})
 		}
 		for _, c := range st.Changes {
-			rows = append(rows, scmRow(c, false, w))
+			rows = append(rows, scmRow(c, false, w, ic))
 		}
 	}
 	if len(st.History) > 0 {

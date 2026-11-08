@@ -111,7 +111,7 @@ func TestRender(t *testing.T) {
 		"▾ AGENTS", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Terminal",
 		"blog", "▲  blog pass", "9m ●", "✻  Claude", "3d ○",
 		"Continue this chat in", "▲ Antigravity", "◉ Copilot", "◎ Codex",
-		"✎ Rename", "⧉ History", "▌ 🤖", "Agents", "📁", "Files", "🔍", "Search", "🔀", "Git 3", "📊", "Limits", "❓", "Help",
+		"📝 Rename", "📜 History", "▌ 🤖", "Agents", "📁", "Files", "🔍", "Search", "🔀", "Git 3", "📊", "Limits", "❓", "Help",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sidebar lacks %q:\n%s", want, text)
@@ -128,7 +128,7 @@ func TestRender(t *testing.T) {
 	find := func(sc Screen, sub string) (Line, int) {
 		for _, l := range sc.Lines {
 			if i := strings.Index(Plain(l.Text), sub); i >= 0 {
-				return l, utf8.RuneCountInString(Plain(l.Text)[:i])
+				return l, DisplayWidth(Plain(l.Text)[:i])
 			}
 		}
 		t.Fatalf("no row with %q", sub)
@@ -143,8 +143,8 @@ func TestRender(t *testing.T) {
 		{" B  blog", Action{Kind: ActProject, Session: "blog-3c4d"}},
 		{"▲ Antigravity", Action{Kind: ActSwitch, Agent: "antigravity"}},
 		{"◎ Codex", Action{Kind: ActSwitch, Agent: "codex"}},
-		{"✎ Rename", Action{Kind: ActRename}},
-		{"⧉ History", Action{Kind: ActSessions}},
+		{"📝 Rename", Action{Kind: ActRename}},
+		{"📜 History", Action{Kind: ActSessions}},
 	} {
 		// Hit-test at the text's column: some rows hold several buttons.
 		l, x := find(sc, c.row)
@@ -180,7 +180,7 @@ func TestRender(t *testing.T) {
 	short := Render(model(), 41, 16, NoItem)
 	stext := screenText(short)
 	t.Logf("\n%s", stext)
-	for _, want := range []string{"AGENTS", "backend fix", "Continue this chat in", "✎ Rename"} {
+	for _, want := range []string{"AGENTS", "backend fix", "Continue this chat in", "📝 Rename"} {
 		if !strings.Contains(stext, want) {
 			t.Errorf("short sidebar lacks %q:\n%s", want, stext)
 		}
@@ -190,7 +190,7 @@ func TestRender(t *testing.T) {
 	}
 	// Tall: the toolbar and the rail's Help are on the last row.
 	tall := Render(model(), 41, 50, NoItem)
-	if last := Plain(tall.Lines[49].Text); !strings.Contains(last, "⧉ History") || !strings.HasPrefix(last, " Help │") ||
+	if last := Plain(tall.Lines[49].Text); !strings.Contains(last, "📜 History") || !strings.HasPrefix(last, " Help │") ||
 		strings.Trim(Plain(tall.Lines[30].Text), " │") != "" {
 		t.Errorf("toolbar not at the bottom:\n%s", screenText(tall))
 	}
@@ -262,7 +262,7 @@ func TestExplorer(t *testing.T) {
 	sc := Render(m, 41, 12, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
-	for _, want := range []string{"EXPLORER · acme-api", "⌕", "▸ docs", "▾ src", "▸ auth", "main.ts", "README.md", "▌ 📁"} {
+	for _, want := range []string{"EXPLORER · acme-api", "🔍", "▸ docs", "▾ src", "▸ auth", "main.ts", "README.md", "▌ 📁"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("explorer lacks %q", want)
 		}
@@ -287,7 +287,7 @@ func TestExplorer(t *testing.T) {
 	if a := find("main.ts"); a != (Action{Kind: ActOpenFile, Path: "src/main.ts"}) {
 		t.Errorf("file %+v", a)
 	}
-	if a := find("⌕"); a.Kind != ActView && a.Kind != ActSearch {
+	if a := find("🔍"); a.Kind != ActView && a.Kind != ActSearch {
 		t.Errorf("search %+v", a)
 	}
 	// Scrolling keeps the title and moves the list.
@@ -318,7 +318,7 @@ func TestChangesView(t *testing.T) {
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
-		"SOURCE CONTROL", "⟳", "⎇ main ▾", "↑1 ↓0", "⇅", "✓ Commit…", "▾ STAGED CHANGES  1", "M  a.go", "+3 −1",
+		"SOURCE CONTROL", "🔄", "🌿 main ▾", "↑1 ↓0", "🔃", "✅ Commit…", "▾ STAGED CHANGES  1", "M  a.go", "+3 −1",
 		"▾ CHANGES  2", "M  b.go", "?  c.txt", "▾ HISTORY  1", "a1b2c3d feat: login", "2h", "▌ 🔀",
 	} {
 		if !strings.Contains(text, want) {
@@ -351,10 +351,10 @@ func TestChangesView(t *testing.T) {
 	if a := lineEnd("a.go").ActionAt(39); a != (Action{Kind: ActGit, Section: "unstage", Path: "a.go"}) {
 		t.Errorf("unstage button %+v", a)
 	}
-	if a := lineEnd("b.go").ActionAt(39); a != (Action{Kind: ActGit, Section: "stage", Path: "b.go"}) {
+	if a := lineEnd("b.go").ActionAt(37); a != (Action{Kind: ActGit, Section: "stage", Path: "b.go"}) {
 		t.Errorf("stage button %+v", a)
 	}
-	if a := lineEnd("c.txt").ActionAt(37); a != (Action{Kind: ActGitConfirm, Section: "discard", Path: "c.txt", Status: "?"}) {
+	if a := lineEnd("c.txt").ActionAt(33); a != (Action{Kind: ActGitConfirm, Section: "discard", Path: "c.txt", Status: "?"}) {
 		t.Errorf("discard button %+v", a)
 	}
 	if a := lineEnd("CHANGES  2").ActionAt(39); a != (Action{Kind: ActGit, Section: "stage-all"}) {
@@ -363,10 +363,10 @@ func TestChangesView(t *testing.T) {
 	if a := at("Commit…", 0); a.Kind != ActCommit {
 		t.Errorf("commit %+v", a)
 	}
-	if a := at("⎇ main", 0); a.Kind != ActBranchMenu {
+	if a := at("🌿 main", 0); a.Kind != ActBranchMenu {
 		t.Errorf("branch %+v", a)
 	}
-	if a := at("⇅", 0); a != (Action{Kind: ActGitPopup, Section: "sync"}) {
+	if a := at("🔃", 0); a != (Action{Kind: ActGitPopup, Section: "sync"}) {
 		t.Errorf("sync %+v", a)
 	}
 	if a := at("a1b2c3d", 0); a != (Action{Kind: ActGitPopup, Section: "show", Path: "a1b2c3d"}) {
@@ -592,7 +592,7 @@ func TestFold(t *testing.T) {
 		}
 		return ""
 	}
-	if l := lineWith("▸ PROJECTS"); !strings.HasSuffix(l, "2  +") {
+	if l := lineWith("▸ PROJECTS"); !strings.HasSuffix(l, "2  ➕") {
 		t.Errorf("projects title %q", l)
 	}
 	if lineWith("▾ AGENTS") == "" {
@@ -701,6 +701,48 @@ func TestClosedPanel(t *testing.T) {
 		}
 		if !bottom[ActLimits] || !bottom[ActKeys] || !bottom[ActSearch] {
 			t.Errorf("%s: search, limits or help gone: %v", theme, bottom)
+		}
+	}
+}
+
+// TestButtonSizes: in both themes every view keeps its width and every
+// button takes at least 3 columns; the nerd theme draws the editor's icons.
+func TestButtonSizes(t *testing.T) {
+	i18n.SetLocale("en")
+	for _, theme := range []string{IconsEmoji, IconsNerd} {
+		for _, view := range []string{ViewAgents, ViewExplorer, ViewChanges} {
+			m := model()
+			m.Icons, m.View = theme, view
+			m.Tree = []TreeRow{{Path: "src", Name: "src", Dir: true}, {Path: "src/a.go", Name: "a.go", Depth: 1, Git: "M"}}
+			m.SCM = &gitops.Status{
+				Branch: "main", Upstream: "origin/main",
+				Staged:  []gitops.Change{{Status: "M", Path: "a.go", Added: 3}},
+				Changes: []gitops.Change{{Status: "?", Path: "c.txt", Untracked: true}},
+			}
+			sc := Render(m, 41, 40, NoItem)
+			for _, l := range sc.Lines {
+				if n := DisplayWidth(Plain(l.Text)); n != 41 {
+					t.Errorf("%s/%s: %d columns: %q", theme, view, n, Plain(l.Text))
+				}
+				for _, c := range l.Cells {
+					if c.Action.Kind != ActNone && c.W < 3 {
+						t.Errorf("%s/%s: a %d-column button %q", theme, view, c.W, Plain(c.Text))
+					}
+				}
+			}
+			if theme == IconsNerd && view == ViewChanges {
+				text := screenText(sc)
+				for _, ic := range []string{"", "", "", "", "", "", "", "", "", ""} {
+					if !strings.Contains(text, ic) {
+						t.Errorf("nerd: icon %U missing", []rune(ic)[0])
+					}
+				}
+				for _, old := range []string{"⟳", "↶", "⇅", "⎇"} {
+					if strings.Contains(text, old) {
+						t.Errorf("nerd: old sign %q", old)
+					}
+				}
+			}
 		}
 	}
 }

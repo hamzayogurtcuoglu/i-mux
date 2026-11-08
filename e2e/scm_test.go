@@ -14,8 +14,8 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestSourceControl (T22.5): in the 🔀 view a click on a file's + stages
-// it, Commit… asks for a message and commits, ↶ asks and discards a new file.
+// TestSourceControl (T22.5): in the 🔀 view a click on a file's ➕ stages
+// it, Commit… asks for a message and commits, ⏪ asks and discards a new file.
 func TestSourceControl(t *testing.T) {
 	h := newH(t, sidebarConfig)
 	if _, err := exec.LookPath("git"); err != nil {
@@ -61,7 +61,7 @@ func TestSourceControl(t *testing.T) {
 	// + on a.txt stages it.
 	time.Sleep(500 * time.Millisecond)
 	_, y = h.rowOf(bar, "M  a.txt")
-	c.Click(0, col(1), y) // the last button: +
+	c.Click(0, col(2), y) // the last button: ➕ (" ➕ ", 4 columns)
 	h.rowOf(bar, "STAGED CHANGES  1")
 	if out := git("diff", "--cached", "--name-only"); strings.TrimSpace(out) != "a.txt" {
 		t.Fatalf("staged %q", out)
@@ -83,7 +83,7 @@ func TestSourceControl(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 	_, y = h.rowOf(bar, "?  new.txt")
 	mark = c.Mark()
-	c.Click(0, col(3), y) // ↶, left of +
+	c.Click(0, col(6), y) // ⏪, left of ➕
 	c.waitScreenAfter(h, mark, "cannot be undone", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 	c.Write("y")

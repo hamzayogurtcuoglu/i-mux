@@ -299,14 +299,12 @@ const (
 
 // header is a section title that folds the section on click, with an
 // optional count and a "+" button on the right.
-func header(name, text string, folded bool, count string, w int, plus Action) Line {
-	arrow := "▾"
-	if folded {
-		arrow = "▸"
-	}
+func header(name, text string, folded bool, count string, w int, plus Action, ic Icons) Line {
+	arrow := ic.fold(folded)
+	add := button(ic.Add, muted, plus)
 	tw := w
 	if plus.Kind != ActNone {
-		tw = w - 3
+		tw = w - add.W
 	}
 	l, r := text, ""
 	if count != "" {
@@ -318,7 +316,8 @@ func header(name, text string, folded bool, count string, w int, plus Action) Li
 		Action: Action{Kind: ActFold, Section: name},
 	}}
 	if plus.Kind != ActNone {
-		cells = append(cells, Cell{X: w - 3, W: 3, Text: muted + " + " + reset, Action: plus})
+		add.X = w - add.W
+		cells = append(cells, add)
 	}
 	return Line{Text: compose(cells, w), Cells: cells}
 }
@@ -481,12 +480,13 @@ func continueRows(m Model, w int) []Line {
 // Help.
 func toolbar(m Model, w int) []Line {
 	btn := func(x, cw int, sym, label string, a Action) Cell {
-		return Cell{X: x, W: cw, Text: muted + sym + reset + " " + fit(label, cw-2), Action: a}
+		return Cell{X: x, W: cw, Text: muted + sym + reset + " " + fit(label, cw-1-DisplayWidth(sym)), Action: a}
 	}
+	ic := m.icons()
 	half := (w - 1) / 2
 	cells := []Cell{
-		btn(1, half, "✎", i18n.T("sidebar.rename"), Action{Kind: ActRename}),
-		btn(1+half, w-1-half, "⧉", i18n.T("sidebar.history"), Action{Kind: ActSessions}),
+		btn(1, half, ic.Edit, i18n.T("sidebar.rename"), Action{Kind: ActRename}),
+		btn(1+half, w-1-half, ic.History, i18n.T("sidebar.history"), Action{Kind: ActSessions}),
 	}
 	return []Line{{Text: compose(cells, w), Cells: cells}}
 }
@@ -552,7 +552,7 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 	if folded(SecProjects) {
 		count = strconv.Itoa(len(m.Projects))
 	}
-	out = append(out, header(SecProjects, i18n.T("sidebar.projects"), folded(SecProjects), count, w, Action{Kind: ActOpen}))
+	out = append(out, header(SecProjects, i18n.T("sidebar.projects"), folded(SecProjects), count, w, Action{Kind: ActOpen}, m.icons()))
 	if !folded(SecProjects) {
 		for _, pr := range m.Projects {
 			out = append(out, projectRow(pr, w, m.Tick))
@@ -568,7 +568,7 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 		}
 		count = strconv.Itoa(n)
 	}
-	out = append(out, header(SecAgents, i18n.T("sidebar.agents"), folded(SecAgents), count, w, Action{Kind: ActNewAgent}))
+	out = append(out, header(SecAgents, i18n.T("sidebar.agents"), folded(SecAgents), count, w, Action{Kind: ActNewAgent}, m.icons()))
 	if !folded(SecAgents) {
 		for _, pr := range m.Projects {
 			if len(pr.Panes) == 0 {
@@ -595,7 +595,7 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 		if m.Changed > 0 {
 			count = strconv.Itoa(m.Changed)
 		}
-		out = append(out, header(SecChanges, text, folded(SecChanges), count, w, Action{}))
+		out = append(out, header(SecChanges, text, folded(SecChanges), count, w, Action{}, m.icons()))
 		if !folded(SecChanges) {
 			if m.Changed == 0 {
 				out = append(out, Line{Text: muted + fit("   "+i18n.T("sidebar.no_changes"), w) + reset})
@@ -775,7 +775,8 @@ func DisplayWidth(s string) int {
 	n := 0
 	for _, r := range s {
 		switch {
-		case r >= 0x1F000, r == 0x2753:
+		case r >= 0x1F000, r == 0x2753, r == 0x2705, r >= 0x2795 && r <= 0x2797, r >= 0x23E9 && r <= 0x23EC:
+			// Emoji presented wide: ➕ ➖ ⏪ ⏫ ⏬ ✅ ❓ and the planes above.
 			n += 2
 		default:
 			n++
