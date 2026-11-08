@@ -1304,8 +1304,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - `nerd`: the editor's codicons: add U+EA60 (stage, new project / agent), remove U+EB3B
   (unstage), discard U+EAE2, refresh U+EB37, arrow down / up U+EA9A / U+EAA1 (pull / push), sync
   U+EA77, check U+EAB2 (Commit), git branch U+E725, chevron down / right U+EAB4 / U+EAB6 (sections
-  and folders), edit U+EA73 (Rename), history U+EA82 (History).
-- `emoji`: ➕ ➖ ⏪ 🔄 ⏬ ⏫ 🔃 ✅ 🌿 📝 📜, which every font draws at full size (2 columns; the width
+  and folders), edit U+EA73 (Rename), history U+EA82 (History), search U+EA6D (the explorer's).
+- `emoji`: ➕ ➖ ⏪ 🔄 ⏬ ⏫ 🔃 ✅ 🌿 📝 📜 🔍, which every font draws at full size (2 columns; the width
   table counts these BMP emoji as wide); folds keep ▾ ▸.
 - The tab bar's × takes 3 columns (" × "), like its +.
 
