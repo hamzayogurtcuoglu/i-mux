@@ -332,6 +332,7 @@ var en = map[string]string{
 	"doctor.opencode_state":    "OpenCode cannot write %s (it belongs to another user, often root after a sudo). Fix: sudo chown -R \"$USER\" %s",
 	"doctor.paste_ok":          "Pasting images (Ctrl+V): the clipboard is read with %s",
 	"doctor.paste_missing":     "Pasting images (Ctrl+V) will not work here: %s",
+	"doctor.opencode_v1":       "OpenCode %s is OpenCode 1: i-mux needs OpenCode 2 (new OpenCode tabs drop to a plain shell). Fix: opencode upgrade --major",
 	"doctor.opencode_sqlite":   "sqlite3 is not installed: imux finds OpenCode sessions it started, but not others (install sqlite3)",
 	"limits.opencode":          "OpenCode uses your model provider's limits; when it hits one, it shows here.",
 	"limits.opencode_tokens":   "last 5 h: %s in / %s out tokens in %d sessions",

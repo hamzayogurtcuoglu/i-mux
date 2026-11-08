@@ -41,7 +41,7 @@ var registry = []Info{
 	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", ReadDirFlag: "--add-dir"},
 	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot", ReadDirFlag: "--add-dir"},
 	{ID: session.Codex, Key: "x", Bin: "codex", Vendor: "OpenAI", InstallHint: "npm i -g @openai/codex"},
-	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "brew install opencode (or: curl -fsSL https://opencode.ai/install | bash)"},
+	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "brew install opencode (or: curl -fsSL https://opencode.ai/install | bash, then: opencode upgrade --major)"},
 }
 
 func init() {

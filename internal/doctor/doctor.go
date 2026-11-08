@@ -90,6 +90,11 @@ var MinVersions = map[session.AgentID]string{
 	session.Codex:  "0.38.0",
 }
 
+// OpenCodeMin is the first OpenCode imux works with at all (§7.7): OpenCode
+// 1 has no session_v2 table, no `session export`, and its --session only
+// continues an existing session, so a new tab exits at once to a shell.
+const OpenCodeMin = "2.0.0"
+
 // Run performs every check.
 func Run(ctx context.Context, o Options) *Report {
 	r := &Report{}
@@ -237,6 +242,16 @@ func checkAgents(ctx context.Context, r *Report, o Options) {
 		ver := x.Version
 		if ver == "" {
 			ver = agent.ProbeVersion(x.Path, x.PathEnv)
+		} else if a.ID == session.OpenCode && compareVersions(ver, OpenCodeMin) < 0 {
+			// The bin cache lags an in-place `opencode upgrade --major`
+			// by up to a day: ask the binary before failing.
+			if v := agent.ProbeVersion(x.Path, x.PathEnv); v != "" {
+				ver = v
+			}
+		}
+		if ver != "" && a.ID == session.OpenCode && compareVersions(ver, OpenCodeMin) < 0 {
+			r.add(Fail, "doctor.opencode_v1", ver)
+			continue // no ✓ for a version that cannot start a tab
 		}
 		if ver == "" {
 			r.add(Warn, "doctor.agent_noversion", a.Name, x.Path)

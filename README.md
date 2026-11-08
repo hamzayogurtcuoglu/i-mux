@@ -91,9 +91,11 @@ so it cannot work there. `imux doctor` says what it uses; Settings turns it off.
 
 **OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
 NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
-when the others hit their limits. Install it with `brew install opencode`; `imux doctor` checks
-that it can run. Add a key inside OpenCode with `/connect` (pick NVIDIA or Groq, paste the key from
-build.nvidia.com or console.groq.com; no account needed), then choose a model with `/models`.
+when the others hit their limits. i-mux needs OpenCode 2: `brew install opencode` gives it. Its
+install script and npm still give OpenCode 1; after them, run `opencode upgrade --major`. `imux
+doctor` checks that it can run. Add a key inside OpenCode with `/connect` (pick NVIDIA or Groq,
+paste the key from build.nvidia.com or console.groq.com; no account needed), then choose a model
+with `/models`.
 
 Files open in your editor: `editor` in the config, else micro (the easiest in a terminal: `brew
 install micro`), `$VISUAL`, `$EDITOR`, nano, vim. The mouse wheel scrolls everywhere.
