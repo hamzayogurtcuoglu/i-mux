@@ -235,6 +235,8 @@ var en = map[string]string{
 	"picker.more":              "More…",
 	"picker.pin":               "Pin to the top",
 	"picker.unpin":             "Unpin",
+	"picker.pin_mode":          "📌 Pin or unpin…",
+	"picker.pin_title":         "Pin to the top · %s",
 	"picker.none":              "No conversations found for %s",
 	"picker.session_title":     "%s · %s",
 	"picker.resume":            "Continue in %s (resume)",

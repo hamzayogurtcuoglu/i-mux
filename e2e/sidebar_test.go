@@ -262,10 +262,14 @@ func TestSidebarProjectsNamesChanges(t *testing.T) {
 	h.rowOf(bar, "AGENTS")
 	time.Sleep(500 * time.Millisecond)
 
-	// Name this pane: the prompt's answer becomes the name, quotes and all.
-	x, y = h.rowOf(bar, "Rename")
+	// Name this pane from its row (the selected agent: a click opens its
+	// menu): the prompt's answer becomes the name, quotes and all.
+	x, y = h.rowOf(bar, "✻  Claude")
 	mark = c.Mark()
 	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "Rename…", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	c.Write("r")
 	c.waitScreenAfter(h, mark, "Name for this pane:", 5*time.Second)
 	c.Write(`backend "fix"; true` + "\r")
 	h.waitFor("pane named", 5*time.Second, func() bool { return h.paneOpt(agentPane, "#{@imux_name}") == `backend "fix"; true` })

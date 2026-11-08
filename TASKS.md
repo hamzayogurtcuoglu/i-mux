@@ -815,9 +815,9 @@ editing a file (ARCHITECTURE D30).
 User report: the toolbar's Rename named the wrong pane ("Claude does not rename"), and the pin
 in History was not found.
 
-- [ ] **T30.1 Toolbar and rows** · S
+- [x] **T30.1 Toolbar and rows** · S
   - AC: no Rename in the toolbar (History alone); e2e renames from the agent's row.
-- [ ] **T30.2 Pins in the list** · S
+- [x] **T30.2 Pins in the list** · S
   - AC: "📌 Pin or unpin…" (p) in the picker opens the rows for pinning; aligned agent column;
     `<pasted_content>` tags out of previews; unit and e2e tests.
 

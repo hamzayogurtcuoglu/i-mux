@@ -100,9 +100,8 @@ görünümü değiştirir.
 | bir agent'a sağ tıkla (ya da seçili olana tıkla) | menüsü: **Yeniden adlandır…** (sohbet başka CLI'ya geçse de ad kalır) ya da **Agent'ı kapat…** |
 | bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni bir pane'de yeni agent ya da düz **Terminal** aç (sağa / aşağı için `prefix v` / `prefix -`) |
 | **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder |
-| **✎ Adlandır** (ya da `n`) | agent'a "backend düzeltme" gibi kendi adını ver (terminal başlığı koyan agent'lar kendini adlandırır) |
 | bir bölüm başlığı (PROJELER, AGENT'LAR) | bölümü kapatır / açar |
-| **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar (menüsünden `t` ile en üste sabitlenir) · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |
+| **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar (📌 Sabitle ya da kaldır…, `p`, birini en üstte tutar) · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |
 | en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat |
 | `prefix b` | kenar paneli gizle ya da göster |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` `e` | pane menüsü; Claude / Antigravity / Copilot / Codex / OpenCode'da sürdür |

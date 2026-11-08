@@ -53,7 +53,22 @@ func TestPinConversation(t *testing.T) {
 	c.Write("t")
 	c.waitScreenAfter(h, mark, "Sessions · ", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
-	if strings.Contains(stripANSI(c.Output()[mark:]), "📌") {
+	if strings.Contains(stripANSI(c.Output()[mark:]), "📌 Claude") {
 		t.Fatal("still pinned after Unpin")
+	}
+
+	// From the list: "📌 Pin or unpin…" shows the rows for pinning.
+	c.waitScreenAfter(h, mark, "📌 Pin or unpin…", 5*time.Second)
+	time.Sleep(200 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("p")
+	c.waitScreenAfter(h, mark, "Pin to the top · ", 5*time.Second)
+	time.Sleep(200 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("3") // row 3: synthetic task 01
+	c.waitScreenAfter(h, mark, "📌 Claude", 5*time.Second)
+	text = stripANSI(c.Output()[mark:])
+	if i, j := strings.Index(text, "📌 Claude"), strings.Index(text, "synthetic task 01"); i < 0 || j < i {
+		t.Fatalf("pinned from the list is not first:\n%s", text)
 	}
 }

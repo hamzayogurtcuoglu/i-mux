@@ -236,6 +236,8 @@ var tr = map[string]string{
 	"picker.more":              "Daha fazla…",
 	"picker.pin":               "En üste sabitle",
 	"picker.unpin":             "Sabitlemeyi kaldır",
+	"picker.pin_mode":          "📌 Sabitle ya da kaldır…",
+	"picker.pin_title":         "En üste sabitle · %s",
 	"picker.none":              "%s için sohbet bulunamadı",
 	"picker.session_title":     "%s · %s",
 	"picker.resume":            "%s içinde sürdür (kaldığı yerden)",

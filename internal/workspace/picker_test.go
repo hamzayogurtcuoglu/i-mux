@@ -48,11 +48,13 @@ func TestPickerMenuPagesInstalledAgents(t *testing.T) {
 	if m == nil || !strings.HasPrefix(m.Title, "Sessions · ~/proj (1/2)") {
 		t.Fatalf("title %+v", m)
 	}
-	if len(m.Items) != PickerRows+2 || m.Items[PickerRows+1].Name != "More…" || m.Items[PickerRows+1].Key != "m" {
+	if len(m.Items) != PickerRows+3 || m.Items[PickerRows+1].Name != "More…" || m.Items[PickerRows+1].Key != "m" ||
+		m.Items[PickerRows+2].Name != "📌 Pin or unpin…" || m.Items[PickerRows+2].Key != "p" ||
+		!strings.Contains(m.Items[PickerRows+2].Cmd, "__menu --sessions --pin --page 0") {
 		t.Fatalf("page 1 items: %d %+v", len(m.Items), m.Items[len(m.Items)-1])
 	}
 	first := m.Items[0]
-	const rowPrefix = "Claude   just now     "
+	const rowPrefix = "Claude      just now     " // padded to "Antigravity"
 	preview := strings.TrimPrefix(first.Name, rowPrefix)
 	if first.Key != "1" || !strings.HasPrefix(first.Name, rowPrefix+"claude task 00 with") ||
 		utf8.RuneCountInString(preview) > previewRunes || !strings.HasSuffix(preview, "…") {
@@ -74,7 +76,7 @@ func TestPickerMenuPagesInstalledAgents(t *testing.T) {
 		t.Fatal("antigravity row missing from page 1")
 	}
 	m2 := w.PickerMenu(ctx, f, p, "", 1)
-	if !strings.HasSuffix(m2.Title, "(2/2)") || len(m2.Items) != 3+2 || !strings.Contains(m2.Items[4].Cmd, "--page 0") {
+	if !strings.HasSuffix(m2.Title, "(2/2)") || len(m2.Items) != 3+3 || !strings.Contains(m2.Items[4].Cmd, "--page 0") {
 		t.Fatalf("page 2: %q %d", m2.Title, len(m2.Items))
 	}
 	if w.PickerMenu(ctx, f, &Pane{ID: "%2", CWD: "/home/test/empty"}, "", 0) != nil {
@@ -161,5 +163,44 @@ func TestPickerPinned(t *testing.T) {
 	w.State().Unpin("claude:gone-0000")
 	if m := w.PickerMenu(context.Background(), f, p, "", 0); !strings.HasPrefix(m.Items[0].Name, "Claude") {
 		t.Fatalf("no pins: no indent: %q", m.Items[0].Name)
+	}
+}
+
+// TestPinMenu: the picker for pinning marks pinned rows and toggles them;
+// previews lose <pasted_content> tags; the agent column lines up.
+func TestPinMenu(t *testing.T) {
+	w, _, h := testWS(t)
+	f := sources.New(config.Default())
+	now := testutil.FrozenTime
+	writeClaudeSession(t, h, "11111111-0000-4000-8000-000000000001", `<pasted_content id=\"61b6\"> # Task: write tests</pasted_content>`, now)
+	writeClaudeSession(t, h, "11111111-0000-4000-8000-000000000002", "second task", now.Add(-time.Hour))
+	writeAgy(t, h, "22222222-0000-4000-8000-000000000001", now.Add(-2*time.Hour), now.Add(-2*time.Hour))
+	w.State().Pin("claude:11111111-0000-4000-8000-000000000002")
+	p := &Pane{ID: "%1", Agent: "claude", CWD: h.Project}
+	m := w.PinMenu(context.Background(), f, p, "c1", 0)
+	if m == nil || m.Title != "Pin to the top · ~/proj" {
+		t.Fatalf("menu %+v", m)
+	}
+	var rows []string
+	for _, it := range m.Items {
+		if it.Key != "" {
+			rows = append(rows, it.Name+" | "+it.Cmd)
+		}
+	}
+	if len(rows) != 3 || !strings.HasPrefix(rows[0], "📌 Claude      ") || !strings.Contains(rows[0], "second task") ||
+		!strings.Contains(rows[0], "__pin claude:11111111-0000-4000-8000-000000000002 --unpin --pane %1 --client c1") ||
+		!strings.HasPrefix(rows[1], "   Claude      ") || !strings.Contains(rows[1], "__pin claude:11111111-0000-4000-8000-000000000001 --pane %1") {
+		t.Fatalf("rows:\n%s", strings.Join(rows, "\n"))
+	}
+	if strings.Contains(rows[1], "pasted_content") || !strings.Contains(rows[1], "# Task: write tests") {
+		t.Fatalf("preview tags: %s", rows[1])
+	}
+	if !strings.HasPrefix(rows[2], "   Antigravity ") {
+		t.Fatalf("agent column: %q", rows[2])
+	}
+	for _, it := range m.Items {
+		if it.Key == "p" {
+			t.Fatal("the pin picker offers itself")
+		}
 	}
 }

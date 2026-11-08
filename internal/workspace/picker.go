@@ -3,6 +3,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -35,12 +36,35 @@ func (w *WS) pickerAgents() []session.AgentID {
 	return ids
 }
 
+// agentCol is the width of the picker's agent column: the longest short
+// name, so the columns line up.
+var agentCol = func() int {
+	n := 0
+	for _, a := range session.AllAgents {
+		n = max(n, utf8.RuneCountInString(session.ShortName(a)))
+	}
+	return n
+}()
+
+// pastedRe matches the tags some agents wrap pasted text in.
+var pastedRe = regexp.MustCompile(`</?\\?/?pasted_content[^>]*>`)
+
 // PickerMenu builds page `page` (0-based) of the session picker for pane p:
 // conversations of every installed agent for @imux_cwd, the pinned ones
 // first (§9.3 "Pinned conversations"), then newest first. Only the shown
 // rows are read for their preview. It returns nil when there is nothing to
 // show.
 func (w *WS) PickerMenu(ctx context.Context, f *sources.Finder, p *Pane, client string, page int) *Menu {
+	return w.picker(ctx, f, p, client, page, false)
+}
+
+// PinMenu is the picker for pinning: choosing a conversation pins or unpins
+// it, and the picker opens again.
+func (w *WS) PinMenu(ctx context.Context, f *sources.Finder, p *Pane, client string, page int) *Menu {
+	return w.picker(ctx, f, p, client, page, true)
+}
+
+func (w *WS) picker(ctx context.Context, f *sources.Finder, p *Pane, client string, page int, pinMode bool) *Menu {
 	pinned := w.pinnedRefs(ctx, f, p.CWD)
 	isPinned := map[string]bool{}
 	for _, r := range pinned {
@@ -60,6 +84,9 @@ func (w *WS) PickerMenu(ctx context.Context, f *sources.Finder, p *Pane, client 
 		page = 0
 	}
 	title := i18n.T("picker.title", paths.Shorten(p.CWD))
+	if pinMode {
+		title = i18n.T("picker.pin_title", paths.Shorten(p.CWD))
+	}
 	if pages > 1 {
 		title += fmt.Sprintf(" (%d/%d)", page+1, pages)
 	}
@@ -68,29 +95,45 @@ func (w *WS) PickerMenu(ctx context.Context, f *sources.Finder, p *Pane, client 
 	now := w.Now()
 	rows := refs[page*PickerRows : min((page+1)*PickerRows, len(refs))]
 	for i, r := range rows {
-		preview := clean.OneLine(f.Preview(ctx, r), previewRunes)
+		preview := clean.OneLine(pastedRe.ReplaceAllString(f.Preview(ctx, r), " "), previewRunes)
 		if strings.TrimSpace(preview) == "" {
 			preview = i18n.T("picker.no_preview")
 		}
-		name := pad(session.ShortName(r.Agent), 8) + " " + pad(textfmt.Ago(now, r.UpdatedAt), 12) + " " + preview
-		if len(pinned) > 0 {
+		name := pad(session.ShortName(r.Agent), agentCol) + " " + pad(textfmt.Ago(now, r.UpdatedAt), 12) + " " + preview
+		if len(pinned) > 0 || pinMode {
 			mark := "   " // the width of "📌 ", so the columns line up
 			if isPinned[r.Key()] {
 				mark = "📌 "
 			}
 			name = mark + name
 		}
-		m.Items = append(m.Items, MenuItem{
-			Name: name, Key: strconv.Itoa(i + 1),
-			Cmd: w.ui(append([]string{"__menu", "--session", r.Key()}, tgt...)...),
-		})
+		cmd := w.ui(append([]string{"__menu", "--session", r.Key()}, tgt...)...)
+		if pinMode {
+			args := []string{"__pin", r.Key()}
+			if isPinned[r.Key()] {
+				args = append(args, "--unpin")
+			}
+			cmd = w.ui(append(args, tgt...)...)
+		}
+		m.Items = append(m.Items, MenuItem{Name: name, Key: strconv.Itoa(i + 1), Cmd: cmd})
 	}
+	var tail []MenuItem
 	if pages > 1 {
 		next := (page + 1) % pages
-		m.Items = append(m.Items, Separator(), MenuItem{
-			Name: i18n.T("picker.more"), Key: "m",
-			Cmd: w.ui(append([]string{"__menu", "--sessions", "--page", strconv.Itoa(next)}, tgt...)...),
+		args := []string{"__menu", "--sessions", "--page", strconv.Itoa(next)}
+		if pinMode {
+			args = append(args, "--pin")
+		}
+		tail = append(tail, MenuItem{Name: i18n.T("picker.more"), Key: "m", Cmd: w.ui(append(args, tgt...)...)})
+	}
+	if !pinMode {
+		tail = append(tail, MenuItem{
+			Name: i18n.T("picker.pin_mode"), Key: "p",
+			Cmd: w.ui(append([]string{"__menu", "--sessions", "--pin", "--page", strconv.Itoa(page)}, tgt...)...),
 		})
+	}
+	if len(tail) > 0 {
+		m.Items = append(append(m.Items, Separator()), tail...)
 	}
 	return m
 }

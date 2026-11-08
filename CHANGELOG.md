@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-08
+
+### Changed
+
+- **Rename from the agent's row only.** The sidebar's Rename button named the window's current
+  pane, not the agent you meant (naming Claude could name OpenCode); it is gone. A click on the
+  selected agent (or a right-click on any agent) opens its menu with Rename….
+- **Pins are in the History list:** "📌 Pin or unpin…" (key `p`) shows the conversations for
+  pinning. The agent column lines up (Antigravity no longer shifts the rest), and previews drop
+  `<pasted_content>` tags.
+
 ## [0.25.1] - 2026-11-08
 
 ### Fixed

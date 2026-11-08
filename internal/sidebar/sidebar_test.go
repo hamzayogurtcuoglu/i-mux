@@ -111,7 +111,7 @@ func TestRender(t *testing.T) {
 		"▾ AGENTS", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Terminal",
 		"blog", "▲  blog pass", "9m ●", "✻  Claude", "3d ○",
 		"Continue this chat in", "▲ Antigravity", "◉ Copilot", "◎ Codex",
-		"📝 Rename", "📜 History", "▌ 🤖", "Agents", "📁", "Files", "🔍", "Search", "🔀", "Git 3", "📊", "Limits", "❓", "Help",
+		"📜 History", "▌ 🤖", "Agents", "📁", "Files", "🔍", "Search", "🔀", "Git 3", "📊", "Limits", "❓", "Help",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sidebar lacks %q:\n%s", want, text)
@@ -143,7 +143,6 @@ func TestRender(t *testing.T) {
 		{" B  blog", Action{Kind: ActProject, Session: "blog-3c4d"}},
 		{"▲ Antigravity", Action{Kind: ActSwitch, Agent: "antigravity"}},
 		{"◎ Codex", Action{Kind: ActSwitch, Agent: "codex"}},
-		{"📝 Rename", Action{Kind: ActRename}},
 		{"📜 History", Action{Kind: ActSessions}},
 	} {
 		// Hit-test at the text's column: some rows hold several buttons.
@@ -180,7 +179,7 @@ func TestRender(t *testing.T) {
 	short := Render(model(), 41, 16, NoItem)
 	stext := screenText(short)
 	t.Logf("\n%s", stext)
-	for _, want := range []string{"AGENTS", "backend fix", "Continue this chat in", "📝 Rename"} {
+	for _, want := range []string{"AGENTS", "backend fix", "Continue this chat in", "📜 History"} {
 		if !strings.Contains(stext, want) {
 			t.Errorf("short sidebar lacks %q:\n%s", want, stext)
 		}
@@ -743,6 +742,22 @@ func TestButtonSizes(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+// TestNoToolbarRename: renaming is on the agent's row, not in the toolbar.
+func TestNoToolbarRename(t *testing.T) {
+	i18n.SetLocale("en")
+	sc := Render(model(), 41, 40, NoItem)
+	for _, l := range sc.Lines {
+		for _, c := range l.Cells {
+			if c.Action.Kind == ActRename {
+				t.Fatalf("a Rename button: %q", Plain(l.Text))
+			}
+		}
+		if l.Action.Kind == ActRename {
+			t.Fatalf("a Rename row: %q", Plain(l.Text))
 		}
 	}
 }

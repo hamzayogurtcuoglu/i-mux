@@ -478,18 +478,14 @@ func continueRows(m Model, w int) []Line {
 	return out
 }
 
-// toolbar is the bottom block: Rename and Changes, then History, Limits and
-// Help.
+// toolbar is the bottom block: History. Renaming is on the agent's row
+// (its menu), which names the pane the user means.
 func toolbar(m Model, w int) []Line {
 	btn := func(x, cw int, sym, label string, a Action) Cell {
 		return Cell{X: x, W: cw, Text: muted + sym + reset + " " + fit(label, cw-1-DisplayWidth(sym)), Action: a}
 	}
 	ic := m.icons()
-	half := (w - 1) / 2
-	cells := []Cell{
-		btn(1, half, ic.Edit, i18n.T("sidebar.rename"), Action{Kind: ActRename}),
-		btn(1+half, w-1-half, ic.History, i18n.T("sidebar.history"), Action{Kind: ActSessions}),
-	}
+	cells := []Cell{btn(1, w-1, ic.History, i18n.T("sidebar.history"), Action{Kind: ActSessions})}
 	return []Line{{Text: compose(cells, w), Cells: cells}}
 }
 

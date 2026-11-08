@@ -60,6 +60,7 @@ func runMenu(e *Env, args []string) error {
 	clientF := fs.String("client", "", "client to show the menu on")
 	sessionsF := fs.Bool("sessions", false, "open the session picker")
 	pageF := fs.Int("page", 0, "picker page (0-based)")
+	pinF := fs.Bool("pin", false, "the picker for pinning conversations")
 	sessionF := fs.String("session", "", "menu for one conversation (<agent>:<id>)")
 	splitF := fs.String("split", "", "ask which agent a new pane starts with: h (right) or v (down)")
 	keysF := fs.Bool("keys", false, "show the keys")
@@ -130,7 +131,11 @@ func runMenu(e *Env, args []string) error {
 	case *splitF != "":
 		m = w.SplitMenu(p, client, *splitF == "h")
 	case *sessionsF:
-		m = w.PickerMenu(ctx, sources.New(cfg), p, client, *pageF)
+		if *pinF {
+			m = w.PinMenu(ctx, sources.New(cfg), p, client, *pageF)
+		} else {
+			m = w.PickerMenu(ctx, sources.New(cfg), p, client, *pageF)
+		}
 		if m == nil {
 			w.Message(ctx, client, pane, i18n.T("picker.none", paths.Shorten(p.CWD)))
 			return nil
