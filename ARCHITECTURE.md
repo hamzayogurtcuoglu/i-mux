@@ -624,6 +624,11 @@ provider, no quota; synthetic prompts only).
   tokens from `session_v2`.
 - **Known issue:** OpenCode needs a writable `$XDG_STATE_HOME` (default `~/.local/state`); a folder
   owned by root (made by an earlier `sudo` command) stops it. `imux doctor` warns with the fix.
+- **OpenCode 1 is not supported:** its `--session` only continues an existing session ("Session
+  not found", so a new tab exits at once to a shell), its store has no `session_v2`, and it has
+  no `session export`. The installer, Homebrew and npm's `latest` still give OpenCode 1; `opencode
+  upgrade --major` moves to 2 and migrates the sessions. `imux doctor` fails below 2.0.0 (it
+  re-probes a cached 1.x version first: the bin cache lags an in-place upgrade by up to a day).
 
 ## 8. Handoff document
 

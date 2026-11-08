@@ -145,6 +145,49 @@ func TestDoctor(t *testing.T) {
 	}
 }
 
+// TestDoctorOpenCode1: OpenCode 1 cannot start the sessions imux asks for
+// (`--session ses_imux…` is "Session not found" there), so it is a hard
+// failure with the upgrade command. A cached 1.x version is re-probed first:
+// the bin cache lags an in-place `opencode upgrade --major` by up to a day.
+func TestDoctorOpenCode1(t *testing.T) {
+	h := testutil.Isolate(t)
+	i18n.SetLocale("en")
+	if err := os.MkdirAll(h.Imux, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(h.Root, "bin")
+	verFile := filepath.Join(h.Root, "opencode-version")
+	testutil.WriteFile(t, verFile, []byte("1.19.5\n"))
+	ocBin := script(t, bin, "opencode", "#!/bin/sh\n[ \"$1\" = --version ] && /bin/cat "+verFile+"\nexit 0\n")
+	o := Options{
+		Cfg: config.Default(), Tmux: &tmux.Client{Bin: "tmux", Socket: "x", Runner: fakeTmux{"3.4"}},
+		Resolved: map[session.AgentID]agent.Resolved{
+			"opencode": {Agent: "opencode", Installed: true, Path: ocBin, PathEnv: bin, Version: "1.19.5"},
+		},
+		Users: func() []string { return nil }, Watcher: func() (bool, int) { return true, 1 },
+	}
+
+	r := Run(context.Background(), o)
+	x := find(r, "OpenCode 1.19.5 is OpenCode 1")
+	if x == nil || x.Level != Fail || !strings.Contains(x.Msg, "opencode upgrade --major") || !r.Failed() {
+		t.Fatalf("opencode 1: %+v", r.Results)
+	}
+
+	// Upgraded since the cache was written: the binary says 2.x, no failure.
+	testutil.WriteFile(t, verFile, []byte("opencode v2.2.6\n"))
+	r = Run(context.Background(), o)
+	if x := find(r, "OpenCode 2.2.6"); x == nil || x.Level != OK || find(r, "is OpenCode 1") != nil {
+		t.Fatalf("opencode 2 behind a stale cache: %+v", r.Results)
+	}
+
+	// Not installed: the hint ends at OpenCode 2 (the installer stops at 1).
+	o.Resolved = map[session.AgentID]agent.Resolved{}
+	r = Run(context.Background(), o)
+	if x := find(r, "OpenCode: not installed"); x == nil || !strings.Contains(x.Msg, "opencode upgrade --major") {
+		t.Fatalf("opencode hint: %+v", r.Results)
+	}
+}
+
 func TestCompareVersions(t *testing.T) {
 	cases := []struct {
 		a, b string

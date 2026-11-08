@@ -85,7 +85,9 @@ için orada çalışmaz. `imux doctor` neyi kullandığını söyler; Ayarlar'da
 
 **OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
 Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):
-diğerleri limite takılınca devam etmek için kullanışlı bir yer. `brew install opencode` ile kur;
+diğerleri limite takılınca devam etmek için kullanışlı bir yer. i-mux OpenCode 2 ister; kurulum
+betiği (Homebrew ve npm gibi) hâlâ OpenCode 1 kurduğu için
+`curl -fsSL https://opencode.ai/install | bash` ile kur, ardından `opencode upgrade --major` çalıştır.
 `imux doctor` çalışabildiğini kontrol eder. Anahtarı OpenCode'un içinde `/connect` ile ekle (NVIDIA
 ya da Groq'u seç, build.nvidia.com ya da console.groq.com'dan aldığın anahtarı yapıştır; hesap
 gerekmez), sonra `/models` ile modeli seç.

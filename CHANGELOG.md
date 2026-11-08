@@ -6,6 +6,12 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **OpenCode 1 is reported:** a new OpenCode tab with OpenCode 1 (what its installer, Homebrew
+  and npm still give) dropped to a plain shell without a word. `imux doctor` now says so, with
+  the fix: `opencode upgrade --major`. The install hint ends at OpenCode 2 too.
+
 ## [0.29.0] - 2026-11-08
 
 ### Added
