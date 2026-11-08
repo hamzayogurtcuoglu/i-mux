@@ -76,6 +76,9 @@ func newH(t *testing.T, extraConfig string) *H {
 	if !strings.Contains(tables, "[notify]") {
 		tables += "\n[notify]\nenabled = false\n"
 	}
+	if !strings.Contains(tables, "[paste]") {
+		tables += "\n[paste]\nimages = false\n" // never the real clipboard
+	}
 	if !strings.Contains(top, "update_check") {
 		top = "update_check = false\n" + top // never the network in tests
 	}

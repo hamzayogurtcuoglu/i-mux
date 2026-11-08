@@ -74,6 +74,15 @@ sorunca, o sırada ona bakmıyorsan bildirim gelir: macOS'un bildirim merkezi, L
 kitty, GNOME Terminal …). Terminal kapalıyken de çalışır. Bildirimi ve sesini Ayarlar'dan kapatabilir,
 `[notify] command` ile istediğin yere (örneğin telefonuna) gönderebilirsin.
 
+**Resim yapıştırma:** bir ekran görüntüsü (ya da Finder'da / dosya yöneticinde resim dosyaları)
+kopyala ve herhangi bir ajanın panelinde **Ctrl+V**'ye bas; istediğin kadar tekrarlayabilirsin.
+i-mux resmi `~/.imux/images/` altına kaydeder ve yolunu ajana, sürüklenip bırakılmış bir dosya
+gibi verir (Antigravity `@yol` alır). **Alt+V** ve kenar çubuğundaki 📎 de aynısını yapar; Ctrl+V'yi
+terminalin kendisi yakalıyorsa (Windows Terminal) bunları kullan. Panoda resim yoksa Ctrl+V her
+zamanki gibi ajana gider. macOS panosunu, Wayland'inkini (`wl-clipboard`), X11'inkini (`xclip`), WSL'de
+ise Windows panosunu okur: Windows'ta kopyala, WSL'de yapıştır. SSH'ta pano öbür makinede kaldığı
+için orada çalışmaz. `imux doctor` neyi kullandığını söyler; Ayarlar'dan kapatılabilir.
+
 **OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
 Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):
 diğerleri limite takılınca devam etmek için kullanışlı bir yer. `brew install opencode` ile kur;

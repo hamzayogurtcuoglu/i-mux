@@ -82,3 +82,12 @@ func TestSetSetting(t *testing.T) {
 		t.Fatal("still on")
 	}
 }
+
+func TestImageText(t *testing.T) {
+	if got := ImageText("claude", []string{"/a/b.png", "/my shots/c.png"}); got != `/a/b.png /my\ shots/c.png ` {
+		t.Fatalf("claude %q", got)
+	}
+	if got := ImageText("antigravity", []string{"/a/b.png"}); got != "@/a/b.png " {
+		t.Fatalf("antigravity %q", got)
+	}
+}

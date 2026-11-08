@@ -100,6 +100,8 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 		label, flip = onOff(cfg.Notify.Sound)
 		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify_sound", label), Key: "d", Cmd: set("notify_sound", flip)})
 	}
+	label, flip = onOff(cfg.Paste.Images)
+	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.paste_images", label), Key: "v", Cmd: set("paste_images", flip)})
 	icons := cfg.Tmux.Icons
 	if icons == "" {
 		icons = "auto"

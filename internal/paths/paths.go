@@ -51,6 +51,7 @@ func TmuxLocal() string      { return filepath.Join(Home(), "tmux.local.conf") }
 func WatchPid() string       { return filepath.Join(Home(), "watch.pid") }
 func WatchLog() string       { return filepath.Join(Home(), "watch.log") }
 func Handoffs() string       { return filepath.Join(Home(), "handoffs") }
+func Images() string         { return filepath.Join(Home(), "images") }
 func Launch() string         { return filepath.Join(Home(), "launch") }
 func BusDir() string         { return filepath.Join(Home(), "bus") }
 func Activity() string       { return filepath.Join(Home(), "activity.json") }

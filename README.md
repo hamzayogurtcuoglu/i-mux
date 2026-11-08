@@ -80,6 +80,15 @@ are not looking at it, a notification comes: macOS's notification center, the Li
 GNOME Terminal …). It works with the terminal closed too. Turn it and its sound off in Settings, or set
 `[notify] command` to send it anywhere (a push to your phone).
 
+**Pasting images:** copy a screenshot (or image files in Finder / your file manager) and press
+**Ctrl+V** in any agent's pane, as many times as you like: i-mux saves the image under
+`~/.imux/images/` and gives the agent its path, the way a dropped file arrives (Antigravity gets
+`@path`). **Alt+V** and the sidebar's 📎 do the same; use them where the terminal keeps Ctrl+V
+for itself (Windows Terminal). With no image on the clipboard Ctrl+V reaches the agent as usual.
+It reads the macOS clipboard, Wayland's (`wl-clipboard`), X11's (`xclip`), and from WSL the
+Windows clipboard: copy on Windows, paste in WSL. Over SSH the clipboard is on the other machine,
+so it cannot work there. `imux doctor` says what it uses; Settings turns it off.
+
 **OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
 NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
 when the others hit their limits. Install it with `brew install opencode`; `imux doctor` checks

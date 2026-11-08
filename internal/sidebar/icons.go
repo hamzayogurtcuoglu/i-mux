@@ -9,6 +9,7 @@ type Icons struct {
 	Branch, Open, Closed          string // Open / Closed: a section's or folder's arrow
 	Edit, History, Search         string
 	Suggest                       string // an agent writes the commit message
+	Image                         string // paste the clipboard's image
 }
 
 var buttonIcons = map[string]Icons{
@@ -20,14 +21,14 @@ var buttonIcons = map[string]Icons{
 		Pull: "\uea9a", Push: "\ueaa1", Sync: "\uea77", Commit: "\ueab2",
 		Branch: "\ue725", Open: "\ueab4", Closed: "\ueab6",
 		Edit: "\uea73", History: "\uea82", Search: "\uea6d",
-		Suggest: "\uec10",
+		Suggest: "\uec10", Image: "\ueaea",
 	},
 	IconsEmoji: {
 		Add: "➕", Remove: "➖", Discard: "⏪", Refresh: "🔄",
 		Pull: "⏬", Push: "⏫", Sync: "🔃", Commit: "✅",
 		Branch: "🌿", Open: "▾", Closed: "▸",
 		Edit: "📝", History: "📜", Search: "🔍",
-		Suggest: "✨",
+		Suggest: "✨", Image: "📎",
 	},
 }
 

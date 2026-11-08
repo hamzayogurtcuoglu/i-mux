@@ -44,6 +44,7 @@ const (
 	ActRefresh                // redraw
 	ActSuggest                // an agent writes a commit message (D29)
 	ActSettings               // the Settings menu
+	ActPasteImage             // paste the clipboard's image into the target pane
 )
 
 // Action is a row's action.
@@ -494,7 +495,11 @@ func toolbar(m Model, w int) []Line {
 		return Cell{X: x, W: cw, Text: muted + sym + reset + " " + fit(label, cw-1-DisplayWidth(sym)), Action: a}
 	}
 	ic := m.icons()
-	cells := []Cell{btn(1, w-1, ic.History, i18n.T("sidebar.history"), Action{Kind: ActSessions})}
+	half := (w - 1) / 2
+	cells := []Cell{
+		btn(1, half, ic.History, i18n.T("sidebar.history"), Action{Kind: ActSessions}),
+		btn(1+half, w-1-half, ic.Image, i18n.T("sidebar.paste_image"), Action{Kind: ActPasteImage}),
+	}
 	return []Line{{Text: compose(cells, w), Cells: cells}}
 }
 

@@ -59,9 +59,19 @@ func TestSourceControl(t *testing.T) {
 	}
 
 	// + on a.txt stages it.
-	time.Sleep(500 * time.Millisecond)
-	_, y = h.rowOf(bar, "M  a.txt")
-	c.Click(0, col(2), y) // the last button: ➕ (" ➕ ", 4 columns)
+	// A click while the sidebar redraws after attaching can be lost: retry.
+	for attempt := 0; ; attempt++ {
+		time.Sleep(500 * time.Millisecond)
+		_, y = h.rowOf(bar, "M  a.txt")
+		c.Click(0, col(2), y) // the last button: ➕ (" ➕ ", 4 columns)
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) && !strings.Contains(h.screen(bar), "STAGED CHANGES  1") {
+			time.Sleep(100 * time.Millisecond)
+		}
+		if strings.Contains(h.screen(bar), "STAGED CHANGES  1") || attempt == 2 {
+			break
+		}
+	}
 	h.rowOf(bar, "STAGED CHANGES  1")
 	if out := git("diff", "--cached", "--name-only"); strings.TrimSpace(out) != "a.txt" {
 		t.Fatalf("staged %q", out)

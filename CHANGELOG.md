@@ -6,6 +6,19 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-08
+
+### Added
+
+- **Pasting images into any agent.** Copy a screenshot (or image files) and press Ctrl+V in an
+  agent's pane, as often as you like: each paste is saved as a new file under `~/.imux/images/`
+  (kept 30 days) and the agent gets its path as a bracketed paste, the way a dropped file arrives
+  (`@path` for Antigravity). Alt+V and the sidebar's 📎 do the same where the terminal keeps
+  Ctrl+V (Windows Terminal). With no image, or outside an agent's pane, Ctrl+V is untouched.
+  Reads the macOS clipboard, Wayland (`wl-paste`), X11 (`xclip`) and, from WSL, the Windows
+  clipboard. `[paste] images` (a Settings row) turns it off; `[paste] command` brings your own
+  reader; `imux doctor` shows the one in use.
+
 ## [0.28.0] - 2026-11-08
 
 ### Added

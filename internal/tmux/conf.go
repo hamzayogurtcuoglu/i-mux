@@ -107,6 +107,9 @@ func BoundKeys(in *ConfInput) []string {
 	if t.Mouse {
 		ks = append(ks, "root MouseDown3Border")
 	}
+	if in.Cfg.Paste.Images {
+		ks = append(ks, "root C-v", "root M-v")
+	}
 	return ks
 }
 
@@ -175,6 +178,13 @@ func GenerateConf(in *ConfInput) string {
 	}
 	if k := cfg.Tmux.PickerKeyPrefix; k != "" {
 		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--sessions", pane))
+	}
+	if cfg.Paste.Images {
+		w("# Ctrl+V / Alt+V in an agent's pane paste the clipboard's image; elsewhere, or with no image, the key goes on.")
+		for _, k := range []string{"C-v", "M-v"} {
+			w("bind -n %s if-shell -F %s %s %s", k, Quote("#{@imux_agent}"),
+				QuoteDouble(runShell(in.Self, "__paste-image", pane, "--key", k)), Quote("send-keys "+k))
+		}
 	}
 	w("# Sidebar on/off, and splits that ask which agent to start.")
 	if k := cfg.Tmux.SidebarKey; k != "" {

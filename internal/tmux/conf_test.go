@@ -73,8 +73,13 @@ func TestGenerateConfOptions(t *testing.T) {
 	if last := lines[len(lines)-1]; !strings.HasPrefix(last, "source-file -q ") || !strings.Contains(last, "tmux.local.conf") {
 		t.Fatalf("last line %q", last)
 	}
-	if ks := BoundKeys(in); strings.Join(ks, ",") != "prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ," {
+	if ks := BoundKeys(in); strings.Join(ks, ",") != "prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root C-v,root M-v" {
 		t.Fatalf("BoundKeys %q", ks)
+	}
+	// Images off: Ctrl+V and Alt+V are the panes' again.
+	in.Cfg.Paste.Images = false
+	if got := GenerateConf(in); strings.Contains(got, "__paste-image") || strings.Contains(strings.Join(BoundKeys(in), ","), "C-v") {
+		t.Error("paste bindings with images off")
 	}
 	for _, want := range []string{"bind    b ", "sidebar toggle", "bind    v ", "__menu --split h", "bind    - ", "__menu --split v", "set-hook -g pane-focus-in", "__sidebar-refresh"} {
 		if !strings.Contains(got, want) {

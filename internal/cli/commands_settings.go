@@ -53,6 +53,7 @@ var settingKeys = map[string]settingKey{
 	"completion":   {"completion", "enabled", []string{"on", "off"}, false},
 	"notify":       {"notify", "enabled", []string{"on", "off"}, false},
 	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},
+	"paste_images": {"paste", "images", []string{"on", "off"}, false},
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane

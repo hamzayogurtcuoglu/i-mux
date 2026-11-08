@@ -25,7 +25,7 @@ func TestSettingsMenu(t *testing.T) {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|i Icons: Auto|m Commit messages by: Auto (the pane's agent)|" +
+	want := "u Update i-mux… (dev)| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|m Commit messages by: Auto (the pane's agent)|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
@@ -45,6 +45,7 @@ func TestSettingsMenu(t *testing.T) {
 		"w": "__settings set on_arrival continue",
 		"n": "__settings set notify off",
 		"d": "__settings set notify_sound off",
+		"v": "__settings set paste_images off",
 		"l": "__settings set on_limit auto",
 		"o": "__settings edit",
 	} {

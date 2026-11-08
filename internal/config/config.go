@@ -124,6 +124,12 @@ type Notify struct {
 	Command string `toml:"command"` // run with the title and message instead; "" = the system's
 }
 
+// Paste is the [paste] section: images from the clipboard into agents.
+type Paste struct {
+	Images  bool   `toml:"images"`
+	Command string `toml:"command"` // prints image paths instead of reading the clipboard
+}
+
 // Completion is the [completion] section: AI completion in the editor (D30).
 type Completion struct {
 	Enabled bool `toml:"enabled"`
@@ -163,6 +169,7 @@ type Config struct {
 	Git          Git               `toml:"git"`
 	Completion   Completion        `toml:"completion"`
 	Notify       Notify            `toml:"notify"`
+	Paste        Paste             `toml:"paste"`
 	Tmux         Tmux              `toml:"tmux"`
 	Agents       map[string]*Agent `toml:"agents"`
 }
@@ -244,6 +251,7 @@ func Default() *Config {
 		},
 		Git:    Git{CommitAgent: "auto"},
 		Notify: Notify{Enabled: true, Sound: true},
+		Paste:  Paste{Images: true},
 		Bus: Bus{
 			Enabled:         true,
 			IdleAfter:       D(5 * time.Second),

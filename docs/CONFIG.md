@@ -45,6 +45,8 @@ line number.
 | `notify.enabled` | `true` | A notification when an agent finishes (after working 10 s or more) or asks you something, unless you are looking at it: macOS's notification center, the Linux desktop's, or your terminal's own when there is no desktop. |
 | `notify.sound` | `true` |  |
 | `notify.command` | `""` | Run this instead, with the title and the message as arguments (e.g. a push to your phone); "" = the system's notifications. |
+| `paste.images` | `true` | Ctrl+V (or Alt+V, or 📎 in the sidebar) in an agent's pane pastes the image on the clipboard (a screenshot) or copied image files: macOS, Linux with wl-clipboard or xclip, and WSL (the Windows clipboard). With no image the key goes to the pane as before. |
+| `paste.command` | `""` | Run this instead to get the images: it prints image file paths, one a line. |
 | `completion.enabled` | `false` | Copilot-like suggestions while you edit a file (Tab accepts): files open in Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim). Turn it on in Settings (⚙ on the rail), which sets it up and signs you in. |
 | `tmux.menu_key_root` | `'C-\'` | Key that opens the pane menu without the prefix. "" disables it. |
 | `tmux.menu_key_prefix` | `"a"` | prefix + key opens the pane menu. |
@@ -197,6 +199,15 @@ enabled           = true
 sound             = true
 # Run this instead, with the title and the message as arguments (e.g. a push
 # to your phone); "" = the system's notifications.
+command           = ""
+
+[paste]
+# Ctrl+V (or Alt+V, or 📎 in the sidebar) in an agent's pane pastes the image
+# on the clipboard (a screenshot) or copied image files: macOS, Linux with
+# wl-clipboard or xclip, and WSL (the Windows clipboard). With no image the key
+# goes to the pane as before.
+images            = true
+# Run this instead to get the images: it prints image file paths, one a line.
 command           = ""
 
 [completion]

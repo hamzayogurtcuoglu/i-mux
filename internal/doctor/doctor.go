@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/clipimage"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
@@ -103,6 +104,13 @@ func Run(ctx context.Context, o Options) *Report {
 			r.add(OK, "doctor.watcher_running", pid)
 		} else {
 			r.add(Info, "doctor.watcher_stopped")
+		}
+	}
+	if o.Cfg.Paste.Images && o.Cfg.Paste.Command == "" {
+		if src, hint := (&clipimage.Reader{}).Source(); src != "" {
+			r.add(OK, "doctor.paste_ok", src)
+		} else {
+			r.add(Info, "doctor.paste_missing", hint)
 		}
 	}
 	if o.Cfg.Handoff.Inject == "argv" && o.Cfg.Handoff.Deliver == "inline" {
