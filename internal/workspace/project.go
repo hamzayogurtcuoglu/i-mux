@@ -228,12 +228,7 @@ func (w *WS) AgentMenu(ctx context.Context, p *Pane, client string) (*Menu, erro
 	if out, err := w.T.Run(ctx, tmux.Cmd{"show-options", "-pqv", "-t", p.ID, sidebar.OptName}); err == nil {
 		cur = strings.TrimSpace(out)
 	}
-	rename := "command-prompt"
-	if client != "" {
-		rename += " -t " + tmux.Quote(client)
-	}
-	rename += " -I " + tmux.Quote(cur) + " -p " + tmux.Quote(i18n.T("prompt.rename")) + " " +
-		tmux.Quote("set-option -p -t "+p.ID+" "+sidebar.OptName+" \"%%%\" ; "+w.ui("__sidebar-refresh"))
+	rename := sidebar.RenamePrompt(w.Self, p.ID, client, cur, i18n.T("prompt.rename"))
 	goTo := "select-pane -t " + p.ID
 	if client != "" {
 		goTo = "switch-client -c " + tmux.Quote(client) + " -t " + p.ID + " ; select-window -t " + p.ID + " ; " + goTo

@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-11-08
+
+### Fixed
+
+- Renaming some agents said "no such pane": tmux's prompt turned `%1` in the command into the
+  typed name, so panes numbered %1, %10-%19, %100 and up could not be renamed (often a Claude
+  pane opened later). Any pane can be renamed now.
+
 ## [0.26.0] - 2026-11-08
 
 ### Changed

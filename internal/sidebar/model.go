@@ -178,6 +178,47 @@ const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#
 
 const paneFields = 21
 
+// OptRenamePane and OptRename carry a rename through the command prompt:
+// the pane to name and the answer. A prompt's template turns "%1" into the
+// answer, so a pane id like %14 must not be in it (it became "<name>4":
+// "no such pane").
+const (
+	OptRenamePane = "@imux_rename_pane"
+	OptRename     = "@imux_rename"
+)
+
+// renameTemplate is the prompt's template: the answer goes to OptRename,
+// then `imux rename --from-option` names the pane in OptRenamePane.
+func renameTemplate(self, client string) string {
+	args := []string{"rename", "--from-option"}
+	if client != "" {
+		args = append(args, "--client", client)
+	}
+	return "set-option -g " + OptRename + " \"%%%\" ; " + tmux.RunShell(self, args...)
+}
+
+// RenamePrompt is the command line (for a menu item) that asks on client
+// for pane's new name, cur being the current one.
+func RenamePrompt(self, pane, client, cur, label string) string {
+	c := "set-option -g " + OptRenamePane + " " + pane + " ; command-prompt"
+	if client != "" {
+		c += " -t " + tmux.Quote(client)
+	}
+	return c + " -I " + tmux.Quote(cur) + " -p " + tmux.Quote(label) + " " + tmux.Quote(renameTemplate(self, client))
+}
+
+// RenameCmds is RenamePrompt as tmux commands.
+func RenameCmds(self, pane, client, cur, label string) []tmux.Cmd {
+	c := tmux.Cmd{"command-prompt"}
+	if client != "" {
+		c = append(c, "-t", client)
+	}
+	return []tmux.Cmd{
+		{"set-option", "-g", OptRenamePane, pane},
+		append(c, "-I", cur, "-p", label, renameTemplate(self, client)),
+	}
+}
+
 // OptName is the user's name for a pane.
 const OptName = "@imux_name"
 

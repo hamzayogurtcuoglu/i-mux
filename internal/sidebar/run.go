@@ -538,8 +538,7 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 				cur = p.Name
 			}
 		}
-		s.prompt(ctx, client, i18n.T("prompt.rename"), cur,
-			"set-option -p -t "+target+" "+OptName+" \"%%%\" ; "+tmux.RunShell(s.o.Self, "__sidebar-refresh"))
+		_, _ = s.t.Run(ctx, RenameCmds(s.o.Self, target, client, cur, i18n.T("prompt.rename"))...)
 	case ActChanges:
 		s.spawn(append([]string{"__menu", "--changes"}, tgt...))
 	}

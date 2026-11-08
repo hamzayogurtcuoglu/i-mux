@@ -171,20 +171,35 @@ func runRename(e *Env, args []string) error {
 	fs := newFlags(e, "rename")
 	paneF := fs.String("pane", "", "pane to name (default: this pane)")
 	clientF := fs.String("client", "", "client for the message")
+	fromOpt := fs.Bool("from-option", false, "take the pane and the name from the rename prompt's options")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
 	}
 	name := strings.TrimSpace(strings.Join(pos, " "))
-	pane, err := targetPane(*paneF)
-	if err != nil {
-		return err
-	}
 	w, _, err := newWorkspace(e, false)
 	if err != nil {
 		return err
 	}
 	ctx := context.Background()
+	if *fromOpt {
+		// The prompt left both in global options (sidebar.RenamePrompt).
+		out, _ := w.T.Run(ctx,
+			tmux.Cmd{"show-options", "-gqv", sidebar.OptRenamePane},
+			tmux.Cmd{"show-options", "-gqv", sidebar.OptRename})
+		_, _ = w.T.Run(ctx,
+			tmux.Cmd{"set-option", "-gu", sidebar.OptRenamePane},
+			tmux.Cmd{"set-option", "-gu", sidebar.OptRename})
+		lines := strings.SplitN(out, "\n", 3)
+		if len(lines) < 2 || strings.TrimSpace(lines[0]) == "" {
+			return errors.New("rename: no pane in " + sidebar.OptRenamePane)
+		}
+		*paneF, name = strings.TrimSpace(lines[0]), strings.TrimSpace(lines[1])
+	}
+	pane, err := targetPane(*paneF)
+	if err != nil {
+		return err
+	}
 	p, err := w.PaneTarget(ctx, pane)
 	if err != nil {
 		return err

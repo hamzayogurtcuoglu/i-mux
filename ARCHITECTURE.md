@@ -1165,6 +1165,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   OpenCode pane instead. A click on a row of another tab goes there; on the selected agent (or
   a right-click anywhere) it opens the menu with Rename…. The sidebar key `n` still names the
   current pane.
+- **No pane id in a prompt's template** (v0.26.1): `command-prompt` turns `%1` in its template
+  into the answer, so a template holding `%14` targeted "<name>4" ("no such pane"; panes
+  %1, %10-%19, %100-… could not be renamed). The pane goes to `@imux_rename_pane` before the
+  prompt, the answer to `@imux_rename`, and `imux rename --from-option` names the pane.
 - **Close a tab:** the **×** after the current tab (`range=user|imux:close`) → confirm →
   `imux __close-tab`; the last tab closes the project as above.
 
