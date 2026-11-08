@@ -219,7 +219,7 @@ func TestRender(t *testing.T) {
 	if sc.ActionOf(last).Kind != ActKeys {
 		t.Fatalf("last item %+v", sc.ActionOf(last))
 	}
-	f := Frame(sc, 10)
+	f := Frame(sc, 41, 10)
 	if !strings.HasPrefix(f, "\x1b[H") || !strings.HasSuffix(f, "\x1b[J") || strings.Count(f, "\r\n") != 9 {
 		t.Errorf("frame %q", f)
 	}
@@ -758,5 +758,48 @@ func TestNoToolbarRename(t *testing.T) {
 		if l.Action.Kind == ActRename {
 			t.Fatalf("a Rename row: %q", Plain(l.Text))
 		}
+	}
+}
+
+// TestWideText: wide emoji and CJK in commit subjects, file and agent names
+// never make a row wider than the sidebar (a ✨ in a subject wrapped the
+// row and broke the rail).
+func TestWideText(t *testing.T) {
+	i18n.SetLocale("en")
+	m := model()
+	m.View = ViewChanges
+	m.SCM = &gitops.Status{
+		Branch:  "main",
+		Changes: []gitops.Change{{Status: "M", Path: "文档/说明书.md", Added: 3}},
+		History: []gitops.LogEntry{
+			{Hash: "c7c81ba", Subject: "feat: ✨ Commit message suggestions from the user's agents", When: m.Now},
+			{Hash: "a1b2c3d", Subject: "修复：标签页的关闭按钮 🎉🎉🎉 and more", When: m.Now},
+		},
+	}
+	for _, theme := range []string{IconsEmoji, IconsNerd} {
+		m.Icons = theme
+		for _, w := range []int{43, 30} {
+			for _, l := range Render(m, w, 30, NoItem).Lines {
+				if n := DisplayWidth(Plain(l.Text)); n != w {
+					t.Errorf("%s %d: %d columns: %q", theme, w, n, Plain(l.Text))
+				}
+			}
+		}
+	}
+	if got := fit("ab✨cd", 4); DisplayWidth(got) != 4 || got != "ab …" {
+		t.Errorf("fit cuts by columns: %q", got)
+	}
+	if got := fit("漢字テスト", 5); DisplayWidth(got) != 5 {
+		t.Errorf("fit CJK: %q (%d)", got, DisplayWidth(got))
+	}
+	line := "\x1b[33mabc\x1b[0m ✨✨✨ end"
+	if c := clip(line, 6); DisplayWidth(Plain(c)) != 6 || !strings.HasPrefix(c, "\x1b[33mabc\x1b[0m ") {
+		t.Errorf("clip %q (%d)", c, DisplayWidth(Plain(c)))
+	}
+	if clip("short", 10) != "short" {
+		t.Error("clip changed a short line")
+	}
+	if DisplayWidth("é") != 1 || DisplayWidth("👍🏽") != 2 || DisplayWidth("❤️") != 1 {
+		t.Errorf("combining marks, skin tones, variation selectors: %d %d %d", DisplayWidth("é"), DisplayWidth("👍🏽"), DisplayWidth("❤️"))
 	}
 }

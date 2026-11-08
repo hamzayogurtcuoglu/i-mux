@@ -6,6 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.27.3] - 2026-11-08
+
+### Fixed
+
+- A wide character (an emoji like ✨, or Chinese / Japanese / Korean text) in a commit subject, a
+  file name or an agent name made its row wider than the sidebar: the row wrapped and the rail
+  broke. Widths follow the terminal's wide characters now, text is cut by columns, and every row
+  is cut to the sidebar's width before it is drawn.
+
 ## [0.27.2] - 2026-11-08
 
 0.27.0 and 0.27.1 were tagged, but their builds could not build the release tool (it needs a

@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -143,7 +142,8 @@ func (s Screen) ActionOf(it Item) Action {
 
 // runes counts display columns. The sidebar uses only narrow characters
 // (no emoji such as ⛔, which many terminals draw two columns wide).
-func runes(s string) int { return utf8.RuneCountInString(s) }
+// runes is the columns plain text takes (wide emoji and CJK count two).
+func runes(s string) int { return DisplayWidth(s) }
 
 // fit cuts s to w columns (with "…") or pads it with spaces.
 func fit(s string, w int) string {
@@ -152,11 +152,20 @@ func fit(s string, w int) string {
 	}
 	n := runes(s)
 	if n > w {
-		r := []rune(s)
 		if w == 1 {
 			return "…"
 		}
-		return string(r[:w-1]) + "…"
+		var b strings.Builder
+		used := 0
+		for _, r := range s {
+			cw := runeWidth(r)
+			if used+cw > w-1 {
+				break
+			}
+			b.WriteRune(r)
+			used += cw
+		}
+		return b.String() + strings.Repeat(" ", w-1-used) + "…"
 	}
 	return s + strings.Repeat(" ", w-n)
 }
@@ -733,7 +742,7 @@ func (m Model) Animated() bool {
 
 // Frame turns a screen into the bytes that draw it on an h-row terminal:
 // cursor home, each line erased to its end, the rest of the screen cleared.
-func Frame(sc Screen, h int) string {
+func Frame(sc Screen, w, h int) string {
 	var b strings.Builder
 	b.WriteString("\x1b[H")
 	for i, l := range sc.Lines {
@@ -743,7 +752,7 @@ func Frame(sc Screen, h int) string {
 		if i > 0 {
 			b.WriteString("\r\n")
 		}
-		b.WriteString(l.Text)
+		b.WriteString(clip(l.Text, w))
 		b.WriteString("\x1b[K")
 	}
 	b.WriteString("\x1b[J")
@@ -765,20 +774,4 @@ func Plain(s string) string {
 		b.WriteByte(s[i])
 	}
 	return b.String()
-}
-
-// DisplayWidth counts the terminal columns of plain text: the rail's emoji
-// take two.
-func DisplayWidth(s string) int {
-	n := 0
-	for _, r := range s {
-		switch {
-		case r >= 0x1F000, r == 0x2753, r == 0x2705, r == 0x2728, r >= 0x2795 && r <= 0x2797, r >= 0x23E9 && r <= 0x23EC:
-			// Emoji presented wide: ➕ ➖ ⏪ ⏫ ⏬ ✅ ✨ ❓ and the planes above.
-			n += 2
-		default:
-			n++
-		}
-	}
-	return n
 }

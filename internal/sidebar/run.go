@@ -191,7 +191,7 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 // draw renders the cached model.
 func (s *sidebar) draw() {
 	s.screen = Render(s.model, s.win.Width, s.win.Height, s.sel)
-	_, _ = io.WriteString(s.o.Out, Frame(s.screen, s.win.Height))
+	_, _ = io.WriteString(s.o.Out, Frame(s.screen, s.win.Width, s.win.Height))
 }
 
 // width is the sidebar's width: the configured one, or the rail's while the
