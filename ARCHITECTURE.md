@@ -104,6 +104,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D25 | **Plan percentages come from the CLIs themselves** (added 2026-11-07, v0.13): Claude Code gives its status-line command `rate_limits.five_hour` / `seven_day` (`used_percentage`, `resets_at`; Pro/Max, after the first reply), so imux starts Claude with `--settings=~/.imux/claude-settings.json` whose `statusLine` is `imux __statusline claude`: it records the numbers in `~/.imux/usage/claude.json` and prints the user's own status line (from their settings, highest precedence first) or a short usage line. Codex already writes `rate_limits` in its rollouts. Copilot writes `quotaSnapshots.premium_interactions` (entitlement, used requests, remaining %, reset date) in every `model.model_call_success` event of its session files (v0.14: read from there). Antigravity keeps its quota inside its local language server, behind a CSRF token of the running agy process; imux does not read it, so the panel shows only limits seen on screen for it. | The user found the limits panel unreadable and asked for percentages per window. No credentials are read and no request is sent: the numbers are the ones each CLI already has. The user's settings files are never written. |
 | D26 | **The sidebar gets an activity bar like an editor's** (added 2026-11-08, v0.15, at the user's request): a 3-column rail of view icons (Agents, Explorer, Search, Source Control; Limits and Help at the bottom). Explorer is the project's file tree; Search and diffs open in wide popups; a diff shows the whole file with the changes highlighted, side by side when wide. | The user wanted the editor's way of looking at a project (files, search, changes) next to the agents, without leaving the terminal. A narrow sidebar is enough to choose; reading happens in popups that use the whole window. |
 | D27 | **The sidebar's source control works like an editor's** (added 2026-11-08, v0.16): staged and unstaged changes, per-file stage / unstage / discard, stage / unstage / discard all, commit (a prompt; with nothing staged it stages everything first), push / pull / sync with ahead and behind counts, branch checkout and creation, and the recent history. Git runs in the project folder; discards ask first; network commands run in a popup so their output and any password prompt show. Files open in an editor (micro, $VISUAL/$EDITOR, nano, vim with the mouse on) or VS Code. | The user asked for the editor's source control "with every feature", and to edit files, not only read them. imux stays a thin layer over git and the user's editor: no git library, no editor of its own. |
+| D28 | **OpenCode is the fifth agent** (added 2026-11-08, v0.18, at the user's request; taken out in v0.19, back in v0.20: its `/connect` adds an NVIDIA or Groq key without an account): an open-source coding CLI that works with any model endpoint (OpenAI-compatible APIs, Anthropic, Ollama, NVIDIA's and Groq's free tiers ...). imux supports it like the others: launch with a session id imux chooses, native resume, sessions read for handoffs, the picker and limits. | The user wants to code with free or self-hosted endpoints too. Writing an agent of our own would be a separate project (§17 Q32); OpenCode already does it well, so the cheap path is to support it. |
 
 ## 4. Components
 
@@ -589,6 +590,31 @@ the `antigravity` agent and follows Claude in the default order. Gemini CLI supp
 - **Agent bar:** its range is `imux:agy`, because `imux:antigravity` is 16 bytes and tmux drops
   ranges over 15 bytes (the entry could not be clicked in v0.2.0). `workspace.AgentRange` picks the
   binary name whenever the id would not fit.
+
+### 7.7 OpenCode (`opencode`, v2)
+
+Verified 2026-11-08 with OpenCode 2.2.6 against a local fake OpenAI-compatible server (no
+provider, no quota; synthetic prompts only).
+
+- **Store:** a SQLite database, `$XDG_DATA_HOME/opencode/opencode.db` (default
+  `~/.local/share/opencode/opencode.db`). Table `session_v2` (id `ses_…`, `directory`, `title`,
+  `parent_id`, `time_created` / `time_updated` in ms, token totals, `model` JSON) and
+  `session_message` (`type` user | assistant | idle …, `seq`, `data` JSON).
+- **Reading:** listing (`Find`) queries `session_v2` with the `sqlite3` CLI (`-readonly -json`,
+  top-level sessions only); without `sqlite3`, only sessions whose id imux knows are found.
+  Loading (`Load`) runs `opencode session export --standalone <id>`: JSON `info` (id, directory,
+  time, title, model, tokens) and `messages`: user `{text}`; assistant `{content: [{type: text,
+  text} | {type: tool, name, state: {status, input}}], tokens}`. Tool names: read, write, edit,
+  bash, glob, grep, list, webfetch, todowrite …; inputs use `path`, `command`, `pattern`.
+- **Launch:** `opencode --session ses_imux<uuid> --prompt <handoff>` (the TUI; `--session`
+  creates a session with that id: it must start with "ses"); resume: `--session <id> --prompt
+  <delta>`. The handoff file is read without a prompt (external directories are allowed by
+  default in v2).
+- **Limits:** OpenCode has no plan of its own; the provider's limits apply. On-screen patterns:
+  "rate limit", "429", "quota exceeded", "insufficient credits". The panel shows the last 5 hours'
+  tokens from `session_v2`.
+- **Known issue:** OpenCode needs a writable `$XDG_STATE_HOME` (default `~/.local/state`); a folder
+  owned by root (made by an earlier `sudo` command) stops it. `imux doctor` warns with the fix.
 
 ## 8. Handoff document
 
@@ -1140,8 +1166,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   for its trail entry (fresh when none, or when the agent has no resume form); names and tab
   names set; sidebars added; the saved layout applied when the pane count matches. Shell panes
   are not restored, nor panes of an agent that is not installed or that this version does not
-  know (a pane an older version left, e.g. 0.18's OpenCode: shown under its id in the sidebar,
-  and it can be switched to a known agent). Opening a folder (picker, `imux open`, `imux` in the folder) restores its
+  know (a pane another version left: shown under its id in the sidebar, and it can be switched
+  to a known agent). Opening a folder (picker, `imux open`, `imux` in the folder) restores its
   snapshot when the project is not open.
 - **Picker:** with an empty query, sections: Restore last session (when projects of an earlier
   server were open), RECENT (open projects, then snapshots and recent folders by time, with
@@ -1244,7 +1270,7 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Mouse:** viewers run `less --mouse` (wheel scrolls); the folder picker and search popups
   scroll with the wheel; search results fold per file (click the file, ← →) and all at once (Tab).
 
-#### Closing the side panel (v0.20)
+#### Closing the side panel (v0.21)
 
 - A click on the active view's icon closes the panel, as in the editor: the sidebar pane narrows
   to the rail's item (6 columns; the pane border is the line) and the agent pane gets the room.

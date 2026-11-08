@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Bir yapay zekâ kodlama agent'ında kullanım limitine mi takıldınız? Sohbetin tamamıyla başka bir agent'ta devam edin.</b><br>
-  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI
+  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode
 </p>
 
 <p align="center">
@@ -60,6 +60,13 @@ Terminalin bir [Nerd Font](https://www.nerdfonts.com) kullanıyorsa şerit edit�
 gösterir (`brew install --cask font-jetbrains-mono-nerd-font`, sonra terminalin ayarlarından seç);
 yoksa emojileri.
 
+**OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
+Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):
+diğerleri limite takılınca devam etmek için kullanışlı bir yer. `brew install opencode` ile kur;
+`imux doctor` çalışabildiğini kontrol eder. Anahtarı OpenCode'un içinde `/connect` ile ekle (NVIDIA
+ya da Groq'u seç, build.nvidia.com ya da console.groq.com'dan aldığın anahtarı yapıştır; hesap
+gerekmez), sonra `/models` ile modeli seç.
+
 Dosyalar editöründe açılır: config'teki `editor`, yoksa micro (terminalde en kolayı: `brew install
 micro`), `$VISUAL`, `$EDITOR`, nano, vim. Fare tekerleği her yerde kaydırır.
 
@@ -90,7 +97,7 @@ görünümü değiştirir.
 | **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |
 | en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat |
 | `prefix b` | kenar paneli gizle ya da göster |
-| `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` | pane menüsü; Claude / Antigravity / Copilot / Codex'te sürdür |
+| `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` `e` | pane menüsü; Claude / Antigravity / Copilot / Codex / OpenCode'da sürdür |
 
 `prefix`, `Ctrl+b` demektir: bas, bırak, sonra tuşa bas.
 

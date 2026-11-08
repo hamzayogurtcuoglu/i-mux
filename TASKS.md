@@ -741,6 +741,23 @@ User feedback (ARCHITECTURE D27, §9.3 "Sidebar v7").
 - [ ] **T24.2 E2E and docs** · S · deps: T24.1
   - AC: real clicks close and open the panel; the agent pane grows and shrinks; README.
 
+## M25: OpenCode (added 2026-11-08; removed in 0.19, back in 0.20)
+
+User request: an agent that works with any model endpoint (ARCHITECTURE D28, §7.7). Taken out
+in 0.19 and put back in 0.20 at the user's request: its `/connect` adds an NVIDIA or Groq key
+without an account.
+
+- [x] **T25.1 Agent and launch** · S
+  - AC: registry entry (key `e`), templates with an imux-chosen `ses_` id, resume; unit tests.
+- [x] **T25.2 Session provider** · M
+  - AC: Find via sqlite3 (cwd, since, id), Load via `session export`: text, tools, model, tokens,
+    chained handoffs; tests with synthetic exports and a synthetic database.
+- [x] **T25.3 Limits, doctor, UI** · S
+  - AC: limit patterns; panel row with recent tokens; doctor warns about an unwritable state
+    folder; sidebar icon; i18n.
+- [x] **T25.4 E2E and docs** · M · deps: T25.1–T25.3
+  - AC: a fake opencode; Claude → OpenCode → Claude round trip keeps the context; README.
+
 ---
 
 ## Testing strategy
