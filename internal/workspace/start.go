@@ -31,7 +31,7 @@ func (w *WS) launchNew(ctx context.Context, l Launch, create func(cmd []string) 
 		return "", err
 	}
 	cmds := []tmux.Cmd{create(w.execCmd(p))}
-	cmds = append(cmds, optCmds("", te, Trail{te}, l.CWD, w.Label(l.Agent))...)
+	cmds = append(cmds, optCmds("", te, append(append(Trail{}, l.Before...), te), l.CWD, w.Label(l.Agent))...)
 	out, err := w.T.Run(ctx, cmds...)
 	if err != nil {
 		os.Remove(p)

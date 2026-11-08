@@ -254,6 +254,9 @@ type Launch struct {
 	ResumeID string // resume this native session instead of starting a new one
 	Handoff  string // handoff file that seeded the run (recorded in the trail)
 	Pane     string // pane id when known (respawn); "" for a new pane
+	// Before starts a new pane's trail (a conversation picked in History
+	// that this run continues).
+	Before []TrailEntry
 }
 
 // Spec builds the launch spec and the trail entry of a run.

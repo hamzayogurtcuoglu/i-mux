@@ -168,6 +168,18 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	} else if !native {
 		res.Fresh = true
 	}
+	// A conversation picked in History and continued in another agent joins
+	// the trail: going back to its agent later resumes it, not an older run
+	// of that agent in this pane.
+	if req.From != nil && !native && req.From.ID != "" {
+		now := w.Now().UnixMilli()
+		picked := TrailEntry{Agent: req.From.Agent, SessionID: req.From.ID, File: req.From.Path, Start: now, End: now}
+		if req.NewPane {
+			l.Before = []TrailEntry{picked}
+		} else {
+			trail = append(trail.Close(w.Now()), picked)
+		}
+	}
 	// Returning to an agent that already ran in this pane resumes its session
 	// natively with a delta handoff; the full handoff becomes the fallback
 	// for a resume that fails fast (§8.6, §9.5).

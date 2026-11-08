@@ -809,6 +809,11 @@ Failed calls get a ` (failed)` suffix.
 - The delta covers every run *after* the agent's last run, concatenated in order
   (here G and X, each loaded with `Since = t1`).
 - If the delta is empty, the resume runs without a prompt.
+- A conversation picked in History and continued in another agent joins the trail as a closed
+  entry (its agent, id and file) right before the new run, in the same pane or the new one
+  (v0.25.1). Going back to its agent then resumes that conversation with what happened since,
+  not an older run of that agent in the pane (before, Claude → History: Claude X → Antigravity →
+  Claude resumed the pane's first Claude chat).
 
 ## 9. tmux integration
 

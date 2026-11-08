@@ -6,6 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-11-08
+
+### Fixed
+
+- A conversation picked in History and continued in another agent went back to the wrong chat:
+  choosing its agent again (for example Continue this chat in → Claude) resumed an older chat
+  of that agent in the pane. It now resumes the picked conversation, with what happened in the
+  other agent since.
+
 ## [0.25.0] - 2026-11-08
 
 ### Added
