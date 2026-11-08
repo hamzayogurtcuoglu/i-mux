@@ -26,10 +26,11 @@ jobs:
       - name: Install GoReleaser
         run: |
           for i in 1 2 3; do
-            go install github.com/goreleaser/goreleaser/v2@latest && break
+            GOBIN="$RUNNER_TEMP/bin" go install github.com/goreleaser/goreleaser/v2@latest && break
             sleep 20
           done
-          goreleaser --version
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH" # go install's folder is not on the PATH
+          "$RUNNER_TEMP/bin/goreleaser" --version
       - name: GoReleaser
         run: goreleaser release --clean
         env:
