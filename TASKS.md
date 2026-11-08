@@ -890,6 +890,20 @@ everything similar); what the pointer is over lights up.
     menus list the items; New File, Rename, Delete (into `IMUX_TRASH_DIR`), Copy / Paste, Copy
     Relative Path (`IMUX_COPY_COMMAND` and the tmux buffer) do what they say; README.
 
+## M35: Go to File (added 2026-11-08)
+
+User request: find a file in the open project the way the editor's Ctrl+P does; in the Files
+view too. Key chosen by the user: Ctrl+P (it is taken from shells and OpenCode in their panes).
+
+- [ ] **T35.1 Finder** · M
+  - AC: fuzzy matching and ranking of §9.3 "Go to File" with unit tests (name over folders,
+    consecutive, word starts, shorter paths, smart case, parts, `:line`); empty query by change
+    time; the popup with ↑↓, wheel, click, Enter, Esc; highlighted letters.
+- [ ] **T35.2 Key, button, e2e and docs** · S · deps: T35.1
+  - AC: `quick_open_key_root` (default `C-p`) bound in tmux.conf; the explorer's title button;
+    the pane's project folder (the sidebar's target on the sidebar); e2e: Ctrl+P in an agent pane,
+    type, Enter opens the file in the editor at the line; the button; README.
+
 ---
 
 ## Testing strategy

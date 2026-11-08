@@ -1503,6 +1503,24 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   - Every change redraws the sidebars and reveals the result: `@imux_reveal` (a counter and the
     path) makes each sidebar of that project open the folders above it and select it.
 
+#### Go to File (v0.31, Ctrl+P)
+
+- **What:** the editor's Quick Open: type a few letters of a file's name, Enter opens it in the
+  editor. A popup (`imux __goto`, 80% × 70%) in the project folder.
+- **Opening it:** `Ctrl+P` in any pane (`[tmux] quick_open_key_root = "C-p"`; `""` for none), and
+  a button in the explorer's title next to 🔍. The key runs `imux __goto --pane P --client C`,
+  which finds the pane's project folder (on the sidebar: its target pane's) and opens the popup
+  there. Cmd+P cannot work: macOS terminals keep it (Print). Ctrl+P is taken from the program in
+  the pane (a shell's and OpenCode's previous command; ↑ does the same there).
+- **The list:** the project's files as search lists them (`git ls-files -co --exclude-standard`,
+  else a walk with the explorer's skip list). Empty query: the files changed last first.
+- **Matching:** the query's letters in order, not necessarily together (`sbrnd` finds
+  `internal/sidebar/render.go`); case-insensitive unless the query has a capital; spaces split it
+  into parts that must all match. Ranking: letters in the file's name over its folders,
+  consecutive letters, letters at a word start (after `/ . _ -`, a capital), then shorter paths.
+  The matched letters are highlighted; up to 200 rows. `name:42` opens at line 42.
+- **Keys:** ↑↓ (and Ctrl+N / Ctrl+P), the wheel, Enter or a click opens, Esc closes.
+
 #### Notifications (v0.28)
 
 - **When:** an agent pane goes from working to idle after working at least 10 s ("Claude
