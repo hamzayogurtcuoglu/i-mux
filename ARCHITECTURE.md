@@ -105,6 +105,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D26 | **The sidebar gets an activity bar like an editor's** (added 2026-11-08, v0.15, at the user's request): a 3-column rail of view icons (Agents, Explorer, Search, Source Control; Limits and Help at the bottom). Explorer is the project's file tree; Search and diffs open in wide popups; a diff shows the whole file with the changes highlighted, side by side when wide. | The user wanted the editor's way of looking at a project (files, search, changes) next to the agents, without leaving the terminal. A narrow sidebar is enough to choose; reading happens in popups that use the whole window. |
 | D27 | **The sidebar's source control works like an editor's** (added 2026-11-08, v0.16): staged and unstaged changes, per-file stage / unstage / discard, stage / unstage / discard all, commit (a prompt; with nothing staged it stages everything first), push / pull / sync with ahead and behind counts, branch checkout and creation, and the recent history. Git runs in the project folder; discards ask first; network commands run in a popup so their output and any password prompt show. Files open in an editor (micro, $VISUAL/$EDITOR, nano, vim with the mouse on) or VS Code. | The user asked for the editor's source control "with every feature", and to edit files, not only read them. imux stays a thin layer over git and the user's editor: no git library, no editor of its own. |
 | D28 | **OpenCode is the fifth agent** (added 2026-11-08, v0.18, at the user's request; taken out in v0.19, back in v0.20: its `/connect` adds an NVIDIA or Groq key without an account): an open-source coding CLI that works with any model endpoint (OpenAI-compatible APIs, Anthropic, Ollama, NVIDIA's and Groq's free tiers ...). imux supports it like the others: launch with a session id imux chooses, native resume, sessions read for handoffs, the picker and limits. | The user wants to code with free or self-hosted endpoints too. Writing an agent of our own would be a separate project (§17 Q32); OpenCode already does it well, so the cheap path is to support it. |
+| D29 | **Commit messages are written by the user's own agents, run once without a UI** (added 2026-11-08, v0.23, at the user's request): the ✨ button in Source Control sends the changes to the agent of the pane the sidebar follows (or `git.commit_agent`) in its print mode and offers the reply; it never commits by itself. | Like the editor's "generate commit message", without an API or key of imux's own: the user's plans and keys (Claude, Codex, Copilot, Antigravity, or OpenCode with a free NVIDIA / Groq key) already pay for it. |
 
 ## 4. Components
 
@@ -1308,6 +1309,50 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - `emoji`: ➕ ➖ ⏪ 🔄 ⏬ ⏫ 🔃 ✅ 🌿 📝 📜 🔍, which every font draws at full size (2 columns; the width
   table counts these BMP emoji as wide); folds keep ▾ ▸.
 - The tab bar's × takes 3 columns (" × "), like its +.
+
+#### Commit message suggestions (v0.23, D29)
+
+```
+ ✅ Commit…                      ✨        ✨ → "Writing a commit message with Claude Code…"
+                                             → menu:  feat: add OpenCode round-trip tests
+                                                      Commit                       c
+                                                      Edit before committing…      e
+                                                      Write another                r
+                                                      Cancel                       q
+```
+
+- **Button:** ✨ right of Commit… (codicon sparkle U+EC10; emoji ✨). It runs `imux __git suggest
+  --cwd D --client C --pane P` in the background.
+- **Agent:** `git.commit_agent = "auto"` (default) takes the agent of the pane the sidebar follows,
+  else the first installed in `order`; or one agent by name. `git.commit_model` (default "")
+  passes a model when `commit_agent` names an agent (`haiku` for Claude,
+  `groq/llama-3.3-70b-versatile` for OpenCode ...).
+- **Changes sent:** the staged changes (`git diff --cached --stat` and the patch); with nothing
+  staged, what Commit would commit: the work tree (`git diff`) plus untracked files (names, and
+  text under 8 KB). The patch is cut at 48 KB, secrets are redacted (§8.5), and the last 10
+  commit subjects show the style.
+- **Prompt:** one line, at most 72 characters, imperative, in the style of the recent subjects
+  (a `feat:` / `fix:` prefix when they use one), the message only.
+- **Runs** in an empty temporary folder (the agent cannot touch the project; its session does not
+  join the project's history) with the agent's resolved PATH, at most 120 s:
+  - Claude: `claude -p --no-session-persistence --tools "" [--model M] <instructions>`, changes on
+    stdin;
+  - Codex: `codex exec --skip-git-repo-check --sandbox read-only --color never
+    --output-last-message F [-m M] -`, prompt on stdin;
+  - Copilot: `copilot -p <prompt> -s --no-color [--model M]` (one premium request);
+  - Antigravity: `agy -p <prompt> [--model M]`;
+  - OpenCode: `opencode run --archived --title "imux commit message" [-m M] <prompt>` (the reply on
+    stdout; `--archived` keeps it out of its session list).
+- **Reply:** ANSI and code fences stripped; the first line that is not a lead-in ("Here is ...:")
+  without quotes or backticks, at most 200 characters.
+- **Offer:** the message goes to `@imux_git` and a menu shows it: Commit (`__git commit
+  --from-option`), Edit before committing… (the editor in a popup on a file holding it; lines
+  starting with `#` are dropped; empty cancels), Write another, Cancel. Never committed without
+  the user's key press.
+- **First use:** a menu asks once whether the changes may be sent to that agent ("Yes, do not ask
+  again" stores the notice `commit_suggest_ok`).
+- **Feedback:** "Writing a commit message with X…" until the menu opens; a failure shows the
+  agent's last error line; no changes: "Nothing to commit".
 
 #### Agent bar
 

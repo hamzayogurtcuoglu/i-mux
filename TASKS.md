@@ -767,6 +767,23 @@ without an account.
   - AC: the tab's × takes 3 columns (tmux 3.4 gap kept); goldens; e2e clicks still stage,
     discard and close; README.
 
+## M27: Commit message suggestions (added 2026-11-08)
+
+User request: like the editor's "generate commit message" (ARCHITECTURE D29).
+
+- [ ] **T27.1 Collect, prompt, clean** · M
+  - AC: `internal/commitmsg`: staged or work-tree changes with untracked files, 48 KB cut,
+    redaction, recent subjects; the prompt; reply cleaning; unit tests with a temp repository.
+- [ ] **T27.2 Agents** · S
+  - AC: argv / stdin / output file per agent (Claude, Codex, Copilot, Antigravity, OpenCode) from
+    their `--help`; agent choice (`git.commit_agent`, `commit_model`); unit tests.
+- [ ] **T27.3 UI** · M · deps: T27.1, T27.2
+  - AC: ✨ button; `__git suggest` with the first-use question, progress message, the offer menu
+    (Commit, Edit…, Write another, Cancel) and `__git edit-message`; i18n.
+- [ ] **T27.4 E2E and docs** · M · deps: T27.3
+  - AC: headless modes in the fake agents; real clicks: ✨ → consent → menu → commit with the
+    suggested message, the fake got the diff; the real OpenCode with a fake model; README.
+
 ---
 
 ## Testing strategy
