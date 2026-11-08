@@ -1404,6 +1404,29 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Releases** build GoReleaser from the Go module proxy (`go install …/goreleaser/v2`), not a
   GitHub download: three releases (0.24.0–0.25.1) failed on a 504 from that download.
 
+#### Notifications (v0.28)
+
+- **When:** an agent pane goes from working to idle after working at least 10 s ("Claude
+  finished"), or starts asking ("Claude needs you"). Not when the user is looking at it: a client
+  whose terminal has the focus (`client_flags` has `focused`; `focus-events on`) shows the pane's
+  window. At most one per pane per 30 s.
+- **Text:** title "Claude finished · opcua-qtclient" (the pane's name when it has one, else the
+  agent; the project folder); the message is the tab and what to do ("Click the tab to look").
+- **How**, in order, the first that works:
+  1. `[notify] command`: run with the title and the message as arguments (a phone push, …);
+  2. macOS: `osascript -e 'display notification … with title … [sound name "Glass"]'`;
+  3. Linux: `notify-send -a i-mux [-h string:sound-name:message-new-instant] title message`, else
+     `gdbus call --session … org.freedesktop.Notifications.Notify` (needs the desktop session's
+     D-Bus: the watcher inherits it from the tmux server);
+  4. otherwise (SSH, no desktop): the terminal's own notification, written to each client's
+     tty: OSC 9 for iTerm2 (`\e]9;title: message\a`), OSC 777 for the others
+     (`\e]777;notify;title;message\a`: Ghostty, WezTerm, foot, GNOME Terminal and other VTE
+     ones, kitty); terminals that know neither ignore it.
+  Every notification also shows as a tmux message on the clients.
+- **Settings:** "Notifications: On/Off" (n) and "Notification sound: On/Off" (`[notify] enabled`,
+  `sound`; default on). The e2e tests turn them off unless a test turns them on with a
+  `command` that logs.
+
 #### Commit message suggestions (v0.23, D29)
 
 ```
