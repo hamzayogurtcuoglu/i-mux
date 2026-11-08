@@ -137,21 +137,23 @@ type Completion struct {
 
 // Tmux is the [tmux] section.
 type Tmux struct {
-	MenuKeyRoot     string `toml:"menu_key_root"`
-	MenuKeyPrefix   string `toml:"menu_key_prefix"`
-	PickerKeyPrefix string `toml:"picker_key_prefix"`
-	AgentBar        bool   `toml:"agent_bar"`
-	Sidebar         bool   `toml:"sidebar"`
-	SidebarWidth    int    `toml:"sidebar_width"`
-	SidebarKey      string `toml:"sidebar_key_prefix"`
-	SplitRightKey   string `toml:"split_right_key_prefix"`
-	SplitDownKey    string `toml:"split_down_key_prefix"`
-	Tabs            bool   `toml:"tabs"`
-	Icons           string `toml:"icons"` // auto | nerd | emoji
-	NewTabKey       string `toml:"new_tab_key_prefix"`
-	RenameTabKey    string `toml:"rename_tab_key_prefix"`
-	Mouse           bool   `toml:"mouse"`
-	HistoryLimit    int    `toml:"history_limit"`
+	MenuKeyRoot string `toml:"menu_key_root"`
+	// QuickOpenKeyRoot opens Go to File (the editor's Ctrl+P); "" for none.
+	QuickOpenKeyRoot string `toml:"quick_open_key_root"`
+	MenuKeyPrefix    string `toml:"menu_key_prefix"`
+	PickerKeyPrefix  string `toml:"picker_key_prefix"`
+	AgentBar         bool   `toml:"agent_bar"`
+	Sidebar          bool   `toml:"sidebar"`
+	SidebarWidth     int    `toml:"sidebar_width"`
+	SidebarKey       string `toml:"sidebar_key_prefix"`
+	SplitRightKey    string `toml:"split_right_key_prefix"`
+	SplitDownKey     string `toml:"split_down_key_prefix"`
+	Tabs             bool   `toml:"tabs"`
+	Icons            string `toml:"icons"` // auto | nerd | emoji
+	NewTabKey        string `toml:"new_tab_key_prefix"`
+	RenameTabKey     string `toml:"rename_tab_key_prefix"`
+	Mouse            bool   `toml:"mouse"`
+	HistoryLimit     int    `toml:"history_limit"`
 }
 
 // Config is the effective configuration.
@@ -259,21 +261,22 @@ func Default() *Config {
 			RatePerMinute:   20,
 		},
 		Tmux: Tmux{
-			MenuKeyRoot:     `C-\`,
-			MenuKeyPrefix:   "a",
-			PickerKeyPrefix: "S",
-			AgentBar:        false,
-			Sidebar:         true,
-			SidebarWidth:    43,
-			SidebarKey:      "b",
-			SplitRightKey:   "v",
-			SplitDownKey:    "-",
-			Tabs:            true,
-			Icons:           "auto",
-			NewTabKey:       "c",
-			RenameTabKey:    ",",
-			Mouse:           true,
-			HistoryLimit:    50000,
+			MenuKeyRoot:      `C-\`,
+			QuickOpenKeyRoot: "C-p",
+			MenuKeyPrefix:    "a",
+			PickerKeyPrefix:  "S",
+			AgentBar:         false,
+			Sidebar:          true,
+			SidebarWidth:     43,
+			SidebarKey:       "b",
+			SplitRightKey:    "v",
+			SplitDownKey:     "-",
+			Tabs:             true,
+			Icons:            "auto",
+			NewTabKey:        "c",
+			RenameTabKey:     ",",
+			Mouse:            true,
+			HistoryLimit:     50000,
 		},
 		Agents: defaultAgents(),
 	}

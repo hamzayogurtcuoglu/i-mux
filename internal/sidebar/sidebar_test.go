@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
@@ -272,7 +271,7 @@ func TestExplorer(t *testing.T) {
 	find := func(sub string) Action {
 		for _, l := range sc.Lines {
 			if i := strings.Index(Plain(l.Text), sub); i >= 0 {
-				return l.ActionAt(utf8.RuneCountInString(Plain(l.Text)[:i]))
+				return l.ActionAt(DisplayWidth(Plain(l.Text)[:i]))
 			}
 		}
 		t.Fatalf("no %q", sub)
@@ -291,6 +290,9 @@ func TestExplorer(t *testing.T) {
 	}
 	if a := find("🔍"); a.Kind != ActView && a.Kind != ActSearch {
 		t.Errorf("search %+v", a)
+	}
+	if a := find("📄"); a.Kind != ActGoto {
+		t.Errorf("go to file %+v", a)
 	}
 	// Scrolling keeps the title and moves the list.
 	m.Scroll = 2

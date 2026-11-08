@@ -49,6 +49,7 @@ line number.
 | `paste.command` | `""` | Run this instead to get the images: it prints image file paths, one a line. |
 | `completion.enabled` | `false` | Copilot-like suggestions while you edit a file (Tab accepts): files open in Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim). Turn it on in Settings (⚙ on the rail), which sets it up and signs you in. |
 | `tmux.menu_key_root` | `'C-\'` | Key that opens the pane menu without the prefix. "" disables it. |
+| `tmux.quick_open_key_root` | `"C-p"` | Root key that opens Go to File, the editor's Ctrl+P: type letters of a file's name, Enter opens it. It takes the key from the program in the pane (a shell's or OpenCode's previous command; the up arrow does the same). "" for none. |
 | `tmux.menu_key_prefix` | `"a"` | prefix + key opens the pane menu. |
 | `tmux.picker_key_prefix` | `"S"` | prefix + key opens the session picker. |
 | `tmux.sidebar` | `true` | Sidebar on the left of each window: panes, agents to continue in, split buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3). |
@@ -219,6 +220,10 @@ enabled           = false
 [tmux]
 # Key that opens the pane menu without the prefix. "" disables it.
 menu_key_root     = 'C-\'
+# Root key that opens Go to File, the editor's Ctrl+P: type letters of a file's
+# name, Enter opens it. It takes the key from the program in the pane (a
+# shell's or OpenCode's previous command; the up arrow does the same). "" for none.
+quick_open_key_root = "C-p"
 # prefix + key opens the pane menu.
 menu_key_prefix   = "a"
 # prefix + key opens the session picker.

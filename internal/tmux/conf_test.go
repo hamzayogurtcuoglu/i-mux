@@ -73,7 +73,7 @@ func TestGenerateConfOptions(t *testing.T) {
 	if last := lines[len(lines)-1]; !strings.HasPrefix(last, "source-file -q ") || !strings.Contains(last, "tmux.local.conf") {
 		t.Fatalf("last line %q", last)
 	}
-	if ks := BoundKeys(in); strings.Join(ks, ",") != "prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root C-v,root M-v" {
+	if ks := BoundKeys(in); strings.Join(ks, ",") != "root C-p,prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root C-v,root M-v" {
 		t.Fatalf("BoundKeys %q", ks)
 	}
 	// Images off: Ctrl+V and Alt+V are the panes' again.

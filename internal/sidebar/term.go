@@ -3,7 +3,9 @@
 package sidebar
 
 import (
+	"io"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -42,4 +44,31 @@ func Size(fd int) (w, h int) {
 		return 80, 24
 	}
 	return int(ws.Col), int(ws.Row)
+}
+
+// ReadInput reads what the terminal fd has, waiting at most d: nil when
+// nothing came. Popups read this way rather than from a goroutine: a read
+// left waiting when the popup hands the terminal on (to the editor) would
+// swallow the editor's first key.
+func ReadInput(fd int, d time.Duration) ([]byte, error) {
+	tv := syscall.NsecToTimeval(d.Nanoseconds())
+	ok, err := waitReadable(fd, &tv)
+	if err == syscall.EINTR {
+		return nil, nil // a signal (a resize)
+	}
+	if err != nil || !ok {
+		return nil, err
+	}
+	buf := make([]byte, 1024)
+	n, err := syscall.Read(fd, buf)
+	if n <= 0 {
+		if err == nil || err == syscall.EAGAIN || err == syscall.EINTR {
+			if n == 0 && err == nil {
+				return nil, io.EOF
+			}
+			return nil, nil
+		}
+		return nil, err
+	}
+	return buf[:n], nil
 }

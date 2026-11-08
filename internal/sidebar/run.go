@@ -606,6 +606,9 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActSearch:
 		s.popup(client, "90%", "90%", "__search")
 		return
+	case ActGoto:
+		s.popup(client, "80%", "70%", "__goto", "--run")
+		return
 	case ActFold:
 		// Fold or unfold a section in every sidebar (@imux_fold, global).
 		var names []string

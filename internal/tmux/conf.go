@@ -86,6 +86,9 @@ func BoundKeys(in *ConfInput) []string {
 	if t.MenuKeyRoot != "" {
 		ks = append(ks, "root "+t.MenuKeyRoot)
 	}
+	if t.QuickOpenKeyRoot != "" {
+		ks = append(ks, "root "+t.QuickOpenKeyRoot)
+	}
 	if t.MenuKeyPrefix != "" {
 		ks = append(ks, "prefix "+t.MenuKeyPrefix)
 	}
@@ -175,6 +178,10 @@ func GenerateConf(in *ConfInput) string {
 	}
 	if k := cfg.Tmux.MenuKeyPrefix; k != "" {
 		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", pane))
+	}
+	if k := cfg.Tmux.QuickOpenKeyRoot; k != "" {
+		w("# Go to File, the editor's Ctrl+P (§9.3).")
+		w("bind -n %s %s", Quote(k), runShell(in.Self, "__goto", pane))
 	}
 	if k := cfg.Tmux.PickerKeyPrefix; k != "" {
 		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--sessions", pane))

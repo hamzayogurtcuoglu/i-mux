@@ -166,7 +166,8 @@ func scrolled(list []Line, scroll, n int) []Line {
 // the project's tree.
 func renderExplorer(m Model, w, h int) []Line {
 	search := button(m.icons().Search, muted, Action{Kind: ActSearch})
-	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.explorer")+" · "+m.Project, w-search.W) + reset}, search)}
+	gotoFile := button(m.icons().GoTo, muted, Action{Kind: ActGoto})
+	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.explorer")+" · "+m.Project, w-search.W-gotoFile.W) + reset}, gotoFile, search)}
 	var rows []Line
 	for _, r := range m.Tree {
 		rows = append(rows, treeRow(r, w, m.icons(), r.Path == m.Selected))

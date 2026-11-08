@@ -45,6 +45,7 @@ const (
 	ActSuggest                // an agent writes a commit message (D29)
 	ActSettings               // the Settings menu
 	ActPasteImage             // paste the clipboard's image into the target pane
+	ActGoto                   // Go to File (the editor's Ctrl+P)
 )
 
 // Action is a row's action.
@@ -145,6 +146,9 @@ func (s Screen) ActionOf(it Item) Action {
 // (no emoji such as ⛔, which many terminals draw two columns wide).
 // runes is the columns plain text takes (wide emoji and CJK count two).
 func runes(s string) int { return DisplayWidth(s) }
+
+// Fit is fit for other packages' screens.
+func Fit(s string, w int) string { return fit(s, w) }
 
 // fit cuts s to w columns (with "…") or pads it with spaces.
 func fit(s string, w int) string {

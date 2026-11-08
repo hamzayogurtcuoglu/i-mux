@@ -363,36 +363,38 @@ func Run(o Options) (*search.Match, error) {
 	winch := make(chan os.Signal, 1)
 	signal.Notify(winch, syscall.SIGWINCH)
 	defer signal.Stop(winch)
-	input := make(chan []byte, 8)
-	go func() {
-		buf := make([]byte, 1024)
-		for {
-			n, err := o.In.Read(buf)
-			if n > 0 {
-				b := make([]byte, n)
-				copy(b, buf[:n])
-				input <- b
-			}
-			if err != nil {
-				close(input)
-				return
-			}
-		}
-	}()
+	// No reader goroutine: one left waiting after the popup hands the
+	// terminal to the editor would swallow the editor's first key.
+	fd := int(o.In.Fd())
 	var pending []byte
 	draw()
 	for {
+		b, err := sidebar.ReadInput(fd, 50*time.Millisecond)
+		if err != nil {
+			return nil, nil
+		}
+		changed := false
 		select {
 		case <-winch:
+			changed = true
+		default:
+		}
+		select {
 		case r := <-results:
 			if r.gen == gen {
 				m.Results, m.Cut, m.Busy, m.Sel, m.Top = r.matches, r.cut, false, 1, 0 // the first match
 				m.Folded = nil
+				changed = true
 			}
-		case b, ok := <-input:
-			if !ok {
-				return nil, nil
+		default:
+		}
+		if b == nil {
+			if changed {
+				draw()
 			}
+			continue
+		}
+		{
 			var evs []sidebar.Event
 			evs, pending = sidebar.Parse(append(pending, b...), true)
 			for _, ev := range evs {

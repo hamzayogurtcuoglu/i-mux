@@ -29,6 +29,8 @@ set -g  status-format[1] '#[align=left] imux #[range=user|imux:menu]☰#[norange
 # Pane menu, session picker.
 bind -n 'C-\' run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    a run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+# Go to File, the editor's Ctrl+P (§9.3).
+bind -n C-p run-shell -b '/opt/imux/bin/imux __goto --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    S run-shell -b '/opt/imux/bin/imux __menu --sessions --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # Ctrl+V / Alt+V in an agent's pane paste the clipboard's image; elsewhere, or with no image, the key goes on.
 bind -n C-v if-shell -F '#{@imux_agent}' "run-shell -b '/opt/imux/bin/imux __paste-image --pane #{pane_id} --client #{client_name} --key C-v >/dev/null 2>&1 || true'" 'send-keys C-v'
@@ -42,7 +44,7 @@ bind    c run-shell -b '/opt/imux/bin/imux __menu --tab --pane #{pane_id} --clie
 bind    , command-prompt -I '#{@imux_tab}' -p 'Tab name:' 'set-option -w @imux_tab "%%%"'
 # Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).
 bind -n MouseDown3Border run-shell -t = -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
-set -g  @imux_keys 'root C-\,prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root MouseDown3Border,root C-v,root M-v'
+set -g  @imux_keys 'root C-\,root C-p,prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root MouseDown3Border,root C-v,root M-v'
 
 # Pane lifecycle and watcher.
 set-hook -g pane-died "run-shell -b '/opt/imux/bin/imux __pane-died #{pane_id} #{pane_dead_status} >/dev/null 2>&1 || true'"

@@ -6,6 +6,22 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-11-08
+
+### Added
+
+- **Go to File (Ctrl+P),** the editor's Quick Open: type a few letters of a file's name (the
+  letters in order, not necessarily together: `sbrnd` finds `internal/sidebar/render.go`),
+  Enter opens it in the editor; `name:42` opens it at line 42. With nothing typed it lists the
+  files changed last. Ctrl+P works in every pane, and 📄 in the Files title opens it too;
+  `[tmux] quick_open_key_root` changes the key (`""` turns it off). Ctrl+P is then i-mux's in
+  the panes: a shell's or OpenCode's previous command is the up arrow.
+
+### Fixed
+
+- After a search result opened a file, the editor lost the first key typed into it: the search
+  popup's reader was still waiting on the terminal.
+
 ## [0.30.2] - 2026-11-08
 
 ### Changed

@@ -112,6 +112,10 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 			key("ctrl-u")
 		case c == 0x03:
 			key("ctrl-c")
+		case c == 0x0e:
+			key("ctrl-n")
+		case c == 0x10:
+			key("ctrl-p")
 		case c >= 0x20 && c < 0x7f:
 			key(string(c))
 		case c >= 0xc0:

@@ -67,7 +67,15 @@ func TestExplorerAndSearch(t *testing.T) {
 	mark = c.Mark()
 	c.Write("\r")
 	c.waitScreenAfter(h, mark, "EDIT +3 src/app.go", 5*time.Second) // at the line
+	// The editor gets the first key typed into it (the search popup does
+	// not keep reading): Enter closes it, and 🔍 opens the search again.
 	c.Write("\r")
+	time.Sleep(500 * time.Millisecond)
+	x, y = h.rowOf(bar, "🔍")
+	mark = c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "Search in proj", 5*time.Second)
+	c.Write("\x1b")
 }
 
 // TestViewerWheel (T22.5): a right-click on a file offers Edit and View;
