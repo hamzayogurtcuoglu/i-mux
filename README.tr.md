@@ -58,7 +58,8 @@ imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 
 Terminalin bir [Nerd Font](https://www.nerdfonts.com) kullanıyorsa şerit editördeki simgeleri
 gösterir (`brew install --cask font-jetbrains-mono-nerd-font`, sonra terminalin ayarlarından seç);
-yoksa emojileri.
+yoksa emojileri. Açık görünümün simgesine tıklamak, editördeki gibi şeridin yanındaki paneli
+kapatır ve yeri ajana bırakır; herhangi bir görünümün simgesine tıklamak onu yeniden açar.
 
 **OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
 Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):

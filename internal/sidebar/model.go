@@ -154,6 +154,7 @@ type Model struct {
 	Tick     int             // spinner frame
 	Fold     map[string]bool // folded sections (@imux_fold)
 	View     string          // the view on the activity rail (@imux_view)
+	Closed   bool            // the panel is closed: only the rail shows (@imux_collapsed)
 	Tree     []TreeRow       // the explorer's rows (Explorer view)
 	SCM      *gitops.Status  // the Source Control view's repository (nil outside git)
 	Icons    string          // the rail's icon theme (IconsNerd, IconsEmoji)
@@ -285,7 +286,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}\t#{client_termname}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -296,10 +297,12 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	var tabAuto, tabState string
 	fold := map[string]bool{}
 	view := ViewAgents
-	if rows := tmux.Rows(sec["me"], 10); len(rows) > 0 {
+	closed := false
+	if rows := tmux.Rows(sec["me"], 11); len(rows) > 0 {
 		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges {
 			view = v
 		}
+		closed = rows[0][10] == "1"
 		r := rows[0]
 		tabAuto, tabState = r[6], r[7]
 		for _, f := range strings.Split(r[8], ",") {
@@ -410,7 +413,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view, Icons: s.iconTheme(term)}
+	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term)}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target

@@ -1,0 +1,92 @@
+//go:build e2e
+
+package e2e
+
+import (
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+)
+
+// closedRowOf is rowOf for a sidebar whose panel is closed (the rail alone).
+func (h *H) closedRowOf(bar, text string) (x, y int) {
+	h.t.Helper()
+	var lines []string
+	h.waitFor("closed rail shows "+text, 10*time.Second, func() bool {
+		lines = strings.Split(h.screen(bar), "\n")
+		for _, l := range lines {
+			if strings.Contains(l, text) {
+				return true
+			}
+		}
+		return false
+	})
+	pos := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_left} #{pane_top} #{status-position} #{status}"))
+	left, _ := strconv.Atoi(pos[0])
+	top, _ := strconv.Atoi(pos[1])
+	if pos[2] == "top" && pos[3] != "off" {
+		top++
+	}
+	for i, l := range lines {
+		if j := strings.Index(l, text); j >= 0 {
+			return left + sidebar.DisplayWidth(l[:j]) + 1, top + i + 1
+		}
+	}
+	return 0, 0
+}
+
+// TestClosePanel (T24.2): a real click on the active view's icon closes the
+// panel: the sidebar narrows to the rail and the agent pane gets the room; a
+// click on another view's icon opens it again with that view.
+func TestClosePanel(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	agentPane, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	width := func(p string) int {
+		n, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", p, "#{pane_width}")))
+		return n
+	}
+	x, y := h.rowOf(bar, "🤖")
+	open, agentW := width(bar), width(agentPane)
+
+	c.Click(0, x, y)
+	h.waitFor("panel closed", 5*time.Second, func() bool { return width(bar) == sidebar.ClosedWidth })
+	h.waitFor("agent pane grown", 5*time.Second, func() bool { return width(agentPane) == agentW+open-sidebar.ClosedWidth })
+	if v := h.paneOpt(bar, "#{@imux_collapsed}"); v != "1" {
+		t.Fatalf("@imux_collapsed %q", v)
+	}
+	h.waitFor("only the rail drawn", 5*time.Second, func() bool {
+		s := h.screen(bar)
+		return !strings.Contains(s, "AGENTS") && strings.Contains(s, "📁")
+	})
+	// A redraw keeps it closed (the sidebar does not take its width back).
+	h.mustImux("__sidebar-refresh")
+	time.Sleep(500 * time.Millisecond)
+	if w := width(bar); w != sidebar.ClosedWidth {
+		t.Fatalf("width after a redraw %d", w)
+	}
+
+	x, y = h.closedRowOf(bar, "📁")
+	c.Click(0, x, y)
+	h.waitFor("panel open with the explorer", 5*time.Second, func() bool {
+		return width(bar) == open && h.paneOpt(bar, "#{@imux_view}") == sidebar.ViewExplorer
+	})
+	h.waitFor("agent pane back", 5*time.Second, func() bool { return width(agentPane) == agentW })
+	if v := h.paneOpt(bar, "#{@imux_collapsed}"); v != "" {
+		t.Fatalf("@imux_collapsed %q after opening", v)
+	}
+	// Another view's icon while open only switches the view.
+	time.Sleep(500 * time.Millisecond)
+	x, y = h.rowOf(bar, "🤖")
+	c.Click(0, x, y)
+	h.waitFor("agents view", 5*time.Second, func() bool { return h.paneOpt(bar, "#{@imux_view}") == sidebar.ViewAgents })
+	time.Sleep(time.Second)
+	if w := width(bar); w != open {
+		t.Fatalf("switching the view changed the width to %d", w)
+	}
+}

@@ -20,11 +20,18 @@ const (
 	ViewSearch   = "search" // a popup: the rail opens it, the view stays
 	ViewChanges  = "changes"
 	OptView      = "@imux_view"
+	// OptClosed is "1" while the panel is closed (§9.3 "Closing the side
+	// panel"): the sidebar is only the rail.
+	OptClosed = "@imux_collapsed"
 )
 
 // railW is the activity rail's width: an icon with room around it and a
 // short label under it (6 columns), then the separator line.
 const railW = 7
+
+// ClosedWidth is the sidebar's width while the panel is closed: the rail's
+// item without its line (the pane border is the line).
+const ClosedWidth = railW - 1
 
 // railTall is the height from which the rail shows labels.
 const railTall = 26
@@ -359,7 +366,7 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 	if cur == "" {
 		cur = ViewAgents
 	}
-	active := it.view != "" && it.view == cur
+	active := !m.Closed && it.view != "" && it.view == cur
 	a := it.action
 	if it.view != "" {
 		a = Action{Kind: ActView, Section: it.view}
@@ -386,13 +393,16 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 	if !active {
 		iconColor = muted
 	}
-	line := faint + "│" + reset
-	if active {
-		return Cell{X: 0, W: railW, Text: selBg + cyan + "▌" + reset + selBg + " " + bold + it.icon + reset + selBg + gap + reset + line, Action: a},
-			Cell{X: 0, W: railW, Text: selBg + bold + lt + reset + line, Action: a}
+	line, cw := faint+"│"+reset, railW
+	if m.Closed {
+		line, cw = "", ClosedWidth
 	}
-	return Cell{X: 0, W: railW, Text: "  " + iconColor + it.icon + reset + gap + line, Action: a},
-		Cell{X: 0, W: railW, Text: color + lt + reset + line, Action: a}
+	if active {
+		return Cell{X: 0, W: cw, Text: selBg + cyan + "▌" + reset + selBg + " " + bold + it.icon + reset + selBg + gap + reset + line, Action: a},
+			Cell{X: 0, W: cw, Text: selBg + bold + lt + reset + line, Action: a}
+	}
+	return Cell{X: 0, W: cw, Text: "  " + iconColor + it.icon + reset + gap + line, Action: a},
+		Cell{X: 0, W: cw, Text: color + lt + reset + line, Action: a}
 }
 
 // withRail puts the activity rail on the left of the view's lines: the views
@@ -439,13 +449,21 @@ func withRail(content []Line, m Model, w, h int) []Line {
 	}
 	out := make([]Line, 0, n)
 	for i := 0; i < n; i++ {
+		cell, ok := at[i]
+		if m.Closed {
+			// Only the rail; the pane border is its line.
+			if !ok {
+				cell = Cell{X: 0, W: ClosedWidth, Text: strings.Repeat(" ", ClosedWidth)}
+			}
+			out = append(out, Line{Text: compose([]Cell{cell}, w), Cells: []Cell{cell}})
+			continue
+		}
 		var c Line
 		if i < len(content) {
 			c = content[i]
 		} else {
-			c = Line{Text: strings.Repeat(" ", w-railW)}
+			c = Line{Text: strings.Repeat(" ", max(w-railW, 0))}
 		}
-		cell, ok := at[i]
 		if !ok {
 			cell = Cell{X: 0, W: railW, Text: strings.Repeat(" ", railW-1) + faint + "│" + reset}
 		}

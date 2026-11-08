@@ -64,7 +64,8 @@ imux            # start the first installed agent (or: imux claude)
 
 The rail shows the editor's icons when your terminal uses a [Nerd Font](https://www.nerdfonts.com)
 (`brew install --cask font-jetbrains-mono-nerd-font`, then pick it in the terminal's settings),
-emoji otherwise.
+emoji otherwise. A click on the open view's icon closes the panel beside the rail, as in the
+editor, and gives the agent the room; a click on any view's icon opens it again.
 
 **OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
 NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue

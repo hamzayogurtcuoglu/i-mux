@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-08
+
+### Added
+
+- **Close the side panel from the rail**, as in the editor: a click on the open view's icon
+  narrows the sidebar to the rail and gives the agent the room; a click on any view's icon opens it
+  again with that view. Each tab keeps its own state.
+
 ## [0.20.0] - 2026-11-08
 
 ### Added

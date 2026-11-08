@@ -119,10 +119,10 @@ func Run(ctx context.Context, o Options) error {
 	// exec, only while one is shown.
 	spin := time.NewTicker(SpinEvery)
 	defer spin.Stop()
-	s.keepWidth(ctx)
 	if s.redraw(ctx) {
 		return nil
 	}
+	s.keepWidth(ctx)
 	var pending []byte
 	for {
 		select {
@@ -175,7 +175,7 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 	}
 	// A resize the SIGWINCH did not fix (tmux grows panes in proportion
 	// when a bigger client attaches): take the width back.
-	if want := s.o.Width; want > 0 && w.Width != want && w.WinW >= want+20 {
+	if want := s.width(m.Closed); want > 0 && w.Width != want && w.WinW >= want+20 {
 		_, _ = s.t.Run(ctx, tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(want)})
 	}
 	m.Tick, m.Scroll = s.model.Tick, s.scroll
@@ -190,10 +190,19 @@ func (s *sidebar) draw() {
 	_, _ = io.WriteString(s.o.Out, Frame(s.screen, s.win.Height))
 }
 
+// width is the sidebar's width: the configured one, or the rail's while the
+// panel is closed.
+func (s *sidebar) width(closed bool) int {
+	if closed {
+		return ClosedWidth
+	}
+	return s.o.Width
+}
+
 // keepWidth restores the sidebar's width after the window was resized,
 // unless the window is too narrow to keep it.
 func (s *sidebar) keepWidth(ctx context.Context) {
-	w := s.o.Width
+	w := s.width(s.model.Closed)
 	if w <= 0 {
 		return
 	}
@@ -373,10 +382,32 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		_ = s.t.Spawn(append(c, "-E", "-w", "80%", "-h", "70%", tmux.ShJoin(args...)))
 		return
 	case ActView:
-		// Show another view in this sidebar (@imux_view, per window).
+		// Show another view in this sidebar (@imux_view, per window). The
+		// active view's icon closes the panel; any view's icon opens it.
 		s.scroll = 0
-		if s.win.ID != "" {
-			_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", s.win.ID, OptView, a.Section})
+		if s.win.ID == "" {
+			return
+		}
+		cur := s.model.View
+		if cur == "" {
+			cur = ViewAgents
+		}
+		setView := tmux.Cmd{"set-option", "-w", "-t", s.win.ID, OptView, a.Section}
+		switch {
+		case s.model.Closed:
+			s.model.Closed = false
+			cmds := []tmux.Cmd{setView, {"set-option", "-w", "-u", "-t", s.win.ID, OptClosed}}
+			if w := s.width(false); w > 0 {
+				cmds = append(cmds, tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(w)})
+			}
+			_, _ = s.t.Run(ctx, cmds...)
+		case a.Section == cur:
+			s.model.Closed = true
+			_, _ = s.t.Run(ctx,
+				tmux.Cmd{"set-option", "-w", "-t", s.win.ID, OptClosed, "1"},
+				tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(ClosedWidth)})
+		default:
+			_, _ = s.t.Run(ctx, setView)
 		}
 		return
 	case ActToggleDir:

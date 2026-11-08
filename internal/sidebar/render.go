@@ -638,6 +638,9 @@ func bottom(m Model, w int) []Line {
 // When the rows do not fit, blank rows go first, then the other projects'
 // agents fold into one row each, then the top is cut.
 func Render(m Model, w, h int, sel Item) Screen {
+	if m.Closed {
+		return Screen{Lines: withRail(nil, m, w, h)}
+	}
 	cw := w - railW
 	var content []Line
 	switch m.View {

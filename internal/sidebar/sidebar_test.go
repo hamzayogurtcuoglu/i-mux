@@ -662,3 +662,45 @@ func TestRailThemes(t *testing.T) {
 		t.Error("terminals with Nerd Font symbols")
 	}
 }
+
+// TestClosedPanel: with the panel closed the sidebar is the rail alone, 6
+// columns with no line of its own; its icons still open views, none marked
+// active; the bottom buttons stay.
+func TestClosedPanel(t *testing.T) {
+	i18n.SetLocale("en")
+	for _, theme := range []string{IconsEmoji, IconsNerd} {
+		m := model()
+		m.Icons, m.Closed, m.View = theme, true, ViewExplorer
+		sc := Render(m, ClosedWidth, 30, NoItem)
+		if len(sc.Lines) != 30 {
+			t.Fatalf("%s: %d lines", theme, len(sc.Lines))
+		}
+		views := map[string]bool{}
+		bottom := map[ActionKind]bool{}
+		for _, l := range sc.Lines {
+			p := Plain(l.Text)
+			if n := DisplayWidth(p); n != ClosedWidth {
+				t.Errorf("%s: %d columns: %q", theme, n, p)
+			}
+			if strings.Contains(p, "│") || strings.Contains(p, "PROJECTS") || strings.Contains(l.Text, "▌") {
+				t.Errorf("%s: more than the rail, or an active mark: %q", theme, p)
+			}
+			for x := 0; x < ClosedWidth; x++ {
+				switch a := l.ActionAt(x); a.Kind {
+				case ActView:
+					views[a.Section] = true
+				case ActLimits, ActKeys, ActSearch:
+					bottom[a.Kind] = true
+				}
+			}
+		}
+		for _, v := range []string{ViewAgents, ViewExplorer, ViewChanges} {
+			if !views[v] {
+				t.Errorf("%s: no icon opens %s", theme, v)
+			}
+		}
+		if !bottom[ActLimits] || !bottom[ActKeys] || !bottom[ActSearch] {
+			t.Errorf("%s: search, limits or help gone: %v", theme, bottom)
+		}
+	}
+}
