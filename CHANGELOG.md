@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-08
+
+### Added
+
+- **✨ Commit message suggestions** in Source Control, like the editor's: the agent of the pane
+  you work in (or `git.commit_agent`, with `git.commit_model`) gets the staged changes, or with
+  nothing staged all of them, in its print mode and writes a one-line message in the style of
+  your recent commits. A menu offers Commit, Edit before committing… (your editor), Write another
+  and Cancel; nothing is committed without you. It asks once before the changes go to an agent.
+  Claude, Codex, Copilot, Antigravity and OpenCode (for example with a free NVIDIA or Groq key).
+
 ## [0.22.0] - 2026-11-08
 
 ### Changed

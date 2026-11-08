@@ -39,6 +39,8 @@ line number.
 | `bus.idle_after` | `"5s"` | A pane counts as idle once its screen did not change for this long. |
 | `bus.max_message_bytes` | `16384` | Largest message `imux send` delivers. |
 | `bus.rate_per_minute` | `20` | Messages per minute per sending pane (stops agent ping-pong loops). |
+| `git.commit_agent` | `"auto"` | Who writes a suggested commit message (✨ in Source Control): "auto" = the agent of the pane the sidebar follows (else the first installed), or one of claude, antigravity, copilot, codex, opencode. It gets the changes once, without its UI; nothing is committed until you choose Commit. |
+| `git.commit_model` | `""` | Model for commit_agent when it names an agent ("" = that agent's default), e.g. "haiku" for claude or "groq/llama-3.3-70b-versatile" for opencode. |
 | `tmux.menu_key_root` | `'C-\'` | Key that opens the pane menu without the prefix. "" disables it. |
 | `tmux.menu_key_prefix` | `"a"` | prefix + key opens the pane menu. |
 | `tmux.picker_key_prefix` | `"S"` | prefix + key opens the session picker. |
@@ -168,6 +170,16 @@ idle_after        = "5s"
 max_message_bytes = 16384
 # Messages per minute per sending pane (stops agent ping-pong loops).
 rate_per_minute   = 20
+
+[git]
+# Who writes a suggested commit message (✨ in Source Control): "auto" = the
+# agent of the pane the sidebar follows (else the first installed), or one of
+# claude, antigravity, copilot, codex, opencode. It gets the changes once,
+# without its UI; nothing is committed until you choose Commit.
+commit_agent      = "auto"
+# Model for commit_agent when it names an agent ("" = that agent's default),
+# e.g. "haiku" for claude or "groq/llama-3.3-70b-versatile" for opencode.
+commit_model      = ""
 
 [tmux]
 # Key that opens the pane menu without the prefix. "" disables it.

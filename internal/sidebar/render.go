@@ -43,6 +43,7 @@ const (
 	ActGitPopup               // run git action Section in a popup (push, pull, sync, show Path)
 	ActFileMenu               // the menu of file Path (edit, view, VS Code)
 	ActRefresh                // redraw
+	ActSuggest                // an agent writes a commit message (D29)
 )
 
 // Action is a row's action.
@@ -775,8 +776,8 @@ func DisplayWidth(s string) int {
 	n := 0
 	for _, r := range s {
 		switch {
-		case r >= 0x1F000, r == 0x2753, r == 0x2705, r >= 0x2795 && r <= 0x2797, r >= 0x23E9 && r <= 0x23EC:
-			// Emoji presented wide: ➕ ➖ ⏪ ⏫ ⏬ ✅ ❓ and the planes above.
+		case r >= 0x1F000, r == 0x2753, r == 0x2705, r == 0x2728, r >= 0x2795 && r <= 0x2797, r >= 0x23E9 && r <= 0x23EC:
+			// Emoji presented wide: ➕ ➖ ⏪ ⏫ ⏬ ✅ ✨ ❓ and the planes above.
 			n += 2
 		default:
 			n++

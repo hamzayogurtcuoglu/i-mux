@@ -255,13 +255,18 @@ func renderChanges(m Model, w, h int) []Line {
 	left := " " + cyan + ic.Branch + reset + " " + fit(branch+" "+ic.Open, nw) + " " + muted + sync + reset
 	out = append(out, buttons(w, Cell{Text: left, Action: Action{Kind: ActBranchMenu}}, syncBtns...))
 
-	// Commit button.
+	// Commit button, and ✨: an agent writes the message (D29).
+	suggest := button(ic.Suggest, cyan, Action{Kind: ActSuggest})
 	label := ic.Commit + " " + i18n.T("git.commit_button")
-	pad := max(w-2-DisplayWidth(label), 0)
-	out = append(out, Line{
+	cw := w - suggest.W
+	pad := max(cw-2-DisplayWidth(label), 0)
+	commit := Cell{
+		W:      cw,
 		Text:   " " + "\x1b[48;5;24m\x1b[38;5;255m" + strings.Repeat(" ", pad/2) + label + strings.Repeat(" ", pad-pad/2) + reset + " ",
 		Action: Action{Kind: ActCommit},
-	})
+	}
+	suggest.X = cw
+	out = append(out, Line{Text: compose([]Cell{commit, suggest}, w), Cells: []Cell{commit, suggest}})
 
 	var rows []Line
 	section := func(name, text string, n int, btns ...Cell) {

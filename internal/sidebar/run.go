@@ -436,6 +436,13 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.prompt(ctx, client, i18n.T("prompt.commit"), "",
 			"set-option -g @imux_git \"%%%\" ; "+tmux.RunShell(s.o.Self, s.gitArgs("commit", client, false)...)+"")
 		return
+	case ActSuggest:
+		args := s.gitArgs("suggest", client, false)
+		if s.model.Target != "" {
+			args = append(args, "--pane", s.model.Target)
+		}
+		s.spawn(args)
+		return
 	case ActBranchMenu:
 		s.branchMenu(ctx, client)
 		return

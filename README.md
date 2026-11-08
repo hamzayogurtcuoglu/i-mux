@@ -89,7 +89,7 @@ them) switches its view.
 | 🤖 | **Agents:** your projects (branch, uncommitted changes) and every agent working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks you something, a green dot when it finished while you were elsewhere, a ring when idle, and how long ago that changed |
 | 📁 | **Files:** the project's files; click a folder to open it, a file to edit it (right-click: view, or open in VS Code); changed files are colored |
 | 🔍 | **Search:** every file of the project, results as you type, grouped by file (click a file or press Tab to fold); Enter opens the file at the line |
-| 🔀 | **Git:** like an editor's source control: staged and unstaged changes with + (stage), − (unstage), ↶ (discard, asks first) on each file and for all; **Commit…**; pull / push / sync with ↑↓ counts; the branch menu (switch, new branch); the history. A click on a file shows the whole file with the changes highlighted, side by side when the window is wide |
+| 🔀 | **Git:** like an editor's source control: staged and unstaged changes with stage, unstage and discard (asks first) on each file and for all; **Commit…**, and **✨** next to it: your agent (or `git.commit_agent`, for example OpenCode with a free Groq key) writes the message from the changes, and you commit it, edit it or ask for another; pull / push / sync with ↑↓ counts; the branch menu (switch, new branch); the history. A click on a file shows the whole file with the changes highlighted, side by side when the window is wide |
 | 📊 · ❓ | usage limits · every key |
 
 | Sidebar / key | What it does |

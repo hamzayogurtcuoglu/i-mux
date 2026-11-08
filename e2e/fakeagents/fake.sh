@@ -47,6 +47,40 @@ if [ "$agent" = opencode ] && [ "${1:-}" = session ] && [ "${2:-}" = export ]; t
 	exit 0
 fi
 
+# Print mode (commit message suggestions, D29): claude -p, codex exec,
+# copilot -p, agy -p, opencode run. Each logs A-headless-n.argv (and
+# .stdin for claude and codex) and replies "feat: fake A commit message n"
+# ($IMUX_FAKE_LOG/A.headless-reply replaces it) the way that agent does.
+headless=""
+case "$agent:${1:-}" in
+claude:-p | copilot:-p | antigravity:-p | codex:exec | opencode:run) headless=1 ;;
+esac
+if [ -n "$headless" ]; then
+	n=1
+	while ! (set -C; : >"$log/$agent-headless-$n.argv") 2>/dev/null; do
+		n=$((n + 1))
+	done
+	printf '%s\0' "$@" >"$log/$agent-headless-$n.argv"
+	case "$agent" in
+	claude | codex) cat >"$log/$agent-headless-$n.stdin" ;;
+	esac
+	msg="feat: fake $agent commit message $n"
+	[ -f "$log/$agent.headless-reply" ] && msg=$(cat "$log/$agent.headless-reply")
+	if [ "$agent" = codex ]; then
+		out=""
+		prev=""
+		for a in "$@"; do
+			[ "$prev" = "--output-last-message" ] && out="$a"
+			prev="$a"
+		done
+		echo "codex: thinking" >&2
+		printf '%s\n' "$msg" >"$out"
+	else
+		printf 'Here is a commit message:\n\n```\n%s\n```\n' "$msg"
+	fi
+	exit 0
+fi
+
 # Claim the next run number atomically (noclobber create).
 n=1
 while ! (set -C; : >"$log/$agent-$n.argv") 2>/dev/null; do

@@ -18,7 +18,7 @@ import (
 func init() {
 	register(&command{
 		Name:   "__git",
-		Args:   "<op> [--cwd D] [--client C] [--untracked] [--from-option] [path...]",
+		Args:   "<op> [--cwd D] [--client C] [--pane P] [--untracked] [--from-option] [--yes] [path...]",
 		Hidden: true,
 		Run:    runGit,
 	})
@@ -33,6 +33,8 @@ func runGit(e *Env, args []string) error {
 	client := fs.String("client", "", "client for messages")
 	untracked := fs.Bool("untracked", false, "the paths are untracked (discard deletes them)")
 	fromOpt := fs.Bool("from-option", false, "read the message or branch from @imux_git")
+	paneF := fs.String("pane", "", "the pane the sidebar follows (suggest: its agent writes the message)")
+	yes := fs.Bool("yes", false, "suggest: the user agreed to send the changes")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
@@ -41,7 +43,7 @@ func runGit(e *Env, args []string) error {
 		return &UsageError{Msg: i18n.T("cli.usage", "__git <op> [path...]")}
 	}
 	op, paths := pos[0], pos[1:]
-	w, _, err := newWorkspace(e, false)
+	w, cfg, err := newWorkspace(e, false)
 	if err != nil {
 		return err
 	}
@@ -98,8 +100,12 @@ func runGit(e *Env, args []string) error {
 		}
 	case "push", "pull", "sync", "show":
 		return gitInPopup(e, *cwd, op, paths)
+	case "suggest":
+		return suggestCommit(ctx, w, cfg, *cwd, *client, *paneF, *yes, say)
+	case "edit-message":
+		return editMessage(ctx, e, w, cfg, *cwd, say)
 	default:
-		return &UsageError{Msg: i18n.T("cli.usage", "__git stage|unstage|discard|stage-all|unstage-all|discard-all|commit|checkout|new-branch|push|pull|sync|show")}
+		return &UsageError{Msg: i18n.T("cli.usage", "__git stage|unstage|discard|stage-all|unstage-all|discard-all|commit|suggest|edit-message|checkout|new-branch|push|pull|sync|show")}
 	}
 	if err != nil {
 		say(i18n.T("git.failed", firstLine(err.Error())))

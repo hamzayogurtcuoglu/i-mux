@@ -109,6 +109,13 @@ type Bus struct {
 	RatePerMinute   int      `toml:"rate_per_minute"`
 }
 
+// Git is the [git] section: the Source Control view's commit message
+// suggestions (D29).
+type Git struct {
+	CommitAgent string `toml:"commit_agent"` // auto | an agent id
+	CommitModel string `toml:"commit_model"` // "" = the agent's default
+}
+
 // Tmux is the [tmux] section.
 type Tmux struct {
 	MenuKeyRoot     string `toml:"menu_key_root"`
@@ -139,6 +146,7 @@ type Config struct {
 	Handoff      Handoff           `toml:"handoff"`
 	Limits       Limits            `toml:"limits"`
 	Bus          Bus               `toml:"bus"`
+	Git          Git               `toml:"git"`
 	Tmux         Tmux              `toml:"tmux"`
 	Agents       map[string]*Agent `toml:"agents"`
 }
@@ -217,6 +225,7 @@ func Default() *Config {
 			DefaultExpiry:    D(5 * time.Hour),
 			ClaudeStatusline: true,
 		},
+		Git: Git{CommitAgent: "auto"},
 		Bus: Bus{
 			Enabled:         true,
 			IdleAfter:       D(5 * time.Second),
@@ -364,6 +373,7 @@ func (c *Config) validate(src []byte) error {
 		{"on_arrival", c.Handoff.OnArrival, []string{"wait", "continue"}},
 		{"deliver", c.Handoff.Deliver, []string{"file", "inline"}},
 		{"icons", c.Tmux.Icons, []string{"auto", "nerd", "emoji"}},
+		{"commit_agent", c.Git.CommitAgent, append([]string{"auto"}, AgentIDs...)},
 		{"on_exit", c.OnExit, []string{"shell", "close"}},
 		{"inject", c.Handoff.Inject, []string{"argv", "paste"}},
 		{"locale", c.Locale, []string{"", "en", "tr"}},
