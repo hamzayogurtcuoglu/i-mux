@@ -952,6 +952,20 @@ CLI was old) and updates them, or at least gives the command and a warning.
     with the terminal, the list is read again and the bin cache takes the new versions; e2e with
     the fake agents' updaters; README.
 
+## M39: Named conversations in History (added 2026-11-09)
+
+User request: agents can be named in the sidebar, but History does not show those names, so a
+conversation is hard to find again ("I forget which name I gave"); maybe rename in History too.
+
+- [ ] **T39.1 Names on conversations** · S
+  - AC: §9.3 "Named conversations": `state.json` names by conversation key; a named pane's trail
+    runs take its name (on rename, when History opens, before an agent, tab or project closes, on
+    `on_exit = "close"`); History rows show the name before the preview; unit tests.
+- [ ] **T39.2 Rename in History, the name back** · S · deps: T39.1
+  - AC: the conversation menu's Rename… (options, never the prompt's template, carry the key and
+    the pane); the open agent running it takes the name; continuing a named conversation names its
+    pane; e2e through the real menu and prompt.
+
 ---
 
 ## Testing strategy

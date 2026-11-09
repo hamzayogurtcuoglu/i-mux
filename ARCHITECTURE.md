@@ -1575,6 +1575,28 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   `MouseUp1StatusRight` run `imux __click imux:close` / `imux:tab` (on the release, like the
   3.4 bindings). The tabs themselves were window ranges, clickable since tmux 3.0.
 
+#### Named conversations (v0.35)
+
+- **Why:** agents can be named in the sidebar (`@imux_name`), but History listed conversations by
+  agent, age and first request only, so a named one was hard to find again (user request,
+  2026-11-09).
+- **Where names live:** `state.json` `names`, conversation key (`agent:id`) → name, at most 500.
+  An agent's name is its conversation's: `RememberNames` maps each named pane's trail runs
+  (`RefFor`) to their conversations, so a chat that moved to another CLI keeps the name on every
+  conversation of the chain. It runs on rename, when History opens (conversations whose file came
+  later), and before an agent, a tab or a project closes or an agent exits with `on_exit =
+  "close"` (the pane's trail goes with it). Taking a pane's name away removes it from its current
+  conversation.
+- **History:** a named row reads `name · preview` (name up to 24 characters, the preview
+  shortened). A conversation's menu shows the name in its title and has **Rename…** (`r`):
+  `command-prompt` with the current name; the key, the pane and the client go through global
+  options (`@imux_name_key/_pane/_client`), the answer through `@imux_name_value`, then `imux
+  __name-session --from-option` names it, gives the name to open panes whose current run is that
+  conversation, and opens History again. Nothing but the answer is in the prompt's template (a pane
+  id's `%1` would become the answer, v0.26.1).
+- **Back:** continuing a named conversation from History (`switch` / `split --from-session`)
+  names the pane after it.
+
 #### Versions and updates (v0.34)
 
 - **Where:** Settings → **Versions and updates…** (key `c`), a popup running `imux versions
