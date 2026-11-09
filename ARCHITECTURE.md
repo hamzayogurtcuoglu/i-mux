@@ -1116,7 +1116,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 
 - The status line moves to the top (`tmux.tabs = true`, default) and shows the session's windows as
   tabs: ` <n> <name> <state> `; the current tab on a dark background. A click selects it (tmux's
-  window ranges); the **+** (`range=user|imux:tab`) opens "New tab with: Claude / Antigravity / …"
+  window ranges); the **+** (`range=user|imux:tab`; before tmux 3.4 `range=right`, v0.33) opens
+  "New tab with: Claude / Antigravity / …"
   and `imux tab <agent>` opens a window with that agent (and its sidebar) after the current one.
 - **Name:** the user's (`@imux_tab`, set with `prefix ,`), else the name of the tab's target agent
   (`@imux_tab_auto`, kept by the tab's sidebar), else the window name. `#` is escaped.
@@ -1179,8 +1180,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   into the answer, so a template holding `%14` targeted "<name>4" ("no such pane"; panes
   %1, %10-%19, %100-… could not be renamed). The pane goes to `@imux_rename_pane` before the
   prompt, the answer to `@imux_rename`, and `imux rename --from-option` names the pane.
-- **Close a tab:** the **×** after the current tab (`range=user|imux:close`) → confirm →
-  `imux __close-tab`; the last tab closes the project as above.
+- **Close a tab:** the **×** after the current tab (`range=user|imux:close`; before tmux 3.4
+  `range=left`) → confirm → `imux __close-tab`; the last tab closes the project as above.
 
 #### Recent and restore (v0.10)
 
@@ -1543,6 +1544,36 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   first, then the middle of the name, which keeps its start and its extension (`blim_s…ps.py`);
   an untracked folder (`docs/`) is a name. Up to v0.31 the path was cut at its start
   (`…_bdd/config.py`), which hid the name behind its folders.
+
+#### A project without agents, the tab bar on tmux 3.2 (v0.33)
+
+- **Closing the last agent keeps the project.** Up to v0.32 closing a project's last agent
+  (the agent menu's Close agent…, or the last pane going any other way) closed its tab and with
+  it the project: the user had not closed the project (user report, 2026-11-09). Now the pane
+  stays and says so: `imux __empty` runs in it, with `@imux_role=empty`, the project's folder
+  (`@imux_cwd`) and "No agents" on its border and its tab.
+- **The pane:** "No agents in <project>", then the agents to start in config order, each with
+  its key (`c a p x e`, `t` for a terminal), missing ones grayed out; a key, ↑↓ and Enter, or a
+  click starts one. It runs `imux split <agent> --pane <it>` through `run-shell -b` (respawning
+  the pane ends the process that asked). `imux split` (and the + of AGENTS, which splits the
+  target) given the "No agents" pane starts the agent in its place: `respawn-pane`, and the
+  role is cleared; `--from-session` continues the conversation there.
+- **The sidebar:** the pane is never an agent: not in AGENTS, not a place to continue, not saved
+  in snapshots (Restore starts the default agent for a project without agents). The project
+  stays in PROJECTS; under AGENTS its name and "No agents · + to start one" (the + of AGENTS).
+  It is the target only when nothing else is in the window, and then "Continue this chat in" is
+  hidden.
+- **Other ways the last pane goes** (a terminal's `exit`, `kill-pane`, `on_exit = "close"`): the
+  sidebar, finding itself alone in the project's only window, opens the same pane beside it
+  (`split-window` running `imux __empty`, then its own width). At most once in 5 s: a pane that
+  cannot run must not make a loop; the project then closes as before.
+- **Unchanged:** the last agent of a tab when the project has other tabs closes that tab; the ×
+  of the last tab and the project's Close close the project.
+- **The tab bar's + and × on tmux 3.2 and 3.3:** they were `range=user|…` ranges, which only
+  tmux 3.4 has; there a click did nothing. Before 3.4 the × is a `range=left` and the + a
+  `range=right` (the tab bar uses neither otherwise), and `MouseUp1StatusLeft` /
+  `MouseUp1StatusRight` run `imux __click imux:close` / `imux:tab` (on the release, like the
+  3.4 bindings). The tabs themselves were window ranges, clickable since tmux 3.0.
 
 #### Notifications (v0.28)
 

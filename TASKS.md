@@ -920,6 +920,23 @@ by dragging its edge (it snaps back).
     closed rail keep the width (unit test against a real tmux); e2e: a real mouse drag on the
     border through tmux; README.
 
+## M37: A project without agents, the tab bar on tmux 3.2 (added 2026-11-09)
+
+User report: closing the agents closed the project ("I did not close the project"); it should
+stay and say that it has no agents. And the + of the tab bar does nothing (tmux 3.2a, Ubuntu
+22.04's).
+
+- [ ] **T37.1 The tab bar's + and × before tmux 3.4** · S
+  - AC: §9.3 "A project without agents, the tab bar on tmux 3.2": status-left / status-right
+    ranges and their MouseUp1 bindings below 3.4, golden configs; the tab e2e tests pass on tmux
+    3.2a.
+- [ ] **T37.2 "No agents"** · M · deps: T37.1
+  - AC: Close agent… on the project's last agent and the last pane going otherwise leave the
+    "No agents" pane; its keys and clicks start an agent or a terminal in its place, and so do
+    `imux split` and the + of AGENTS; the sidebar lists the project with "No agents" and offers
+    nothing to continue; snapshots skip it; another tab's last agent still closes its tab; unit
+    tests (drawing, Gather against a real tmux) and e2e.
+
 ---
 
 ## Testing strategy
