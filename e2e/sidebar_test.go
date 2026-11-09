@@ -109,7 +109,7 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 // continue in; a real click on "Antigravity" switches the agent pane with
 // context; "Split right" asks for an agent and opens a pane with it; the
 // sidebar never becomes a target; prefix b hides and shows it; closing the
-// last agent pane closes the window.
+// last agent pane leaves the project open, without agents.
 func TestSidebar(t *testing.T) {
 	h := newH(t, sidebarConfig)
 	agentPane, bar := h.startWithSidebar()
@@ -172,16 +172,17 @@ func TestSidebar(t *testing.T) {
 		return strings.Contains(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{@imux_role}"), "sidebar")
 	})
 
-	// Closing every agent pane closes the window: the sidebar leaves with it.
+	// Closing every agent pane of the project's only tab keeps the project:
+	// the sidebar opens the "No agents" pane beside it (TestNoAgents).
 	win := strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", agentPane, "#{window_id}"))
 	for _, l := range strings.Split(strings.TrimSpace(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{pane_id} #{@imux_role}")), "\n") {
 		if f := strings.Fields(l); len(f) == 1 {
 			h.mustTmux("kill-pane", "-t", f[0])
 		}
 	}
-	h.waitFor("window closed", 10*time.Second, func() bool {
-		out, _ := h.tmux("list-windows", "-a", "-F", "#{window_id}")
-		return !strings.Contains(out, win)
+	h.waitFor("No agents in the window", 10*time.Second, func() bool {
+		out, _ := h.tmux("list-panes", "-t", win, "-F", "#{@imux_role}")
+		return strings.Join(strings.Fields(out), " ") == "sidebar empty"
 	})
 }
 

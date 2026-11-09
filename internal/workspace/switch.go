@@ -14,6 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -292,6 +293,8 @@ func (w *WS) respawn(ctx context.Context, p *Pane, l Launch, trail Trail, fallba
 	trail = trail.Push(te, w.Now())
 	cmds := []tmux.Cmd{append(tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", l.CWD}, w.execCmd(specPath)...)}
 	cmds = append(cmds, optCmds(p.ID, te, trail, l.CWD, w.Label(l.Agent))...)
+	// A "No agents" pane that gets an agent is an agent's pane.
+	cmds = append(cmds, tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, sidebar.OptRole})
 	if fallback != "" {
 		cmds = append(cmds, tmux.Cmd{"set-option", "-p", "-t", p.ID, OptFallback, fallback})
 	} else {

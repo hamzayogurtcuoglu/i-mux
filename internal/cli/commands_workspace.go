@@ -291,6 +291,15 @@ func runSplit(e *Env, args []string) error {
 		return err
 	}
 	pane = p.ID // a sidebar's commands act on its target pane
+	if p.IsEmpty() && *fromF == "" {
+		// The project's "No agents" pane: the agent starts in its place.
+		if err := w.FillEmpty(ctx, p, id); err != nil {
+			w.Message(ctx, *clientF, pane, err.Error())
+			return err
+		}
+		fmt.Fprintln(e.Stdout, p.ID)
+		return nil
+	}
 	if *fromF != "" {
 		f := sources.New(w.Cfg)
 		ref, err := f.Resolve(ctx, "", *fromF, p.CWD)
@@ -298,10 +307,13 @@ func runSplit(e *Env, args []string) error {
 			w.Message(ctx, *clientF, pane, workspace.SwitchError(id, err))
 			return err
 		}
-		res, err := w.Switch(ctx, f, workspace.SwitchReq{Pane: p.ID, To: id, From: &ref, NewPane: true, Client: *clientF})
+		res, err := w.Switch(ctx, f, workspace.SwitchReq{Pane: p.ID, To: id, From: &ref, NewPane: !p.IsEmpty(), Client: *clientF})
 		if err != nil {
 			w.Message(ctx, *clientF, pane, workspace.SwitchError(id, err))
 			return err
+		}
+		if res.Pane == "" {
+			res.Pane = p.ID // continued in the "No agents" pane itself
 		}
 		fmt.Fprintln(e.Stdout, res.Pane)
 		return nil

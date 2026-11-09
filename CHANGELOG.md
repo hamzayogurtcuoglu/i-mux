@@ -6,6 +6,22 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-11-09
+
+### Changed
+
+- **Closing a project's last agent no longer closes the project.** Its pane stays and says
+  "No agents in <project>", with the agents to start there (a key or a click each, a terminal
+  too); the sidebar keeps the project and shows "No agents · + to start one", and the + of
+  AGENTS starts an agent in that pane. The same happens when the last pane goes another way (a
+  terminal's `exit`). Closing the last agent of one of several tabs still closes that tab; the
+  × of the last tab and the project's Close still close the project.
+
+### Fixed
+
+- **The + and × of the tab bar work on tmux 3.2 and 3.3** (Ubuntu 22.04 has 3.2a): a click on
+  them did nothing there, as they used click ranges only tmux 3.4 has.
+
 ## [0.32.0] - 2026-11-09
 
 ### Added

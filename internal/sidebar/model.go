@@ -21,6 +21,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
@@ -34,6 +35,7 @@ import (
 const (
 	OptRole     = "@imux_role"        // pane: "sidebar" on sidebar panes
 	RoleSidebar = "sidebar"           // value of OptRole
+	RoleEmpty   = "empty"             // value of OptRole: "No agents" where a project's last agent closed
 	OptPID      = "@imux_sidebar_pid" // pane: the sidebar process, signaled to redraw
 	OptLast     = "@imux_last"        // window: the agent pane actions apply to
 	OptState    = "@imux_state"       // pane: "working", "idle" or "blocked", set by the watcher
@@ -151,6 +153,7 @@ type Model struct {
 	Panes    []PaneRow    // the current window's panes (also inside Projects)
 	Agents   []AgentRow
 	Target   string // pane id actions apply to; "" when the window has none
+	NoAgents bool   // the target is the "No agents" pane: nothing to continue
 	TargetW  int    // its size in cells (+ New agent picks the split direction)
 	TargetH  int
 	Now      time.Time       // for the times shown
@@ -176,6 +179,7 @@ type Window struct {
 	Client  string // the client showing the session (most recently active)
 	Session string
 	Alone   bool   // no other pane is left in the window
+	Windows int    // the session's windows (tabs)
 	Panes   string // the window's panes (ids), to tell a drag from a closed pane
 	Last    string
 	Reveal  string // OptReveal: a path to reveal in the explorer
@@ -338,7 +342,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}\t" + PanesFormat},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}\t" + PanesFormat + "\t#{session_windows}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}\t#{client_termname}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -350,12 +354,13 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	fold := map[string]bool{}
 	view := ViewAgents
 	closed, program := false, ""
-	if rows := tmux.Rows(sec["me"], 14); len(rows) > 0 {
+	if rows := tmux.Rows(sec["me"], 15); len(rows) > 0 {
 		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges {
 			view = v
 		}
 		closed, program = rows[0][10] == "1", rows[0][11]
 		win.Reveal, win.Panes = rows[0][12], rows[0][13]
+		win.Windows, _ = strconv.Atoi(rows[0][14])
 		r := rows[0]
 		tabAuto, tabState = r[6], r[7]
 		for _, f := range strings.Split(r[8], ",") {
@@ -390,6 +395,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		session string
 		window  string
 		w, h    int
+		empty   bool // the "No agents" pane
 	}
 	var all []raw
 	var seen []tmux.Cmd
@@ -400,6 +406,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		p := raw{
 			row:    PaneRow{ID: r[0], Agent: session.AgentID(r[2]), Label: r[3], Name: r[10]},
 			active: r[5] == "1" && r[12] == "1", cwd: r[7], session: r[9], window: r[11],
+			empty: r[1] == RoleEmpty,
 		}
 		p.looked = p.active && r[19] != "" && r[19] != "0"
 		if p.cwd == "" {
@@ -449,24 +456,31 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		win.Alone = true
 		return Model{}, win, nil
 	}
+	// The target: the active pane, else the one focused last, else the
+	// first; an agent or terminal before the "No agents" pane.
 	target := -1
 	for i, p := range panes {
-		if p.active {
+		if p.active && !p.empty {
 			target = i
 		}
 	}
 	if target < 0 {
 		for i, p := range panes {
-			if p.row.ID == win.Last {
+			if p.row.ID == win.Last && !p.empty {
 				target = i
 			}
+		}
+	}
+	for i, p := range panes {
+		if target < 0 && !p.empty {
+			target = i
 		}
 	}
 	if target < 0 {
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program)}
+	m := Model{Target: panes[target].row.ID, NoAgents: panes[target].empty, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program)}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target
@@ -500,12 +514,18 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		return row
 	}
 	for _, p := range panes {
-		m.Panes = append(m.Panes, fill(p.row))
+		if !p.empty {
+			m.Panes = append(m.Panes, fill(p.row))
+		}
 	}
 	// The tab bar shows this window's name and state (§9.3 "Tabs").
 	if win.ID != "" {
 		var set []tmux.Cmd
-		if name := TabName(m.Panes); name != tabAuto {
+		name := TabName(m.Panes)
+		if m.NoAgents {
+			name = i18n.T("sidebar.no_agents")
+		}
+		if name != tabAuto {
 			set = append(set, tmux.Cmd{"set-option", "-w", "-q", "-t", win.ID, OptTabAuto, name})
 		}
 		if st := TabState(m.Panes); st != tabState {
@@ -526,6 +546,9 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 			bySession[p.session] = pr
 			cwdOf[p.session] = p.cwd
 			order = append(order, p.session)
+		}
+		if p.empty {
+			continue // the project stays listed, without agents
 		}
 		row := fill(p.row)
 		row.Target = p.row.ID == m.Target
@@ -554,7 +577,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	}
 	bins := resolve(s.Cfg, st)
 	cur := panes[target].row.Agent
-	if panes[target].row.State == StateExited {
+	if panes[target].row.State == StateExited || m.NoAgents {
 		cur = ""
 	}
 	for _, a := range agent.Ordered(s.Cfg) {

@@ -127,6 +127,7 @@ them) switches its view.
 | a section title (PROJECTS, AGENTS) | fold or unfold it |
 | **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations (📌 Pin or unpin…, `p`, keeps one at the top) · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
 | the **tab bar** at the top · its **+** (or `prefix c`) · **×** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab |
+| close a project's last agent | the project stays open and says **No agents**: press an agent's key (or click it) there, or **+** next to AGENTS, to start one |
 | `prefix b` | hide or show the sidebar |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode |
 

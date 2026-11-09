@@ -165,7 +165,7 @@ func (w *WS) Sessions(ctx context.Context) ([]*SessionInfo, error) {
 		return nil, err
 	}
 	for _, p := range panes {
-		if p.IsSidebar() {
+		if p.IsSidebar() || p.IsEmpty() {
 			continue // part of the UI, not a pane of the project
 		}
 		if s := byName[p.Session]; s != nil {

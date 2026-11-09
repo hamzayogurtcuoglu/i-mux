@@ -629,6 +629,13 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 	if !folded(SecAgents) {
 		for _, pr := range m.Projects {
 			if len(pr.Panes) == 0 {
+				if pr.Current {
+					// Its last agent was closed: the project stays.
+					out = append(out, groupRow(pr, w, m.Tick, false), Line{
+						Text:   muted + fit("   "+i18n.T("sidebar.no_agents_hint"), w) + reset,
+						Action: Action{Kind: ActNewAgent},
+					})
+				}
 				continue
 			}
 			fold := collapse && !pr.Current
@@ -679,7 +686,7 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 func bottom(m Model, w int) []Line {
 	rule := Line{Text: faint + strings.Repeat("─", w) + reset}
 	var out []Line
-	if m.Target != "" {
+	if m.Target != "" && !m.NoAgents {
 		if rows := continueRows(m, w); len(rows) > 0 {
 			out = append(out, rule, Line{Text: muted + fit(" "+i18n.T("sidebar.continue_in"), w) + reset})
 			out = append(out, rows...)

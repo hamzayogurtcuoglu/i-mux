@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
@@ -41,6 +42,12 @@ func init() {
 		Run:     runSidebar,
 	})
 	register(&command{
+		Name:    "__empty",
+		Summary: "cmd.internal",
+		Hidden:  true,
+		Run:     runEmpty,
+	})
+	register(&command{
 		Name:    "__sidebar-refresh",
 		Summary: "cmd.internal",
 		Hidden:  true,
@@ -65,6 +72,41 @@ func runSidebar(e *Env, args []string) error {
 	src := &sidebar.Source{T: tmux.New(paths.TmuxConf()), Cfg: cfg, CfgPath: paths.Config(), Now: time.Now}
 	return sidebar.Run(context.Background(), sidebar.Options{
 		Source: src, Self: self, Pane: pane, Width: cfg.Tmux.SidebarWidth, In: os.Stdin, Out: os.Stdout,
+	})
+}
+
+// runEmpty is the "No agents" pane of a project whose last agent closed
+// (§9.3 "A project without agents").
+func runEmpty(e *Env, args []string) error {
+	pane := os.Getenv("TMUX_PANE")
+	if pane == "" {
+		return &UsageError{Msg: i18n.T("cli.no_pane")}
+	}
+	cfg, err := loadConfig(e)
+	if err != nil {
+		return err
+	}
+	self, err := workspace.Self()
+	if err != nil {
+		return err
+	}
+	t := tmux.New(paths.TmuxConf())
+	ctx := context.Background()
+	dir := ""
+	if out, err := t.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", pane, "#{?@imux_cwd,#{@imux_cwd},#{session_path}}"}); err == nil {
+		dir = strings.TrimSpace(out)
+	}
+	st, _ := state.Read()
+	if st == nil {
+		st = &state.State{}
+	}
+	bins := agent.ResolveAll(cfg, st)
+	var agents []sidebar.AgentRow
+	for _, a := range agent.Ordered(cfg) {
+		agents = append(agents, sidebar.AgentRow{ID: a.ID, Name: a.Short, Key: a.Key, Installed: bins[a.ID].Installed})
+	}
+	return sidebar.RunEmpty(ctx, sidebar.EmptyOptions{
+		T: t, Self: self, Pane: pane, Project: filepath.Base(dir), Agents: agents, In: os.Stdin, Out: os.Stdout,
 	})
 }
 

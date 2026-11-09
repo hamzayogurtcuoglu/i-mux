@@ -57,6 +57,8 @@ type sidebar struct {
 	revealRow  string // a revealed path to scroll to
 	lastFrame  string // the frame last written
 
+	emptyAt time.Time // when this sidebar last opened a "No agents" pane
+
 	geom  Geom          // the pane and window as last seen (a drag changes only the width)
 	saveT *time.Timer   // saves a dragged width when the drag rests
 	save  chan struct{} // ... by sending here
@@ -217,7 +219,15 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 		return false // keep the last frame; tmux may be busy
 	}
 	if w.Alone {
-		return true
+		// The project's last pane went (a terminal's exit, a killed pane):
+		// the project stays, saying "No agents". The last pane of another
+		// tab takes its tab with it.
+		if w.Windows > 1 || !s.leaveEmpty(ctx) {
+			return true
+		}
+		if m, w, err = s.o.Source.Gather(ctx, s.o.Pane); err != nil || w.Alone {
+			return err == nil
+		}
 	}
 	// A resize the SIGWINCH did not see yet (tmux grows panes in
 	// proportion when a bigger client attaches): take the width back, or
@@ -830,5 +840,56 @@ func (s *sidebar) spawn(args []string) {
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
 	if err := cmd.Start(); err == nil {
 		go func() { _ = cmd.Wait() }()
+	}
+}
+
+// EmptyAgain is how soon a sidebar may open a "No agents" pane again: one
+// that ends at once (it cannot run) must not make a loop of new panes; the
+// project then closes as before.
+var EmptyAgain = 5 * time.Second
+
+// leaveEmpty opens the "No agents" pane beside the sidebar, alone in the
+// project's only window, in the project's folder (§9.3 "A project without
+// agents"). It reports whether it did.
+func (s *sidebar) leaveEmpty(ctx context.Context) bool {
+	if !s.emptyAt.IsZero() && time.Since(s.emptyAt) < EmptyAgain {
+		return false
+	}
+	s.emptyAt = time.Now()
+	cwd := s.model.CWD
+	if cwd == "" {
+		out, err := s.t.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", s.o.Pane, "#{session_path}"})
+		if err != nil {
+			return false
+		}
+		cwd = strings.TrimSpace(out)
+	}
+	// No -d: the options that follow go to the new pane, the current one.
+	cmds := append([]tmux.Cmd{{"split-window", "-h", "-t", s.o.Pane, "-c", cwd, s.o.Self, "__empty"}}, EmptyOpts("", cwd)...)
+	if w := s.width(s.model.Closed); w > 0 {
+		cmds = append(cmds, tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(w)})
+	}
+	_, err := s.t.Run(ctx, cmds...)
+	return err == nil
+}
+
+// EmptyOpts are the options of a "No agents" pane (target "" = the current
+// pane): its role, folder and border label, and no agent's.
+func EmptyOpts(target, cwd string) []tmux.Cmd {
+	opt := func(c ...string) tmux.Cmd {
+		cmd := tmux.Cmd{"set-option", "-p"}
+		if target != "" {
+			cmd = append(cmd, "-t", target)
+		}
+		return append(cmd, c...)
+	}
+	return []tmux.Cmd{
+		opt(OptRole, RoleEmpty),
+		opt("remain-on-exit", "off"),
+		opt("@imux_cwd", cwd),
+		opt("@imux_label", i18n.T("sidebar.no_agents")),
+		opt("-u", "@imux_agent"), opt("-u", "@imux_start"), opt("-u", "@imux_trail"),
+		opt("-u", "@imux_flag"), opt("-u", "@imux_fallback"), opt("-u", "@imux_name"),
+		opt("-u", OptState), opt("-u", OptStateAt), opt("-u", OptDoneAt),
 	}
 }

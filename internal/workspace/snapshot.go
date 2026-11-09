@@ -139,6 +139,9 @@ func (w *WS) Capture(ctx context.Context) ([]ProjectSnap, error) {
 			tab.Sidebar = true
 			continue
 		}
+		if r[5] == sidebar.RoleEmpty {
+			continue // "No agents": nothing to bring back
+		}
 		ps := PaneSnap{Name: r[7]}
 		if r[8] != "1" && r[6] != "" {
 			ps.Agent = session.AgentID(r[6])

@@ -37,11 +37,26 @@ func (in *ConfInput) Clickable() bool {
 	return (in.AgentBar != "" || in.Cfg.Tmux.Tabs) && in.Cfg.Tmux.Mouse && in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
 }
 
+// oldTabClicks reports whether the tab bar's × and + take clicks through
+// tmux's status-left and status-right ranges: tmux 3.2 and 3.3 have no user
+// ranges, but these two areas make mouse keys of their own
+// (MouseUp1StatusLeft, MouseUp1StatusRight), which nothing else in imux's
+// status lines uses.
+func (in *ConfInput) oldTabClicks() bool {
+	return in.Cfg.Tmux.Tabs && in.Cfg.Tmux.Mouse && !in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
+}
+
 // TabFormat is the tab bar (status-format[0] with tmux.tabs): the session's
 // windows as tabs " <n> <name> <state> ", the current one highlighted, each
 // a window range (a click selects it), then a "+" (range=user|imux:tab).
 // Nothing on the right: the agents' states and limits are in the sidebar.
-func TabFormat() string {
+// With old (tmux before 3.4) the × is a status-left range and the + a
+// status-right one.
+func TabFormat(old bool) string {
+	closeRange, tabRange := "#[range=user|imux:close]", "#[range=user|imux:tab]"
+	if old {
+		closeRange, tabRange = "#[range=left]", "#[range=right]"
+	}
 	// The state glyph always takes its column (a space when idle), so the
 	// × and the next tabs do not move when an agent starts or stops.
 	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }"
@@ -53,9 +68,9 @@ func TabFormat() string {
 		"#{W:" +
 		"#[range=window|#{window_index}]#[fg=colour245]" + tab + " #[norange default] ," +
 		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange] " +
-		"#[range=user|imux:close]#[bg=colour236 fg=colour245 nobold] × #[norange default] " +
+		closeRange + "#[bg=colour236 fg=colour245 nobold] × #[norange default] " +
 		"}" +
-		"#[range=user|imux:tab]#[fg=colour245] + #[norange default]"
+		tabRange + "#[fg=colour245] + #[norange default]"
 }
 
 // Silent is appended to every shell command imux's bindings, hooks and menu
@@ -106,6 +121,9 @@ func BoundKeys(in *ConfInput) []string {
 	}
 	if in.Clickable() {
 		ks = append(ks, "root MouseDown1Status", "root MouseUp1Status")
+	}
+	if in.oldTabClicks() {
+		ks = append(ks, "root MouseUp1StatusLeft", "root MouseUp1StatusRight")
 	}
 	if t.Mouse {
 		ks = append(ks, "root MouseDown3Border")
@@ -160,7 +178,7 @@ func GenerateConf(in *ConfInput) string {
 		w("# Tab bar at the top: the session's windows, and + for a new tab.")
 		w("set -g  status-position top")
 		w("set -g  status-style %s", Quote("bg=default,fg=colour245"))
-		w("set -g  status-format[0] %s", Quote(TabFormat()))
+		w("set -g  status-format[0] %s", Quote(TabFormat(in.oldTabClicks())))
 	} else {
 		w("set -g  status-position bottom")
 		w("set -gu status-format[0]")
@@ -222,6 +240,12 @@ func GenerateConf(in *ConfInput) string {
 		w("bind -n MouseUp1Status if-shell -F %s %s",
 			Quote("#{m:imux:*,#{mouse_status_range}}"),
 			QuoteDouble(runShell(in.Self, "__click", "#{mouse_status_range}", pane)))
+	}
+	if in.oldTabClicks() {
+		w("# tmux before 3.4: the tab bar's × and + are its status-left and status-right ranges; clicks go to imux")
+		w("# when the button is released.")
+		w("bind -n MouseUp1StatusLeft %s", runShell(in.Self, "__click", "imux:close", pane))
+		w("bind -n MouseUp1StatusRight %s", runShell(in.Self, "__click", "imux:tab", pane))
 	}
 	if cfg.Tmux.Mouse {
 		w("# Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).")

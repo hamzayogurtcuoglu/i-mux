@@ -266,19 +266,54 @@ func (w *WS) CloseAgentMenu(ctx context.Context, p *Pane, client string) (*Menu,
 }
 
 // CloseAgent ends agent pane p. The last agent of a tab closes the tab (its
-// sidebar leaves with it); of the last tab, the project.
+// sidebar leaves with it); the project's last one leaves the project open,
+// saying "No agents" (§9.3 "A project without agents").
 func (w *WS) CloseAgent(ctx context.Context, p *Pane) error {
 	_, tabPanes, windows, err := w.agentInfo(ctx, p.ID)
 	if err != nil {
 		return err
 	}
-	if tabPanes <= 1 {
+	switch {
+	case tabPanes <= 1 && windows <= 1:
+		return w.LeaveEmpty(ctx, p.ID)
+	case tabPanes <= 1:
 		return w.CloseTab(ctx, p)
 	}
-	_ = windows
 	if _, err := w.T.Run(ctx, tmux.Cmd{"kill-pane", "-t", p.ID}); err != nil {
 		return err
 	}
 	w.RefreshSidebars(ctx)
 	return nil
+}
+
+// LeaveEmpty replaces pane's agent with the "No agents" pane, in the
+// project's folder.
+func (w *WS) LeaveEmpty(ctx context.Context, pane string) error {
+	p, err := w.Pane(ctx, pane)
+	if err != nil {
+		return err
+	}
+	cmds := append([]tmux.Cmd{{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD, w.Self, "__empty"}}, sidebar.EmptyOpts(p.ID, p.CWD)...)
+	if _, err := w.T.Run(ctx, cmds...); err != nil {
+		return err
+	}
+	w.RefreshSidebars(ctx)
+	return nil
+}
+
+// IsEmpty reports whether p is the "No agents" pane.
+func (p *Pane) IsEmpty() bool { return p.Role == sidebar.RoleEmpty }
+
+// FillEmpty starts agent id (or, with id "", the user's shell) in the "No
+// agents" pane p, which becomes an ordinary pane.
+func (w *WS) FillEmpty(ctx context.Context, p *Pane, id session.AgentID) error {
+	defer w.RefreshSidebars(ctx)
+	if id != "" {
+		return w.respawn(ctx, p, Launch{Agent: id, CWD: p.CWD}, nil, "")
+	}
+	_, err := w.T.Run(ctx,
+		tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD, w.loginShell(ctx), "-l"},
+		tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, sidebar.OptRole},
+		tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, OptLabel})
+	return err
 }
