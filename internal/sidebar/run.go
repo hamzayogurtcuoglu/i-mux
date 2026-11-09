@@ -56,6 +56,10 @@ type sidebar struct {
 	revealSeen bool
 	revealRow  string // a revealed path to scroll to
 	lastFrame  string // the frame last written
+
+	geom  Geom          // the pane and window as last seen (a drag changes only the width)
+	saveT *time.Timer   // saves a dragged width when the drag rests
+	save  chan struct{} // ... by sending here
 }
 
 // ClickDelay holds a click's action until tmux's double-click window (300 ms)
@@ -78,7 +82,7 @@ func Run(ctx context.Context, o Options) error {
 	if o.Safety <= 0 {
 		o.Safety = 15 * time.Second
 	}
-	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), revealKey: (&fileops.System{}).Reveal()}
+	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), save: make(chan struct{}, 1), revealKey: (&fileops.System{}).Reveal()}
 	restore, err := rawMode(int(o.In.Fd()))
 	if err == nil {
 		defer restore()
@@ -147,10 +151,16 @@ func Run(ctx context.Context, o Options) error {
 				upgrade()
 			case syscall.SIGWINCH:
 				s.lastFrame = "" // the pane was resized: draw it whole
-				s.keepWidth(ctx)
+				if s.keepWidth(ctx) {
+					s.draw() // its edge dragged: the same model, wider or narrower
+					continue
+				}
 			default:
 				return nil
 			}
+		case <-s.save:
+			s.saveWidth(ctx)
+			continue
 		case <-tick.C:
 			upgrade()
 		case <-spin.C:
@@ -209,11 +219,10 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 	if w.Alone {
 		return true
 	}
-	// A resize the SIGWINCH did not fix (tmux grows panes in proportion
-	// when a bigger client attaches): take the width back.
-	if want := s.width(m.Closed); want > 0 && w.Width != want && w.WinW >= want+20 {
-		_, _ = s.t.Run(ctx, tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(want)})
-	}
+	// A resize the SIGWINCH did not see yet (tmux grows panes in
+	// proportion when a bigger client attaches): take the width back, or
+	// take the one the user dragged the edge to.
+	s.settle(ctx, Geom{W: w.Width, H: w.Height, WinW: w.WinW, Panes: w.Panes}, m.Closed)
 	if s.reveal(w.Reveal) {
 		// Folders opened for a new, renamed or pasted path: list them.
 		if m2, w2, err := s.o.Source.Gather(ctx, s.o.Pane); err == nil {
@@ -300,26 +309,28 @@ func (s *sidebar) width(closed bool) int {
 	return s.o.Width
 }
 
-// keepWidth restores the sidebar's width after the window was resized,
-// unless the window is too narrow to keep it.
-func (s *sidebar) keepWidth(ctx context.Context) {
-	w := s.width(s.model.Closed)
-	if w <= 0 {
-		return
-	}
-	out, err := s.t.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", s.o.Pane, "#{pane_width}\t#{window_width}"})
+// keepWidth looks at the sidebar's pane after it was resized: a dragged edge
+// gives it a new width (it reports true, with s.win at the new size), any
+// other resize is undone (settle).
+func (s *sidebar) keepWidth(ctx context.Context) bool {
+	out, err := s.t.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", s.o.Pane, "#{pane_width}\t#{pane_height}\t#{window_width}\t" + PanesFormat})
 	if err != nil {
-		return
+		return false
 	}
-	rows := tmux.Rows(out, 2)
+	rows := tmux.Rows(out, 4)
 	if len(rows) == 0 {
-		return
+		return false
 	}
-	pw, _ := strconv.Atoi(rows[0][0])
-	ww, _ := strconv.Atoi(rows[0][1])
-	if pw != w && ww >= w+20 {
-		_, _ = s.t.Run(ctx, tmux.Cmd{"resize-pane", "-t", s.o.Pane, "-x", strconv.Itoa(w)})
+	var g Geom
+	g.W, _ = strconv.Atoi(rows[0][0])
+	g.H, _ = strconv.Atoi(rows[0][1])
+	g.WinW, _ = strconv.Atoi(rows[0][2])
+	g.Panes = rows[0][3]
+	if !s.settle(ctx, g, s.model.Closed) {
+		return false
 	}
+	s.win.Width, s.win.Height, s.win.WinW = g.W, g.H, g.WinW
+	return true
 }
 
 // handle reacts to one key or click.

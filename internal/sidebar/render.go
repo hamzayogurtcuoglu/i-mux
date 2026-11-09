@@ -534,21 +534,62 @@ func changeRow(c ChangeRow, w int) Line {
 		right = strings.Join(parts, " ")
 		rw += len(parts) - 1
 	}
-	// "   M  path +12 −3 ": indent, status, gap, path, counts, margin.
+	// "   M  name folder +12 −3 ": indent, status, gap, path, counts, margin.
 	pw := w - 7
 	if rw > 0 {
 		pw -= rw + 1
 	}
 	pw = max(pw, 1)
-	path := c.Path
-	if r := []rune(path); len(r) > pw && pw > 1 {
-		path = "…" + string(r[len(r)-pw+1:])
-	}
-	text := "   " + color + fit(c.Status, 1) + reset + "  " + fit(path, pw)
+	text := "   " + color + fit(c.Status, 1) + reset + "  " + fileLabel(c.Path, pw)
 	if rw > 0 {
 		text += " " + right
 	}
 	return Line{Text: text + " ", Action: Action{Kind: ActDiff, Path: c.Path, Status: c.Status}}
+}
+
+// minFolder is the fewest columns worth showing a file's folder in.
+const minFolder = 4
+
+// fileLabel lays out a changed file's path in w columns the way an editor's
+// source control does: the file's name first and whole, then its folder in
+// gray. A short row cuts the folder first (at its end), then the middle of
+// the name, so the name's start and its extension stay. An untracked
+// folder ("docs/") is a name with its slash.
+func fileLabel(path string, w int) string {
+	if w <= 0 {
+		return ""
+	}
+	name, dir := path, ""
+	if i := strings.LastIndex(strings.TrimSuffix(path, "/"), "/"); i >= 0 {
+		name, dir = path[i+1:], path[:i]
+	}
+	nw := DisplayWidth(name)
+	if nw >= w {
+		return fitMiddle(name, w)
+	}
+	if dir == "" || w-nw-1 < minFolder {
+		return name + strings.Repeat(" ", w-nw)
+	}
+	return name + " " + muted + fit(dir, w-nw-1) + reset
+}
+
+// fitMiddle is fit, but a text too long loses its middle: "blim_s…tor.py".
+func fitMiddle(s string, w int) string {
+	if w <= 0 {
+		return ""
+	}
+	if DisplayWidth(s) <= w || w < 3 {
+		return fit(s, w)
+	}
+	r := []rune(s)
+	tailW := (w - 1) / 2
+	tail, used := len(r), 0
+	for tail > 0 && used+runeWidth(r[tail-1]) <= tailW {
+		tail--
+		used += runeWidth(r[tail])
+	}
+	// The head is longer than its columns: fit cuts it and adds the "…".
+	return fit(string(r[:tail]), w-used) + string(r[tail:])
 }
 
 // top is the PROJECTS, AGENTS and SOURCE CONTROL sections (folded ones show

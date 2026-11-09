@@ -3,6 +3,9 @@
 package e2e
 
 import (
+	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -109,4 +112,86 @@ func (h *H) openView(c *Client, bar, icon, view string) {
 		time.Sleep(500 * time.Millisecond) // past the double-click window
 	}
 	h.t.Fatalf("the %s view did not open", view)
+}
+
+// TestDragPanelEdge (T36.2): dragging the edge between the panel and the
+// agent with the mouse widens the panel and it stays that wide: after the
+// drag, after a redraw, in the config, in the other tab and in a new tab.
+func TestDragPanelEdge(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	agentPane, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	h.mustImux("tab", "codex", "--pane", agentPane)
+	h.run("codex", 1)
+	var bar2 string
+	h.waitFor("the second tab's sidebar", 10*time.Second, func() bool {
+		for _, l := range strings.Split(h.mustTmux("list-panes", "-a", "-F", "#{pane_id} #{@imux_role}"), "\n") {
+			if f := strings.Fields(l); len(f) == 2 && f[1] == "sidebar" && f[0] != bar {
+				bar2 = f[0]
+			}
+		}
+		return bar2 != ""
+	})
+	h.mustTmux("select-window", "-t", agentPane)
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	h.rowOf(bar, "🤖") // drawn at its width
+	width := func(p string) int {
+		n, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", p, "#{pane_width}")))
+		return n
+	}
+	if w := width(bar); w != 43 {
+		t.Fatalf("width before the drag %d", w)
+	}
+
+	// Press on the edge (the border column right of the panel), move 17
+	// columns right with the button down, release.
+	pos := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_left} #{pane_top} #{status-position}"))
+	left, _ := strconv.Atoi(pos[0])
+	top, _ := strconv.Atoi(pos[1])
+	if pos[2] == "top" {
+		top++
+	}
+	x, y := left+43+1, top+10
+	time.Sleep(500 * time.Millisecond)
+	c.Write(sgrMouse(0, x, y, 'M'))
+	for i := 1; i <= 17; i++ {
+		time.Sleep(15 * time.Millisecond)
+		c.Write(sgrMouse(32, x+i, y, 'M'))
+	}
+	time.Sleep(15 * time.Millisecond)
+	c.Write(sgrMouse(0, x+17, y, 'm'))
+	h.waitFor("panel dragged to 60", 5*time.Second, func() bool { return width(bar) == 60 })
+	h.waitFor("panel drawn at 60", 5*time.Second, func() bool {
+		first, _, _ := strings.Cut(h.screen(bar), "\n")
+		return sidebar.DisplayWidth(strings.TrimRight(first, " ")) == 59 // the "+" of Projects
+	})
+
+	// Saved once the drag rests; the other tab's panel takes the width.
+	cfgPath := filepath.Join(h.Homes.Imux, "config.toml")
+	h.waitFor("width saved in the config", 5*time.Second, func() bool {
+		b, _ := os.ReadFile(cfgPath)
+		return regexp.MustCompile(`(?m)^sidebar_width\s*=\s*60$`).Match(b)
+	})
+	h.waitFor("the other tab's panel at 60", 5*time.Second, func() bool { return width(bar2) == 60 })
+
+	// A redraw keeps it.
+	h.mustImux("__sidebar-refresh")
+	time.Sleep(700 * time.Millisecond)
+	if w := width(bar); w != 60 {
+		t.Fatalf("width after a redraw %d", w)
+	}
+
+	// A new tab's panel opens at it.
+	h.mustImux("tab", "copilot", "--pane", agentPane)
+	h.run("copilot", 1)
+	h.waitFor("a new tab's panel at 60", 10*time.Second, func() bool {
+		n := 0
+		for _, l := range strings.Split(h.mustTmux("list-panes", "-a", "-F", "#{@imux_role} #{pane_width}"), "\n") {
+			if f := strings.Fields(l); len(f) == 2 && f[0] == "sidebar" && f[1] == "60" {
+				n++
+			}
+		}
+		return n == 3
+	})
 }

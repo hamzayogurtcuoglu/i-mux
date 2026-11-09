@@ -135,6 +135,13 @@ type Completion struct {
 	Enabled bool `toml:"enabled"`
 }
 
+// The sidebar's width in columns (tmux.sidebar_width): what the config may
+// say and what dragging its edge may give it.
+const (
+	MinSidebarWidth = 20
+	MaxSidebarWidth = 80
+)
+
 // Tmux is the [tmux] section.
 type Tmux struct {
 	MenuKeyRoot string `toml:"menu_key_root"`
@@ -432,8 +439,8 @@ func (c *Config) validate(src []byte) error {
 			return &Error{Line: lineOf(src, p.key), Msg: fmt.Sprintf("%s must be positive", p.key)}
 		}
 	}
-	if c.Tmux.Sidebar && (c.Tmux.SidebarWidth < 20 || c.Tmux.SidebarWidth > 80) {
-		return &Error{Line: lineOf(src, "sidebar_width"), Msg: "sidebar_width must be between 20 and 80"}
+	if c.Tmux.Sidebar && (c.Tmux.SidebarWidth < MinSidebarWidth || c.Tmux.SidebarWidth > MaxSidebarWidth) {
+		return &Error{Line: lineOf(src, "sidebar_width"), Msg: fmt.Sprintf("sidebar_width must be between %d and %d", MinSidebarWidth, MaxSidebarWidth)}
 	}
 	if c.Handoff.BudgetChars < 2000 {
 		return &Error{Line: lineOf(src, "budget_chars"), Msg: "budget_chars must be at least 2000"}

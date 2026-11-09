@@ -6,6 +6,23 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-11-09
+
+### Added
+
+- **Drag the panel's edge to make it wider or narrower,** as in the editor. Up to now the panel
+  snapped back to its width at once. The width (20-80 columns) is saved in the config
+  (`tmux.sidebar_width`) when the drag ends; every tab's panel takes it, new tabs open at it and
+  it stays after a restart. A bigger window or a closed agent next to the panel still leave its
+  width as it is.
+
+### Changed
+
+- **Source Control shows each changed file's name first, then its folder in gray,** as in the
+  editor (`config.py tests/_bdd`). Paths used to be cut at their start (`…_bdd/config.py`,
+  `…omation-framework/`), which hid the names. A short row now cuts the folder first, then the
+  middle of a long name, so its start and its extension stay (`blim_s…ps.py`).
+
 ## [0.31.0] - 2026-11-08
 
 ### Added

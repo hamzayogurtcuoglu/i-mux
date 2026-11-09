@@ -60,6 +60,8 @@ Terminalin bir [Nerd Font](https://www.nerdfonts.com) kullanıyorsa şerit edit�
 gösterir (`brew install --cask font-jetbrains-mono-nerd-font`, sonra terminalin ayarlarından seç);
 yoksa emojileri. Açık görünümün simgesine tıklamak, editördeki gibi şeridin yanındaki paneli
 kapatır ve yeri ajana bırakır; herhangi bir görünümün simgesine tıklamak onu yeniden açar.
+Panelin kenarını sürükleyerek onu genişletir ya da daraltırsın: her sekme bu genişliğe geçer ve
+i-mux onu hatırlar (`tmux.sidebar_width`).
 
 Şeritteki **🔧 Ayar** (ya da `imux settings`, ya da kenar çubuğunda `,`) Ayarlar'ı açar: editörde
 yapay zekâ tamamlama, simgeler, commit mesajlarını kimin yazacağı, geçişten sonra yeni ajanın ne
@@ -107,7 +109,7 @@ görünümü değiştirir.
 | 🤖 | **Agent'lar:** projelerin (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan bütün agent'lar, her birinin ne yaptığıyla: çalışırken dönen bir işaret, sana bir şey sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve bunun ne kadar önce olduğu |
 | 📁 | **Dosyalar:** **Ctrl+P** (ya da başlığındaki 📄) editördeki gibi projede dosya bulur: adından harfler yaz (`sbrnd`, `sidebar/render.go`'yu bulur; `ad:42` 42. satırda açar), Enter açar. Projenin dosyaları; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir; değişen dosyalar renklidir. **Sağ tık** editördeki menüyü açar: Yeni dosya / Yeni klasör, Yeniden adlandır, Sil (Çöp Sepeti'ne), Kes / Kopyala / Yapıştır, Yolu / Göreli yolu kopyala, Finder'da göster, Terminalde aç, Yanda aç, Klasörde ara, Karşılaştır, Ajana ekle. İmlecin üzerindeki şey parlar; seçili dosya işaretli kalır |
 | 🔍 | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar, dosya dosya (dosyaya tıkla ya da Tab'a bas: daralt); Enter dosyayı o satırda açar |
-| 🔀 | **Git:** editördeki kaynak kontrolü gibi: hazırlanan ve hazırlanmayan değişiklikler, her dosyada ve hepsi için hazırla, geri al ve at (önce sorar); **Commit…** ve yanında **✨**: ajanın (ya da `git.commit_agent`, örneğin ücretsiz Groq anahtarıyla OpenCode) değişikliklerden mesajı yazar, sen commit eder, düzenler ya da başkasını istersin; ↑↓ sayılarıyla pull / push / senkron; dal menüsü (değiştir, yeni dal); geçmiş. Dosyaya tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
+| 🔀 | **Git:** editördeki kaynak kontrolü gibi: hazırlanan ve hazırlanmayan değişiklikler (her dosyanın önce adı, sonra gri klasörü), her dosyada ve hepsi için hazırla, geri al ve at (önce sorar); **Commit…** ve yanında **✨**: ajanın (ya da `git.commit_agent`, örneğin ücretsiz Groq anahtarıyla OpenCode) değişikliklerden mesajı yazar, sen commit eder, düzenler ya da başkasını istersin; ↑↓ sayılarıyla pull / push / senkron; dal menüsü (değiştir, yeni dal); geçmiş. Dosyaya tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
 | 📊 · ❓ | kullanım limitleri · bütün tuşlar |
 
 | Kenar panel / tuş | Ne yapar |

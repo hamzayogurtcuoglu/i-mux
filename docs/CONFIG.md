@@ -53,7 +53,7 @@ line number.
 | `tmux.menu_key_prefix` | `"a"` | prefix + key opens the pane menu. |
 | `tmux.picker_key_prefix` | `"S"` | prefix + key opens the session picker. |
 | `tmux.sidebar` | `true` | Sidebar on the left of each window: panes, agents to continue in, split buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3). |
-| `tmux.sidebar_width` | `43` |  |
+| `tmux.sidebar_width` | `43` | The sidebar's width in columns (20-80); dragging the panel's edge sets it. |
 | `tmux.sidebar_key_prefix` | `"b"` | prefix + key shows or hides the sidebar. |
 | `tmux.split_right_key_prefix` | `"v"` | prefix + key splits the active pane (asks which agent to start). |
 | `tmux.split_down_key_prefix` | `"-"` |  |
@@ -231,6 +231,7 @@ picker_key_prefix = "S"
 # Sidebar on the left of each window: panes, agents to continue in, split
 # buttons, sessions, limits and keys, all clickable (ARCHITECTURE §9.3).
 sidebar           = true
+# The sidebar's width in columns (20-80); dragging the panel's edge sets it.
 sidebar_width     = 43
 # prefix + key shows or hides the sidebar.
 sidebar_key_prefix = "b"
