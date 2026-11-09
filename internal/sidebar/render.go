@@ -46,6 +46,9 @@ const (
 	ActSettings               // the Settings menu
 	ActPasteImage             // paste the clipboard's image into the target pane
 	ActGoto                   // Go to File (the editor's Ctrl+P)
+	ActSkillWrite             // ask what a skill should do; the target agent writes it (D32)
+	ActSkillNew               // ask for a name, create .agents/skills/<name>/SKILL.md and open it
+	ActSkillMenu              // the menu of skill Path (open, view, add, improve, share, delete)
 )
 
 // Action is a row's action.
@@ -712,6 +715,8 @@ func Render(m Model, w, h int, sel Item) Screen {
 		content = renderExplorer(m, cw, h)
 	case ViewChanges:
 		content = renderChanges(m, cw, h)
+	case ViewSkills:
+		content = renderSkills(m, cw, h)
 	default:
 		content = renderAgents(m, cw, h)
 	}

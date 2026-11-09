@@ -19,6 +19,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/skills"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -697,7 +698,7 @@ func TestClosedPanel(t *testing.T) {
 				}
 			}
 		}
-		for _, v := range []string{ViewAgents, ViewExplorer, ViewChanges} {
+		for _, v := range []string{ViewAgents, ViewExplorer, ViewChanges, ViewSkills} {
 			if !views[v] {
 				t.Errorf("%s: no icon opens %s", theme, v)
 			}
@@ -713,10 +714,11 @@ func TestClosedPanel(t *testing.T) {
 func TestButtonSizes(t *testing.T) {
 	i18n.SetLocale("en")
 	for _, theme := range []string{IconsEmoji, IconsNerd} {
-		for _, view := range []string{ViewAgents, ViewExplorer, ViewChanges} {
+		for _, view := range []string{ViewAgents, ViewExplorer, ViewChanges, ViewSkills} {
 			m := model()
 			m.Icons, m.View = theme, view
 			m.Tree = []TreeRow{{Path: "src", Name: "src", Dir: true}, {Path: "src/a.go", Name: "a.go", Depth: 1, Git: "M"}}
+			m.Skills = []skills.Skill{{Name: "release-notes", Folder: "release-notes", Description: "Writes release notes.", Dir: "/home/test/acme-api/.agents/skills/release-notes", Shared: true}}
 			m.SCM = &gitops.Status{
 				Branch: "main", Upstream: "origin/main",
 				Staged:  []gitops.Change{{Status: "M", Path: "a.go", Added: 3}},
@@ -952,5 +954,87 @@ func TestFileMenus(t *testing.T) {
 		if strings.Contains(it, "__file") && !strings.Contains(it, "--client /dev/ttys1 --pane %3") {
 			t.Errorf("command without its client and pane: %s", it)
 		}
+	}
+}
+
+// TestSkillsViewAndMenu (M40): the Skills view shows the empty hint, the
+// skills with their agent badges and problems, and the skill menus carry no
+// path or pane id in their commands.
+func TestSkillsViewAndMenu(t *testing.T) {
+	i18n.SetLocale("en")
+	m := model()
+	m.View = ViewSkills
+	sc := Render(m, 41, 30, NoItem)
+	text := screenText(sc)
+	for _, want := range []string{"SKILLS · acme-api", "Write with Agent…", "No skills in this project", ".agents/skills/<id>/SKILL.md", "Click ✨ above to write one"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("empty skills view lacks %q:\n%s", want, text)
+		}
+	}
+
+	all := map[session.AgentID]bool{session.Claude: true, session.Antigravity: true, session.Copilot: true, session.Codex: true, session.OpenCode: true}
+	some := map[session.AgentID]bool{session.Claude: true, session.Copilot: true, session.OpenCode: true}
+	m.Skills = []skills.Skill{
+		{Name: "release-notes", Folder: "release-notes", Description: "Writes release notes.", Dir: "/home/test/acme-api/.agents/skills/release-notes", Shared: true, Agents: all},
+		{Name: "draft", Folder: "draft", Dir: "/home/test/acme-api/.claude/skills/draft", Problem: skills.ProbNoDesc, Agents: some},
+	}
+	m.Selected = "/home/test/acme-api/.agents/skills/release-notes"
+	sc = Render(m, 41, 30, NoItem)
+	text = screenText(sc)
+	for _, want := range []string{"SKILLS · 2", "● release-notes", "✻▲◉◎▣", "Writes release notes.", "⚠ draft", "✻·◉·▣", "Missing 'description'"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("skills view lacks %q:\n%s", want, text)
+		}
+	}
+	var sawOpen, sawMenu, sawWrite, sawNew, sawSel bool
+	for _, l := range sc.Lines {
+		if strings.Contains(Plain(l.Text), "release-notes") && strings.Contains(l.Text, selectBg) {
+			sawSel = true
+		}
+		for x := railW; x < 41; x++ {
+			switch a := l.ActionAt(x); a.Kind {
+			case ActOpenFile:
+				if a.Path == ".agents/skills/release-notes/SKILL.md" {
+					sawOpen = true
+				}
+			case ActSkillMenu:
+				if a.Path == "/home/test/acme-api/.agents/skills/release-notes" {
+					sawMenu = true
+				}
+			case ActSkillWrite:
+				sawWrite = true
+			case ActSkillNew:
+				sawNew = true
+			}
+		}
+	}
+	if !sawOpen || !sawMenu || !sawWrite || !sawNew || !sawSel {
+		t.Errorf("actions open=%v menu=%v write=%v new=%v sel=%v", sawOpen, sawMenu, sawWrite, sawNew, sawSel)
+	}
+
+	names := func(items []string) string {
+		var out []string
+		for i := 0; i < len(items); {
+			if items[i] == "" {
+				out = append(out, "-")
+				i++
+				continue
+			}
+			out = append(out, items[i])
+			if strings.Contains(items[i+2], "/home/") || strings.Contains(items[i+2], "%") {
+				t.Errorf("path or pane id in %q: %s", items[i], items[i+2])
+			}
+			i += 3
+		}
+		return strings.Join(out, "|")
+	}
+	if got := names(SkillMenuItems("/bin/imux", "/dev/ttys1", SkillMenuState{Agent: true, Shared: false})); got != "Open|View|-|Add to Agent|Improve with Agent|Share with all agents (.agents/skills)|-|Delete" {
+		t.Errorf("unshared skill menu: %s", got)
+	}
+	if got := names(SkillMenuItems("/bin/imux", "", SkillMenuState{Agent: false, Shared: true})); got != "Open|View|-|Delete" {
+		t.Errorf("shared skill menu without agent: %s", got)
+	}
+	if got := names(SkillMenuItems("/bin/imux", "", SkillMenuState{Root: true, Agent: true})); got != "Write skill with Agent…|New skill from template…" {
+		t.Errorf("root menu: %s", got)
 	}
 }

@@ -266,7 +266,7 @@ func (s *sidebar) draw() {
 // isMenu reports actions that open a menu.
 func isMenu(k ActionKind) bool {
 	switch k {
-	case ActFileMenu, ActProjectMenu, ActAgentMenu, ActBranchMenu, ActSettings:
+	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActBranchMenu, ActSettings:
 		return true
 	}
 	return false
@@ -354,6 +354,9 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		if s.model.View == ViewChanges && s.model.SCM != nil {
 			n = len(s.model.SCM.Staged) + len(s.model.SCM.Changes) + len(s.model.SCM.History) + 3
 		}
+		if s.model.View == ViewSkills {
+			n = len(s.model.Skills) * 2
+		}
 		if ev.Key == "up" {
 			s.scroll = max(s.scroll-3, 0)
 		} else {
@@ -372,17 +375,32 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		var menu Action
 		switch a := s.screen.Lines[row].ActionAt(ev.X - 1); a.Kind {
 		case ActOpenFile:
+			if s.model.View == ViewSkills && a.Status != "" {
+				menu = Action{Kind: ActSkillMenu, Path: a.Status}
+				s.selected = a.Status
+				break
+			}
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFile}
+			s.selected = a.Path
+		case ActSkillMenu:
+			menu = a
 			s.selected = a.Path
 		case ActToggleDir:
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
 			s.selected = a.Path
-		case ActNone, ActSearch:
-			// The explorer's empty space and title: the project folder.
-			if s.model.View != ViewExplorer || s.model.Closed || ev.X <= railW {
+		case ActNone, ActSearch, ActRefresh, ActSkillWrite, ActSkillNew:
+			// The explorer's or skills' empty space and title.
+			if s.model.Closed || ev.X <= railW {
 				return
 			}
-			menu = Action{Kind: ActFileMenu, Section: MenuRoot}
+			switch s.model.View {
+			case ViewExplorer:
+				menu = Action{Kind: ActFileMenu, Section: MenuRoot}
+			case ViewSkills:
+				menu = Action{Kind: ActSkillMenu}
+			default:
+				return
+			}
 		case ActProject, ActProjectMenu:
 			menu = Action{Kind: ActProjectMenu, Session: a.Session}
 		case ActFocus, ActAgentMenu:
@@ -391,7 +409,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			return
 		}
 		s.menuX, s.menuY = ev.X, ev.Y
-		if menu.Kind == ActFileMenu {
+		if menu.Kind == ActFileMenu || menu.Kind == ActSkillMenu {
 			s.draw() // the row the menu is about, selected
 		}
 		if s.t.MenuTakesMouse(ctx) {
@@ -416,8 +434,12 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.lastClick, s.lastClickY = now, ev.Y
 		s.sel = NoItem
 		a := s.screen.Lines[row].ActionAt(ev.X - 1)
-		if a.Kind == ActOpenFile || a.Kind == ActToggleDir {
+		switch a.Kind {
+		case ActOpenFile, ActToggleDir:
 			s.selected = a.Path
+		case ActSkillMenu:
+			s.selected = a.Path
+			s.menuX, s.menuY = ev.X, ev.Y
 		}
 		time.AfterFunc(ClickDelay, func() { s.clicks <- a })
 		return
@@ -460,6 +482,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.do(ctx, Action{Kind: ActSearch})
 	case "4":
 		s.do(ctx, Action{Kind: ActView, Section: ViewChanges})
+	case "5":
+		s.do(ctx, Action{Kind: ActView, Section: ViewSkills})
 	default:
 		for _, a := range s.model.Agents {
 			if a.Key == ev.Key {
@@ -575,6 +599,15 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		return
 	case ActFileMenu:
 		s.fileMenu(ctx, client, a, s.menuX, s.menuY)
+		return
+	case ActSkillWrite:
+		s.skillStart(ctx, client, "write-prompt")
+		return
+	case ActSkillNew:
+		s.skillStart(ctx, client, "new-prompt")
+		return
+	case ActSkillMenu:
+		s.skillMenu(ctx, client, a, s.menuX, s.menuY)
 		return
 	case ActGit:
 		s.spawn(s.gitArgs(a.Section, client, a.Status == "?", a.Path))

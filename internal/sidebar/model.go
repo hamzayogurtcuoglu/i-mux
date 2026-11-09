@@ -23,6 +23,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/skills"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
@@ -164,6 +165,7 @@ type Model struct {
 	Update   string          // a newer i-mux release ("0.27.0"), "" when up to date
 	Tree     []TreeRow       // the explorer's rows (Explorer view)
 	SCM      *gitops.Status  // the Source Control view's repository (nil outside git)
+	Skills   []skills.Skill  // the project's Agent Skills (Skills view)
 	Icons    string          // the rail's icon theme (IconsNerd, IconsEmoji)
 	Scroll   int             // first row of the view's list
 	Selected string          // the explorer's selected row (a path relative to CWD)
@@ -355,7 +357,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	view := ViewAgents
 	closed, program := false, ""
 	if rows := tmux.Rows(sec["me"], 15); len(rows) > 0 {
-		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges {
+		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges || v == ViewSkills {
 			view = v
 		}
 		closed, program = rows[0][10] == "1", rows[0][11]
@@ -617,6 +619,11 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		if st, err := gitops.Read(ctx, cwd); err == nil {
 			m.SCM = st
 		}
+	}
+	if m.View == ViewSkills && cwd != "" {
+		root := skills.Root(cwd)
+		skills.Sync(root)
+		m.Skills = skills.List(root)
 	}
 	return m, win, nil
 }

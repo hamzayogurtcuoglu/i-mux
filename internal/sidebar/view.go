@@ -19,6 +19,7 @@ const (
 	ViewExplorer = "explorer"
 	ViewSearch   = "search" // a popup: the rail opens it, the view stays
 	ViewChanges  = "changes"
+	ViewSkills   = "skills" // the project's Agent Skills (D32)
 	OptView      = "@imux_view"
 	// OptClosed is "1" while the panel is closed (§9.3 "Closing the side
 	// panel"): the sidebar is only the rail.
@@ -336,11 +337,11 @@ const (
 )
 
 // railIcons are the rail's icons per theme: agents, files, search, git,
-// limits, help, settings. Nerd Font codicons (v3): hubot, files, search,
-// source_control, dashboard, question, settings-gear.
-var railIcons = map[string][7]string{
-	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51"},
-	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧"},
+// limits, help, settings, skills. Nerd Font codicons (v3): hubot, files,
+// search, source_control, dashboard, question, settings-gear, extensions.
+var railIcons = map[string][8]string{
+	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueae6"},
+	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "🧩"},
 }
 
 // railItems are the rail's icons: the views at the top, then the bottom
@@ -351,11 +352,12 @@ func railItems(theme string) (top, bottom []railItem) {
 		ic = railIcons[IconsEmoji]
 	}
 	return []railItem{
-		{icon: ic[0], label: "rail.agents", view: ViewAgents},
-		{icon: ic[1], label: "rail.files", view: ViewExplorer},
-		{icon: ic[2], label: "rail.search", action: Action{Kind: ActSearch}},
-		{icon: ic[3], label: "rail.git", view: ViewChanges},
-	}, []railItem{
+			{icon: ic[0], label: "rail.agents", view: ViewAgents},
+			{icon: ic[1], label: "rail.files", view: ViewExplorer},
+			{icon: ic[2], label: "rail.search", action: Action{Kind: ActSearch}},
+			{icon: ic[3], label: "rail.git", view: ViewChanges},
+			{icon: ic[7], label: "rail.skills", view: ViewSkills},
+		}, []railItem{
 		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
 		{icon: ic[6], label: "rail.settings", action: Action{Kind: ActSettings}},
 		{icon: ic[5], label: "rail.help", action: Action{Kind: ActKeys}},

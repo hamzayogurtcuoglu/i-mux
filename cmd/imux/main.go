@@ -1,5 +1,5 @@
 // Command imux is a lightweight tmux workspace that moves a conversation
-// between AI coding CLIs (Claude Code, Antigravity CLI, Copilot CLI, Codex CLI).
+// between AI coding CLIs (Claude Code, Antigravity CLI, Copilot CLI, Codex CLI, OpenCode).
 package main
 
 import (

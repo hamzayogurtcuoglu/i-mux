@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-11-09
+
+### Added
+
+- **🧩 Skills view on the sidebar rail.** Lists the project's `<name>/SKILL.md` skills across every
+  agent CLI's folder, shows which of the five agents see each one (`✻▲◉◎▣`) and any front-matter
+  problem (`⚠`), and links `.agents/skills/` into `.claude/skills/` automatically so one skill works
+  in Claude Code, Antigravity CLI, Copilot CLI, Codex CLI and OpenCode. **✨ Write with Agent…**
+  asks what the skill should teach and sends a structured authoring prompt to the active agent;
+  **➕** creates a starter `SKILL.md` and opens it in the editor; a skill's menu has **Open**,
+  **View**, **Add to Agent**, **Improve with Agent**, **Share with all agents** and **Delete**.
+
 ## [0.35.0] - 2026-11-09
 
 ### Added
