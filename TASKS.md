@@ -966,6 +966,23 @@ conversation is hard to find again ("I forget which name I gave"); maybe rename 
     the pane); the open agent running it takes the name; continuing a named conversation names its
     pane; e2e through the real menu and prompt.
 
+## M40: Project skills in the sidebar (added 2026-11-09)
+
+User request: a Skills tab on the left to see and monitor the project's skills across agents, edit
+them, and have the active LLM agent write or improve them.
+
+- [x] **T40.1 Discovery, validation and cross-agent sharing** · S
+  - AC: `internal/skills` (D32, §9.3 "Skills"): finds `<name>/SKILL.md` across `.agents/skills`,
+    `.claude/skills`, `.github/skills`, `.opencode/skills`, `.agent/skills` and `.codex/skills`;
+    parses YAML front matter and reports missing/invalid `name` or `description`; `Sync` links
+    `.agents/skills/<name>` into `.claude/skills/<name>`; `Share` moves a single-agent skill into
+    `.agents/skills/` and links it; `Create`, `WritePrompt` and `ImprovePrompt`; unit tests.
+- [x] **T40.2 Skills view, menus and agent authoring** · S · deps: T40.1
+  - AC: 🧩 **Skills** on the activity rail (`ViewSkills`, key `5`); **✨ Write with Agent…** and
+    **➕** template creation; each skill shows its status (`●` / `⚠`), per-agent visibility badges
+    (`✻▲◉◎▣`), and description or validation warning; skill menu (Open, View, Add to Agent,
+    Improve with Agent, Share with all agents, Delete); unit and e2e tests; README.
+
 ---
 
 ## Testing strategy

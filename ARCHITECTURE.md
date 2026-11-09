@@ -108,6 +108,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D29 | **Commit messages are written by the user's own agents, run once without a UI** (added 2026-11-08, v0.23, at the user's request): the ✨ button in Source Control sends the changes to the agent of the pane the sidebar follows (or `git.commit_agent`) in its print mode and offers the reply; it never commits by itself. | Like the editor's "generate commit message", without an API or key of imux's own: the user's plans and keys (Claude, Codex, Copilot, Antigravity, or OpenCode with a free NVIDIA / Groq key) already pay for it. |
 | D31 | **The sidebar draws backgrounds for hover and selection, and asks for every mouse motion** (added 2026-11-08, v0.30, at the user's request): a row or button under the pointer gets a background, the selected explorer row another; explorer menus follow the editor's. | The user could not tell which row the pointer or a menu was on. The "foreground colors only" rule (any theme keeps its background) gives way where the editor itself uses backgrounds; the sidebar's text colors already assume a dark theme. Motion reports cost a redraw only when the item under the pointer changes. |
 | D30 | **AI completion in the editor is Neovim with GitHub's copilot.vim, in a profile i-mux manages** (added 2026-11-08, v0.25, at the user's request): when Settings turns it on, file edits open `nvim` with `NVIM_APPNAME=imux-nvim`; i-mux writes that profile's `init.lua` (mouse, Ctrl+S / Ctrl+Q, Tab accepts) and keeps copilot.vim in it. | Inline suggestions are an editor feature, and i-mux edits in an external terminal editor. Neovim with the official plugin gives the editor's Copilot suggestions with the user's Copilot plan; micro has no such plugin; our own editor would be a project of its own. A separate profile leaves the user's own Neovim setup untouched. |
+| D32 | **Project skills live in `.agents/skills/`, are linked into `.claude/skills/` for Claude Code, and are written by the active agent** (added 2026-11-09, v0.36, at the user's request): a **🧩 Skills** view on the activity rail lists the project's `<name>/SKILL.md` skills across every CLI's folder, shows which of the five agents see each one (`✻▲◉◎▣`) and any front-matter problem (`⚠`), links `.agents/skills/` into `.claude/skills/` so one skill works in all five CLIs, and has **✨ Write with Agent…** to send a structured skill-authoring prompt to the active agent pane. | Antigravity, Codex, Copilot CLI and OpenCode read `.agents/skills/`, while Claude Code, Copilot CLI and OpenCode read `.claude/skills/`: keeping the canonical folder in `.agents/skills/` with a relative symlink in `.claude/skills/` covers all five CLIs without copies drifting apart. Letting the active agent write or improve a skill uses its full repo access and requires no separate LLM client. |
 
 ## 4. Components
 
@@ -1596,6 +1597,29 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   id's `%1` would become the answer, v0.26.1).
 - **Back:** continuing a named conversation from History (`switch` / `split --from-session`)
   names the pane after it.
+
+#### Skills (v0.36, D32)
+
+- **Where:** **🧩 Skills** on the activity rail (Nerd Font: `extensions` U+EAE6; key `5` in the
+  sidebar), view `skills`.
+- **Discovery and sharing:** `internal/skills` scans the project's skill folders from the git root
+  (`.agents/skills`, `.claude/skills`, `.github/skills`, `.opencode/skills`, `.opencode/skill`,
+  `.agent/skills`, `.codex/skills`). Canonical project skills live in `.agents/skills/<name>/SKILL.md`
+  (read by Antigravity, Codex, Copilot and OpenCode); `skills.Sync` keeps a relative symlink
+  `.claude/skills/<name> → ../../.agents/skills/<name>` so Claude Code sees them too. A skill found
+  only in a CLI-specific folder shows which agents see it (`✻▲◉◎▣` vs dim `·`) and offers **Share
+  with all agents** in its menu to move it into `.agents/skills/` and link `.claude/skills/`.
+- **Validation:** checks `SKILL.md` for YAML front matter (`---`), `name` (lowercase letters,
+  digits and single hyphens, ≤ 64 chars, matching the folder) and `description` (non-empty, ≤ 1024
+  chars). A problem marks the row with `⚠` and explains it on the subtitle line.
+- **Authoring and actions:** **✨ Write with Agent…** asks what the skill should teach the agent
+  and pastes `skills.WritePrompt` into the target agent pane; **➕** asks for a name, writes a
+  starter `SKILL.md` in `.agents/skills/<name>/`, links `.claude/skills/<name>`, and opens the
+  editor popup. Clicking a skill edits its `SKILL.md`; clicking **✨** on a skill row (or
+  right-clicking the row) opens its menu: **Open**, **View**, **Add to Agent**, **Improve with
+  Agent**, **Share with all agents**, and **Delete** (to the Trash, removing its links too). Every
+  menu and prompt passes paths and pane ids in `@imux_skill*` options, never in the prompt's
+  template.
 
 #### Versions and updates (v0.34)
 
