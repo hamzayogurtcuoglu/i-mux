@@ -904,6 +904,22 @@ view too. Key chosen by the user: Ctrl+P (it is taken from shells and OpenCode i
     the pane's project folder (the sidebar's target on the sidebar); e2e: Ctrl+P in an agent pane,
     type, Enter opens the file in the editor at the line; the button; README.
 
+## M36: A panel you can widen, whole file names in Source Control (added 2026-11-09)
+
+User request: in the Git view the changed files show as `…omation-framework/`,
+`…ls/.env.example`: paths cut at their start hide the names; and the panel cannot be made wider
+by dragging its edge (it snaps back).
+
+- [ ] **T36.1 File names** · S
+  - AC: §9.3 "Resizing the panel, file names in Source Control": the name first, its folder in
+    gray, the folder cut first, then the middle of the name; unit tests at the default width and
+    wider; every row exactly the panel's width.
+- [ ] **T36.2 Dragging the edge** · S · deps: T36.1
+  - AC: a dragged width is kept (20-80), saved to `tmux.sidebar_width` once the drag rests and
+    taken by the other tabs' panels and new tabs; a resized window, a closed neighbor and the
+    closed rail keep the width (unit test against a real tmux); e2e: a real mouse drag on the
+    border through tmux; README.
+
 ---
 
 ## Testing strategy

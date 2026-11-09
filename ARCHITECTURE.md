@@ -946,7 +946,8 @@ default 30 columns), running `imux __sidebar`:
 - **Lifecycle:** created with every imux window (`split-window -hbf -l <width> -d`), marked
   `@imux_role=sidebar` and `remain-on-exit off`; it exits when it is the window's last pane, so
   closing the last agent closes the window. It keeps its width on resize (SIGWINCH →
-  `resize-pane -x`). Menus and commands given the sidebar pane act on the target pane.
+  `resize-pane -x`); since v0.32 a width the user drags its edge to becomes its width (§9.3
+  "Resizing the panel"). Menus and commands given the sidebar pane act on the target pane.
 - **Refresh:** event-driven, no polling loop: it redraws on `SIGUSR1`, sent by
   `imux __sidebar-refresh` from tmux hooks (`pane-focus-in`, `after-split-window`, `pane-exited`,
   `pane-died`), by imux after a switch or split, and by the watcher when a pane's state changes;
@@ -1520,6 +1521,28 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   consecutive letters, letters at a word start (after `/ . _ -`, a capital), then shorter paths.
   The matched letters are highlighted; up to 200 rows. `name:42` opens at line 42.
 - **Keys:** ↑↓ (and Ctrl+N / Ctrl+P), the wheel, Enter or a click opens, Esc closes.
+
+#### Resizing the panel, file names in Source Control (v0.32)
+
+- **Dragging the edge:** tmux's own `MouseDrag1Border` (`resize-pane -M`) moves the border
+  between the panel and the agent. Up to v0.31 the sidebar undid it at once: it took its width
+  back on every SIGWINCH. Now it tells a drag from the other resizes by what else changed since it
+  last looked (its width, the window's width, the window's panes as `#{P:#{pane_id} }`): only its
+  width → the user's (a drag, or `resize-pane` from the keys); the window's width (a client
+  attached, the terminal resized) or its panes (the agent next to it closed and gave it the room)
+  → not the user's, and it takes its width back as before.
+- A dragged width is kept within 20-80 columns (what `tmux.sidebar_width` allows) and drawn at
+  once from the last model (nothing is gathered while the edge moves). 600 ms after the drag rests
+  it is written to the config (`config.Set`: only the `sidebar_width` line changes) and the other
+  sidebars are signaled: they read the config and take the width, so every tab has the same
+  panel, as in the editor. New tabs open at it, and it survives a restart.
+- A closed panel (the rail alone) keeps the rail's width; a click on a view's icon opens the
+  panel at the dragged width.
+- **File names in Source Control:** a changed file shows its name first and whole, then its folder
+  in gray, as in the editor (`config.py tests/_bdd`). A short row cuts the folder (at its end)
+  first, then the middle of the name, which keeps its start and its extension (`blim_s…ps.py`);
+  an untracked folder (`docs/`) is a name. Up to v0.31 the path was cut at its start
+  (`…_bdd/config.py`), which hid the name behind its folders.
 
 #### Notifications (v0.28)
 
