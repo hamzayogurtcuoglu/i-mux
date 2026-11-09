@@ -966,6 +966,20 @@ conversation is hard to find again ("I forget which name I gave"); maybe rename 
     the pane); the open agent running it takes the name; continuing a named conversation names its
     pane; e2e through the real menu and prompt.
 
+## M41: Sidebars come back (added 2026-11-09)
+
+User report: after v0.36.0 was installed, the left panel was gone everywhere. Cause: the build was
+copied over the running binary in place; macOS killed every imux process (Code Signature
+Invalid), and nothing restored the sidebars. The skills feature itself was not the cause.
+
+- [ ] **T41.1 Restore and remember off** · S
+  - AC: `sidebar off` sets `@imux_sidebar_off`, `on` clears it; the watcher restores a sidebar
+    in a window seen without one (and not off) in two checks in a row; unit tests; e2e: a killed
+    sidebar comes back, one turned off does not, a new tab never gets two.
+- [ ] **T41.2 Safe local install** · XS
+  - AC: `make install-local` (a new file, then `mv`); CONTRIBUTING and AGENTS.md say never to copy
+    over a running binary.
+
 ## M40: Project skills in the sidebar (added 2026-11-09)
 
 User request: a Skills tab on the left to see and monitor the project's skills across agents, edit

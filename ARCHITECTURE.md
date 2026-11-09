@@ -1324,6 +1324,24 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   sidebar keeps the narrow width while closed (window resizes, a bigger client) and a restarted
   sidebar reads it back. Search, Limits and Help work while closed.
 
+#### Sidebars come back (v0.36.1)
+
+- **Why:** on 2026-11-09 a development build was copied over `~/.local/bin/imux` in place while
+  imux ran. macOS ties a running program to its file's code signature: every imux process (the
+  sidebars, the watcher) was killed (`SIGKILL (Code Signature Invalid)`), and so was every imux
+  started from that file until it was replaced. The sidebars' panes closed and nothing brought
+  them back. `imux update` and install.sh were never affected: they copy to a new file and `mv`
+  it over the old one (a new file, a new signature).
+- **Off is remembered:** `imux sidebar off` (prefix b) sets the window option `@imux_sidebar_off`;
+  `on` clears it.
+- **The watcher brings them back:** every 10 s it lists the windows that have no sidebar, are not
+  turned off, while `[tmux] sidebar` is on. A window missing one in two checks in a row (so a new
+  tab, whose sidebar comes a moment later, is never doubled) gets it back (`imux sidebar on`).
+  The watcher itself restarts on the next client attach or imux command.
+- **Installing a build:** `make install-local` builds and replaces `~/.local/bin/imux` the safe
+  way (a new file, then `mv`); never `cp` or `go build -o` onto a running binary (CONTRIBUTING,
+  AGENTS.md).
+
 #### Buttons (v0.22)
 
 - Every button in the sidebar draws an icon of the rail's theme with a space on each side, so it
