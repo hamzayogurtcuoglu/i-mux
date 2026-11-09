@@ -19,6 +19,11 @@ make fuzz-short    # every fuzz target for 60 s
 make check-fixtures
 ```
 
+To try a build as your everyday `imux`, run `make install-local`. Never `cp` (or `go build -o`)
+onto the `imux` that is running: macOS kills every process of a program whose file changes in
+place (`SIGKILL (Code Signature Invalid)`), so the sidebars and the watcher die at once.
+`make install-local` writes a new file and moves it over the old one, as `imux update` does.
+
 On Windows, work inside WSL. End-to-end tests copy the binary to the Linux file system, because
 programs under `/mnt/c` start slowly.
 

@@ -352,12 +352,12 @@ func railItems(theme string) (top, bottom []railItem) {
 		ic = railIcons[IconsEmoji]
 	}
 	return []railItem{
-			{icon: ic[0], label: "rail.agents", view: ViewAgents},
-			{icon: ic[1], label: "rail.files", view: ViewExplorer},
-			{icon: ic[2], label: "rail.search", action: Action{Kind: ActSearch}},
-			{icon: ic[3], label: "rail.git", view: ViewChanges},
-			{icon: ic[7], label: "rail.skills", view: ViewSkills},
-		}, []railItem{
+		{icon: ic[0], label: "rail.agents", view: ViewAgents},
+		{icon: ic[1], label: "rail.files", view: ViewExplorer},
+		{icon: ic[2], label: "rail.search", action: Action{Kind: ActSearch}},
+		{icon: ic[3], label: "rail.git", view: ViewChanges},
+		{icon: ic[7], label: "rail.skills", view: ViewSkills},
+	}, []railItem{
 		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
 		{icon: ic[6], label: "rail.settings", action: Action{Kind: ActSettings}},
 		{icon: ic[5], label: "rail.help", action: Action{Kind: ActKeys}},

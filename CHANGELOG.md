@@ -6,6 +6,22 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-11-09
+
+### Fixed
+
+- **Sidebars come back.** When imux was killed (on 2026-11-09 a build copied over the running
+  `imux` made macOS kill every imux process: Code Signature Invalid), the sidebars' panes closed
+  and stayed gone. The watcher now puts a sidebar back in any window that lost one, unless it was
+  turned off (prefix b, which is now remembered per tab). `imux update` and the installer were
+  never affected: they replace the file instead of writing into it.
+- The project skills code from 0.36.0 passes the linter again (CI was red).
+
+### Added
+
+- `make install-local` installs a build into `~/.local/bin` the safe way; CONTRIBUTING and a new
+  AGENTS.md say never to copy over the running `imux`.
+
 ## [0.36.0] - 2026-11-09
 
 ### Added

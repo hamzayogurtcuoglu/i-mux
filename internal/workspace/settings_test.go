@@ -1,6 +1,8 @@
 package workspace
 
 import (
+	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -116,5 +118,28 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	if !strings.Contains(sub.Items[1].Cmd, "__settings set commit_agent claude") {
 		t.Errorf("agent row %+v", sub.Items[1])
+	}
+}
+
+// TestWindowsWithoutSidebar (T41.1): a window whose sidebar was killed is
+// listed with a live pane to add it to (a dead one when that is all); one
+// with a sidebar, or turned off, is not; nothing when sidebars are off.
+func TestWindowsWithoutSidebar(t *testing.T) {
+	w, f, _ := testWS(t)
+	w.Cfg.Tmux.Sidebar = true
+	f.replies["list-panes"] = "@1\t%1\tsidebar\t\t0\n@1\t%2\t\t\t0\n" + // has one
+		"@2\t%3\t\t\t1\n@2\t%4\t\t\t0\n" + // killed: the live pane
+		"@3\t%5\t\t\t1\n" + // only a dead agent pane
+		"@4\t%6\t\t1\t0\n" // turned off
+	got, err := w.WindowsWithoutSidebar(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := map[string]string{"@2": "%4", "@3": "%5"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	w.Cfg.Tmux.Sidebar = false
+	if got, _ := w.WindowsWithoutSidebar(context.Background()); len(got) != 0 {
+		t.Fatalf("sidebars off in the config: %v", got)
 	}
 }

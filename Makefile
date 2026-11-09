@@ -21,6 +21,14 @@ all: lint test build
 build: ## Build bin/imux
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/imux
 
+# A new file, then mv: overwriting a running imux in place makes macOS kill
+# every imux process (Code Signature Invalid), the sidebars included.
+INSTALL_DIR ?= $(HOME)/.local/bin
+install-local: build ## Install bin/imux into ~/.local/bin the safe way (a new file, then mv)
+	mkdir -p "$(INSTALL_DIR)"
+	cp bin/$(BINARY) "$(INSTALL_DIR)/.$(BINARY).new.$$$$" && mv -f "$(INSTALL_DIR)/.$(BINARY).new.$$$$" "$(INSTALL_DIR)/$(BINARY)"
+	"$(INSTALL_DIR)/$(BINARY)" version
+
 install: ## Install imux into GOBIN
 	$(GO) install -trimpath -ldflags "$(LDFLAGS)" ./cmd/imux
 

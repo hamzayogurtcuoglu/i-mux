@@ -46,14 +46,14 @@ var Places = []Place{
 
 // Problems a skill can have; the first one found is reported.
 const (
-	ProbNone        = ""
-	ProbNoFile      = "no_file"        // the folder has no SKILL.md
-	ProbNoHeader    = "no_header"      // SKILL.md does not start with a --- block
-	ProbNoName      = "no_name"        // the block has no name
-	ProbNoDesc      = "no_description" // ... or no description
-	ProbNameFolder  = "name_folder"    // name and folder differ
-	ProbBadName     = "bad_name"       // not lowercase letters, digits and hyphens (≤ 64)
-	ProbLongDesc    = "long_description"
+	ProbNone       = ""
+	ProbNoFile     = "no_file"        // the folder has no SKILL.md
+	ProbNoHeader   = "no_header"      // SKILL.md does not start with a --- block
+	ProbNoName     = "no_name"        // the block has no name
+	ProbNoDesc     = "no_description" // ... or no description
+	ProbNameFolder = "name_folder"    // name and folder differ
+	ProbBadName    = "bad_name"       // not lowercase letters, digits and hyphens (≤ 64)
+	ProbLongDesc   = "long_description"
 )
 
 const (
@@ -232,7 +232,7 @@ func ValidName(n string) bool {
 		return false
 	}
 	for _, r := range n {
-		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
 			return false
 		}
 	}

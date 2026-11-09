@@ -131,11 +131,14 @@ func (w *WS) ToggleSidebar(ctx context.Context, pane, mode string) (bool, error)
 		show = false
 	}
 	if !show {
+		// Remembered, so the watcher does not bring it back.
+		_, _ = w.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", pane, OptSidebarOff, "1"})
 		for _, id := range bars {
 			_, _ = w.T.Run(ctx, tmux.Cmd{"kill-pane", "-t", id})
 		}
 		return false, nil
 	}
+	_, _ = w.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-u", "-t", pane, OptSidebarOff})
 	if len(bars) > 0 || target == "" {
 		return len(bars) > 0, nil
 	}
@@ -241,4 +244,66 @@ func (w *WS) ShowLimits(client string) error {
 	}
 	c = append(c, "-E", "-w", "80%", "-h", "60%", tmux.ShJoin(w.Self, "limits", "--pager"))
 	return w.T.Spawn(c)
+}
+
+// OptSidebarOff marks a window whose sidebar was turned off (prefix b): the
+// watcher leaves it without one.
+const OptSidebarOff = "@imux_sidebar_off"
+
+// WindowsWithoutSidebar lists the windows that should have a sidebar and
+// have none (it was killed: §9.3 "Sidebars come back"), each with the pane
+// to add it next to: a live one first. None when sidebars are off in the
+// config.
+func (w *WS) WindowsWithoutSidebar(ctx context.Context) (map[string]string, error) {
+	if !w.Cfg.Tmux.Sidebar {
+		return nil, nil
+	}
+	out, err := w.T.Run(ctx, tmux.Cmd{
+		"list-panes", "-a", "-F",
+		"#{window_id}\t#{pane_id}\t#{" + sidebar.OptRole + "}\t#{" + OptSidebarOff + "}\t#{pane_dead}",
+	})
+	if err != nil {
+		return nil, err
+	}
+	type win struct {
+		bar, off   bool
+		live, dead string
+	}
+	wins := map[string]*win{}
+	for _, r := range tmux.Rows(out, 5) {
+		x := wins[r[0]]
+		if x == nil {
+			x = &win{}
+			wins[r[0]] = x
+		}
+		switch {
+		case r[2] == sidebar.RoleSidebar:
+			x.bar = true
+		case r[4] == "1":
+			if x.dead == "" {
+				x.dead = r[1]
+			}
+		default:
+			if x.live == "" {
+				x.live = r[1]
+			}
+		}
+		if r[3] == "1" {
+			x.off = true
+		}
+	}
+	missing := map[string]string{}
+	for id, x := range wins {
+		if x.bar || x.off {
+			continue
+		}
+		target := x.live
+		if target == "" {
+			target = x.dead
+		}
+		if target != "" {
+			missing[id] = target
+		}
+	}
+	return missing, nil
 }

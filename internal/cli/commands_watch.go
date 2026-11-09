@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/bus"
@@ -31,6 +32,43 @@ func init() {
 // SnapshotEvery is how often the watcher saves the open projects.
 var SnapshotEvery = 30 * time.Second
 
+// SidebarCheckEvery is how often the watcher looks for windows whose
+// sidebar was killed.
+var SidebarCheckEvery = 10 * time.Second
+
+// keepSidebars brings back the sidebars that were killed (§9.3 "Sidebars
+// come back"): a window seen without one in two checks in a row gets it
+// again; a new tab, whose sidebar comes a moment after it, never gets two.
+func keepSidebars(w *workspace.WS, logger *log.Logger) {
+	ctx := context.Background()
+	seen := map[string]bool{}
+	every := SidebarCheckEvery
+	if d, err := time.ParseDuration(os.Getenv("IMUX_SIDEBAR_CHECK")); err == nil && d > 0 {
+		every = d // tests
+	}
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for range t.C {
+		missing, err := w.WindowsWithoutSidebar(ctx)
+		if err != nil {
+			continue
+		}
+		next := map[string]bool{}
+		for win, pane := range missing {
+			if !seen[win] {
+				next[win] = true
+				continue
+			}
+			if _, err := w.ToggleSidebar(ctx, pane, "on"); err != nil {
+				logger.Printf("sidebar for %s: %v", win, err)
+				continue
+			}
+			logger.Printf("sidebar back in %s", win)
+		}
+		seen = next
+	}
+}
+
 // newTicker builds the watcher's per-tick work from the config.
 var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmux.Client, error) {
 	tc := tmux.New(paths.TmuxConf())
@@ -48,6 +86,7 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	if err := w.EnsureConf(context.Background()); err != nil {
 		logger.Printf("tmux config: %v", err)
 	}
+	go keepSidebars(w, logger)
 	actor := &watch.Actor{W: w, Log: logger}
 	keeper := &watch.StatusKeeper{W: w}
 	states := &watch.PaneStates{T: tc, Notify: newNotifier(cfg.Notify, tc).Send}
