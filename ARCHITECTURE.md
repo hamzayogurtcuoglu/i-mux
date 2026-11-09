@@ -1575,6 +1575,26 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   `MouseUp1StatusRight` run `imux __click imux:close` / `imux:tab` (on the release, like the
   3.4 bindings). The tabs themselves were window ranges, clickable since tmux 3.0.
 
+#### Versions and updates (v0.34)
+
+- **Where:** Settings → **Versions and updates…** (key `c`), a popup running `imux versions
+  --popup`; `imux versions` prints the same list. The row reads `⚠ Versions and updates… (tmux
+  3.2a is old)` when tmux is older than 3.5.
+- **Rows:** i-mux (`imux update`; "the newest" when the last check says so), tmux, then the agents
+  in config order. Each shows the version read now (agents: `--version`, which also refreshes
+  state.json's bin cache, kept for a day otherwise) and what updates it.
+- **tmux:** below 3.2 i-mux does not run; below 3.4 the agent bar takes no clicks; below 3.5 menus
+  do not take the mouse. The command is the package manager's, picked like install.sh does
+  (Homebrew's tmux → `brew upgrade tmux`). apt is asked first (`apt-cache policy`, in the C
+  locale): a candidate with the same upstream version (Ubuntu 22.04: 3.2a-4ubuntu0.2 → 0.3) adds
+  nothing, so the row says that apt has no newer tmux and points to Homebrew. After an update the
+  popup says that i-mux's tmux server keeps the old one until it restarts.
+- **Agents:** their own updaters (`claude update`, `copilot update`, `agy update`, `opencode
+  upgrade`; OpenCode 1 `upgrade --major`); Codex has none, so npm or Homebrew by where it lives.
+  A missing agent shows its install hint.
+- **No network:** whether a newer CLI is out is its updater's business; i-mux only knows its own
+  latest release (the daily check).
+
 #### Notifications (v0.28)
 
 - **When:** an agent pane goes from working to idle after working at least 10 s ("Claude

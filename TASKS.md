@@ -937,6 +937,21 @@ stay and say that it has no agents. And the + of the tab bar does nothing (tmux 
     nothing to continue; snapshots skip it; another tab's last agent still closes its tab; unit
     tests (drawing, Gather against a real tmux) and e2e.
 
+## M38: Versions and updates in Settings (added 2026-11-09)
+
+User request: a place in Settings that shows the versions of what i-mux runs on (tmux was old, a
+CLI was old) and updates them, or at least gives the command and a warning.
+
+- [ ] **T38.1 The list** · S
+  - AC: §9.3 "Versions and updates": i-mux, tmux, the agents in config order with the version read
+    now; tmux's thresholds (3.2 needed, 3.4 agent bar clicks, 3.5 menus with the mouse) and the
+    package manager's command, apt's candidate compared by upstream version; each agent's own
+    updater (Codex: npm or Homebrew by its path; OpenCode 1: `upgrade --major`); unit tests.
+- [ ] **T38.2 Settings row and popup** · S · deps: T38.1
+  - AC: the row (with the tmux warning) opens `imux versions --popup`; a letter runs the command
+    with the terminal, the list is read again and the bin cache takes the new versions; e2e with
+    the fake agents' updaters; README.
+
 ---
 
 ## Testing strategy
