@@ -71,7 +71,9 @@ edge to make it wider or narrower: every tab takes the width, and i-mux remember
 
 **🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: AI completion
 in the editor, icons, who writes commit messages, what a new agent does after a handoff, what happens
-at a limit, and the config file. **AI completion in the editor** works like Copilot in VS Code: turn it
+at a limit, and the config file. **Versions and updates** there (or `imux versions`) lists i-mux, tmux
+and every agent CLI with its version and the command that updates it; press its letter to run it
+right there. It says what an older tmux lacks and how to get a newer one on your system. **AI completion in the editor** works like Copilot in VS Code: turn it
 on there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
@@ -151,7 +153,7 @@ its own. Set `[handoff] deliver = "inline"` to send the whole document as the me
 and `[handoff] on_arrival = "continue"` to let it carry on with an unfinished request right away.
 
 Switching back to an agent that already ran in the pane resumes its own session and tells it only
-what happened in the meantime. Run `imux help` for the command line (`switch`, `split`, `ls`,
+what happened in the meantime. Run `imux help` for the command line (`switch`, `split`, `ls`, `versions`,
 `limits`, `sessions`, `handoff --print`).
 
 ## When an agent hits its limit

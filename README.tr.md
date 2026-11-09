@@ -65,7 +65,10 @@ i-mux onu hatırlar (`tmux.sidebar_width`).
 
 Şeritteki **🔧 Ayar** (ya da `imux settings`, ya da kenar çubuğunda `,`) Ayarlar'ı açar: editörde
 yapay zekâ tamamlama, simgeler, commit mesajlarını kimin yazacağı, geçişten sonra yeni ajanın ne
-yapacağı, limitte ne olacağı ve ayar dosyası. **Editörde yapay zekâ tamamlama** VS Code'daki Copilot
+yapacağı, limitte ne olacağı ve ayar dosyası. Oradaki **Sürümler ve güncellemeler** (ya da `imux
+versions`) i-mux'u, tmux'u ve her agent CLI'ını sürümü ve onu güncelleyen komutla listeler; harfine
+basınca komut orada çalışır. Eski bir tmux'ta neyin eksik olduğunu ve sisteminde yenisini nasıl
+alacağını da söyler. **Editörde yapay zekâ tamamlama** VS Code'daki Copilot
 gibi çalışır: oradan açınca düzenlediğin dosyalar GitHub'ın Copilot eklentili Neovim'inde açılır (Tab
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
 GitHub Copilot'a bir kez giriş yaptırır.
@@ -145,7 +148,7 @@ tamamının mesaj olarak gitmesini istersen `[handoff] deliver = "inline"`, yar�
 devam etmesini istersen `[handoff] on_arrival = "continue"` yaz.
 
 Bölmede daha önce çalışmış bir agent'a geri dönmek, o agent'ın kendi oturumunu sürdürür ve ona
-yalnızca aradaki gelişmeleri anlatır. Komut satırı için `imux help` (`switch`, `split`, `ls`,
+yalnızca aradaki gelişmeleri anlatır. Komut satırı için `imux help` (`switch`, `split`, `ls`, `versions`,
 `limits`, `sessions`, `handoff --print`).
 
 Arayüz dili `LANG` / `IMUX_LANG` ya da yapılandırmadaki `locale = "tr"` ile seçilir; agent'lara

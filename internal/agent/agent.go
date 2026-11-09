@@ -34,14 +34,17 @@ type Info struct {
 	// ReadDirFlag lets the agent read files in another directory without
 	// asking ("" when it needs nothing: Codex reads any path).
 	ReadDirFlag string
+	// UpdateArgs make the CLI update itself (`claude update`); nil when its
+	// package manager does it (Codex: npm or Homebrew).
+	UpdateArgs []string
 }
 
 var registry = []Info{
-	{ID: session.Claude, Key: "c", Bin: "claude", Vendor: "Anthropic", InstallHint: "npm i -g @anthropic-ai/claude-code", ReadDirFlag: "--add-dir"},
-	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", ReadDirFlag: "--add-dir"},
-	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot", ReadDirFlag: "--add-dir"},
+	{ID: session.Claude, Key: "c", Bin: "claude", Vendor: "Anthropic", InstallHint: "npm i -g @anthropic-ai/claude-code", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
+	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
+	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
 	{ID: session.Codex, Key: "x", Bin: "codex", Vendor: "OpenAI", InstallHint: "npm i -g @openai/codex"},
-	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "brew install opencode (or: curl -fsSL https://opencode.ai/install | bash, then: opencode upgrade --major)"},
+	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "brew install opencode (or: curl -fsSL https://opencode.ai/install | bash, then: opencode upgrade --major)", UpdateArgs: []string{"upgrade"}},
 }
 
 func init() {

@@ -18,14 +18,14 @@ func cmdOf(m *Menu, key string) string {
 
 func TestSettingsMenu(t *testing.T) {
 	i18n.SetLocale("en")
-	w, _, _ := testWS(t)
+	w, f, _ := testWS(t)
 	m := w.SettingsMenu("%1", "c1")
 	var names []string
 	for _, it := range m.Items {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|m Commit messages by: Auto (the pane's agent)|" +
+	want := "u Update i-mux… (dev)|c Versions and updates…| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|m Commit messages by: Auto (the pane's agent)|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
@@ -60,6 +60,23 @@ func TestSettingsMenu(t *testing.T) {
 	if c := cmd("u"); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, "update --popup") {
 		t.Errorf("update row %q", c)
 	}
+	if c := cmd("c"); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, "versions --popup") {
+		t.Errorf("versions row %q", c)
+	}
+	// A tmux that lacks features says so on the row (tmux -V's reply).
+	for v, want := range map[string]string{
+		"tmux 3.2a": "⚠ Versions and updates… (tmux 3.2a is old)",
+		"tmux 3.4":  "⚠ Versions and updates… (tmux 3.4 is old)",
+		"tmux 3.5a": "Versions and updates…",
+	} {
+		f.replies[""] = v
+		for _, it := range w.SettingsMenu("%1", "c1").Items {
+			if it.Key == "c" && it.Name != want {
+				t.Errorf("%s: row %q, want %q", v, it.Name, want)
+			}
+		}
+	}
+	f.replies[""] = ""
 	// Values change the rows; completion on offers turning off and signing in.
 	w.Cfg.Completion.Enabled = true
 	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival, w.Cfg.Git.CommitAgent = "emoji", "off", "continue", "opencode"
@@ -77,7 +94,7 @@ func TestSettingsMenu(t *testing.T) {
 			t.Errorf("menu lacks %q:\n%s", want, got)
 		}
 	}
-	if c := m.Items[2].Cmd; !strings.Contains(c, "__settings set completion off") { // u, sep, a
+	if c := cmdOf(m, "a"); !strings.Contains(c, "__settings set completion off") {
 		t.Errorf("turning off: %q", c)
 	}
 	if c := cmdOf(m, "i"); !strings.Contains(c, "__settings set icons auto") {

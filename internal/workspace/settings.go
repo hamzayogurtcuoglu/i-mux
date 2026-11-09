@@ -1,12 +1,15 @@
 package workspace
 
 import (
+	"context"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	upd "github.com/hamzayogurtcuoglu/i-mux/internal/update"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/versions"
 )
 
 // Settings rows cycle through these values (§9.3 "Settings").
@@ -77,7 +80,13 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	if latest := w.State().Latest; upd.Newer(latest, cur) {
 		row.Name = i18n.T("settings.update_available", cur, latest)
 	}
-	m.Items = append(m.Items, row, Separator())
+	// Versions and updates: i-mux, tmux, the agents; a tmux that lacks
+	// features says so here.
+	vers := MenuItem{Name: i18n.T("settings.versions"), Key: "c", Cmd: w.popupCmd("90%", "80%", "versions", "--popup")}
+	if v, err := w.TmuxVersion(context.Background()); err == nil && !v.AtLeast(versions.TmuxWants[0], versions.TmuxWants[1]) {
+		vers.Name = i18n.T("settings.versions_old", v.String())
+	}
+	m.Items = append(m.Items, row, vers, Separator())
 	if cfg.Completion.Enabled {
 		m.Items = append(m.Items,
 			MenuItem{Name: i18n.T("settings.completion", i18n.T("settings.on")), Key: "a", Cmd: set("completion", "off")},

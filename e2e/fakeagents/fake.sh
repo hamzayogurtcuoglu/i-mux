@@ -23,6 +23,12 @@ if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
 	echo "$agent --version" >>"$log/version-probes"
 	exit 0
 fi
+# Self-updates (Settings → Versions and updates) are not runs either.
+if [ "${1:-}" = update ] || [ "${1:-}" = upgrade ]; then
+	echo "$agent $*" >>"$log/updates"
+	echo "$agent is up to date"
+	exit 0
+fi
 if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
 	echo "Usage: $agent [options] [prompt]"
 	echo "  --session-id <uuid>  -i, --prompt-interactive <prompt>  -r, --resume <id>  resume <id>"

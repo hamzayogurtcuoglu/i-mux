@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-11-09
+
+### Added
+
+- **Settings → Versions and updates** (and `imux versions`): i-mux, tmux and every agent CLI with
+  the version installed and the command that updates it (`claude update`, `copilot update`,
+  `agy update`, `opencode upgrade`, npm or Homebrew for Codex, the package manager for tmux); a
+  letter runs it right there and the list is read again. An older tmux is marked with what a newer
+  one adds, and the Settings row says so (`⚠ … (tmux 3.2a is old)`). Where the package manager has
+  no newer tmux (Ubuntu 22.04's apt: 3.2a) it says so and points to Homebrew. Nothing is asked of
+  the network: each CLI's own updater knows whether a newer version is out.
+
 ## [0.33.0] - 2026-11-09
 
 ### Changed
