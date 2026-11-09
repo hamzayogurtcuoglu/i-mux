@@ -143,3 +143,31 @@ func TestUpdateErrorWritesNothing(t *testing.T) {
 		t.Fatal("state written despite error")
 	}
 }
+
+// Conversation names round-trip through state.json; removing the last one
+// leaves no "names" key.
+func TestNames(t *testing.T) {
+	t.Setenv("IMUX_HOME", t.TempDir())
+	if err := Update(func(s *State) error {
+		s.SetName("claude:a", "backend fix")
+		s.SetName("codex:b", "docs")
+		s.SetName("codex:b", "")
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Read()
+	if err != nil || len(s.Names) != 1 || s.Names["claude:a"] != "backend fix" {
+		t.Fatalf("names %v %v", s.Names, err)
+	}
+	s.SetName("claude:a", "")
+	if s.Names != nil {
+		t.Fatalf("empty names %v", s.Names)
+	}
+	for i := 0; i < MaxNames+3; i++ {
+		s.SetName(fmt.Sprintf("claude:%d", i), "n")
+	}
+	if len(s.Names) != MaxNames {
+		t.Fatalf("%d names kept", len(s.Names))
+	}
+}

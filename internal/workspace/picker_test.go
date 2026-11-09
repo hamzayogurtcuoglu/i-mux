@@ -13,6 +13,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session/claude"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
@@ -93,7 +94,7 @@ func TestSessionMenu(t *testing.T) {
 		names = append(names, it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "Continue in Antigravity (resume)|Continue in Claude (with context)||Preview handoff||New pane: Antigravity (resume)|New pane: Claude (with context)||Pin to the top"
+	want := "Continue in Antigravity (resume)|Continue in Claude (with context)||Preview handoff||New pane: Antigravity (resume)|New pane: Claude (with context)||Rename…|Pin to the top"
 	if got != want {
 		t.Fatalf("items\n got %s\nwant %s", got, want)
 	}
@@ -105,6 +106,25 @@ func TestSessionMenu(t *testing.T) {
 	}
 	if pin := m.Items[len(m.Items)-1]; pin.Key != "t" || !strings.Contains(pin.Cmd, "__pin antigravity:g-1 --pane %4 --client c1") {
 		t.Fatalf("pin item %+v", pin)
+	}
+	// Rename… asks for the conversation's name; the pane id stays out of
+	// the prompt's template (command-prompt would turn %4 into the answer).
+	ren := m.Items[len(m.Items)-2]
+	if ren.Key != "r" || !strings.Contains(ren.Cmd, "set-option -g @imux_name_key antigravity:g-1") ||
+		!strings.Contains(ren.Cmd, "set-option -g @imux_name_pane %4") || !strings.Contains(ren.Cmd, "command-prompt -t c1 -I '' -p 'Name for this conversation:'") {
+		t.Fatalf("rename item %+v", ren)
+	}
+	if _, tmpl, _ := strings.Cut(ren.Cmd, "-p 'Name for this conversation:'"); strings.Contains(tmpl, "%4") || !strings.Contains(tmpl, "__name-session --from-option") {
+		t.Fatalf("rename template %q", tmpl)
+	}
+	// A named conversation shows its name in the title.
+	if err := state.Update(func(s *state.State) error { s.SetName("antigravity:g-1", "backend fix"); return nil }); err != nil {
+		t.Fatal(err)
+	}
+	w.st = nil
+	if m := w.SessionMenu(ref, &Pane{ID: "%4"}, ""); !strings.HasPrefix(m.Title, "backend fix · Antigravity") ||
+		!strings.Contains(m.Items[len(m.Items)-2].Cmd, "-I 'backend fix'") {
+		t.Fatalf("named: %q %q", m.Title, m.Items[len(m.Items)-2].Cmd)
 	}
 	// No native resume when the agent's resume is off.
 	w.Cfg.Agents["antigravity"].Resume = false

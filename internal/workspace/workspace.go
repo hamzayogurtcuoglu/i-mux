@@ -368,19 +368,20 @@ type Pane struct {
 	Window   string // window id
 	Command  string // pane_current_command
 	Role     string // @imux_role: "sidebar" for sidebar panes
+	Name     string // @imux_name: the user's name for it
 }
 
 // paneFormat reads every pane field in one display-message.
 const paneFormat = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{@imux_cwd}\t#{pane_current_path}\t#{@imux_label}\t" +
-	"#{pane_dead}\t#{session_name}\t#{window_id}\t#{pane_current_command}\t#{@imux_fallback}\t#{@imux_lock}\t#{@imux_trail}\t#{@imux_role}"
+	"#{pane_dead}\t#{session_name}\t#{window_id}\t#{pane_current_command}\t#{@imux_fallback}\t#{@imux_lock}\t#{@imux_trail}\t#{@imux_role}\t#{@imux_name}"
 
-const paneFields = 14
+const paneFields = 15
 
 func parsePane(f []string) *Pane {
 	p := &Pane{
 		ID: f[0], Agent: session.AgentID(f[1]), CWD: f[3], Label: f[5], Dead: f[6] == "1",
 		Session: f[7], Window: f[8], Command: f[9], Fallback: f[10], Lock: f[11], Trail: ParseTrail(f[12]),
-		Role: f[13],
+		Role: f[13], Name: f[14],
 	}
 	if ms, err := strconv.ParseInt(f[2], 10, 64); err == nil && ms > 0 {
 		p.Start = time.UnixMilli(ms)

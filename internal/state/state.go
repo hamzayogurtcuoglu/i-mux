@@ -59,6 +59,9 @@ type State struct {
 	// Pinned holds the conversations pinned in History ("agent:id"), the
 	// newest pin first.
 	Pinned []string `json:"pinned,omitempty"`
+	// Names holds the user's names of conversations ("agent:id" → name):
+	// an agent's name in the sidebar is its conversation's in History.
+	Names map[string]string `json:"names,omitempty"`
 	// Latest is the newest i-mux release the watcher saw ("0.27.0") and
 	// LatestChecked when it asked (unix seconds).
 	Latest        string `json:"latest,omitempty"`
@@ -68,7 +71,7 @@ type State struct {
 }
 
 // known lists the JSON keys of typed fields.
-var known = []string{"version", "limits", "bins", "notices", "bus_sends", "recent", "pinned", "latest", "latest_checked"}
+var known = []string{"version", "limits", "bins", "notices", "bus_sends", "recent", "pinned", "names", "latest", "latest_checked"}
 
 type plain State // no methods: avoids recursion
 
@@ -254,6 +257,30 @@ func (s *State) Unpin(key string) {
 	if len(s.Pinned) == 0 {
 		s.Pinned = nil
 	}
+}
+
+// MaxNames bounds the named conversations kept (the oldest names go).
+const MaxNames = 500
+
+// SetName names conversation key ("agent:id"); "" removes its name.
+func (s *State) SetName(key, name string) {
+	if name == "" {
+		delete(s.Names, key)
+		if len(s.Names) == 0 {
+			s.Names = nil
+		}
+		return
+	}
+	if s.Names == nil {
+		s.Names = map[string]string{}
+	}
+	if _, ok := s.Names[key]; !ok && len(s.Names) >= MaxNames {
+		for k := range s.Names { // any one: names are rarely this many
+			delete(s.Names, k)
+			break
+		}
+	}
+	s.Names[key] = name
 }
 
 // Recent is a project folder and when it was last started.

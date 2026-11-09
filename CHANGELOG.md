@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-11-09
+
+### Added
+
+- **Named conversations in History.** An agent renamed in the sidebar names its conversation too
+  (every conversation of that pane, also after it moved to another CLI), and History lists it by
+  that name: `backend fix · fix the login redirect…`. A conversation's menu in History has
+  **Rename…** (an empty name removes it); an open agent running that conversation takes the new
+  name. Continuing a named conversation from History gives the agent its name back. Names are kept
+  in `state.json` and survive closing the agent, the tab or the project.
+
 ## [0.34.0] - 2026-11-09
 
 ### Added

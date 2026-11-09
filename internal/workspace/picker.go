@@ -23,6 +23,7 @@ const (
 	PickerRows       = 9
 	PickerCandidates = 50
 	previewRunes     = 40
+	namedRunes       = 24 // a conversation's name in the list
 )
 
 // pickerAgents are the installed agents in config order.
@@ -65,6 +66,9 @@ func (w *WS) PinMenu(ctx context.Context, f *sources.Finder, p *Pane, client str
 }
 
 func (w *WS) picker(ctx context.Context, f *sources.Finder, p *Pane, client string, page int, pinMode bool) *Menu {
+	// Agents named in the sidebar name their conversations (names.go).
+	w.RememberNames(ctx, f, nil)
+	names := w.State().Names
 	pinned := w.pinnedRefs(ctx, f, p.CWD)
 	isPinned := map[string]bool{}
 	for _, r := range pinned {
@@ -98,6 +102,11 @@ func (w *WS) picker(ctx context.Context, f *sources.Finder, p *Pane, client stri
 		preview := clean.OneLine(pastedRe.ReplaceAllString(f.Preview(ctx, r), " "), previewRunes)
 		if strings.TrimSpace(preview) == "" {
 			preview = i18n.T("picker.no_preview")
+		}
+		if n := names[r.Key()]; n != "" {
+			// The name first; the preview shortened to keep the width.
+			n = clean.OneLine(n, namedRunes)
+			preview = n + " · " + clean.OneLine(preview, max(previewRunes-utf8.RuneCountInString(n)+namedRunes/2, 12))
 		}
 		name := pad(session.ShortName(r.Agent), agentCol) + " " + pad(textfmt.Ago(now, r.UpdatedAt), 12) + " " + preview
 		if len(pinned) > 0 || pinMode {
@@ -165,6 +174,10 @@ func (w *WS) SessionMenu(ref session.Ref, p *Pane, client string) *Menu {
 	m := &Menu{Title: i18n.T("picker.session_title", session.ShortName(ref.Agent), textfmt.Ago(w.Now(), ref.UpdatedAt))}
 	tgt := uiTarget(p.ID, client)
 	key := ref.Key()
+	name := w.NameOf(key)
+	if name != "" {
+		m.Title = name + " · " + m.Title
+	}
 	own := w.Installed(ref.Agent) && w.Cfg.Agent(string(ref.Agent)).Resume && len(w.Cfg.Agent(string(ref.Agent)).ResumeArgs) > 0
 	var others []agent.Info
 	for _, a := range agent.Ordered(w.Cfg) {
@@ -205,8 +218,33 @@ func (w *WS) SessionMenu(ref session.Ref, p *Pane, client string) *Menu {
 	if w.State().IsPinned(key) {
 		pin, args = i18n.T("picker.unpin"), append(args, "--unpin")
 	}
-	m.Items = append(m.Items, Separator(), MenuItem{Name: pin, Key: "t", Cmd: w.ui(append(args, tgt...)...)})
+	m.Items = append(m.Items, Separator(),
+		MenuItem{Name: i18n.T("picker.rename"), Key: "r", Cmd: w.NamePrompt(key, name, p.ID, client)},
+		MenuItem{Name: pin, Key: "t", Cmd: w.ui(append(args, tgt...)...)})
 	return m
+}
+
+// tmux options the conversation-name prompt leaves for imux __name-session:
+// the conversation, the pane and client to reopen History for, the answer.
+const (
+	OptNameKey    = "@imux_name_key"
+	OptNamePane   = "@imux_name_pane"
+	OptNameClient = "@imux_name_client"
+	OptNameValue  = "@imux_name_value"
+)
+
+// NamePrompt asks on client for conversation key's name (cur: the current
+// one). Nothing but the answer goes through the prompt's template, which
+// would turn a pane id's %1 into the answer.
+func (w *WS) NamePrompt(key, cur, pane, client string) string {
+	c := "set-option -g " + OptNameKey + " " + tmux.Quote(key) +
+		" ; set-option -g " + OptNamePane + " " + tmux.Quote(pane) +
+		" ; set-option -g " + OptNameClient + " " + tmux.Quote(client) + " ; command-prompt"
+	if client != "" {
+		c += " -t " + tmux.Quote(client)
+	}
+	tmpl := "set-option -g " + OptNameValue + " \"%%%\" ; " + tmux.RunShell(w.Self, "__name-session", "--from-option")
+	return c + " -I " + tmux.Quote(cur) + " -p " + tmux.Quote(i18n.T("prompt.name_session")) + " " + tmux.Quote(tmpl)
 }
 
 // pad right-pads s with spaces to n runes (menus use a monospace font).

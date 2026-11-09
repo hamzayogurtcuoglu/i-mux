@@ -232,6 +232,10 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 		}
 		return nil, err
 	}
+	if req.From != nil {
+		// A named conversation picked in History names its agent again.
+		w.nameFromConversation(ctx, target, req.From.Key())
+	}
 	w.notifySwitch(ctx, req.Client, target, res)
 	if w.pasteMode(l) {
 		res.Pasted = true

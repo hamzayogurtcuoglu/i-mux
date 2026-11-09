@@ -11,6 +11,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -160,6 +161,7 @@ func (w *WS) CloseProject(ctx context.Context, s string) error {
 		dir = strings.TrimSpace(out)
 	}
 	_ = w.SaveSnapshot(ctx)
+	w.RememberNames(ctx, sources.New(w.Cfg), func(q *Pane) bool { return q.Session == s })
 	cmds = append(cmds, tmux.Cmd{"kill-session", "-t", "=" + s})
 	if _, err := w.T.Run(ctx, cmds...); err != nil {
 		return err
@@ -184,7 +186,9 @@ func (w *WS) CloseTab(ctx context.Context, p *Pane) error {
 	if n, _ := strconv.Atoi(rows[0][1]); n <= 1 {
 		return w.CloseProject(ctx, rows[0][0])
 	}
-	if _, err := w.T.Run(ctx, tmux.Cmd{"kill-window", "-t", rows[0][2]}); err != nil {
+	win := rows[0][2]
+	w.RememberNames(ctx, sources.New(w.Cfg), func(q *Pane) bool { return q.Window == win })
+	if _, err := w.T.Run(ctx, tmux.Cmd{"kill-window", "-t", win}); err != nil {
 		return err
 	}
 	w.RefreshSidebars(ctx)
@@ -273,6 +277,8 @@ func (w *WS) CloseAgent(ctx context.Context, p *Pane) error {
 	if err != nil {
 		return err
 	}
+	// Its name goes on its conversation before the pane goes (names.go).
+	w.RememberNames(ctx, sources.New(w.Cfg), func(q *Pane) bool { return q.ID == p.ID })
 	switch {
 	case tabPanes <= 1 && windows <= 1:
 		return w.LeaveEmpty(ctx, p.ID)

@@ -253,6 +253,16 @@ func runRename(e *Env, args []string) error {
 	if _, err := w.T.Run(ctx, c); err != nil {
 		return err
 	}
+	// The agent's name is its conversation's in History too; a name taken
+	// away leaves the conversation's (names.go).
+	f := sources.New(w.Cfg)
+	if name != "" {
+		w.RememberNames(ctx, f, func(q *workspace.Pane) bool { return q.ID == p.ID })
+	} else if last := p.Trail.Last(); last != nil {
+		if r, err := w.RefFor(ctx, f, *last, p.CWD); err == nil && r.ID != "" {
+			_ = w.NameConversation(ctx, f, r.Key(), "")
+		}
+	}
 	w.RefreshSidebars(ctx)
 	if *clientF != "" {
 		w.Message(ctx, *clientF, p.ID, i18n.T("rename.done", name))

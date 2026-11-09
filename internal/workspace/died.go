@@ -12,6 +12,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -63,6 +64,7 @@ func (w *WS) PaneDied(ctx context.Context, pane string, status int) error {
 		msg += " · " + i18n.T("died.doctor")
 	}
 	if w.Cfg.OnExit == "close" {
+		w.RememberNames(ctx, sources.New(w.Cfg), func(q *Pane) bool { return q.ID == p.ID })
 		_, err := w.T.Run(ctx, tmux.Cmd{"kill-pane", "-t", p.ID})
 		return err
 	}
