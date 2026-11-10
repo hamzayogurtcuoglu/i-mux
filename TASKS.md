@@ -997,6 +997,17 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M51: Search in History (added 2026-11-10)
+
+User request: a search in History, to find a conversation by text said in it.
+
+- [x] **T51.1 History's search popup** · M
+  - AC: D43, §9.3 "Search in History": the menu's **🔍 Search their text…**; the popup lists the
+    folder's conversations and finds the ones whose messages have the text (byte search first,
+    then parsed), with up to three messages each, folding, the bar; Enter opens the
+    conversation's menu; unit tests (search, popup); e2e: a word said later in a conversation
+    finds it, Enter opens its menu.
+
 ## M50: Scroll bars, and a clearer search (added 2026-11-10)
 
 User request: scroll bars wherever things scroll (search, a git diff, ...) that do not spoil the

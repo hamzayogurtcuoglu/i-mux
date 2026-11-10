@@ -119,6 +119,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D40 | **The "+" of Agents asks which agent, then where it opens** (added 2026-11-10, v0.41, at the user's request): after the agent (or Terminal), a second menu: Right, Left, Down, Up (a new pane beside the target pane; `split-window -b` for left and up) or a new tab. `prefix v` / `prefix -` keep their fixed direction; the project's "No agents" pane still takes the agent in its place. | The user wants to choose the place instead of i-mux picking right or down from the pane's shape, and to open an agent in a new tab from the same button. |
 | D41 | **An agent that is not installed opens a small popup that installs it** (added 2026-11-10, v0.41, at the user's request): a click on it in "Continue this chat in" or the agent bar shows what it is, the command that installs it and **Install now** / **Close**. Install now runs the command in the popup (its output visible), checks the agent is found, then Enter continues the chat in it. When the command needs a program that is missing (npm without Node.js, curl), the popup says how to get it instead. `[agents.<id>] install` replaces i-mux's command. | The user found the one-line hint in the status line easy to miss and unclear; a popup at the click explains and does the step. Running the vendor's own install command (npm, or its install script) is what the user would type. |
 | D42 | **Everything that scrolls shows a scroll bar, and the viewers are i-mux's own pager** (added 2026-11-10, v0.42, at the user's request): a one-column bar at the right edge (a dark `│` track, a lighter `┃` thumb sized to the part shown) in the sidebar's lists (Explorer, Source Control, Skills), search, Go to File, the folder picker, and the diff, file, commit and limits viewers; a click on it scrolls there. The viewers, `less` before, are `internal/pager`: less's keys (↑↓ j k, PgUp PgDn space b, g G, ←→, / n N, q), the wheel, a click or drag on the bar, `v` to edit a file. The search popup draws files with their icons, folder and a count, the matches in color, and starts folded when more than 5 files match; a button folds or unfolds all. | The user could not tell where they were in a long diff or search, and found the search plain ("colorless", every file open, no visible way to fold them). `less` cannot draw a bar; a pager of our own costs ~300 lines and keeps the keys. The bar is thin and dark so it does not fight the text. |
+| D43 | **History searches the conversations' text** (added 2026-11-10, v0.43, at the user's request): History's last item, **🔍 Search their text…** (`/`), opens a popup with every conversation of the folder (pinned first, then the newest; 300 at most) and, as you type, the ones whose messages (or name, or first request) have the text, each with its count and up to three of its messages, the match marked. Enter opens the conversation's menu (resume, continue in another agent, ...). | The user wants to find a conversation by something said in it, not only by its first request. A conversation's file is read whole only when it can hold the text (a byte search first), so a search over a few hundred conversations takes a moment, shown as it goes. |
 
 ## 4. Components
 
@@ -1645,6 +1646,28 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   its name in bold, its folder dimmed and the number of matches in a grey pill; a match row is
   its line number (dim, right-aligned) and its text with the match on an orange background; the
   selected row has a cyan `▌`. More than 5 files: they start folded, one row each (`FoldMany`).
+
+#### Search in History (v0.43, D43)
+
+- **Opening it:** History (the menu: the sidebar's ⧉ History, `prefix S`, the agent bar) ends with
+  **🔍 Search their text…** (`/`): `display-popup -E -w 90% -h 80%` running `imux __history
+  --pane P --client C` in the folder.
+- **The list:** the folder's conversations of the installed agents (`WS.History`: the pinned ones,
+  then the newest first, at most 300), each a row: the agent's icon and name, its name or first
+  request (📌 when pinned), how long ago; the scroll bar (D42).
+- **Searching:** 250 ms after the last key a search starts (a new one cancels it): for each
+  conversation in that order, a byte search of its file (Copilot: `events.jsonl`) skips the ones
+  without the text, unless the text has what JSON may escape (`"`, `\`, `<`, `>`, `&`, letters
+  beyond ASCII, which some writers escape); the others are parsed whole (`histsearch.Whole`) and
+  their user and agent messages searched (smart case: an uppercase letter makes it
+  case-sensitive). The popup shows "searching 12/48 · 3 found" and the conversations as they are
+  found, in list order; a conversation whose name or first request has the text is found too.
+- **A result:** the conversation's row with the number of its messages that have the text, then up
+  to three of them as `you  …text…` or `Claude  …text…` (one line around the match, the match on
+  orange); ← → fold one, Tab all, a click on the arrow too.
+- **Choosing:** Enter, or a click on a conversation or one of its messages, closes the popup and
+  opens the conversation's menu (`run-shell -b -d 0.15 imux __menu --session …`: after the popup,
+  which a menu would replace).
 
 #### Not installed (v0.41, D41)
 
