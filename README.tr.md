@@ -129,7 +129,7 @@ görünümü değiştirir.
 | bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni agent ya da düz **Terminal** aç, sonra yerini seç: sağda, solda, altta, üstte ya da yeni sekmede (sağa / aşağı için `prefix v` / `prefix -`) |
 | **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder (kurulu olmayan biri, onu kuran komutu ve **Şimdi kur** düğmesini gösteren küçük bir pencere açar) |
 | bir bölüm başlığı (PROJELER, AGENT'LAR) | bölümü kapatır / açar |
-| **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar, ad verilenler adıyla (konuşmanın **Yeniden adlandır…** öğesi ad verir; devam edince agent adını geri alır) (📌 Sabitle ya da kaldır…, `p`, birini en üstte tutar) · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |
+| **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar, ad verilenler adıyla (konuşmanın **Yeniden adlandır…** öğesi ad verir; devam edince agent adını geri alır) (📌 Sabitle ya da kaldır…, `p`, birini en üstte tutar; **🔍 Metinlerinde ara…**, `/`, bir konuşmayı içinde geçen herhangi bir şeyle bulur) · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |
 | en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat |
 | projenin son agent'ını kapat | proje açık kalır ve **Agent yok** der: başlatmak için orada bir agent'ın tuşuna bas (ya da tıkla) veya AGENT'LAR yanındaki **+** |
 | `prefix b` | kenar paneli gizle ya da göster |

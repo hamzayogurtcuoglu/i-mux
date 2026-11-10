@@ -6,6 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-11-10
+
+### Added
+
+- **Search in History.** History's **🔍 Search their text…** (`/`) opens a window with every
+  conversation of the folder; type, and it finds the ones in which anything you or the agent said
+  has the text, with the messages that do (the match marked). Enter opens the conversation, as
+  in History.
+
 ## [0.42.0] - 2026-11-10
 
 ### Added

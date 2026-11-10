@@ -49,10 +49,14 @@ func TestPickerMenuPagesInstalledAgents(t *testing.T) {
 	if m == nil || !strings.HasPrefix(m.Title, "Sessions · ~/proj (1/2)") {
 		t.Fatalf("title %+v", m)
 	}
-	if len(m.Items) != PickerRows+3 || m.Items[PickerRows+1].Name != "More…" || m.Items[PickerRows+1].Key != "m" ||
+	if len(m.Items) != PickerRows+4 || m.Items[PickerRows+1].Name != "More…" || m.Items[PickerRows+1].Key != "m" ||
 		m.Items[PickerRows+2].Name != "📌 Pin or unpin…" || m.Items[PickerRows+2].Key != "p" ||
 		!strings.Contains(m.Items[PickerRows+2].Cmd, "__menu --sessions --pin --page 0") {
 		t.Fatalf("page 1 items: %d %+v", len(m.Items), m.Items[len(m.Items)-1])
+	}
+	// The last item searches their text, in a popup (T51.1).
+	if s := m.Items[PickerRows+3]; s.Key != "/" || !strings.HasPrefix(s.Cmd, "display-popup -c /dev/pts/1 -E") || !strings.Contains(s.Cmd, "__history --pane %1 --client /dev/pts/1") {
+		t.Fatalf("search item %+v", s)
 	}
 	first := m.Items[0]
 	const rowPrefix = "Claude      just now     " // padded to "Antigravity"
@@ -77,7 +81,7 @@ func TestPickerMenuPagesInstalledAgents(t *testing.T) {
 		t.Fatal("antigravity row missing from page 1")
 	}
 	m2 := w.PickerMenu(ctx, f, p, "", 1)
-	if !strings.HasSuffix(m2.Title, "(2/2)") || len(m2.Items) != 3+3 || !strings.Contains(m2.Items[4].Cmd, "--page 0") {
+	if !strings.HasSuffix(m2.Title, "(2/2)") || len(m2.Items) != 3+4 || !strings.Contains(m2.Items[4].Cmd, "--page 0") {
 		t.Fatalf("page 2: %q %d", m2.Title, len(m2.Items))
 	}
 	if w.PickerMenu(ctx, f, &Pane{ID: "%2", CWD: "/home/test/empty"}, "", 0) != nil {

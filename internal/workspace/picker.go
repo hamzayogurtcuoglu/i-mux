@@ -97,6 +97,7 @@ func (w *WS) picker(ctx context.Context, f *sources.Finder, p *Pane, client stri
 	m := &Menu{Title: title}
 	tgt := uiTarget(p.ID, client)
 	now := w.Now()
+
 	rows := refs[page*PickerRows : min((page+1)*PickerRows, len(refs))]
 	for i, r := range rows {
 		preview := clean.OneLine(pastedRe.ReplaceAllString(f.Preview(ctx, r), " "), previewRunes)
@@ -140,11 +141,58 @@ func (w *WS) picker(ctx context.Context, f *sources.Finder, p *Pane, client stri
 			Name: i18n.T("picker.pin_mode"), Key: "p",
 			Cmd: w.ui(append([]string{"__menu", "--sessions", "--pin", "--page", strconv.Itoa(page)}, tgt...)...),
 		})
+		// Search their text: a popup that lists them all (§9.3 "Search in History").
+		c := "display-popup"
+		if client != "" {
+			c += " -c " + tmux.Quote(client)
+		}
+		c += " -E -w 90% -h 80% -d " + tmux.Quote(tmux.EscapeFormat(p.CWD)) + " " + tmux.Quote(tmux.ShJoin(append([]string{w.Self, "__history"}, tgt...)...))
+		tail = append(tail, MenuItem{Name: i18n.T("history.search"), Key: "/", Cmd: c})
 	}
 	if len(tail) > 0 {
 		m.Items = append(append(m.Items, Separator()), tail...)
 	}
 	return m
+}
+
+// HistoryConv is a conversation of History's search popup.
+type HistoryConv struct {
+	Ref    session.Ref
+	Title  string // its name, else its first request
+	Pinned bool
+}
+
+// HistoryLimit is how many conversations History's search looks through.
+const HistoryLimit = 300
+
+// History is the conversations of folder cwd for History's search popup
+// (§9.3 "Search in History"): the pinned ones, then the newest first.
+func (w *WS) History(ctx context.Context, f *sources.Finder, cwd string) []HistoryConv {
+	w.RememberNames(ctx, f, nil)
+	names := w.State().Names
+	var out []HistoryConv
+	seen := map[string]bool{}
+	add := func(r session.Ref, pinned bool) {
+		if seen[r.Key()] {
+			return
+		}
+		seen[r.Key()] = true
+		title := names[r.Key()]
+		if title == "" {
+			title = clean.OneLine(pastedRe.ReplaceAllString(f.Preview(ctx, r), " "), 200)
+		}
+		if strings.TrimSpace(title) == "" {
+			title = i18n.T("picker.no_preview")
+		}
+		out = append(out, HistoryConv{Ref: r, Title: title, Pinned: pinned})
+	}
+	for _, r := range w.pinnedRefs(ctx, f, cwd) {
+		add(r, true)
+	}
+	for _, r := range f.Find(ctx, w.pickerAgents(), session.Query{CWD: cwd, Limit: HistoryLimit}) {
+		add(r, false)
+	}
+	return out
 }
 
 // pinnedRefs looks up the pinned conversations of folder cwd by their ids,
