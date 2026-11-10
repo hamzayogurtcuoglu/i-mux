@@ -997,6 +997,21 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M50: Scroll bars, and a clearer search (added 2026-11-10)
+
+User request: scroll bars wherever things scroll (search, a git diff, ...) that do not spoil the
+look; the search results are colorless, all open, with no way to fold them all and no scroll bar.
+
+- [x] **T50.1 The scroll bar** · S
+  - AC: D42: `ScrollBar` / `ScrollTo` / `Cut`; the sidebar's lists (a click scrolls, the keyboard
+    skips it), Go to File, the folder picker; unit tests (thumb size and place, clicks, widths).
+- [x] **T50.2 i-mux's pager** · M
+  - AC: D42, §9.3 "Scroll bars": the diff, file, commit and limits viewers; less's keys, search
+    keeping colors, the bar (click, drag), `v` edits the file; unit tests; the viewers' e2e.
+- [x] **T50.3 The search, drawn** · S
+  - AC: icons, folder, count pill, colored matches, the fold-all button, folded when more than 5
+    files, the bar (click); unit tests (render, clicks, folding).
+
 ## M49: Install a missing agent from its button (added 2026-11-10)
 
 User request: clicking an agent in "Continue this chat in" that is not installed should show a small

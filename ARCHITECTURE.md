@@ -118,6 +118,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D39 | **Every sidebar click acts at once; only a tmux menu (before tmux 3.5) and the command prompt wait** (added 2026-11-10, v0.40, at the user's request): a project, an agent in another tab or project, "Continue this chat in", a file and every popup now act on the press. tmux passes a double click's second and third press to a sidebar only when the first press went to that same pane (`MouseDown1Pane` notes the pane in `@imux_press`), and i-mux's popups ignore clicks in their first 400 ms. A sidebar a client shows gathers every 3 s, with its own project's git status at most 2 s old. | The user still found switching on the left slow after v0.39.1: a project took 350 ms (8 projects open: ~354 ms, almost all of it the wait), against ~30 ms for a view. The wait only kept a double click's second press from acting where the first one led; tmux can tell that itself. Freshness: the watcher's false "working" changes (D38) used to make sidebars redraw now and then; without them a file written outside an agent showed after up to 15 s. |
 | D40 | **The "+" of Agents asks which agent, then where it opens** (added 2026-11-10, v0.41, at the user's request): after the agent (or Terminal), a second menu: Right, Left, Down, Up (a new pane beside the target pane; `split-window -b` for left and up) or a new tab. `prefix v` / `prefix -` keep their fixed direction; the project's "No agents" pane still takes the agent in its place. | The user wants to choose the place instead of i-mux picking right or down from the pane's shape, and to open an agent in a new tab from the same button. |
 | D41 | **An agent that is not installed opens a small popup that installs it** (added 2026-11-10, v0.41, at the user's request): a click on it in "Continue this chat in" or the agent bar shows what it is, the command that installs it and **Install now** / **Close**. Install now runs the command in the popup (its output visible), checks the agent is found, then Enter continues the chat in it. When the command needs a program that is missing (npm without Node.js, curl), the popup says how to get it instead. `[agents.<id>] install` replaces i-mux's command. | The user found the one-line hint in the status line easy to miss and unclear; a popup at the click explains and does the step. Running the vendor's own install command (npm, or its install script) is what the user would type. |
+| D42 | **Everything that scrolls shows a scroll bar, and the viewers are i-mux's own pager** (added 2026-11-10, v0.42, at the user's request): a one-column bar at the right edge (a dark `│` track, a lighter `┃` thumb sized to the part shown) in the sidebar's lists (Explorer, Source Control, Skills), search, Go to File, the folder picker, and the diff, file, commit and limits viewers; a click on it scrolls there. The viewers, `less` before, are `internal/pager`: less's keys (↑↓ j k, PgUp PgDn space b, g G, ←→, / n N, q), the wheel, a click or drag on the bar, `v` to edit a file. The search popup draws files with their icons, folder and a count, the matches in color, and starts folded when more than 5 files match; a button folds or unfolds all. | The user could not tell where they were in a long diff or search, and found the search plain ("colorless", every file open, no visible way to fold them). `less` cannot draw a bar; a pager of our own costs ~300 lines and keeps the keys. The bar is thin and dark so it does not fight the text. |
 
 ## 4. Components
 
@@ -1292,17 +1293,18 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   hidden entries and `.git`, `node_modules` and similar left out; folders open and close on click
   (kept per sidebar); files changed in git are colored (modified yellow, added / untracked green,
   deleted red) and their folders too. A file opens in a popup viewer: `bat` when installed
-  (`--style=numbers,changes`), else `less -N`. Long trees scroll (wheel, ↑↓).
+  (`--style=numbers,changes`), else the file with line numbers, in i-mux's pager (D42). Long
+  trees scroll (wheel, ↑↓; the scroll bar).
 - **Search** (`imux __search`, popup 90%): a query line; results as you type (150 ms), grouped by
   file with line numbers and the match highlighted; smart case (uppercase in the query makes it
   case-sensitive); files from `git ls-files` (tracked and untracked, not ignored) or a walk with
   the explorer's skip list; text files under 2 MB; at most 2 000 matches. Enter opens the file
-  at the line in the viewer.
+  at the line in the viewer. Drawn as in D42, "Scroll bars".
 - **Source Control:** every changed file with +/− lines; a click opens the diff viewer
   (`imux __diff`): `git diff -U<all> HEAD` of the file (an untracked file is all added) drawn with
   line numbers, removed lines on a red background and added ones on green; side by side when the
-  popup is at least 120 columns wide, otherwise one column; `less -R -S` starts at the first
-  change.
+  popup is at least 120 columns wide, otherwise one column; the pager (D42) starts at the first
+  change, the file's name and +/− counts stay on top.
 
 #### Sidebar v7: bigger rail, source control, editing (v0.16)
 
@@ -1340,9 +1342,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Editing:** a file click in the explorer or Enter on a search result opens the editor in a
   popup at the line: `editor` in the config, else micro, $VISUAL, $EDITOR, nano, vim
   (`+set mouse=a`). Right-click on a file: Edit, View, Open in VS Code (when its `code` CLI or app
-  is found). In the diff and file viewers `v` opens the editor (less's VISUAL).
-- **Mouse:** viewers run `less --mouse` (wheel scrolls); the folder picker and search popups
-  scroll with the wheel; search results fold per file (click the file, ← →) and all at once (Tab).
+  is found). In the file viewer `v` opens the editor at the first line shown.
+- **Mouse:** the viewers (i-mux's pager, D42), the folder picker and the search popup scroll with
+  the wheel and their scroll bar; search results fold per file (click the file, ← →) and all at
+  once (Tab, or the button in the title).
 
 #### Closing the side panel (v0.21)
 
@@ -1621,6 +1624,27 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   `\e[?2026h` and `\e[?2026l`, and the terminal shows only the result. Checked on tmux 3.2a with
   a client in a pty and a pane updating in the background: no such pair without the override, 51
   pairs in 2.5 s with it.
+
+#### Scroll bars (v0.42, D42)
+
+- **The bar:** `sidebar.ScrollBar(total, top, view)`: one cell per shown row in the last column, a
+  thumb of `max(1, view²/total)` rows placed by `top`; nothing when all fits. Track `│` in color
+  236, thumb `┃` in 245. `ScrollTo` turns a click on row y of the bar into a top row (the first
+  row: the top, the last: the end).
+- **Where:** the sidebar's Explorer, Source Control and Skills lists (`scrolled`: the bar is a cell
+  whose action is `ActScroll`; the keyboard skips it); search; Go to File; the folder picker; the
+  pager. A click on the bar scrolls there; in the pager a drag too (mouse mode 1002).
+- **The pager** (`internal/pager`, the diff, file, commit and limits viewers): a fixed header (the
+  diff's file name and counts), the text, a footer with where you are ("31–45 of 120 (37%)") and
+  the keys. ↑↓ j k Enter a line; PgUp PgDn space b f a page; Home End g G; ←→ h l eight columns
+  sideways (long lines are cut, not wrapped); `/` searches (plain text, the line's colors kept
+  around the match), n N the next and previous match, around the ends; `v` edits the file
+  (the file viewer); q Esc close. Tabs are every fourth column.
+- **Search, drawn:** the title with the search icon and a **⊟ Collapse all** / **⊞ Expand all**
+  button; `❯ query` and the count; a file row is its fold arrow, its icon (the explorer's, D35),
+  its name in bold, its folder dimmed and the number of matches in a grey pill; a match row is
+  its line number (dim, right-aligned) and its text with the match on an orange background; the
+  selected row has a cyan `▌`. More than 5 files: they start folded, one row each (`FoldMany`).
 
 #### Not installed (v0.41, D41)
 
