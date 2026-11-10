@@ -38,9 +38,9 @@ func TestExplorerAndSearch(t *testing.T) {
 		t.Fatal("src starts closed")
 	}
 	time.Sleep(500 * time.Millisecond)
-	x, y := h.rowOf(bar, "▸ src")
+	x, y := h.rowOf(bar, "▸ 📁 src")
 	c.Click(0, x, y)
-	h.rowOf(bar, "▾ src")
+	h.rowOf(bar, "▾ 📂 src")
 	time.Sleep(500 * time.Millisecond)
 	x, y = h.rowOf(bar, "app.go")
 	mark := c.Mark()

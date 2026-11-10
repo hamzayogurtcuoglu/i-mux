@@ -119,10 +119,15 @@ func gitColor(st string) string {
 	return yellow
 }
 
-// treeRow draws one explorer entry; the selected one on the selection's
-// background.
-func treeRow(r TreeRow, w int, ic Icons, selected bool) Line {
-	indent := strings.Repeat("  ", min(r.Depth, 8))
+// treeRow draws one explorer entry: the indent guides, a folder's arrow,
+// the icon of its type (D35) and the name in its git color; the selected
+// one on the selection's background.
+func treeRow(r TreeRow, w int, ic Icons, theme string, selected bool) Line {
+	depth := min(r.Depth, 8)
+	guides := ""
+	if depth > 0 {
+		guides = faint + strings.Repeat("│ ", depth) + reset
+	}
 	color := gitColor(r.Git)
 	mark := "  "
 	a := Action{Kind: ActOpenFile, Path: r.Path}
@@ -130,18 +135,19 @@ func treeRow(r TreeRow, w int, ic Icons, selected bool) Line {
 		mark = muted + ic.fold(!r.Open) + " " + reset
 		a = Action{Kind: ActToggleDir, Path: r.Path}
 	}
+	icon, iw := iconOf(r.Name, r.Dir, r.Open).draw(theme)
 	right, rw := "", 0
 	if r.Git != "" && !r.Dir {
 		right, rw = color+r.Git+reset, 1
 	}
-	// " " indent mark name (" " status | "  ") " "
+	// " " guides mark icon " " name (" " status | "  ") " "
 	tail := 2
 	if rw > 0 {
 		tail = 1 + rw
 	}
-	nw := max(w-1-runes(indent)-2-tail-1, 1)
+	nw := max(w-1-2*depth-2-iw-1-tail-1, 1)
 	name := color + fit(r.Name, nw) + reset
-	text := " " + indent + mark + name
+	text := " " + guides + mark + icon + " " + name
 	if rw > 0 {
 		text += " " + right
 	} else {
@@ -171,7 +177,7 @@ func renderExplorer(m Model, w, h int) []Line {
 	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.explorer")+" · "+m.Project, w-search.W-gotoFile.W) + reset}, gotoFile, search)}
 	var rows []Line
 	for _, r := range m.Tree {
-		rows = append(rows, treeRow(r, w, m.icons(), r.Path == m.Selected))
+		rows = append(rows, treeRow(r, w, m.icons(), m.Icons, r.Path == m.Selected))
 	}
 	if len(rows) == 0 {
 		rows = append(rows, Line{Text: muted + fit("   "+i18n.T("sidebar.empty_folder"), w) + reset})

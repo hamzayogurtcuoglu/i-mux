@@ -271,7 +271,7 @@ func TestExplorer(t *testing.T) {
 	sc := Render(m, 41, 12, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
-	for _, want := range []string{"EXPLORER · acme-api", "🔍", "▸ docs", "▾ src", "▸ auth", "main.ts", "README.md", "▌  📁"} {
+	for _, want := range []string{"EXPLORER · acme-api", "🔍", "▸ 📁 docs", "▾ 📂 src", "│ ▸ 📁 auth", "│   🟦 main.ts", "  📖 README.md", "▌  📁"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("explorer lacks %q", want)
 		}
@@ -815,6 +815,48 @@ func TestWideText(t *testing.T) {
 	}
 	if DisplayWidth("é") != 1 || DisplayWidth("👍🏽") != 2 || DisplayWidth("❤️") != 1 {
 		t.Errorf("combining marks, skin tones, variation selectors: %d %d %d", DisplayWidth("é"), DisplayWidth("👍🏽"), DisplayWidth("❤️"))
+	}
+}
+
+// TestFileIcons (M44): the explorer marks entries by type like the editor:
+// whole names first (agent files, manifests, lock files), README and
+// LICENSE, tests, then extensions, any case; folders open and closed. The
+// editor's icons are colored glyphs one column wide, emoji two, so names
+// stay aligned; indent guides mark the levels.
+func TestFileIcons(t *testing.T) {
+	for name, want := range map[string]string{
+		"main.go": "🐹", "main_test.go": "🧪", "app.spec.ts": "🧪", "test_app.py": "🧪", "README.md": "📖", "readme": "📖",
+		"README.tr.md": "📖", "LICENSE": "📜", "AGENTS.md": "🤖", "CLAUDE.md": "🤖", "SKILL.md": "🧩", "go.mod": "📦",
+		"go.sum": "🔒", "Makefile": "🔨", "Dockerfile": "🐳", "notes.md": "📝", "default.toml": "🔧", "data.JSON": "📋",
+		"photo.PNG": "📷", "install.sh": "🐚", "noext": "📄", "x.unknown": "📄",
+	} {
+		if got := iconOf(name, false, false).emoji; got != want {
+			t.Errorf("%s: %s, want %s", name, got, want)
+		}
+	}
+	if iconOf("src", true, false).emoji != "📁" || iconOf("src", true, true).emoji != "📂" {
+		t.Error("folders")
+	}
+	if g, w := iconOf("main.go", false, false).draw(IconsNerd); g != icCyan+"\ue627"+reset || w != 1 {
+		t.Errorf("the editor's Go icon: %q %d", g, w)
+	}
+	if ic := iconOf("x_test.go", false, false); ic.glyph != gBeaker || ic.color != icCyan {
+		t.Errorf("a test keeps its language's color: %+v", ic)
+	}
+	for _, m := range []map[string]fileIcon{fileNames, fileExts} {
+		for k, ic := range m {
+			if DisplayWidth(ic.glyph) != 1 || DisplayWidth(ic.emoji) != 2 {
+				t.Errorf("%s: %q %q", k, ic.glyph, ic.emoji)
+			}
+		}
+	}
+	for _, theme := range []string{IconsNerd, IconsEmoji} {
+		l := treeRow(TreeRow{Path: "a/b/c.go", Name: "c.go", Depth: 2, Git: "M"}, 41, buttonIcons[theme], theme, false)
+		p := Plain(l.Text)
+		icon, _ := iconOf("c.go", false, false).draw(theme)
+		if !strings.HasPrefix(p, " │ │   "+Plain(icon)+" c.go") || !strings.HasSuffix(p, " M ") || DisplayWidth(p) != 41 {
+			t.Errorf("%s row: %q (%d columns)", theme, p, DisplayWidth(p))
+		}
 	}
 }
 

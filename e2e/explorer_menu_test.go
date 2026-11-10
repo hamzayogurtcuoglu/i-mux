@@ -174,9 +174,9 @@ func TestExplorerMenus(t *testing.T) {
 	h.menu(c, bar, "src", 0, 0)
 	c.Write("p")
 	h.waitFor("pasted into src", 5*time.Second, func() bool { return exists("src/renamed #2.md") && exists("renamed #2.md") })
-	h.rowOf(bar, "▾ src")
+	h.rowOf(bar, "▾ 📂 src")
 	// Paste again: a copy with a free name.
-	h.menu(c, bar, "▾ src", 0, 0)
+	h.menu(c, bar, "▾ 📂 src", 0, 0)
 	c.Write("p")
 	h.waitFor("a second copy", 5*time.Second, func() bool { return exists("src/renamed #2 copy.md") })
 
@@ -195,14 +195,14 @@ func TestExplorerMenus(t *testing.T) {
 	if !exists("sub/new.txt") {
 		t.Fatal("no new file")
 	}
-	h.rowOf(bar, "▾ sub")
+	h.rowOf(bar, "▾ 📂 sub")
 	h.waitFor("new.txt selected", 5*time.Second, func() bool { return strings.Contains(h.barLine(bar, "new.txt"), "48;5;24m") })
 
 	// Cut, then Paste into another folder: moved.
 	h.menu(c, bar, "app.go", 0, 0)
 	c.Write("x")
 	time.Sleep(300 * time.Millisecond)
-	h.menu(c, bar, "▾ sub", 0, 0)
+	h.menu(c, bar, "▾ 📂 sub", 0, 0)
 	c.Write("p")
 	h.waitFor("moved", 5*time.Second, func() bool { return exists("sub/app.go") && !exists("src/app.go") })
 
@@ -218,11 +218,11 @@ func TestExplorerMenus(t *testing.T) {
 	})
 
 	// Collapse Folders closes them all.
-	x, y = h.rowOf(bar, "▾ sub")
+	x, y = h.rowOf(bar, "▾ 📂 sub")
 	h.menu(c, bar, "", x, y+8)
 	c.Write("z")
 	h.waitFor("folders closed", 5*time.Second, func() bool {
 		s := h.screen(bar)
-		return strings.Contains(s, "▸ src") && strings.Contains(s, "▸ sub")
+		return strings.Contains(s, "▸ 📁 src") && strings.Contains(s, "▸ 📁 sub")
 	})
 }

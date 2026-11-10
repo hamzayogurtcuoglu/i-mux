@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-11-10
+
+### Added
+
+- **File icons in the explorer.** Every file has the icon of its type, as in the editor: with the
+  editor's icons the Nerd Font glyphs of its default file icon theme (Seti) in their colors (Go,
+  Markdown, JSON, YAML, TOML, shell, JavaScript, TypeScript, Python, Rust and about 50 more),
+  with emoji an emoji per kind. Folders show open or closed, test files a beaker, the agents'
+  instructions (`AGENTS.md`, `CLAUDE.md`) the rail's agent icon and `SKILL.md` the skills one;
+  README, LICENSE, CHANGELOG, Makefile, Dockerfile and lock files have their own. Faint indent
+  guides show the levels of open folders.
+
 ## [0.38.0] - 2026-11-10
 
 ### Added
