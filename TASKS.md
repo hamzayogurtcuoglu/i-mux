@@ -997,6 +997,21 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M46: The spinner means work; AGENTS counts it (added 2026-11-10)
+
+User report: a project's spinner turned although its agent did nothing; and the AGENTS title could
+show how many agents work.
+
+- [x] **T46.1 Work, not typing, resizes or restarts** · S
+  - AC: D38: a change of only the input line and below (Claude Code, Copilot, Codex, Gemini
+    layouts), a resize of a quiet pane and its redraw, and a pane met for the first time are not
+    work; a resize during work still is; a restarted watcher keeps the last one's times
+    (`activity.json`); unit tests (`Typing`, the detector over ticks; fails without the change).
+- [x] **T46.2 The working count** · XS
+  - AC: the AGENTS title shows a spinner and "N working" (all projects, not limited ones; the
+    number alone below 30 columns; folded, "· panes"); nothing extra when none works; i18n en/tr;
+    unit test.
+
 ## M44: File icons in the explorer (added 2026-11-10)
 
 User request: make the Files view nicer, for example with the file types next to the names.

@@ -114,6 +114,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D35 | **The explorer marks files by type, as the editor does** (added 2026-11-10, v0.39, at the user's request): each entry has an icon of its kind, folders open and closed, and indent guides mark the levels. With the editor's icons (`nerd`) they are the Nerd Font glyphs of the editor's default file icon theme (Seti) in its colors; with `emoji` an emoji per kind. | The user found the Files view plain: names alone are slow to scan. The editor's own icons, now that i-mux installs their font (D34), make it look like the explorer users know; the emoji keep it readable without the font. |
 | D36 | **A click in the sidebar acts at once, and tmux's double and triple click no longer select a sidebar** (added 2026-11-10, v0.39.1, at the user's request): a click that leaves the sidebar under the pointer and opens nothing over it (a view on the rail, a folder, a section's fold, an agent of the window) runs at once; one that opens a menu, popup or prompt, or shows another window or project, still waits 350 ms. i-mux binds `DoubleClick1Pane` and `TripleClick1Pane` to tmux's own commands, except over a sidebar, where they only pass the click on. | The user found moving between panels slow ("about a second"). Every click waited 350 ms for tmux's double-click time: tmux's own double click, 300 ms after the second press, selects the pane under the pointer, and took the focus back from the agent pane a click had just focused. Without that selection only what a double click's second press (or the button's release) would land on needs the wait: a menu, a popup, another window. |
 | D37 | **i-mux turns on synchronized output (DECSET 2026) for every terminal** (added 2026-11-10, v0.39.1, at the user's request): `terminal-overrides` gets `Sync=\E[?2026%?%p1%{1}%-%tl%eh%;`, the form tmux 3.4+ uses for the terminals it knows. tmux then sends an update of a pane in the background, with the cursor's way back to the active pane, as one synchronized update. | The user saw the text cursor in the sidebar now and then: tmux draws a change in a pane that is not active (the sidebar's spinner while agents work, its hover) by moving the cursor there and back, and Windows Terminal could show a frame in between. tmux 3.2 and 3.3 know only an older form of the sequence and turn it on for no terminal. Windows Terminal 1.24 supports 2026 (as do iTerm2, kitty, WezTerm, foot, Alacritty and Ghostty); a terminal without it ignores the sequence. |
+| D38 | **"Working" means the agent works: the user typing, a resize and a restarted watcher do not count** (added 2026-11-10, v0.40, at the user's request): a pane is working while its agent's screen changes, except when only its input line and what is below it changed (the user typing; the agents' progress lines are above the input), when a quiet pane was resized (the panel opened or closed) or redraws right after it, and when the watcher meets the pane (a restarted watcher takes the last one's times from `activity.json`). The AGENTS title counts the agents at work. | The user saw the spinner turn at a project whose agent did nothing. Any screen change counted as work: every key typed into an agent, every resize, and every restart of the watcher (each install or Settings change), which then also marked every agent "Done". The count answers "how many are still working?" without reading every row. |
 
 ## 4. Components
 
@@ -967,7 +968,8 @@ default 30 columns), running `imux __sidebar`:
   `pane-died`), by imux after a switch or split, and by the watcher when a pane's state changes;
   plus a 15 s safety refresh. One redraw = one batched tmux exec plus `state.json`.
 - **Pane state:** the watcher already hashes each agent pane's bottom lines every tick; it now also
-  writes `@imux_state` (`working` / `idle`) on change. Only while a client is attached.
+  writes `@imux_state` (`working` / `idle`) on change. Only while a client is attached. What
+  counts as work: D38.
 
 #### Sidebar v2: projects, changes, names (v0.5)
 
@@ -1095,7 +1097,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Projects:** a coloured letter avatar (colour from the name), the name, the branch, a yellow
   dot when it has uncommitted changes, and the most urgent state of its agents
   (Needs you > Done > working > idle). Click: switch to it. **+** (header): open a project.
-- **Agents:** every project's agent panes, grouped under the project's name. A row: the agent's
+- **Agents:** every project's agent panes, grouped under the project's name. The title counts the
+  agents at work (a spinner and "2 working", the number alone in a narrow panel; folded, also the
+  number of panes). A row: the agent's
   icon in its colour (Claude ✻, Antigravity ▲, Codex ◎, Copilot ◉, shell ›), the name, the time
   since its state changed (`<1m`, `9m`, `2h`, `3d`) and the state. Click: go to it (switching
   project if needed). **+** (header): new agent (split by the pane's shape).
@@ -1104,7 +1108,12 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   program name), else the agent's name.
 - **States:**
   - working: a braille spinner, animated every 120 ms from the cached model (no tmux exec) while
-    a visible agent works;
+    a visible agent works (D38): its screen changed in the last 3 s, but not by the user typing
+    (only the input line, the last line among the bottom 12 that starts like a prompt: `>`,
+    `❯`, `›`, `▌` after box edges, and what is below it changed), not by a resize of a quiet
+    pane or its redraw at the next tick (a working pane's changes during a resize still count),
+    and not by the watcher meeting the pane (a restarted watcher starts from the last one's
+    `activity.json`, so no agent turns "working", then "Done", after an install);
   - **Needs you:** a pill; the watcher sets `@imux_state = blocked` when an idle screen's last lines
     ask a question (Claude's "Do you want to …", a numbered "1. Yes" choice, Codex's "Would you
     like to run …", `(y/n)`, `[Y/n]`);
