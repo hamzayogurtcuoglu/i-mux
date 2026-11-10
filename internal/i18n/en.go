@@ -315,6 +315,7 @@ var en = map[string]string{
 	"sidebar.help":                    "Help",
 	"sidebar.history":                 "History",
 	"sidebar.agents":                  "AGENTS",
+	"sidebar.working_count":           "%d working",
 	"sidebar.continue_in":             "Continue this chat in",
 	"sidebar.needs_you":               "Needs you",
 	"sidebar.changes":                 "Changes",

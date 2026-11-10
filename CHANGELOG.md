@@ -6,6 +6,21 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-11-10
+
+### Added
+
+- **The AGENTS title counts the agents at work:** a spinner and "2 working" (in every project;
+  folded, also the number of agents).
+
+### Fixed
+
+- **The spinner turns only while an agent works.** Typing in an agent's input, the panel opening
+  or closing (which resizes the agents' panes) and a restart of i-mux's watcher (after every
+  update or settings change) all counted as work: a project's spinner turned although its agent
+  did nothing, and after an update every agent showed "Done". Now only the agent's own output
+  (its progress line, its answer) counts.
+
 ## [0.39.1] - 2026-11-10
 
 ### Fixed

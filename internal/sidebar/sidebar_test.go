@@ -98,6 +98,41 @@ func model() Model {
 	}
 }
 
+// TestAgentsWorkingCount: the AGENTS title counts the agents at work (not a
+// limited one), in every project; folded, it also counts the panes.
+func TestAgentsWorkingCount(t *testing.T) {
+	i18n.SetLocale("en")
+	m := model()
+	m.Projects[1].Panes[1].State = StateWorking
+	m.Projects[0].Panes[1].State = StateWorking // limited: not counted
+	agents := func(m Model, w int) string {
+		for _, l := range Render(m, w, 0, NoItem).Lines {
+			if p := Plain(l.Text); strings.Contains(p, "AGENTS") {
+				return p
+			}
+		}
+		return ""
+	}
+	if got := agents(m, 41); !strings.Contains(got, "⠋ 2 working") {
+		t.Fatalf("AGENTS title %q", got)
+	}
+	if got := agents(m, 29); !strings.Contains(got, "⠋ 2 ") || strings.Contains(got, "working") {
+		t.Fatalf("narrow AGENTS title %q", got)
+	}
+	m.Fold = map[string]bool{SecAgents: true}
+	if got := agents(m, 41); !strings.Contains(got, "⠋ 2 working · 6") {
+		t.Fatalf("folded AGENTS title %q", got)
+	}
+	for _, pr := range m.Projects {
+		for i := range pr.Panes {
+			pr.Panes[i].State = StateIdle
+		}
+	}
+	if got := agents(m, 41); strings.Contains(got, "working") || !strings.Contains(got, " 6 ") {
+		t.Fatalf("nothing at work: %q", got)
+	}
+}
+
 func TestRender(t *testing.T) {
 	i18n.SetLocale("en")
 	for _, w := range []int{29, 41, 51} {

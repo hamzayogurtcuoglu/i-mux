@@ -363,6 +363,32 @@ func TestSidebarNeedsYou(t *testing.T) {
 	})
 }
 
+// TestSidebarTypingIsNotWork (T46.1, T46.2): keys typed into an agent's
+// input do not make it "working"; its own output above the input does, and
+// the AGENTS title counts it.
+func TestSidebarTypingIsNotWork(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	// An input line; a progress line above it once the "go" file exists.
+	h.control("claude", "printf '> '\n(while [ ! -e \"$log/go\" ]; do sleep 0.1; done; i=0; while [ $i -lt 40 ]; do printf '\\033[H\\033[2J* working %d\\n> ' $i; sleep 0.2; i=$((i+1)); done) &\n")
+	agentPane, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	time.Sleep(time.Second) // the watcher has met the pane
+	for _, k := range []string{"fix", " the", " failing", " tests"} {
+		h.mustTmux("send-keys", "-t", agentPane, "-l", k)
+		for i := 0; i < 4; i++ {
+			time.Sleep(150 * time.Millisecond)
+			if st := h.paneOpt(agentPane, "#{@imux_state}"); st == "working" {
+				t.Fatalf("typing %q made the agent working", k)
+			}
+		}
+	}
+	testutil.WriteFile(t, filepath.Join(h.Log, "go"), nil)
+	h.waitFor("the agent working", 5*time.Second, func() bool { return h.paneOpt(agentPane, "#{@imux_state}") == "working" })
+	h.waitFor("AGENTS counting it", 5*time.Second, func() bool { return strings.Contains(h.lineOf(bar, "AGENTS"), "1 working") })
+}
+
 // TestSidebarFold (T19.1): a click on a section title folds it in every
 // sidebar (@imux_fold) and a second click unfolds it.
 func TestSidebarFold(t *testing.T) {

@@ -316,6 +316,7 @@ var tr = map[string]string{
 	"sidebar.help":                    "Yardım",
 	"sidebar.history":                 "Geçmiş",
 	"sidebar.agents":                  "AGENT'LAR",
+	"sidebar.working_count":           "%d çalışıyor",
 	"sidebar.continue_in":             "Bu sohbete şurada devam et",
 	"sidebar.needs_you":               "Sıra sende",
 	"sidebar.changes":                 "Değişiklikler",

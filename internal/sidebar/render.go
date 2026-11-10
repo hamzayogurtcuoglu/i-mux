@@ -321,19 +321,27 @@ const (
 // header is a section title that folds the section on click, with an
 // optional count and a "+" button on the right.
 func header(name, text string, folded bool, count string, w int, plus Action, ic Icons) Line {
+	right := ""
+	if count != "" {
+		right = muted + count + reset
+	}
+	return headerWith(name, text, folded, right, runes(count), w, plus, ic)
+}
+
+// headerWith is header with a drawn right part rw columns wide.
+func headerWith(name, text string, folded bool, right string, rw, w int, plus Action, ic Icons) Line {
 	arrow := ic.fold(folded)
 	add := button(ic.Add, muted, plus)
 	tw := w
 	if plus.Kind != ActNone {
 		tw = w - add.W
 	}
-	l, r := text, ""
-	if count != "" {
-		r = count + " "
+	if rw > 0 {
+		right, rw = right+" ", rw+1
 	}
-	lw := tw - 1 - runes(r)
+	lw := tw - 1 - rw
 	cells := []Cell{{
-		X: 0, W: tw, Text: " " + muted + arrow + reset + " " + title + fit(l, max(lw-2, 1)) + reset + muted + r + reset,
+		X: 0, W: tw, Text: " " + muted + arrow + reset + " " + title + fit(text, max(lw-2, 1)) + reset + right,
 		Action: Action{Kind: ActFold, Section: name},
 	}}
 	if plus.Kind != ActNone {
@@ -341,6 +349,38 @@ func header(name, text string, folded bool, count string, w int, plus Action, ic
 		cells = append(cells, add)
 	}
 	return Line{Text: compose(cells, w), Cells: cells}
+}
+
+// agentsCount is the right part of the AGENTS title: how many agents work
+// (a spinner and "2 working"; "2" alone when the panel is narrow) and,
+// folded, how many panes there are.
+func agentsCount(m Model, w int) (string, int) {
+	panes, working := 0, 0
+	for _, pr := range m.Projects {
+		for _, p := range pr.Panes {
+			panes++
+			if p.State == StateWorking && p.Limited == "" {
+				working++
+			}
+		}
+	}
+	right, rw := "", 0
+	if working > 0 {
+		n := strconv.Itoa(working)
+		text := i18n.T("sidebar.working_count", working)
+		if w < 30 {
+			text = n
+		}
+		right, rw = spinFg+spinner[m.Tick%len(spinner)]+" "+text+reset, 2+runes(text)
+	}
+	if m.Fold[SecAgents] {
+		if rw > 0 {
+			right, rw = right+muted+" · "+reset, rw+3
+		}
+		n := strconv.Itoa(panes)
+		right, rw = right+muted+n+reset, rw+runes(n)
+	}
+	return right, rw
 }
 
 // projectRow: avatar, name, branch, dirty dot and the roll-up state.
@@ -622,15 +662,8 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 	}
 
 	gap()
-	count = ""
-	if folded(SecAgents) {
-		n := 0
-		for _, pr := range m.Projects {
-			n += len(pr.Panes)
-		}
-		count = strconv.Itoa(n)
-	}
-	out = append(out, header(SecAgents, i18n.T("sidebar.agents"), folded(SecAgents), count, w, Action{Kind: ActNewAgent}, m.icons()))
+	right, rw := agentsCount(m, w)
+	out = append(out, headerWith(SecAgents, i18n.T("sidebar.agents"), folded(SecAgents), right, rw, w, Action{Kind: ActNewAgent}, m.icons()))
 	if !folded(SecAgents) {
 		for _, pr := range m.Projects {
 			if len(pr.Panes) == 0 {
