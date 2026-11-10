@@ -110,6 +110,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D30 | **AI completion in the editor is Neovim with GitHub's copilot.vim, in a profile i-mux manages** (added 2026-11-08, v0.25, at the user's request): when Settings turns it on, file edits open `nvim` with `NVIM_APPNAME=imux-nvim`; i-mux writes that profile's `init.lua` (mouse, Ctrl+S / Ctrl+Q, Tab accepts) and keeps copilot.vim in it. | Inline suggestions are an editor feature, and i-mux edits in an external terminal editor. Neovim with the official plugin gives the editor's Copilot suggestions with the user's Copilot plan; micro has no such plugin; our own editor would be a project of its own. A separate profile leaves the user's own Neovim setup untouched. |
 | D32 | **Project skills live in `.agents/skills/`, are linked into `.claude/skills/` for Claude Code, and are written by the active agent** (added 2026-11-09, v0.36, at the user's request): a **🧩 Skills** view on the activity rail lists the project's `<name>/SKILL.md` skills across every CLI's folder, shows which of the five agents see each one (`✻▲◉◎▣`) and any front-matter problem (`⚠`), links `.agents/skills/` into `.claude/skills/` so one skill works in all five CLIs, and has **✨ Write with Agent…** to send a structured skill-authoring prompt to the active agent pane (since v0.37, D33: one **✨ New skill…** button and dialog). | Antigravity, Codex, Copilot CLI and OpenCode read `.agents/skills/`, while Claude Code, Copilot CLI and OpenCode read `.claude/skills/`: keeping the canonical folder in `.agents/skills/` with a relative symlink in `.claude/skills/` covers all five CLIs without copies drifting apart. Letting the active agent write or improve a skill uses its full repo access and requires no separate LLM client. |
 | D33 | **A skill is written by an agent the user picks, in a new pane that starts with i-mux's skill-writing guide** (added 2026-11-10, v0.37, at the user's request): the Skills view has one **✨ New skill…** button; it opens a dialog (a popup) that asks who writes the skill (an agent in a new pane, the agent of the current pane, or the user from a blank `SKILL.md`), then what it should do (or the template's name) in a real text box. The chosen agent starts beside the current pane with the guide and the description as its first message; with nothing described, the guide tells it to ask first. | The user found two buttons (✨ and ➕) and tmux's one-line prompt in the status line ("a tiny thing at the top") poor for writing a skill: the description is a paragraph, and the user wants to choose the agent rather than always disturb the active one. A new pane keeps the current conversation clean; the agent's own input takes over from there. |
+| D34 | **i-mux installs the Nerd Font its icons need, where the terminal draws text, and sets the terminals it knows to it** (added 2026-11-10, v0.38, at the user's request): `imux font install` (Settings, and the installer, offer it) downloads Nerd Fonts' JetBrainsMono (a pinned release, checked against its SHA-256), installs four styles for the user alone (no administrator rights), sets Windows Terminal's and VS Code's terminal font to it with a backup of their settings, and switches the icons to `nerd`. Under WSL all of this happens on the Windows side. | On a new PC the icons stayed emoji (or "?" boxes when set to `nerd`): no Nerd Font comes with Windows, i-mux only told macOS users to `brew install` one, and under WSL the font must be in Windows (the terminal draws the text there), not in Linux. Changing one value in the terminals' settings, comments and all kept, is what a user would do by hand; the backup undoes it. |
 
 ## 4. Components
 
@@ -1419,8 +1420,15 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   and kitty bring the symbols; Terminal.app and iTerm2 when their default profile's font is a
   Nerd Font (its name has "Nerd", or "NF" / "NFM" / "NFP" as a word); VS Code's terminal when
   `terminal.integrated.fontFamily` names one. Else emoji. The terminal is `TERM_PROGRAM` of the
-  shell that ran `imux`, kept in the global option `@imux_terminal`. Before, a Nerd Font file
-  anywhere in the font folders was enough, and a terminal using another font drew "?" boxes.
+  shell that ran `imux` (Windows Terminal: `WT_SESSION`), kept in the global option
+  `@imux_terminal`. Before, a Nerd Font file anywhere in the font folders was enough, and a
+  terminal using another font drew "?" boxes. Under WSL (v0.38) the terminal runs on Windows:
+  `vscode` reads the Windows user's VS Code settings too, `WindowsTerminal` reads Windows
+  Terminal's `profiles.defaults.font.face`, and an unknown terminal (WSL started from the Start
+  menu: Windows hands it to its default terminal without TERM_PROGRAM or WT_SESSION) either. The
+  Windows user's folder comes from the Windows PATH WSL adds (`/mnt/c/Users/<name>/…`), else
+  `/mnt/*/Users/*`; `IMUX_WINDOWS_HOME` overrides it (the e2e harness points it at an empty
+  folder).
 - **Rail:** 9 columns (an 8-column item and the line), so "Settings" fits; the default sidebar
   width is 43 (the view keeps its 34 columns).
 - **Updates:** `imux update` installs the latest release with the release's own installer
@@ -1653,6 +1661,37 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   Agent**, **Improve with Agent**, **Share with all agents**, and **Delete** (to the Trash,
   removing its links too). Every menu and dialog passes paths and pane ids in `@imux_skill*`
   options, never in a menu's command or a popup's.
+
+#### Nerd Font setup (v0.38, D34)
+
+- **`imux font`** prints the icons setting, whether i-mux's font (or another Nerd Font) is
+  installed, and each terminal's font. **`imux font install`** prints what it will do and asks
+  (`--yes` does not; without a terminal to ask on, or with no answer, nothing changes), then:
+  downloads `JetBrainsMono.tar.xz` of Nerd Fonts v3.5.1 (7 MB; `IMUX_NERD_FONT_URL` for a mirror),
+  checks its SHA-256 (pinned, as the release's `SHA-256.txt` has it), unpacks the Regular, Bold,
+  Italic and BoldItalic styles with `tar -xJf`, and copies them (unless the same file is there:
+  Windows keeps a font in use locked). `--check` exits 1 unless a Nerd Font is installed and every
+  terminal i-mux can set uses one (the installer asks only then). Settings → **Install the Nerd
+  Font for the icons…** (`f`) runs it in a popup.
+- **Where** (`internal/nerdfont`): macOS `~/Library/Fonts`; Linux `$XDG_DATA_HOME/fonts` then
+  `fc-cache -f`; WSL the Windows user's `%LOCALAPPDATA%\Microsoft\Windows\Fonts` (`cmd.exe` names
+  the folders, `wslpath` maps them), registered like Windows' own per-user install
+  (`reg.exe add HKCU\Software\Microsoft\Windows NT\CurrentVersion\Fonts /v "JetBrainsMono NF
+  Regular (TrueType)" …`) and loaded at once (`AddFontResource`, `WM_FONTCHANGE` through
+  PowerShell; a terminal may still want a restart). No administrator rights anywhere.
+- **Terminals:** Windows Terminal (`profiles.defaults.font.face`, every profile and the sessions
+  Windows hands to it; release, preview and unpackaged installs) and VS Code (`terminal.integrated.
+  fontFamily`, put first in the list: the old fonts stay as fallbacks), when their settings file
+  exists and does not name a Nerd Font yet. The family is `JetBrainsMono NF` on Windows (the font's
+  legacy family name, which GDI and DirectWrite both find) and `JetBrainsMono Nerd Font` elsewhere
+  (its typographic name). `internal/jsonc` changes that one value in the JSON-with-comments file
+  and keeps every other byte (comments, order, trailing commas, CRLF, BOM); the file is written in
+  place (it may be a link into dotfiles), the first change keeps `settings.json.imux-backup`.
+- **Icons** become `nerd` when a terminal i-mux knows uses a Nerd Font (on Linux always:
+  fontconfig finds it for any terminal), else `auto` if they were `emoji`; the sidebars redraw.
+  Terminal.app, iTerm2 and other terminals are told where to pick the font.
+- **Installer and doctor:** `install.sh` asks (`--yes` installs, `--no-font` / `IMUX_NO_FONT=1`
+  skips) unless `imux font --check` passes; `imux doctor` says whether the font is in place.
 
 #### Versions and updates (v0.34)
 

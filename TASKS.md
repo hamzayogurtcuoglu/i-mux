@@ -980,6 +980,25 @@ Invalid), and nothing restored the sidebars. The skills feature itself was not t
   - AC: `make install-local` (a new file, then `mv`); CONTRIBUTING and AGENTS.md say never to copy
     over a running binary.
 
+## M43: The Nerd Font comes with i-mux (added 2026-11-10)
+
+User report: the Nerd Font does not work, and a new PC does not come with it. Cause: i-mux never
+installed one (the README only named a Homebrew cask); under WSL the font must be in Windows,
+where the terminal draws text, and neither Windows Terminal nor VS Code used one; auto-detection
+could not see the terminal from WSL.
+
+- [x] **T43.1 Install and set the font** · S
+  - AC: `internal/nerdfont` (D34): Nerd Fonts' JetBrainsMono pinned with its SHA-256, four
+    styles for the user alone on macOS, Linux and WSL (the Windows user's fonts and registry);
+    Windows Terminal's and VS Code's font set with `internal/jsonc` (comments and formatting
+    kept) and a backup; `imux font [install] [--yes] [--check]` asks first and never takes no
+    answer for yes; icons become `nerd`; unit tests with fake Windows programs.
+- [x] **T43.2 Offer it everywhere, see it from WSL** · S · deps: T43.1
+  - AC: the installer offers it (`--yes`, `--no-font`, skipped when `--check` passes); Settings
+    → Install the Nerd Font for the icons… (popup); `imux doctor` reports it; `auto` reads
+    Windows Terminal's and the Windows user's VS Code fonts under WSL (`IMUX_WINDOWS_HOME`);
+    e2e for the installer (a fake imux) and the Settings popup; README.
+
 ## M40: Project skills in the sidebar (added 2026-11-09)
 
 User request: a Skills tab on the left to see and monitor the project's skills across agents, edit
