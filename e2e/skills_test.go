@@ -12,10 +12,13 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestSkillsView (M40): the Skills view lists project skills with their
-// agent badges and problems, shares a single-agent skill with all agents,
-// creates a template skill and opens it in the editor, sends a write-skill
-// prompt and an improve-skill prompt to the active agent, and deletes a
+// TestSkillsView (M40, M42): the Skills view lists project skills with their
+// agent badges and problems, and shares a single-agent skill with all agents.
+// Its one ✨ New skill… button opens the New skill dialog: a blank SKILL.md
+// is named there and opened in the editor; this pane's agent gets i-mux's
+// skill-writing guide pasted; an agent chosen for a new pane starts beside
+// it, named, with the guide and the description as its first message. A
+// skill's menu sends an improve prompt to the active agent and deletes the
 // skill with its link.
 func TestSkillsView(t *testing.T) {
 	ed := filepath.Join(t.TempDir(), "fake-editor")
@@ -28,7 +31,7 @@ func TestSkillsView(t *testing.T) {
 	testutil.WriteFile(t, filepath.Join(p, ".claude", "skills", "claude-only", "SKILL.md"),
 		[]byte("---\nname: claude-only\ndescription: Helps with local migrations.\n---\n\n# Body\n"))
 
-	_, bar := h.startWithSidebar()
+	agent, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
@@ -37,6 +40,9 @@ func TestSkillsView(t *testing.T) {
 	h.rowOf(bar, "claude-only")
 	if s := h.screen(bar); !strings.Contains(s, "✻·◉·▣") || !strings.Contains(s, "Helps with local migrations.") {
 		t.Fatalf("skills screen:\n%s", s)
+	}
+	if s := h.lineOf(bar, "New skill…"); strings.Contains(s, "➕") {
+		t.Fatalf("a second button next to New skill…: %q", s)
 	}
 
 	// Share with all agents moves it into .agents/skills and links .claude/skills.
@@ -57,14 +63,28 @@ func TestSkillsView(t *testing.T) {
 		t.Fatalf("claude link: %q %v", target, err)
 	}
 
-	// + creates a template skill in .agents/skills, links .claude/skills, and opens the editor.
-	x, y = h.rowOf(bar, "➕")
-	time.Sleep(400 * time.Millisecond)
+	// ✨ New skill… asks who writes the skill.
+	newSkill := func() {
+		t.Helper()
+		x, y := h.rowOf(bar, "New skill…")
+		time.Sleep(400 * time.Millisecond)
+		mark := c.Mark()
+		c.Click(0, x, y)
+		c.waitScreenAfter(h, mark, "Who should write it?", 5*time.Second)
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	// t: a blank SKILL.md, named in the dialog, created in .agents/skills,
+	// linked for Claude and opened in the editor.
+	newSkill()
 	mark = c.Mark()
-	c.Click(0, x, y)
+	c.Write("t")
 	c.waitScreenAfter(h, mark, "Skill name", 5*time.Second)
 	mark = c.Mark()
-	c.Write("Release Notes\r")
+	c.Write("Release Notes")
+	c.waitScreenAfter(h, mark, ".agents/skills/release-notes/SKILL.md", 5*time.Second)
+	mark = c.Mark()
+	c.Write("\r")
 	c.waitScreenAfter(h, mark, "EDIT .agents/skills/release-notes/SKILL.md", 5*time.Second)
 	c.Write("\r")
 	h.rowOf(bar, "release-notes")
@@ -72,17 +92,17 @@ func TestSkillsView(t *testing.T) {
 		t.Fatalf("no claude link for release-notes: %v", err)
 	}
 
-	// Write with Agent… asks what the skill should do and sends the prompt to the active agent.
-	x, y = h.rowOf(bar, "Write with Agent")
-	time.Sleep(400 * time.Millisecond)
+	// h: this pane's agent; nothing described, so the guide tells it to ask.
+	newSkill()
 	mark = c.Mark()
-	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "What should this skill teach the agent?", 5*time.Second)
-	c.Write("write changelog entries\r")
+	c.Write("h")
+	c.waitScreenAfter(h, mark, "What should the skill do?", 5*time.Second)
+	c.Write("\r")
 	h.waitFor("write prompt sent to claude", 5*time.Second, func() bool {
-		b, _ := os.ReadFile(filepath.Join(h.Log, "claude-1.stdin"))
-		return strings.Contains(string(b), "What it should do: write changelog entries") &&
-			strings.Contains(string(b), ".agents/skills/<name>/SKILL.md")
+		s := h.stdinOf("claude", 1)
+		return strings.Contains(s, "Create an Agent Skill for this project") &&
+			strings.Contains(s, ".agents/skills/<name>/SKILL.md") &&
+			strings.Contains(s, "First ask me, in English and in one short question")
 	})
 
 	// Improve with Agent sends the skill's path to the active agent.
@@ -94,12 +114,35 @@ func TestSkillsView(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	c.Write("i")
 	h.waitFor("improve prompt sent to claude", 5*time.Second, func() bool {
-		b, _ := os.ReadFile(filepath.Join(h.Log, "claude-1.stdin"))
-		return strings.Contains(string(b), "Improve the Agent Skill at") &&
-			strings.Contains(string(b), "release-notes/SKILL.md")
+		s := h.stdinOf("claude", 1)
+		return strings.Contains(s, "Improve the Agent Skill at") && strings.Contains(s, "release-notes/SKILL.md")
 	})
 
+	// Enter: the current pane's agent (Claude) in a new pane beside it, with
+	// the guide and the description as its first message.
+	panes := len(strings.Fields(h.mustTmux("list-panes", "-t", agent, "-F", "#{pane_id}")))
+	newSkill()
+	mark = c.Mark()
+	c.Write("\r")
+	c.waitScreenAfter(h, mark, "Claude · new pane", 5*time.Second)
+	time.Sleep(200 * time.Millisecond)
+	c.Write("write changelog entries\r")
+	argv := strings.Join(h.run("claude", 2), "\n")
+	for _, want := range []string{"Create an Agent Skill for this project", ".agents/skills/<name>/SKILL.md", "What the skill should do:\nwrite changelog entries"} {
+		if !strings.Contains(argv, want) {
+			t.Errorf("new pane's first message lacks %q:\n%s", want, argv)
+		}
+	}
+	h.waitFor("the skill writer's pane, named", 5*time.Second, func() bool {
+		out := strings.TrimSpace(h.mustTmux("list-panes", "-t", agent, "-F", "#{pane_id}\t#{@imux_name}"))
+		return strings.Count(out, "\n")+1 == panes+1 && strings.Contains(out, "\tnew skill")
+	})
+	if strings.Contains(h.stdinOf("claude", 1), "write changelog entries") {
+		t.Error("the description went to the first pane too")
+	}
+
 	// Delete moves the skill to Trash and removes its .claude/skills link.
+	x, y = h.rowOf(bar, "release-notes")
 	time.Sleep(400 * time.Millisecond)
 	mark = c.Mark()
 	c.Click(2, x, y)

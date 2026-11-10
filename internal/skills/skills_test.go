@@ -143,11 +143,23 @@ func TestNames(t *testing.T) {
 }
 
 func TestPrompts(t *testing.T) {
-	p := WritePrompt("/repo", "write\nrelease notes")
-	for _, want := range []string{"What it should do: write release notes", "/repo/.agents/skills/<name>/SKILL.md", "description", "1024"} {
+	p := WritePrompt("/repo", "  write\r\nrelease notes\n", "Turkish")
+	for _, want := range []string{"/repo/.agents/skills/<name>/SKILL.md", "description", "1024", "What the skill should do:\nwrite\nrelease notes"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("WritePrompt lacks %q:\n%s", want, p)
 		}
+	}
+	// i-mux's guide comes first, the ask last.
+	if !strings.HasPrefix(p, "Create an Agent Skill for this project (/repo).") || !strings.HasSuffix(p, "release notes") {
+		t.Errorf("WritePrompt order:\n%s", p)
+	}
+	// Nothing asked: the agent asks first, in the user's language.
+	p = WritePrompt("/repo", " \n", "Turkish")
+	if !strings.Contains(p, "First ask me, in Turkish and in one short question, what the skill should do") || strings.Contains(p, "What the skill should do:") {
+		t.Errorf("WritePrompt without an ask:\n%s", p)
+	}
+	if !strings.Contains(WritePrompt("/repo", "", ""), "in English and") {
+		t.Error("WritePrompt without a language asks in English")
 	}
 	if !strings.Contains(ImprovePrompt("/repo/.agents/skills/x/SKILL.md"), "/repo/.agents/skills/x/SKILL.md") {
 		t.Error("ImprovePrompt lacks the path")

@@ -302,6 +302,12 @@ func Sync(root string) []string {
 // ErrExists is returned when a skill of that name is already in .agents/skills.
 var ErrExists = errors.New("a skill with this name already exists")
 
+// Exists reports whether .agents/skills already has an entry named name.
+func Exists(root, name string) bool {
+	_, err := os.Lstat(filepath.Join(root, Home, name))
+	return err == nil
+}
+
 // Share moves a skill found elsewhere (.claude/skills, .github/skills ...)
 // into .agents/skills and links it back for Claude, so every agent sees it.
 func Share(root, dir string) (string, error) {
@@ -367,7 +373,7 @@ func Create(root, name, description string) (string, error) {
 		return "", errors.New("invalid skill name")
 	}
 	dir := filepath.Join(root, Home, name)
-	if _, err := os.Lstat(dir); err == nil {
+	if Exists(root, name) {
 		return "", ErrExists
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -408,17 +414,30 @@ func Template(name, description string) string {
 
 func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
-// WritePrompt is what an agent is asked to write a new skill with. It is
+// WritePrompt is the first message of an agent asked to write a new skill:
+// i-mux's skill-writing guide first, then what the skill should do. With an
+// empty ask the agent asks for it, in lang, before writing anything. It is
 // model-facing, so English (like the handoff).
-func WritePrompt(root, ask string) string {
-	return "Create an Agent Skill for this project. What it should do: " + oneLine(ask) + `
+func WritePrompt(root, ask, lang string) string {
+	guide := "Create an Agent Skill for this project (" + root + `).
 
-Write it to ` + filepath.Join(root, Home) + `/<name>/SKILL.md, where <name> is a short lowercase-hyphenated name you choose (letters, digits, hyphens; the same as the folder).
-SKILL.md starts with YAML front matter holding "name" and "description", then the instructions in Markdown:
+How to write it:
+- Save it as ` + filepath.Join(root, Home) + `/<name>/SKILL.md, where <name> is a short lowercase-hyphenated name you choose (letters, digits, hyphens; the same as the folder).
+- SKILL.md starts with YAML front matter holding "name" and "description", then the instructions in Markdown.
 - description: one or two sentences, under 1024 characters, saying what the skill does and when to use it. Agents read only this line to decide whether to load the skill, so name the situations and words that should trigger it.
-- body: the concrete steps, commands, file paths and checks for this repository. Look at the code first so they are right; keep it short and practical.
+- Body: the concrete steps, commands, file paths and checks for this repository. Look at the code first so they are right; keep it short and practical.
 - Long reference material or helper scripts go next to SKILL.md (references/, scripts/), mentioned from it.
-Only create files under that folder. i-mux shows the skill to every agent (it links it into .claude/skills for Claude Code). When you are done, say the skill's name in one line.`
+- Only create files under that folder. i-mux shows the skill to every agent (it links it into .claude/skills for Claude Code).
+- When you are done, say the skill's name in one line.
+`
+	ask = strings.TrimSpace(strings.ReplaceAll(ask, "\r\n", "\n"))
+	if ask == "" {
+		if lang == "" {
+			lang = "English"
+		}
+		return guide + "\nFirst ask me, in " + lang + " and in one short question, what the skill should do, and wait for my answer before you write anything."
+	}
+	return guide + "\nWhat the skill should do:\n" + ask
 }
 
 // ImprovePrompt asks an agent to improve an existing skill.

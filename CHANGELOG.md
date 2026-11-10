@@ -6,6 +6,20 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-11-10
+
+### Changed
+
+- **Skills: one ✨ New skill… button and a dialog.** The ✨ Write with Agent… and ➕ buttons, and
+  tmux's one-line prompt in the status line, are gone. ✨ New skill… opens a popup that asks who
+  writes the skill: an agent in a new pane (Claude, Antigravity, Copilot, Codex or OpenCode; the
+  current pane's agent first), the agent of the current pane (it knows the conversation), or you,
+  from a blank `SKILL.md`. Then it asks what the skill should do in a real text box (wraps, cursor
+  keys, Home/End, paste with newlines). The agent starts beside the current pane, named
+  "new skill", with i-mux's skill-writing guide as its first message and your description after
+  it; left empty, the agent asks you first. A blank skill is named in the same popup (its path is
+  shown, a taken name is refused) and opens in the editor there. Right-clicking the Skills view's
+  empty space offers New skill… and Blank SKILL.md….
 ## [0.36.1] - 2026-11-09
 
 ### Fixed

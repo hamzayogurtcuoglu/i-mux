@@ -48,6 +48,13 @@ func TestParse(t *testing.T) {
 		{"\x1b", false, nil, "\x1b"},
 		{"\x1bq", true, []Event{{Key: "esc"}, {Key: "q"}}, ""},
 		{"\x03\x7f\x08\x15", true, []Event{{Key: "ctrl-c"}, {Key: "backspace"}, {Key: "backspace"}, {Key: "ctrl-u"}}, ""},
+		// Home, End and Delete in their CSI and SS3 forms; SS3 arrows; the
+		// line-editing control keys.
+		{"\x1b[H\x1b[F\x1b[1~\x1b[4~\x1b[3~\x1bOH\x1bOF\x1bOC\x1bOD\x01\x05\x17", true, []Event{{Key: "home"}, {Key: "end"}, {Key: "home"}, {Key: "end"}, {Key: "delete"}, {Key: "home"}, {Key: "end"}, {Key: "right"}, {Key: "left"}, {Key: "ctrl-a"}, {Key: "ctrl-e"}, {Key: "ctrl-w"}}, ""},
+		// A bracketed paste is one event, its newlines kept; one still
+		// arriving waits for the rest.
+		{"a\x1b[200~x\ry\x1b[201~b", true, []Event{{Key: "a"}, {Kind: EvPaste, Key: "paste", Text: "x\ry"}, {Key: "b"}}, ""},
+		{"\x1b[200~half\r", true, nil, "\x1b[200~half\r"},
 		// UTF-8 characters, and one cut in the middle.
 		{"Masaüstü", true, []Event{{Key: "M"}, {Key: "a"}, {Key: "s"}, {Key: "a"}, {Key: "ü"}, {Key: "s"}, {Key: "t"}, {Key: "ü"}}, ""},
 		{"a\xc3", false, []Event{{Key: "a"}}, "\xc3"},
@@ -957,18 +964,29 @@ func TestFileMenus(t *testing.T) {
 	}
 }
 
-// TestSkillsViewAndMenu (M40): the Skills view shows the empty hint, the
-// skills with their agent badges and problems, and the skill menus carry no
-// path or pane id in their commands.
+// TestSkillsViewAndMenu (M40, M42): the Skills view shows the empty hint, one
+// full-width ✨ New skill… button, the skills with their agent badges and
+// problems, and the skill menus carry no path or pane id in their commands.
 func TestSkillsViewAndMenu(t *testing.T) {
 	i18n.SetLocale("en")
 	m := model()
 	m.View = ViewSkills
 	sc := Render(m, 41, 30, NoItem)
 	text := screenText(sc)
-	for _, want := range []string{"SKILLS · acme-api", "Write with Agent…", "No skills in this project", ".agents/skills/<id>/SKILL.md", "Click ✨ above to write one"} {
+	for _, want := range []string{"SKILLS · acme-api", "✨ New skill…", "No skills in this project", ".agents/skills/<id>/SKILL.md", "Click ✨ above to write one"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("empty skills view lacks %q:\n%s", want, text)
+		}
+	}
+	// One button, the panel's whole width: no second (➕) button next to it.
+	for _, l := range sc.Lines {
+		if !strings.Contains(Plain(l.Text), "New skill…") {
+			continue
+		}
+		for x := railW; x < 41; x++ {
+			if a := l.ActionAt(x); a.Kind != ActSkillNew {
+				t.Errorf("column %d of the New skill row: %+v", x, a)
+			}
 		}
 	}
 
@@ -986,7 +1004,7 @@ func TestSkillsViewAndMenu(t *testing.T) {
 			t.Errorf("skills view lacks %q:\n%s", want, text)
 		}
 	}
-	var sawOpen, sawMenu, sawWrite, sawNew, sawSel bool
+	var sawOpen, sawMenu, sawNew, sawSel bool
 	for _, l := range sc.Lines {
 		if strings.Contains(Plain(l.Text), "release-notes") && strings.Contains(l.Text, selectBg) {
 			sawSel = true
@@ -1001,15 +1019,13 @@ func TestSkillsViewAndMenu(t *testing.T) {
 				if a.Path == "/home/test/acme-api/.agents/skills/release-notes" {
 					sawMenu = true
 				}
-			case ActSkillWrite:
-				sawWrite = true
 			case ActSkillNew:
 				sawNew = true
 			}
 		}
 	}
-	if !sawOpen || !sawMenu || !sawWrite || !sawNew || !sawSel {
-		t.Errorf("actions open=%v menu=%v write=%v new=%v sel=%v", sawOpen, sawMenu, sawWrite, sawNew, sawSel)
+	if !sawOpen || !sawMenu || !sawNew || !sawSel {
+		t.Errorf("actions open=%v menu=%v new=%v sel=%v", sawOpen, sawMenu, sawNew, sawSel)
 	}
 
 	names := func(items []string) string {
@@ -1034,7 +1050,13 @@ func TestSkillsViewAndMenu(t *testing.T) {
 	if got := names(SkillMenuItems("/bin/imux", "", SkillMenuState{Agent: false, Shared: true})); got != "Open|View|-|Delete" {
 		t.Errorf("shared skill menu without agent: %s", got)
 	}
-	if got := names(SkillMenuItems("/bin/imux", "", SkillMenuState{Root: true, Agent: true})); got != "Write skill with Agent…|New skill from template…" {
+	// The empty space's menu opens the dialog, at its first step or at the
+	// blank template's name.
+	root := SkillMenuItems("/bin/imux", "", SkillMenuState{Root: true})
+	if got := names(root); got != "New skill…|Blank SKILL.md…" {
 		t.Errorf("root menu: %s", got)
+	}
+	if !strings.Contains(root[2], "__skill dialog") || strings.Contains(root[2], "--template") || !strings.Contains(root[5], "__skill dialog --template") {
+		t.Errorf("root menu commands: %q, %q", root[2], root[5])
 	}
 }

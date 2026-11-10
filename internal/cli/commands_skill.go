@@ -5,12 +5,15 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/skilldialog"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/skills"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
@@ -19,30 +22,43 @@ import (
 func init() {
 	register(&command{
 		Name:   "__skill",
-		Args:   "<op> [--client C]",
+		Args:   "<op> [--client C] [--agent A | --here] [--template]",
 		Hidden: true,
 		Run:    runSkill,
 	})
 }
 
+// The New skill dialog's popup: at most this big, inside the client.
+const (
+	dialogW = 78
+	dialogH = 22
+)
+
 // skillCtx is what a Skills view action or menu item works on.
 type skillCtx struct {
-	ctx    context.Context
-	w      *workspace.WS
-	client string
-	dir    string // sidebar.OptSkill (the skill's folder, absolute)
-	root   string // sidebar.OptSkillRoot (the project root)
-	pane   string // sidebar.OptSkillPane (the target agent pane)
-	text   string // sidebar.OptSkillText (a prompt's answer)
-	sys    *fileops.System
+	ctx      context.Context
+	e        *Env
+	w        *workspace.WS
+	client   string
+	dir      string // sidebar.OptSkill (the skill's folder, absolute)
+	root     string // sidebar.OptSkillRoot (the project root)
+	pane     string // sidebar.OptSkillPane (the target agent pane)
+	text     string // sidebar.OptSkillText (what the dialog was told)
+	agent    string // --agent: who writes the skill in a new pane
+	here     bool   // --here: the target pane's agent writes it
+	template bool   // --template: the dialog opens at the blank template
+	sys      *fileops.System
 }
 
 // runSkill runs an operation of the Skills view (§9.3 "Skills"). The skill's
 // folder, the project root and the target pane come from the options the
-// sidebar set before opening the menu or prompt.
+// sidebar set before opening the menu or the dialog.
 func runSkill(e *Env, args []string) error {
 	fs := newFlags(e, "__skill")
 	clientF := fs.String("client", "", "client for messages, prompts and popups")
+	agentF := fs.String("agent", "", "write: the agent that writes the skill in a new pane")
+	hereF := fs.Bool("here", false, "write: the target pane's agent writes the skill")
+	templateF := fs.Bool("template", false, "dialog: open at the blank template's name")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
@@ -54,7 +70,7 @@ func runSkill(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	s := &skillCtx{ctx: context.Background(), w: w, client: *clientF, sys: &fileops.System{}}
+	s := &skillCtx{ctx: context.Background(), e: e, w: w, client: *clientF, agent: *agentF, here: *hereF, template: *templateF, sys: &fileops.System{}}
 	out, err := w.T.Run(s.ctx,
 		tmux.DelimCmd("dir"), tmux.Cmd{"show-options", "-gqv", sidebar.OptSkill},
 		tmux.DelimCmd("root"), tmux.Cmd{"show-options", "-gqv", sidebar.OptSkillRoot},
@@ -103,18 +119,116 @@ func (s *skillCtx) popup(args ...string) error {
 	return s.w.T.Spawn(append(c, "-E", "-w", "90%", "-h", "90%", "-d", tmux.EscapeFormat(s.root), sh))
 }
 
-// prompt asks on the client; the answer goes to OptSkillText, then `imux __skill <then>` runs.
-func (s *skillCtx) prompt(label, initial, then string) error {
-	c := tmux.Cmd{"command-prompt"}
+// dialog opens the New skill dialog (`__skill new`) in a popup sized to the
+// client, in the project root.
+func (s *skillCtx) dialog() error {
+	w, h := "80%", "70%"
 	if s.client != "" {
-		c = append(c, "-t", s.client)
+		out, err := s.w.T.Run(s.ctx, tmux.Cmd{"display-message", "-p", "-c", s.client, "#{client_width}\t#{client_height}"})
+		if f := strings.Split(strings.TrimSpace(out), "\t"); err == nil && len(f) == 2 {
+			cw, _ := strconv.Atoi(f[0])
+			ch, _ := strconv.Atoi(f[1])
+			if cw > 0 && ch > 0 {
+				w, h = strconv.Itoa(min(cw, dialogW)), strconv.Itoa(min(ch, dialogH))
+			}
+		}
 	}
-	if initial != "" && !strings.Contains(initial, ",") {
-		c = append(c, "-I", initial)
+	args := append([]string{s.w.Self}, s.again("new")...)
+	if s.template {
+		args = append(args, "--template")
 	}
-	tpl := "set-option -g " + sidebar.OptSkillText + " \"%%%\" ; " + tmux.RunShell(s.w.Self, s.again(then)...)
-	_, err := s.w.T.Run(s.ctx, append(c, "-p", label, tpl))
-	return err
+	c := tmux.Cmd{"display-popup"}
+	if s.client != "" {
+		c = append(c, "-c", s.client)
+	}
+	return s.w.T.Spawn(append(c, "-E", "-w", w, "-h", h, "-d", tmux.EscapeFormat(s.root), tmux.ShJoin(args...)))
+}
+
+// newSkill runs the New skill dialog on this terminal (the popup) and acts
+// on its answer: a template is created and edited right here; an agent's
+// answer goes to `__skill write`, which tmux runs once the popup is closed.
+func (s *skillCtx) newSkill() error {
+	ctx := s.ctx
+	var cur session.AgentID
+	if p, err := s.agentPane(); err == nil {
+		cur = p.Agent
+	}
+	var agents []skilldialog.Agent
+	for _, a := range agent.Ordered(s.w.Cfg) {
+		agents = append(agents, skilldialog.Agent{ID: a.ID, Name: a.Short, Key: a.Key, Installed: s.w.Installed(a.ID), Limited: s.w.LimitedUntil(a.ID)})
+	}
+	m := skilldialog.New(skilldialog.Options{
+		Agents: agents, Current: cur, Template: s.template,
+		Exists: func(name string) bool { return skills.Exists(s.root, name) },
+	})
+	res, err := skilldialog.Run(m, os.Stdin, os.Stdout)
+	if err != nil {
+		return err
+	}
+	switch res.Kind {
+	case skilldialog.Template:
+		p, err := skills.Create(s.root, res.Text, "")
+		if errors.Is(err, skills.ErrExists) {
+			s.say(i18n.T("skills.exists", res.Text))
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		_, _ = s.w.T.Run(ctx, tmux.Cmd{"set-option", "-g", sidebar.OptSkill, filepath.Dir(p)})
+		sidebar.RefreshAll(ctx, s.w.T)
+		return runEdit(s.e, []string{s.rel(p)})
+	case skilldialog.NewPane, skilldialog.Here:
+		args := s.again("write")
+		if res.Kind == skilldialog.Here {
+			args = append(args, "--here")
+		} else {
+			args = append(args, "--agent", string(res.Agent))
+		}
+		_, err := s.w.T.Run(ctx,
+			tmux.Cmd{"set-option", "-g", sidebar.OptSkillText, res.Text},
+			tmux.Cmd{"run-shell", "-b", tmux.UICommand(s.w.Self, args...)})
+		return err
+	}
+	return nil
+}
+
+// write has an agent write a new skill: i-mux's guide, then what the dialog
+// was told. --here sends it to the target pane's agent; --agent opens that
+// agent beside the target pane (or in the "No agents" pane), named for it.
+func (s *skillCtx) write() error {
+	ctx := s.ctx
+	prompt := skills.WritePrompt(s.root, s.text, i18n.T("skills.language"))
+	if s.here {
+		p, err := s.agentPane()
+		if err != nil {
+			s.say(i18n.T("skills.no_agent"))
+			return nil
+		}
+		if err := s.w.Paste(ctx, p.ID, prompt, true); err != nil {
+			return err
+		}
+		_, _ = s.w.T.Run(ctx, tmux.Cmd{"select-pane", "-t", p.ID})
+		s.say(i18n.T("skills.writing", session.ShortName(p.Agent)))
+		return nil
+	}
+	id, err := parseAgentFlag("agent", s.agent)
+	if err != nil || id == "" {
+		return &UsageError{Msg: i18n.T("cli.usage", "__skill write --agent <agent> | --here")}
+	}
+	if s.pane == "" {
+		return errors.New("no pane chosen")
+	}
+	p, err := s.w.PaneTarget(ctx, s.pane)
+	if err != nil {
+		return err
+	}
+	if _, err := s.w.StartPrompt(ctx, p, id, prompt, i18n.T("skills.pane_name")); err != nil {
+		s.say(workspace.SwitchError(id, err))
+		return nil
+	}
+	s.say(i18n.T("skills.writing_new", session.ShortName(id)))
+	return nil
 }
 
 // agentPane returns the target pane when it runs a live agent.
@@ -137,46 +251,12 @@ func (s *skillCtx) file() string { return filepath.Join(s.dir, skills.File) }
 func (s *skillCtx) do(op string) error {
 	ctx := s.ctx
 	switch op {
-	case "write-prompt":
-		if _, err := s.agentPane(); err != nil {
-			s.say(i18n.T("skills.no_agent"))
-			return nil
-		}
-		return s.prompt(i18n.T("skills.write_prompt"), "", "write-done")
-	case "write-done":
-		ask := strings.TrimSpace(s.text)
-		if ask == "" {
-			return nil
-		}
-		p, err := s.agentPane()
-		if err != nil {
-			s.say(i18n.T("skills.no_agent"))
-			return nil
-		}
-		if err := s.w.Paste(ctx, p.ID, skills.WritePrompt(s.root, ask), true); err != nil {
-			return err
-		}
-		_, _ = s.w.T.Run(ctx, tmux.Cmd{"select-pane", "-t", p.ID})
-		s.say(i18n.T("skills.writing", session.ShortName(p.Agent)))
-		return nil
-	case "new-prompt":
-		return s.prompt(i18n.T("skills.new_prompt"), "", "new-done")
-	case "new-done":
-		name := skills.Slug(s.text)
-		if name == "" {
-			return nil
-		}
-		p, err := skills.Create(s.root, name, "")
-		if errors.Is(err, skills.ErrExists) {
-			s.say(i18n.T("skills.exists", name))
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		_, _ = s.w.T.Run(ctx, tmux.Cmd{"set-option", "-g", sidebar.OptSkill, filepath.Dir(p)})
-		sidebar.RefreshAll(ctx, s.w.T)
-		return s.popup("__edit", s.rel(p))
+	case "dialog":
+		return s.dialog()
+	case "new":
+		return s.newSkill()
+	case "write":
+		return s.write()
 	}
 	if s.dir == "" {
 		return errors.New("no skill chosen")

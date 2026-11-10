@@ -13,6 +13,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -131,6 +132,51 @@ func (w *WS) Split(ctx context.Context, pane string, id session.AgentID, cwd str
 	return w.launchNew(ctx, Launch{Agent: id, CWD: cwd}, func(cmd []string) tmux.Cmd {
 		return append(tmux.Cmd{"split-window", dir, "-t", pane, "-c", cwd, "-P", "-F", "#{pane_id}"}, cmd...)
 	})
+}
+
+// SideBySide is the narrowest pane a new agent opens beside rather than
+// below: each half keeps 60 columns.
+const SideBySide = 120
+
+// StartPrompt opens agent id with prompt as its first message, named name
+// (an agent writing a skill, §9.3 "Skills"): beside p (below it when p is
+// narrower than SideBySide), or in p's place when p is the project's "No
+// agents" pane. It returns the agent's pane.
+func (w *WS) StartPrompt(ctx context.Context, p *Pane, id session.AgentID, prompt, name string) (string, error) {
+	l := Launch{Agent: id, CWD: p.CWD, Prompt: prompt}
+	pane := p.ID
+	if p.IsEmpty() {
+		if err := w.respawn(ctx, p, l, nil, ""); err != nil {
+			return "", err
+		}
+	} else {
+		dir := "-h"
+		if out, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", p.ID, "#{pane_width}"}); err == nil {
+			if n, err := strconv.Atoi(strings.TrimSpace(out)); err == nil && n < SideBySide {
+				dir = "-v"
+			}
+		}
+		np, err := w.launchNew(ctx, l, func(cmd []string) tmux.Cmd {
+			return append(tmux.Cmd{"split-window", dir, "-t", p.ID, "-c", p.CWD, "-P", "-F", "#{pane_id}"}, cmd...)
+		})
+		if err != nil {
+			return "", err
+		}
+		pane = np
+	}
+	if name != "" {
+		_, _ = w.T.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", pane, sidebar.OptName, name})
+	}
+	w.RefreshSidebars(ctx)
+	if w.pasteMode(l) {
+		if err := w.WaitStable(ctx, pane); err != nil {
+			return pane, err
+		}
+		if err := w.Paste(ctx, pane, prompt, true); err != nil {
+			return pane, err
+		}
+	}
+	return pane, nil
 }
 
 // SessionInfo is one imux tmux session.

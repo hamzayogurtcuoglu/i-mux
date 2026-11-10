@@ -46,8 +46,7 @@ const (
 	ActSettings               // the Settings menu
 	ActPasteImage             // paste the clipboard's image into the target pane
 	ActGoto                   // Go to File (the editor's Ctrl+P)
-	ActSkillWrite             // ask what a skill should do; the target agent writes it (D32)
-	ActSkillNew               // ask for a name, create .agents/skills/<name>/SKILL.md and open it
+	ActSkillNew               // the New skill dialog: an agent writes a skill, or a blank SKILL.md (D32)
 	ActSkillMenu              // the menu of skill Path (open, view, add, improve, share, delete)
 )
 
@@ -215,6 +214,9 @@ func icon(a session.AgentID) (string, string) {
 	}
 	return "›", faint
 }
+
+// AgentIcon is an agent's glyph and its color (other packages' screens).
+func AgentIcon(a session.AgentID) (string, string) { return icon(a) }
 
 // avatar is a project's letter on its color (3 columns).
 func avatar(name string) string {

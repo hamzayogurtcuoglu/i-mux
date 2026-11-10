@@ -16,20 +16,32 @@ const (
 	EvRightClick                  // right button press at X, Y
 	EvScroll                      // mouse wheel at X, Y: Key "up" or "down"
 	EvMove                        // the pointer moved to X, Y (X 0: it left the sidebar)
+	EvPaste                       // a bracketed paste: Text holds it, Key is "paste"
 )
 
 // Event is one key press or mouse click.
 type Event struct {
 	Kind EventKind
-	Key  string // "up", "down", "enter", "esc", "tab", "backtab", "backspace", "ctrl-u", "ctrl-c", or the character
+	Key  string // "up", "down", "left", "right", "home", "end", "delete", "enter", "esc", "tab", "backtab", "backspace", "ctrl-a", "ctrl-e", "ctrl-u", "ctrl-w", "ctrl-c", or the character
 	X, Y int
+	Text string // EvPaste: the pasted text
 }
 
-// Parse decodes terminal input: printable keys, Enter, Tab, Esc, arrows
-// (CSI and SS3 forms) and SGR mouse reports (ESC [ < b ; x ; y M|m), of
-// which only left-button presses become events. It returns the events and
-// the bytes of an incomplete sequence to keep for the next read. A lone ESC
-// at the end of the input is Esc when final is true.
+// Paste markers of bracketed paste mode (only a program that turns the mode
+// on with ESC [ ? 2004 h gets them).
+const (
+	pasteStart = "\x1b[200~"
+	pasteEnd   = "\x1b[201~"
+	// maxPaste is how much of a paste with no end marker is kept waiting.
+	maxPaste = 1 << 20
+)
+
+// Parse decodes terminal input: printable keys, Enter, Tab, Esc, arrows,
+// Home, End and Delete (CSI and SS3 forms), bracketed pastes and SGR mouse
+// reports (ESC [ < b ; x ; y M|m), of which only left-button presses become
+// events. It returns the events and the bytes of an incomplete sequence (or
+// paste) to keep for the next read. A lone ESC at the end of the input is
+// Esc when final is true.
 func Parse(in []byte, final bool) ([]Event, []byte) {
 	var evs []Event
 	key := func(k string) { evs = append(evs, Event{Kind: EvKey, Key: k}) }
@@ -63,6 +75,19 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 				if i+2 >= len(in) {
 					return evs, in[i:]
 				}
+				if bytes.HasPrefix(in[i:], []byte(pasteStart)) {
+					body := in[i+len(pasteStart):]
+					end := bytes.Index(body, []byte(pasteEnd))
+					if end < 0 && len(body) < maxPaste {
+						return evs, in[i:] // the rest of the paste is still coming
+					}
+					if end < 0 {
+						end = len(body)
+					}
+					evs = append(evs, Event{Kind: EvPaste, Key: "paste", Text: string(body[:end])})
+					i += len(pasteStart) + min(end+len(pasteEnd), len(body))
+					continue
+				}
 				// CSI: parameters then a final byte.
 				j := i + 2
 				for j < len(in) && in[j] >= 0x30 && in[j] <= 0x3f {
@@ -80,8 +105,21 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 					key("right")
 				case 'D':
 					key("left")
+				case 'H':
+					key("home")
+				case 'F':
+					key("end")
 				case 'Z':
 					key("backtab")
+				case '~':
+					switch string(in[i+2 : j]) {
+					case "1", "7":
+						key("home")
+					case "4", "8":
+						key("end")
+					case "3":
+						key("delete")
+					}
 				}
 				i = j + 1
 				continue
@@ -94,6 +132,14 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 					key("up")
 				case 'B':
 					key("down")
+				case 'C':
+					key("right")
+				case 'D':
+					key("left")
+				case 'H':
+					key("home")
+				case 'F':
+					key("end")
 				}
 				i += 3
 				continue
@@ -110,6 +156,12 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 			key("backspace")
 		case c == 0x15:
 			key("ctrl-u")
+		case c == 0x01:
+			key("ctrl-a")
+		case c == 0x05:
+			key("ctrl-e")
+		case c == 0x17:
+			key("ctrl-w")
 		case c == 0x03:
 			key("ctrl-c")
 		case c == 0x0e:

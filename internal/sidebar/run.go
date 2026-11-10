@@ -388,7 +388,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		case ActToggleDir:
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
 			s.selected = a.Path
-		case ActNone, ActSearch, ActRefresh, ActSkillWrite, ActSkillNew:
+		case ActNone, ActSearch, ActRefresh, ActSkillNew:
 			// The explorer's or skills' empty space and title.
 			if s.model.Closed || ev.X <= railW {
 				return
@@ -600,11 +600,8 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActFileMenu:
 		s.fileMenu(ctx, client, a, s.menuX, s.menuY)
 		return
-	case ActSkillWrite:
-		s.skillStart(ctx, client, "write-prompt")
-		return
 	case ActSkillNew:
-		s.skillStart(ctx, client, "new-prompt")
+		s.skillStart(ctx, client, "dialog")
 		return
 	case ActSkillMenu:
 		s.skillMenu(ctx, client, a, s.menuX, s.menuY)

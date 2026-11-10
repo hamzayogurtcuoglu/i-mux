@@ -120,9 +120,9 @@ func skillRows(sk skills.Skill, cwd string, w int, ic Icons, selected bool) []Li
 	return []Line{first, {Text: second, Action: open}}
 }
 
-// renderSkills is the Skills view (D32): the project's Agent Skills, a
-// button that asks the active agent to write one, and a button that creates
-// a template SKILL.md.
+// renderSkills is the Skills view (D32): the project's Agent Skills under one
+// button, ✨ New skill…, which opens the New skill dialog (an agent writes it,
+// or a blank SKILL.md).
 func renderSkills(m Model, w, h int) []Line {
 	ic := m.icons()
 	refresh := button(ic.Refresh, muted, Action{Kind: ActRefresh})
@@ -134,18 +134,14 @@ func renderSkills(m Model, w, h int) []Line {
 	}
 	out := []Line{buttons(w, Cell{Text: title + fit(" "+head, w-refresh.W) + reset}, refresh)}
 
-	// Primary button: ✨ Write with Agent…; and + for a blank template.
-	newBtn := button(ic.Add, cyan, Action{Kind: ActSkillNew})
-	label := ic.Suggest + " " + i18n.T("skills.write_button")
-	cw := max(w-newBtn.W, 1)
-	pad := max(cw-2-DisplayWidth(label), 0)
-	writeCell := Cell{
-		W:      cw,
-		Text:   " " + "\x1b[48;5;24m\x1b[38;5;255m" + strings.Repeat(" ", pad/2) + fit(label, cw-2-pad) + strings.Repeat(" ", pad-pad/2) + reset + " ",
-		Action: Action{Kind: ActSkillWrite},
+	label := ic.Suggest + " " + i18n.T("skills.new_button")
+	pad := max(w-2-DisplayWidth(label), 0)
+	newCell := Cell{
+		W:      w,
+		Text:   " " + "\x1b[48;5;24m\x1b[38;5;255m" + strings.Repeat(" ", pad/2) + fit(label, w-2-pad) + strings.Repeat(" ", pad-pad/2) + reset + " ",
+		Action: Action{Kind: ActSkillNew},
 	}
-	newBtn.X = cw
-	out = append(out, Line{Text: compose([]Cell{writeCell, newBtn}, w), Cells: []Cell{writeCell, newBtn}})
+	out = append(out, Line{Text: compose([]Cell{newCell}, w), Cells: []Cell{newCell}})
 
 	var rows []Line
 	for _, sk := range m.Skills {
@@ -156,7 +152,7 @@ func renderSkills(m Model, w, h int) []Line {
 		rows = append(rows,
 			Line{Text: muted + fit("   "+i18n.T("skills.empty"), w) + reset},
 			Line{Text: faint + fit("   .agents/skills/<id>/SKILL.md", w) + reset},
-			Line{Text: cyan + fit("   "+i18n.T("skills.empty_hint"), w) + reset, Action: Action{Kind: ActSkillWrite}},
+			Line{Text: cyan + fit("   "+i18n.T("skills.empty_hint"), w) + reset, Action: Action{Kind: ActSkillNew}},
 		)
 	}
 	n := 0
@@ -182,15 +178,13 @@ func SkillMenuItems(self, client string, st SkillMenuState) []string {
 			items = append(items, "")
 		}
 	}
-	add := func(label, key, op string) {
-		args := append([]string{"__skill", op}, clientArgs(client)...)
+	add := func(label, key string, op ...string) {
+		args := append(append([]string{"__skill"}, op...), clientArgs(client)...)
 		items = append(items, tmux.EscapeFormat(i18n.T(label)), key, tmux.RunShell(self, args...))
 	}
 	if st.Root {
-		if st.Agent {
-			add("skills.menu_write", "w", "write-prompt")
-		}
-		add("skills.menu_new", "n", "new-prompt")
+		add("skills.new_button", "n", "dialog")
+		add("skills.menu_template", "t", "dialog", "--template")
 		return items
 	}
 	add("file.open", "o", "open")
