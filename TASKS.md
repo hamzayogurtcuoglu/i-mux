@@ -997,6 +997,21 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M47: Faster switching on the left (added 2026-11-10)
+
+User report (after v0.39.1): switching on the left is still slow.
+
+- [x] **T47.1 Every click at once** · S
+  - AC: D39: projects, agents elsewhere, Continue in, files and popups act on the press; menus
+    (tmux < 3.5) and the command prompt wait; `MouseDown1Pane` notes the pane and
+    `SecondClick1Pane` / `TripleClick1Pane` reach a sidebar only from the same pane (checked on
+    tmux 3.2a); popups ignore clicks for 400 ms; one gather per click; unit test (which clicks
+    wait); config tests (golden, mouse off, real tmux); e2e: a double click on another project
+    switches once (fails without the bindings), the switch within 300 ms.
+- [x] **T47.2 Fresh while shown** · XS
+  - AC: a shown sidebar gathers every 3 s with its project's git status ≤ 2 s old; a hidden one
+    does not; e2e: a file written outside shows in Source Control (`TestCommitSuggest`).
+
 ## M46: The spinner means work; AGENTS counts it (added 2026-11-10)
 
 User report: a project's spinner turned although its agent did nothing; and the AGENTS title could

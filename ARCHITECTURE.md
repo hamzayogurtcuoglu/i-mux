@@ -115,6 +115,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D36 | **A click in the sidebar acts at once, and tmux's double and triple click no longer select a sidebar** (added 2026-11-10, v0.39.1, at the user's request): a click that leaves the sidebar under the pointer and opens nothing over it (a view on the rail, a folder, a section's fold, an agent of the window) runs at once; one that opens a menu, popup or prompt, or shows another window or project, still waits 350 ms. i-mux binds `DoubleClick1Pane` and `TripleClick1Pane` to tmux's own commands, except over a sidebar, where they only pass the click on. | The user found moving between panels slow ("about a second"). Every click waited 350 ms for tmux's double-click time: tmux's own double click, 300 ms after the second press, selects the pane under the pointer, and took the focus back from the agent pane a click had just focused. Without that selection only what a double click's second press (or the button's release) would land on needs the wait: a menu, a popup, another window. |
 | D37 | **i-mux turns on synchronized output (DECSET 2026) for every terminal** (added 2026-11-10, v0.39.1, at the user's request): `terminal-overrides` gets `Sync=\E[?2026%?%p1%{1}%-%tl%eh%;`, the form tmux 3.4+ uses for the terminals it knows. tmux then sends an update of a pane in the background, with the cursor's way back to the active pane, as one synchronized update. | The user saw the text cursor in the sidebar now and then: tmux draws a change in a pane that is not active (the sidebar's spinner while agents work, its hover) by moving the cursor there and back, and Windows Terminal could show a frame in between. tmux 3.2 and 3.3 know only an older form of the sequence and turn it on for no terminal. Windows Terminal 1.24 supports 2026 (as do iTerm2, kitty, WezTerm, foot, Alacritty and Ghostty); a terminal without it ignores the sequence. |
 | D38 | **"Working" means the agent works: the user typing, a resize and a restarted watcher do not count** (added 2026-11-10, v0.40, at the user's request): a pane is working while its agent's screen changes, except when only its input line and what is below it changed (the user typing; the agents' progress lines are above the input), when a quiet pane was resized (the panel opened or closed) or redraws right after it, and when the watcher meets the pane (a restarted watcher takes the last one's times from `activity.json`). The AGENTS title counts the agents at work. | The user saw the spinner turn at a project whose agent did nothing. Any screen change counted as work: every key typed into an agent, every resize, and every restart of the watcher (each install or Settings change), which then also marked every agent "Done". The count answers "how many are still working?" without reading every row. |
+| D39 | **Every sidebar click acts at once; only a tmux menu (before tmux 3.5) and the command prompt wait** (added 2026-11-10, v0.40, at the user's request): a project, an agent in another tab or project, "Continue this chat in", a file and every popup now act on the press. tmux passes a double click's second and third press to a sidebar only when the first press went to that same pane (`MouseDown1Pane` notes the pane in `@imux_press`), and i-mux's popups ignore clicks in their first 400 ms. A sidebar a client shows gathers every 3 s, with its own project's git status at most 2 s old. | The user still found switching on the left slow after v0.39.1: a project took 350 ms (8 projects open: ~354 ms, almost all of it the wait), against ~30 ms for a view. The wait only kept a double click's second press from acting where the first one led; tmux can tell that itself. Freshness: the watcher's false "working" changes (D38) used to make sidebars redraw now and then; without them a file written outside an agent showed after up to 15 s. |
 
 ## 4. Components
 
@@ -1569,29 +1570,43 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   - Every change redraws the sidebars and reveals the result: `@imux_reveal` (a counter and the
     path) makes each sidebar of that project open the folders above it and select it.
 
-#### Clicks at once (v0.39.1, D36)
+#### Clicks at once (v0.39.1, D36; v0.40, D39)
 
-- **At once:** a click whose action leaves the sidebar under the pointer and opens nothing over it
-  runs as soon as the sidebar reads it: a view on the rail (open, switch, close the panel), a
-  folder, a section's fold, an agent of the window (its pane gets the focus). In the e2e tests the
-  new view is on screen about 30 ms after the click (350 ms before).
-- **Waits 350 ms (`OpenAfter`):** a click that opens a menu, popup or prompt, or shows another
-  window or project (an agent elsewhere, a project). A double click's second press would land on
-  what the first one opened: a menu closes (on tmux 3.5+, where i-mux's menus take the mouse, it
-  may run the item under the pointer), a popup's program gets the click, another window's sidebar
-  acts on its own row. Before tmux 3.5 the button's release closes a menu too; the same wait holds
-  a right-click's menu there.
+- **At once:** a click runs its action as soon as the sidebar reads the press: a view on the rail
+  (open, switch, close the panel), a folder, a section's fold, an agent (its pane gets the focus;
+  in another tab or project the client goes there), a project, "Continue this chat in", a file
+  (the editor popup), search, Go to File, a diff, the folder picker, a skill's dialog. The press
+  itself is drawn from the model (the row it selected); the action's redraw is the one gather
+  (two before). In the e2e tests with eight projects open a project is shown ~5 ms after the press
+  (~354 ms before) and a view ~0-15 ms after it.
+- **Waits 350 ms (`OpenAfter`):** a click that opens a tmux menu where menus take no mouse (tmux
+  before 3.5: the button's release closes one, and so does a double click's second press), and one
+  that opens the command prompt (rename, commit message). On tmux 3.5+ menus open on the press
+  (`-M -O`); a right-click's menu follows the same rule.
+- **A double click's second press:** it acts again only where the first one did.
+  `MouseDown1Pane` is tmux's own plus `set -gF @imux_press '#{mouse_pane}'`; `SecondClick1Pane`
+  and i-mux's `TripleClick1Pane` pass the press to a sidebar only when it is that pane (any other
+  pane gets it as before). A click that showed another tab or project therefore does not act
+  again in that one's sidebar, where the same row is something else (a double click on project B
+  went to B and back to A). In the same sidebar a click on the same row within 400 ms
+  (`ClickIgnore`) is dropped; a quick click on another row still counts. Checked on tmux 3.2a
+  with a real client: a quick second click on another row of the same sidebar arrives; after a
+  switch neither the second nor the third press reaches the new sidebar (with tmux's bindings
+  they did); a double click on another pane is unchanged.
+- **Popups:** a double click's second press lands on the popup the first one opened (outside it
+  tmux drops it). i-mux's popups that take clicks (search, Go to File, the folder picker, the
+  skill dialog) ignore clicks in their first 400 ms (`sidebar.PopupGuard`). An editor gets it as a
+  click (the cursor moves there).
 - **Double and triple clicks:** tmux's own `DoubleClick1Pane` (fired 300 ms after the second
   press) selects the pane under the pointer: it took the focus back from the agent pane a click had
-  just focused, so every click waited for it. i-mux binds `DoubleClick1Pane` and
-  `TripleClick1Pane` to tmux's own commands for every other pane; over a sidebar they only pass
-  the click on (`send -M`; tmux marks the late double click as already sent, so nothing arrives
-  twice). The second press reaches the sidebar as before (`SecondClick1Pane` is unbound, so tmux
-  passes it to the pane): a click on the same row within 400 ms of the last one (`ClickIgnore`) is
-  dropped, so nothing runs twice. tmux counts any press within 300 ms as the second, wherever it
-  is, so i-mux does not swallow it: a quick click on another row still counts. Checked on tmux
-  3.2a with a real client: with tmux's bindings a double or triple click on the sidebar selects it
-  again, with i-mux's the agent pane keeps the focus and the sidebar still gets every press.
+  just focused. i-mux binds `DoubleClick1Pane` and `TripleClick1Pane` to tmux's own commands for
+  every other pane; over a sidebar they only pass the click on (`send -M`; tmux marks the late
+  double click as already sent, so nothing arrives twice).
+- **Fresh while shown:** the gather knows whether a client shows the sidebar (`window_active`,
+  `session_attached`). Shown, it gathers every 3 s (`FreshEvery`) and keeps its project's git
+  status at most 2 s (`FreshTTL`; other projects' and a hidden sidebar's 20 s): files an agent or
+  editor wrote, or a new untracked file, show within a few seconds. A switch to a tab or project
+  makes its sidebar redraw at once (`pane-focus-in` fires on `switch-client` and `select-window`).
 - **The cursor stays put (D37):** tmux draws a change in a pane that is not active by moving the
   cursor there and back afterwards, and Windows Terminal could show a frame in between: the cursor
   flashed in the sidebar while it redrew (its spinner, every 120 ms while agents work; hover). With
