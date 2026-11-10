@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -82,9 +81,7 @@ func (w *WS) Click(ctx context.Context, f *sources.Finder, rng string, p *Pane, 
 		}
 		return w.Show(ctx, m, client, p.ID)
 	case ClickInstall:
-		a := agent.MustGet(id)
-		w.Message(ctx, client, p.ID, i18n.T("agent.not_installed", a.Name, a.InstallHint))
-		return nil
+		return w.ShowInstall(id, p.ID, client)
 	case ClickConfirm:
 		return w.Show(ctx, w.ConfirmMenu(id, p, client), client, p.ID)
 	case ClickSwitch:

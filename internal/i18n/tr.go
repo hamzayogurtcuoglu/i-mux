@@ -545,6 +545,21 @@ var tr = map[string]string{
 
 	// agents
 	"agent.not_installed": "%s kurulu değil: %s",
+	"install.title":       "%s kurulu değil",
+	"install.why":         "Bu sohbete %s ile devam etmek için önce onu kur. i-mux bunu senin için çalıştırabilir:",
+	"install.needs":       "%s, %s ile kuruluyor; o da burada kurulu değil.",
+	"install.needs_npm":   "npm, Node.js ile gelir: https://nodejs.org adresinden ya da paket yöneticinle kur (sudo apt install nodejs npm).",
+	"install.needs_curl":  "curl'ü paket yöneticinle kur (sudo apt install curl).",
+	"install.needs_brew":  "Homebrew: https://brew.sh",
+	"install.then":        "Sonra:",
+	"install.now":         "Şimdi kur",
+	"install.close":       "Kapat",
+	"install.hint":        "Enter kur · Tab sonraki · Esc kapat",
+	"install.hint_close":  "Enter ya da Esc kapatır",
+	"install.done":        "✓ %s kuruldu.",
+	"install.continue":    "Bu sohbete %s ile devam etmek için Enter'a, kapatmak için Esc'e bas. ",
+	"install.not_on_path": "Kurulum bitti ama %[2]s, i-mux'un kullandığı PATH'te yok. Yeni bir terminal aç ya da kurulduğu klasörü PATH'e ekle.",
+	"install.failed":      "✗ Kurulum başarısız: %s",
 
 	// notices
 	"notice.cross_provider": "Not: geçiş, %s sohbetinizden alıntıları ve depo durumunu %s tarafına gönderir. Gizli bilgiler elden geldiğince maskelenir. (bir kez gösterilir)",

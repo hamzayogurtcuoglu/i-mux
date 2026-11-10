@@ -132,7 +132,7 @@ them) switches its view.
 | click a project · **+** next to **Projects** (or `o`) | switch to it (click the current one, or right-click any, to **close** it) · open another project: type a few letters of its name, Enter |
 | right-click an agent (or click the selected one) | its menu: **Rename…** (the name stays when the chat moves to another CLI, and History lists the conversation by it) or **Close agent…** |
 | click an agent · **+** next to **Agents** | go to it (in any project) · open a new agent, or a plain **Terminal**, then pick where: right, left, down, up or a new tab (`prefix v` / `prefix -` for right / down) |
-| click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation |
+| click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation (one that is not installed opens a small window with the command that installs it, and **Install now**) |
 | a section title (PROJECTS, AGENTS) | fold or unfold it |
 | **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations, named ones by their name (a conversation's **Rename…** names it; continuing it gives the agent its name back) (📌 Pin or unpin…, `p`, keeps one at the top) · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
 | the **tab bar** at the top · its **+** (or `prefix c`) · **×** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab |

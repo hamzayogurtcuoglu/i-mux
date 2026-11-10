@@ -544,6 +544,21 @@ var en = map[string]string{
 
 	// agents
 	"agent.not_installed": "%s is not installed: %s",
+	"install.title":       "%s is not installed",
+	"install.why":         "To continue this chat in %s, install it first. i-mux can run this for you:",
+	"install.needs":       "%s installs with %s, which is not installed here.",
+	"install.needs_npm":   "npm comes with Node.js: install it from https://nodejs.org or with your package manager (sudo apt install nodejs npm).",
+	"install.needs_curl":  "Install curl with your package manager (sudo apt install curl).",
+	"install.needs_brew":  "Homebrew: https://brew.sh",
+	"install.then":        "Then:",
+	"install.now":         "Install now",
+	"install.close":       "Close",
+	"install.hint":        "Enter install · Tab next · Esc close",
+	"install.hint_close":  "Enter or Esc close",
+	"install.done":        "✓ %s is installed.",
+	"install.continue":    "Press Enter to continue this chat in %s, Esc to close. ",
+	"install.not_on_path": "The install finished, but %[2]s is not on the PATH i-mux uses. Open a new terminal, or add the folder it went to to PATH.",
+	"install.failed":      "✗ The install failed: %s",
 
 	// notices
 	"notice.cross_provider": "Note: switching sends excerpts of your %s conversation and repository state to %s. Secrets are redacted on a best-effort basis. (shown once)",

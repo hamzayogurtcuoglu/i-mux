@@ -31,6 +31,8 @@ type Info struct {
 	Bin         string // default binary name
 	Vendor      string // who makes it: "Anthropic"
 	InstallHint string
+	// InstallCmd installs it (sh); "" means InstallHint, which is one.
+	InstallCmd string
 	// ReadDirFlag lets the agent read files in another directory without
 	// asking ("" when it needs nothing: Codex reads any path).
 	ReadDirFlag string
@@ -44,7 +46,7 @@ var registry = []Info{
 	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
 	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
 	{ID: session.Codex, Key: "x", Bin: "codex", Vendor: "OpenAI", InstallHint: "npm i -g @openai/codex"},
-	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "brew install opencode (or: curl -fsSL https://opencode.ai/install | bash, then: opencode upgrade --major)", UpdateArgs: []string{"upgrade"}},
+	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "brew install opencode (or: curl -fsSL https://opencode.ai/install | bash, then: opencode upgrade --major)", InstallCmd: "curl -fsSL https://opencode.ai/install | bash", UpdateArgs: []string{"upgrade"}},
 }
 
 func init() {
@@ -52,6 +54,19 @@ func init() {
 		registry[i].Name = session.DisplayName(registry[i].ID)
 		registry[i].Short = session.ShortName(registry[i].ID)
 	}
+}
+
+// Install is the command that installs agent id: the config's
+// (`[agents.<id>] install`), else i-mux's.
+func Install(cfg *config.Config, id session.AgentID) string {
+	if c := strings.TrimSpace(cfg.Agent(string(id)).Install); c != "" {
+		return c
+	}
+	a := MustGet(id)
+	if a.InstallCmd != "" {
+		return a.InstallCmd
+	}
+	return a.InstallHint
 }
 
 // All returns every agent in registry order.

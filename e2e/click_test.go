@@ -43,10 +43,12 @@ func TestClick(t *testing.T) {
 	c.waitScreenAfter(h, mark, "Sessions · ", 5*time.Second)
 	c.Write("q")
 
-	// Not installed: the install hint.
+	// Not installed: the install popup (T49.1); q closes it.
 	mark = c.Mark()
 	click("imux:copilot", pane)
-	c.waitScreenAfter(h, mark, "npm i -g @github/copilot", 5*time.Second)
+	c.waitScreenAfter(h, mark, "$ npm i -g @github/copilot", 5*time.Second)
+	c.Write("q")
+	time.Sleep(300 * time.Millisecond)
 
 	// Limited: a confirm menu first; "n" does nothing, "y" switches.
 	if err := state.Update(func(s *state.State) error {

@@ -72,6 +72,7 @@ line number.
 | `agents.claude.resume` | `true` | Resume the agent's earlier session when switching back to it. |
 | `agents.claude.patterns` | `[]` | Extra limit patterns: [{ re = 'my limit text', severity = "limit" }] (limit, warn or ignore; case-insensitive). |
 | `agents.claude.replace_default_patterns` | `false` | Use only `patterns`, not the built-in ones. |
+| `agents.claude.install` | `""` | "" = i-mux's command (the popup for a missing agent runs it) |
 | `agents.antigravity.new_args` | `["-i", "{prompt}"]` | Template for a new session; the handoff goes in {prompt}. |
 | `agents.antigravity.resume_args` | `["--conversation", "{id}", "-i", "{prompt}"]` | Template for resuming a native session ({id}) with a delta handoff. |
 | `agents.antigravity.home` | `""` | Where the agent keeps its sessions. "" = ~/.gemini/antigravity-cli |
@@ -272,6 +273,7 @@ home                     = ""   # "" = $CLAUDE_CONFIG_DIR or ~/.claude
 resume                   = true
 patterns                 = []
 replace_default_patterns = false
+install                  = ""   # "" = i-mux's command (the popup for a missing agent runs it)
 
 # Antigravity CLI (agy): Google's successor to Gemini CLI for personal Google
 # accounts. Its conversations are read from brain/<id>/ under home.
@@ -284,6 +286,7 @@ home                     = ""   # "" = ~/.gemini/antigravity-cli
 resume                   = true
 patterns                 = []
 replace_default_patterns = false
+install                  = ""   # "" = i-mux's command (the popup for a missing agent runs it)
 
 [agents.copilot]
 bin                      = ""
@@ -294,6 +297,7 @@ home                     = ""   # "" = $COPILOT_HOME or ~/.copilot
 resume                   = true
 patterns                 = []
 replace_default_patterns = false
+install                  = ""   # "" = i-mux's command (the popup for a missing agent runs it)
 
 [agents.codex]
 bin                      = ""
@@ -304,6 +308,7 @@ home                     = ""   # "" = $CODEX_HOME or ~/.codex
 resume                   = true
 patterns                 = []
 replace_default_patterns = false
+install                  = ""   # "" = i-mux's command (the popup for a missing agent runs it)
 
 # OpenCode: works with any model endpoint you configure in OpenCode itself
 # (OpenAI-compatible APIs, Anthropic, Ollama, NVIDIA, Groq ...).
@@ -316,4 +321,5 @@ home                     = ""   # "" = $XDG_DATA_HOME/opencode or ~/.local/share
 resume                   = true
 patterns                 = []
 replace_default_patterns = false
+install                  = ""   # "" = i-mux's command (the popup for a missing agent runs it)
 ```

@@ -296,6 +296,18 @@ func (w *WS) ShowLimits(client string) error {
 	return w.T.Spawn(c)
 }
 
+// ShowInstall opens the popup for agent id, which is not installed: what
+// installs it, a button that does, then the chat in pane can continue in it
+// (§9.3 "Not installed").
+func (w *WS) ShowInstall(id session.AgentID, pane, client string) error {
+	c := tmux.Cmd{"display-popup"}
+	if client != "" {
+		c = append(c, "-c", client)
+	}
+	args := append([]string{w.Self, "__install", string(id)}, uiTarget(pane, client)...)
+	return w.T.Spawn(append(c, "-E", "-w", "72", "-h", "13", tmux.ShJoin(args...)))
+}
+
 // OptSidebarOff marks a window whose sidebar was turned off (prefix b): the
 // watcher leaves it without one.
 const OptSidebarOff = "@imux_sidebar_off"

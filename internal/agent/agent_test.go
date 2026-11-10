@@ -208,3 +208,19 @@ func TestReadDirArgs(t *testing.T) {
 		t.Fatal("empty dir or unknown agent")
 	}
 }
+
+// The config's install command wins over i-mux's; OpenCode's hint is prose,
+// its command is not.
+func TestInstallCommand(t *testing.T) {
+	cfg := config.Default()
+	if got := Install(cfg, session.Codex); got != "npm i -g @openai/codex" {
+		t.Errorf("codex: %q", got)
+	}
+	if got := Install(cfg, session.OpenCode); got != "curl -fsSL https://opencode.ai/install | bash" {
+		t.Errorf("opencode: %q", got)
+	}
+	cfg.Agents = map[string]*config.Agent{"codex": {Install: "brew install codex"}}
+	if got := Install(cfg, session.Codex); got != "brew install codex" {
+		t.Errorf("configured: %q", got)
+	}
+}

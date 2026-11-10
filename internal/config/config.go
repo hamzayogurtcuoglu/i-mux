@@ -60,6 +60,7 @@ type Agent struct {
 	Resume                 bool      `toml:"resume"`
 	Patterns               []Pattern `toml:"patterns"`
 	ReplaceDefaultPatterns bool      `toml:"replace_default_patterns"`
+	Install                string    `toml:"install"`
 }
 
 // normalize turns empty lists into nil so that `args = []` equals the default.

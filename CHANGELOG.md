@@ -6,8 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-11-10
+
 ### Added
 
+- **Install a missing agent from its button.** A click on an agent that is not installed under
+  **Continue this chat in** (or on the agent bar) opens a small window: what to run, **Install
+  now** (it runs the vendor's command and shows its output) and **Close**; once installed, Enter
+  continues the chat in it. Without npm (Node.js) or curl it says how to get them first.
+  `[agents.<name>] install` replaces the command.
 - **Choose where a new agent opens.** The **+** next to **Agents** asks for the agent (or a plain
   Terminal), then where: right, left, below or above the current pane, or in a new tab.
 
