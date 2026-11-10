@@ -126,7 +126,7 @@ func BoundKeys(in *ConfInput) []string {
 		ks = append(ks, "root MouseUp1StatusLeft", "root MouseUp1StatusRight")
 	}
 	if t.Mouse {
-		ks = append(ks, "root MouseDown3Border", "root DoubleClick1Pane", "root TripleClick1Pane")
+		ks = append(ks, "root MouseDown3Border", "root MouseDown1Pane", "root SecondClick1Pane", "root DoubleClick1Pane", "root TripleClick1Pane")
 	}
 	if in.Cfg.Paste.Images {
 		ks = append(ks, "root C-v", "root M-v")
@@ -259,13 +259,21 @@ func GenerateConf(in *ConfInput) string {
 		w("# Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).")
 		w("bind -n MouseDown3Border run-shell -t = -b %s", Quote(UICommand(in.Self, "__menu", pane)))
 		w("# A sidebar acts on a click at once, so a double or triple click on it must not select it")
-		w("# (tmux's own bindings do, 300 ms after a double click: the focus went back to the sidebar).")
-		w("# The click still reaches it; other panes keep tmux's defaults.")
+		w("# (tmux's own bindings do, 300 ms after a double click: the focus went back to the sidebar),")
+		w("# and the second and third press reach a sidebar only if the first did: a click that showed")
+		w("# another tab or project must not act again in that one's sidebar. Other panes keep tmux's")
+		w("# defaults (tmux's MouseDown1Pane, which also notes the pane, @imux_press).")
 		const sidebar = "#{==:#{@imux_role},sidebar}"
 		const mouse = "#{||:#{pane_in_mode},#{mouse_any_flag}}"
-		for _, c := range []struct{ key, sel string }{{"DoubleClick1Pane", "select-word"}, {"TripleClick1Pane", "select-line"}} {
-			w("bind -n %s if -F -t= %s { send -M } { select-pane -t=; if -F %s { send -M } { copy-mode -H; send -X %s; run -d0.3; send -X copy-pipe-and-cancel } }",
-				c.key, Quote(sidebar), Quote(mouse), c.sel)
+		const same = "#{==:#{pane_id},#{@imux_press}}"
+		w("bind -n MouseDown1Pane { set -gF @imux_press '#{mouse_pane}'; select-pane -t=; send -M }")
+		w("bind -n SecondClick1Pane if -F -t= %s { send -M } {}", Quote("#{||:#{!=:#{@imux_role},sidebar},"+same+"}"))
+		for _, c := range []struct{ key, sel, own string }{
+			{"DoubleClick1Pane", "select-word", "send -M"},
+			{"TripleClick1Pane", "select-line", "if -F -t= " + Quote(same) + " { send -M } {}"},
+		} {
+			w("bind -n %s if -F -t= %s { %s } { select-pane -t=; if -F %s { send -M } { copy-mode -H; send -X %s; run -d0.3; send -X copy-pipe-and-cancel } }",
+				c.key, Quote(sidebar), c.own, Quote(mouse), c.sel)
 		}
 	}
 	w("set -g  @imux_keys %s", Quote(strings.Join(BoundKeys(in), ",")))

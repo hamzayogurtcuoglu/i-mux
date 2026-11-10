@@ -335,7 +335,7 @@ func Run(o Options) (folders.Cand, bool, error) {
 					}
 					continue
 				}
-				if ev.Kind == sidebar.EvClick {
+				if ev.Kind == sidebar.EvClick && !sidebar.EarlyClick() {
 					// A click on a list row opens it.
 					list := m.List()
 					if i := m.Top + ev.Y - 4; ev.Y >= 4 && i < len(list) && list[i].Selectable() {

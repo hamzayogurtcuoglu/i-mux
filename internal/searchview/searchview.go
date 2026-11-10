@@ -406,7 +406,7 @@ func Run(o Options) (*search.Match, error) {
 					}
 					continue
 				}
-				if ev.Kind == sidebar.EvClick {
+				if ev.Kind == sidebar.EvClick && !sidebar.EarlyClick() {
 					rows := m.Rows()
 					if i := m.Top + ev.Y - 4; ev.Y >= 4 && i < len(rows) {
 						if rows[i].Match != nil {

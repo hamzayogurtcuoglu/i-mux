@@ -64,22 +64,24 @@ type sidebar struct {
 	save  chan struct{} // ... by sending here
 }
 
-// A click acts at once when its action leaves this sidebar under the
-// pointer and opens nothing over it (atOnce: a view, a folder, a pane of
-// this window); i-mux's tmux.conf keeps tmux's late double click from
-// selecting the sidebar again (§9.3 "Clicks at once"). The second press of a
-// double click still reaches the sidebar: a click on the same row within
-// ClickIgnore of the previous one is dropped, so an action never runs twice,
-// and a quick click on another row still counts.
+// A click acts at once (§9.3 "Clicks at once"). i-mux's tmux.conf keeps
+// tmux's late double click from selecting the sidebar again, and passes the
+// second press of a double click only to the sidebar the first went to: a
+// click that showed another tab or project does not act again there. In
+// this sidebar a click on the same row within ClickIgnore of the previous
+// one is dropped, so an action never runs twice, and a quick click on
+// another row still counts. i-mux's popups ignore the clicks of their first
+// moments (PopupGuard): the second press lands on them.
 //
-// Any other click waits OpenAfter, until a double click is over: its second
-// press would land on the menu, popup or window the first one opened (and
-// close the menu or choose its item), and before tmux 3.5 the button's
-// release closes a menu.
+// A click that opens a tmux menu where menus take no mouse (before tmux
+// 3.5: the button's release closes one, and so does a second press), or the
+// command prompt, waits OpenAfter, until a double click is over (waits).
 var (
 	OpenAfter   = 350 * time.Millisecond
 	ClickIgnore = 400 * time.Millisecond
 	SpinEvery   = 120 * time.Millisecond
+	// FreshEvery: a sidebar a client shows gathers this often (FreshTTL).
+	FreshEvery = 3 * time.Second
 )
 
 // Run draws the sidebar until its window has no other pane, stdin closes or
@@ -143,6 +145,8 @@ func Run(ctx context.Context, o Options) error {
 	// exec, only while one is shown.
 	spin := time.NewTicker(SpinEvery)
 	defer spin.Stop()
+	fresh := time.NewTicker(FreshEvery)
+	defer fresh.Stop()
 	if s.redraw(ctx) {
 		return nil
 	}
@@ -170,6 +174,10 @@ func Run(ctx context.Context, o Options) error {
 			continue
 		case <-tick.C:
 			upgrade()
+		case <-fresh.C:
+			if !s.win.Visible {
+				continue // nobody sees it; a switch to it signals a redraw
+			}
 		case <-spin.C:
 			if s.model.Animated() {
 				s.model.Tick++
@@ -193,17 +201,24 @@ func Run(ctx context.Context, o Options) error {
 			}
 			var evs []Event
 			evs, pending = Parse(append(pending, b...), true)
-			gather := false
+			gather, paint := false, false
 			for _, ev := range evs {
 				// The pointer moving and a right-click (its menu) change
-				// nothing to gather.
-				if ev.Kind != EvMove && ev.Kind != EvRightClick {
+				// nothing to gather; a click's action gathers when it runs.
+				switch ev.Kind {
+				case EvMove, EvRightClick:
+				case EvClick:
+					paint = true // the row it selected
+				default:
 					gather = true
 				}
 				s.handle(ctx, ev)
 			}
 			if !gather {
-				continue // the pointer moved: drawn from the model, no tmux
+				if paint {
+					s.draw()
+				}
+				continue // drawn from the model, no tmux
 			}
 		}
 		if s.redraw(ctx) {
@@ -277,15 +292,15 @@ func isMenu(k ActionKind) bool {
 	return false
 }
 
-// atOnce reports whether a click's action may run at once (see OpenAfter).
-func (s *sidebar) atOnce(a Action) bool {
+// waits reports whether a click's action waits OpenAfter (see there).
+func (s *sidebar) waits(ctx context.Context, a Action) bool {
 	switch a.Kind {
-	case ActNone, ActRefresh, ActView, ActToggleDir, ActFold:
-		return true
-	case ActFocus:
-		return s.here(a.Pane)
+	case ActCommit, ActRename:
+		return true // the command prompt
+	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm, ActSuggest:
+		return !s.t.MenuTakesMouse(ctx)
 	}
-	return false
+	return isMenu(a.Kind) && !s.t.MenuTakesMouse(ctx)
 }
 
 // here reports whether pane id is in this sidebar's window.
@@ -467,11 +482,11 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			s.selected = a.Path
 			s.menuX, s.menuY = ev.X, ev.Y
 		}
-		wait := OpenAfter
-		if s.atOnce(a) {
-			wait = 0
+		wait := time.Duration(0)
+		if s.waits(ctx, a) {
+			wait = OpenAfter
 		}
-		// The loop runs it (after this input's redraw), even at once.
+		// The loop runs it (and gathers then), even at once.
 		time.AfterFunc(wait, func() { s.clicks <- a })
 		return
 	}

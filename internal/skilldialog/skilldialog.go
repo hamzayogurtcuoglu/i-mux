@@ -618,7 +618,9 @@ func Run(m *Model, in, out *os.File) (Result, error) {
 			case sidebar.EvPaste:
 				m.Paste(ev.Text)
 			case sidebar.EvClick:
-				res, done = m.Click(ev.X, ev.Y)
+				if !sidebar.EarlyClick() {
+					res, done = m.Click(ev.X, ev.Y)
+				}
 			}
 			if done {
 				return res, nil

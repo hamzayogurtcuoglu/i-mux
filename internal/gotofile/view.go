@@ -297,6 +297,9 @@ func Run(o Options) (string, int, error) {
 						m.Scroll(3)
 					}
 				case sidebar.EvClick:
+					if sidebar.EarlyClick() {
+						continue
+					}
 					if i := m.Top + ev.Y - header - 1; ev.Y > header && i < len(m.Results) {
 						m.Sel = i
 						p, line, _ := m.Chosen()

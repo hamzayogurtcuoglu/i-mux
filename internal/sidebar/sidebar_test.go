@@ -483,39 +483,49 @@ func TestMoveWraps(t *testing.T) {
 	}
 }
 
-// TestClickAtOnce: a click that leaves the sidebar under the pointer acts at
-// once; one that opens something over it, or shows another window, waits
-// until a double click would be over.
+// TestClickAtOnce: a click acts at once, also when it shows another window
+// or project or opens a popup; one that opens a tmux menu waits where menus
+// take no mouse (before tmux 3.5), one that opens the command prompt always.
 func TestClickAtOnce(t *testing.T) {
+	if _, err := exec.LookPath("tmux"); err != nil {
+		t.Skip("tmux not installed")
+	}
 	defer func(d time.Duration) { OpenAfter = d }(OpenAfter)
 	OpenAfter = time.Hour
-	s := &sidebar{sel: NoItem, clicks: make(chan Action, 4), model: Model{Panes: []PaneRow{{ID: "%1"}}}}
+	ctx := context.Background()
+	tc := &tmux.Client{Bin: "tmux", Runner: tmux.ExecRunner{}}
+	menus := !tc.MenuTakesMouse(ctx)
+	s := &sidebar{t: tc, sel: NoItem, clicks: make(chan Action, 4), model: Model{Panes: []PaneRow{{ID: "%1"}}}}
 	for i, c := range []struct {
-		a   Action
-		now bool
+		a    Action
+		wait bool
 	}{
-		{Action{Kind: ActView, Section: ViewExplorer}, true},
-		{Action{Kind: ActToggleDir, Path: "src"}, true},
-		{Action{Kind: ActFocus, Pane: "%1"}, true},
+		{Action{Kind: ActView, Section: ViewExplorer}, false},
+		{Action{Kind: ActToggleDir, Path: "src"}, false},
+		{Action{Kind: ActFocus, Pane: "%1"}, false},
 		{Action{Kind: ActFocus, Pane: "%9"}, false}, // in another window
 		{Action{Kind: ActProject, Session: "other"}, false},
-		{Action{Kind: ActNewAgent}, false}, // a menu
-		{Action{Kind: ActOpenFile, Path: "a.go"}, false},
+		{Action{Kind: ActSwitch, Agent: "codex"}, false},
+		{Action{Kind: ActOpenFile, Path: "a.go"}, false}, // a popup
+		{Action{Kind: ActSearch}, false},
+		{Action{Kind: ActNewAgent}, menus},
+		{Action{Kind: ActSettings}, menus},
+		{Action{Kind: ActRename}, true}, // the command prompt
 	} {
 		s.screen = Screen{Lines: []Line{{Text: "row", Action: c.a}}}
 		s.lastClick = time.Time{}
-		s.handle(context.Background(), Event{Kind: EvClick, X: 1, Y: 1})
+		s.handle(ctx, Event{Kind: EvClick, X: 1, Y: 1})
 		wait := 5 * time.Second
-		if !c.now {
+		if c.wait {
 			wait = 100 * time.Millisecond
 		}
 		select {
 		case a := <-s.clicks:
-			if !c.now || a != c.a {
+			if c.wait || a != c.a {
 				t.Errorf("%d: %+v ran at once", i, a)
 			}
 		case <-time.After(wait):
-			if c.now {
+			if !c.wait {
 				t.Errorf("%d: %+v waited", i, c.a)
 			}
 		}

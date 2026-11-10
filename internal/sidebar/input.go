@@ -3,6 +3,7 @@ package sidebar
 import (
 	"bytes"
 	"strconv"
+	"time"
 	"unicode/utf8"
 )
 
@@ -229,3 +230,14 @@ func mouse(body string, final byte) (Event, bool) {
 	}
 	return Event{}, false
 }
+
+// PopupGuard is how long a popup's program ignores clicks after it starts:
+// the click that opened it acts at once, and a double click's second press
+// lands on the popup (§9.3 "Clicks at once").
+const PopupGuard = 400 * time.Millisecond
+
+var started = time.Now()
+
+// EarlyClick reports whether a click comes within PopupGuard of this
+// process's start, so a popup drops it.
+func EarlyClick() bool { return time.Since(started) < PopupGuard }

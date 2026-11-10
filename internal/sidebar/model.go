@@ -185,6 +185,7 @@ type Window struct {
 	Panes   string // the window's panes (ids), to tell a drag from a closed pane
 	Last    string
 	Reveal  string // OptReveal: a path to reveal in the explorer
+	Visible bool   // the active window of a session a client shows
 }
 
 const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}\t#{@imux_state_at}\t#{@imux_done_at}\t#{@imux_seen}\t#{@imux_start}\t#{session_attached}\t#{pane_title}"
@@ -270,13 +271,23 @@ type gitCache struct {
 
 const gitTTL = 20 * time.Second
 
+// FreshTTL keeps the git status of the project a sidebar shows while a
+// client shows it (it gathers every FreshEvery then): new and changed files
+// appear within a few seconds.
+const FreshTTL = 2 * time.Second
+
 func (s *Source) gitInfo(ctx context.Context, dir string) gitinfo.Info {
+	return s.gitInfoTTL(ctx, dir, gitTTL)
+}
+
+// gitInfoTTL is gitInfo with results kept for ttl.
+func (s *Source) gitInfoTTL(ctx context.Context, dir string, ttl time.Duration) gitinfo.Info {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.git == nil {
 		s.git = map[string]gitCache{}
 	}
-	if c, ok := s.git[dir]; ok && s.Now().Sub(c.at) < gitTTL {
+	if c, ok := s.git[dir]; ok && s.Now().Sub(c.at) < ttl {
 		return c.info
 	}
 	collect := s.Git
@@ -344,7 +355,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}\t" + PanesFormat + "\t#{session_windows}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}\t" + PanesFormat + "\t#{session_windows}\t#{window_active}\t#{session_attached}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}\t#{client_termname}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -356,13 +367,14 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	fold := map[string]bool{}
 	view := ViewAgents
 	closed, program := false, ""
-	if rows := tmux.Rows(sec["me"], 15); len(rows) > 0 {
+	if rows := tmux.Rows(sec["me"], 17); len(rows) > 0 {
 		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges || v == ViewSkills {
 			view = v
 		}
 		closed, program = rows[0][10] == "1", rows[0][11]
 		win.Reveal, win.Panes = rows[0][12], rows[0][13]
 		win.Windows, _ = strconv.Atoi(rows[0][14])
+		win.Visible = rows[0][15] == "1" && rows[0][16] != "" && rows[0][16] != "0"
 		r := rows[0]
 		tabAuto, tabState = r[6], r[7]
 		for _, f := range strings.Split(r[8], ",") {
@@ -591,13 +603,17 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 
 	cwd := panes[target].cwd
 	m.Project, m.CWD = filepath.Base(cwd), cwd
+	ttl := gitTTL
+	if win.Visible {
+		ttl = FreshTTL // what the user sees: files an agent or editor wrote show soon
+	}
 	if cwd != "" {
-		gi := s.gitInfo(ctx, cwd)
+		gi := s.gitInfoTTL(ctx, cwd, ttl)
 		if gi.State == gitinfo.OK {
 			m.Git, m.Branch, m.Changed = true, gi.Branch, gi.StatusTotal
 			m.Changes = ParseStatus(gi.Status)
 			if len(m.Changes) > 0 {
-				ns := s.numstat(ctx, cwd)
+				ns := s.numstat(ctx, cwd, ttl)
 				for i := range m.Changes {
 					if n, ok := ns[m.Changes[i].Path]; ok {
 						m.Changes[i].Added, m.Changes[i].Removed = n[0], n[1]
@@ -673,10 +689,10 @@ func ParseStatus(lines []string) []ChangeRow {
 
 // numstat returns the added and removed lines per changed file of dir
 // (git diff --numstat HEAD), cached like the status.
-func (s *Source) numstat(ctx context.Context, dir string) map[string][2]int {
+func (s *Source) numstat(ctx context.Context, dir string, ttl time.Duration) map[string][2]int {
 	s.mu.Lock()
 	c := s.git[dir]
-	if c.num != nil && s.Now().Sub(c.numAt) < gitTTL {
+	if c.num != nil && s.Now().Sub(c.numAt) < ttl {
 		s.mu.Unlock()
 		return c.num
 	}

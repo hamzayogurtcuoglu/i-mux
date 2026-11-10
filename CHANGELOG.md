@@ -15,6 +15,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ### Fixed
 
+- **Switching on the left is instant.** A click on a project, on an agent in another tab or
+  project, on "Continue this chat in", on a file or on anything that opens a popup acts on the
+  press (a project took 350 ms, now a few ms). A double click still acts once: its second press
+  reaches the left panel only where the first one went, and i-mux's popups ignore it. Only menus
+  (on tmux older than 3.5, as on Ubuntu 22.04 and 24.04) and questions in the status line still
+  wait a moment.
+- **The left panel stays up to date:** while you look at it, it checks the project every 3 s, so
+  files an agent or editor wrote show within a few seconds.
 - **The spinner turns only while an agent works.** Typing in an agent's input, the panel opening
   or closing (which resizes the agents' panes) and a restart of i-mux's watcher (after every
   update or settings change) all counted as work: a project's spinner turned although its agent

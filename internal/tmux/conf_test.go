@@ -58,7 +58,7 @@ func TestGenerateConfOptions(t *testing.T) {
 	in.Cfg.Tmux.Mouse = false
 	in.AgentBar = ""
 	got := GenerateConf(in)
-	for _, bad := range []string{"bind -n 'C-\\'", "MouseDown1Status", "MouseDown3Border", "DoubleClick1Pane", "TripleClick1Pane", "status 2", "status-format[1]"} {
+	for _, bad := range []string{"bind -n 'C-\\'", "MouseDown1Status", "MouseDown3Border", "MouseDown1Pane", "SecondClick1Pane", "DoubleClick1Pane", "TripleClick1Pane", "status 2", "status-format[1]"} {
 		if strings.Contains(got, bad) {
 			t.Errorf("unexpected %q in:\n%s", bad, got)
 		}
@@ -187,14 +187,16 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 	if !strings.Contains(keys, "__menu") {
 		t.Fatalf("root menu key not bound:\n%s", keys)
 	}
-	dbl := ""
-	for _, l := range strings.Split(keys, "\n") {
-		if strings.Contains(l, " DoubleClick1Pane ") {
-			dbl = l
+	for key, want := range map[string]string{"DoubleClick1Pane": "@imux_role", "MouseDown1Pane": "@imux_press", "SecondClick1Pane": "@imux_press"} {
+		bound := ""
+		for _, l := range strings.Split(keys, "\n") {
+			if strings.Contains(l, " "+key+" ") {
+				bound = l
+			}
 		}
-	}
-	if !strings.Contains(dbl, "@imux_role") {
-		t.Fatalf("i-mux's double click is not bound: %q", dbl)
+		if !strings.Contains(bound, want) {
+			t.Fatalf("i-mux's %s is not bound: %q", key, bound)
+		}
 	}
 	// A changed config unbinds keys it no longer uses.
 	in.Cfg.Tmux.MenuKeyRoot = "M-m"

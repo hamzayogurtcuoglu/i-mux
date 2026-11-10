@@ -241,6 +241,39 @@ func TestSidebarDoubleClickFocus(t *testing.T) {
 	}
 }
 
+// TestSidebarDoubleClickProject (T47.1): a double click on another project
+// switches to it at once, and once: its second press does not act in that
+// project's sidebar, where the same row is the first project.
+func TestSidebarDoubleClickProject(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	agentPane, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	dir := filepath.Join(t.TempDir(), "beta")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	h.mustImux("open", "-d", dir)
+	h.run("claude", 2)
+	c, _ := h.attach(140, 40)
+	first := strings.TrimSpace(h.paneOpt(agentPane, "#{session_name}"))
+	h.mustTmux("switch-client", "-t", first)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	session := func() string { return strings.TrimSpace(h.mustTmux("list-clients", "-F", "#{client_session}")) }
+	x, y := h.rowOf(bar, "beta")
+	start := time.Now()
+	c.Click(0, x, y)
+	time.Sleep(80 * time.Millisecond)
+	c.Click(0, x, y)
+	h.waitFor("the client in beta", 5*time.Second, func() bool { return session() != first })
+	if d := time.Since(start); d > 300*time.Millisecond {
+		t.Errorf("the switch took %v", d)
+	}
+	time.Sleep(time.Second) // past tmux's double click
+	if session() == first {
+		t.Fatal("the second press switched back to the first project")
+	}
+}
+
 // TestSidebarProjectsNamesChanges (T11.6): the sidebar's CHANGES row opens
 // the file's diff, "Name this pane" names the pane (quotes are safe), and
 // the Projects + opens another folder as a project and switches to it;
