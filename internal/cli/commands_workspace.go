@@ -260,6 +260,7 @@ func runSplit(e *Env, args []string) error {
 	fs := newFlags(e, "split")
 	horiz := fs.Bool("h", false, "split side by side")
 	vert := fs.Bool("v", false, "split one above the other (default)")
+	before := fs.Bool("before", false, "the new pane left of (-h) or above (-v) the pane")
 	paneF := fs.String("pane", "", "pane to split (default: this pane, $TMUX_PANE)")
 	clientF := fs.String("client", "", "tmux client to show messages on")
 	fromF := fs.String("from-session", "", "continue this conversation (<agent>:<id>) in the new pane")
@@ -268,7 +269,7 @@ func runSplit(e *Env, args []string) error {
 		return err
 	}
 	if len(pos) != 1 || *horiz && *vert {
-		return &UsageError{Msg: i18n.T("cli.usage", "split <agent|shell> [-h|-v]")}
+		return &UsageError{Msg: i18n.T("cli.usage", "split <agent|shell> [-h|-v] [--before]")}
 	}
 	var id session.AgentID
 	shell := pos[0] == workspace.ShellAgent
@@ -319,7 +320,7 @@ func runSplit(e *Env, args []string) error {
 		return nil
 	}
 	if shell {
-		np, err := w.SplitShell(ctx, p.ID, p.CWD, *horiz)
+		np, err := w.SplitShell(ctx, p.ID, p.CWD, *horiz, *before)
 		if err != nil {
 			w.Message(ctx, *clientF, pane, err.Error())
 			return err
@@ -327,7 +328,7 @@ func runSplit(e *Env, args []string) error {
 		fmt.Fprintln(e.Stdout, np)
 		return nil
 	}
-	np, err := w.Split(ctx, p.ID, id, p.CWD, *horiz)
+	np, err := w.Split(ctx, p.ID, id, p.CWD, *horiz, *before)
 	if err != nil {
 		w.Message(ctx, *clientF, pane, workspace.SwitchError(id, err))
 		return err

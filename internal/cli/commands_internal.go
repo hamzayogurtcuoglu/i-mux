@@ -63,6 +63,8 @@ func runMenu(e *Env, args []string) error {
 	pinF := fs.Bool("pin", false, "the picker for pinning conversations")
 	sessionF := fs.String("session", "", "menu for one conversation (<agent>:<id>)")
 	splitF := fs.String("split", "", "ask which agent a new pane starts with: h (right) or v (down)")
+	newF := fs.Bool("new", false, "ask which agent a new pane starts with, then where")
+	placeF := fs.String("place", "", "ask where agent (or shell) opens: right, left, down, up or a new tab")
 	keysF := fs.Bool("keys", false, "show the keys")
 	limitsF := fs.Bool("limits", false, "open the limits popup")
 	changesF := fs.Bool("changes", false, "menu of the changed files")
@@ -130,6 +132,10 @@ func runMenu(e *Env, args []string) error {
 		}
 	case *splitF != "":
 		m = w.SplitMenu(p, client, *splitF == "h")
+	case *newF:
+		m = w.NewAgentMenu(p, client)
+	case *placeF != "":
+		m = w.PlaceMenu(p, client, *placeF)
 	case *sessionsF:
 		if *pinF {
 			m = w.PinMenu(ctx, sources.New(cfg), p, client, *pageF)

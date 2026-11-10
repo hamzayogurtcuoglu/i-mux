@@ -8,6 +8,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -171,6 +172,55 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal bool) *Menu {
 		Cmd: w.ui(append([]string{"split", ShellAgent, dir}, uiTarget(p.ID, client)...)...),
 	})
 	return m
+}
+
+// NewAgentMenu asks which agent a new pane starts with (the sidebar's "+"
+// of Agents); PlaceMenu then asks where it opens. In the project's "No
+// agents" pane the agent starts in its place.
+func (w *WS) NewAgentMenu(p *Pane, client string) *Menu {
+	if p.IsEmpty() {
+		return w.SplitMenu(p, client, true)
+	}
+	m := &Menu{Title: i18n.T("new_agent.title")}
+	for _, a := range agent.Ordered(w.Cfg) {
+		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: w.ui(append([]string{"__menu", "--place", string(a.ID)}, uiTarget(p.ID, client)...)...)}
+		if !w.Installed(a.ID) {
+			it.Name += " " + i18n.T("menu.not_installed")
+			it.Disabled, it.Key = true, ""
+		} else if until := w.LimitedUntil(a.ID); until != "" {
+			it.Name += " " + i18n.T("sidebar.limited", until)
+		}
+		m.Items = append(m.Items, it)
+	}
+	m.Items = append(m.Items, Separator(), MenuItem{
+		Name: i18n.T("menu.terminal"), Key: "t",
+		Cmd: w.ui(append([]string{"__menu", "--place", ShellAgent}, uiTarget(p.ID, client)...)...),
+	})
+	return m
+}
+
+// PlaceMenu asks where agent id (or ShellAgent) opens: in a new pane right
+// of, left of, below or above p, or in a new tab.
+func (w *WS) PlaceMenu(p *Pane, client, id string) *Menu {
+	name := i18n.T("menu.terminal")
+	if a, ok := agent.Get(session.AgentID(id)); ok {
+		name = a.Short
+	}
+	split := func(dir string, before bool) string {
+		args := []string{"split", id, dir}
+		if before {
+			args = append(args, "--before")
+		}
+		return w.ui(append(args, uiTarget(p.ID, client)...)...)
+	}
+	return &Menu{Title: i18n.T("place.title", name), Items: []MenuItem{
+		{Name: i18n.T("place.right"), Key: "r", Cmd: split("-h", false)},
+		{Name: i18n.T("place.left"), Key: "l", Cmd: split("-h", true)},
+		{Name: i18n.T("place.down"), Key: "d", Cmd: split("-v", false)},
+		{Name: i18n.T("place.up"), Key: "u", Cmd: split("-v", true)},
+		Separator(),
+		{Name: i18n.T("place.tab"), Key: "t", Cmd: w.ui(append([]string{"tab", id}, uiTarget(p.ID, client)...)...)},
+	}}
 }
 
 // ChangesMenu lists the target project's changed files (git status); each

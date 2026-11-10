@@ -6,6 +6,11 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Choose where a new agent opens.** The **+** next to **Agents** asks for the agent (or a plain
+  Terminal), then where: right, left, below or above the current pane, or in a new tab.
+
 ## [0.40.0] - 2026-11-10
 
 ### Added

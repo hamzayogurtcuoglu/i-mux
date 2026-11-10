@@ -153,10 +153,8 @@ type Model struct {
 	Projects []ProjectRow // the current project first
 	Panes    []PaneRow    // the current window's panes (also inside Projects)
 	Agents   []AgentRow
-	Target   string // pane id actions apply to; "" when the window has none
-	NoAgents bool   // the target is the "No agents" pane: nothing to continue
-	TargetW  int    // its size in cells (+ New agent picks the split direction)
-	TargetH  int
+	Target   string          // pane id actions apply to; "" when the window has none
+	NoAgents bool            // the target is the "No agents" pane: nothing to continue
 	Now      time.Time       // for the times shown
 	Tick     int             // spinner frame
 	Fold     map[string]bool // folded sections (@imux_fold)
@@ -408,7 +406,6 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		cwd     string
 		session string
 		window  string
-		w, h    int
 		empty   bool // the "No agents" pane
 	}
 	var all []raw
@@ -426,8 +423,6 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		if p.cwd == "" {
 			p.cwd = r[8]
 		}
-		p.w, _ = strconv.Atoi(r[13])
-		p.h, _ = strconv.Atoi(r[14])
 		stateAt, doneAt, seenAt, start := unix(r[15]), unix(r[16]), unix(r[17]), unix(r[18])
 		if p.row.Agent != "" {
 			p.row.Title = CleanTitle(r[20], host, p.row.Agent)
@@ -494,7 +489,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, NoAgents: panes[target].empty, TargetW: panes[target].w, TargetH: panes[target].h, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program)}
+	m := Model{Target: panes[target].row.ID, NoAgents: panes[target].empty, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program)}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target

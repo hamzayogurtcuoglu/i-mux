@@ -146,19 +146,22 @@ func TestSidebar(t *testing.T) {
 		t.Fatal("the sidebar must never run an agent")
 	}
 
-	// The "+" of Agents asks which agent, then splits the wide agent pane side
-	// by side. A person does not click twice within tmux's double-click time.
+	// The "+" of Agents asks which agent, then where: Codex left of the agent
+	// pane (T48.1). A person does not click twice within tmux's double-click
+	// time.
 	time.Sleep(500 * time.Millisecond)
 	x, y = h.plusOf(bar, "AGENTS")
 	mark := c.Mark()
 	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "Split right: new pane with", 5*time.Second)
+	c.waitScreenAfter(h, mark, "New agent with:", 5*time.Second)
 	c.Write("x")
+	c.waitScreenAfter(h, mark, "Codex: open where?", 5*time.Second)
+	c.Write("l")
 	h.run("codex", 1)
 	var panes string
-	h.waitFor("codex pane next to antigravity", 5*time.Second, func() bool {
+	h.waitFor("codex pane left of antigravity", 5*time.Second, func() bool {
 		panes = strings.Join(strings.Fields(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{@imux_role}:#{@imux_agent}")), " ")
-		return panes == "sidebar: :antigravity :codex"
+		return panes == "sidebar: :codex :antigravity"
 	})
 	h.rowOf(bar, "◎  Codex") // its row
 
@@ -201,18 +204,20 @@ func TestSidebarDoubleClick(t *testing.T) {
 	c.Click(0, x, y)
 	time.Sleep(80 * time.Millisecond)
 	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "Split right: new pane with", 5*time.Second)
+	c.waitScreenAfter(h, mark, "New agent with:", 5*time.Second)
 	time.Sleep(600 * time.Millisecond) // past the double-click window
 	c.Write("x")
+	c.waitScreenAfter(h, mark, "Codex: open where?", 5*time.Second)
+	c.Write("t") // a new tab (T48.1)
 	h.run("codex", 1)
-	h.waitFor("codex in a new pane", 5*time.Second, func() bool {
-		return strings.Contains(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{@imux_agent}"), "codex")
+	h.waitFor("codex in a new tab", 5*time.Second, func() bool {
+		return strings.Contains(h.mustTmux("list-panes", "-s", "-t", agentPane, "-F", "#{window_index}:#{@imux_agent}"), "1:codex")
 	})
 	if got := h.paneOpt(agentPane, "#{@imux_agent}"); got != "claude" {
-		t.Fatalf("the key switched the agent pane to %q instead of splitting", got)
+		t.Fatalf("the key switched the agent pane to %q instead of opening a tab", got)
 	}
-	if n := strings.Count(h.mustTmux("list-panes", "-t", agentPane, "-F", "#{@imux_agent}"), "codex"); n != 1 || h.runs("codex") != 1 {
-		t.Fatalf("split ran %d times (%d codex runs)", n, h.runs("codex"))
+	if n := strings.Count(h.mustTmux("list-panes", "-s", "-t", agentPane, "-F", "#{@imux_agent}"), "codex"); n != 1 || h.runs("codex") != 1 {
+		t.Fatalf("codex opened %d times (%d codex runs)", n, h.runs("codex"))
 	}
 }
 

@@ -33,7 +33,12 @@ func TestTerminalFromMenus(t *testing.T) {
 	c.waitScreenAfter(h, mark, "Terminal (shell)", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 	c.Write("t")
-	h.waitFor("a shell next to claude", 5*time.Second, func() bool { return shells(agentPane) == 1 })
+	c.waitScreenAfter(h, mark, "Terminal (shell): open where?", 5*time.Second)
+	c.Write("d")
+	h.waitFor("a shell below claude", 5*time.Second, func() bool { return shells(agentPane) == 1 })
+	if top := h.paneOpt(agentPane, "#{pane_top}"); top != "1" && top != "0" {
+		t.Errorf("claude moved down (top %s): the shell should be below it", top)
+	}
 	h.rowOf(bar, "›  Terminal")
 
 	window := func() string {

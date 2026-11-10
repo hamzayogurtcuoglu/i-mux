@@ -124,14 +124,23 @@ func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID,
 }
 
 // Split opens a pane with agent id next to pane, in the same directory.
-func (w *WS) Split(ctx context.Context, pane string, id session.AgentID, cwd string, horizontal bool) (string, error) {
-	dir := "-v"
-	if horizontal {
-		dir = "-h"
-	}
+func (w *WS) Split(ctx context.Context, pane string, id session.AgentID, cwd string, horizontal, before bool) (string, error) {
 	return w.launchNew(ctx, Launch{Agent: id, CWD: cwd}, func(cmd []string) tmux.Cmd {
-		return append(tmux.Cmd{"split-window", dir, "-t", pane, "-c", cwd, "-P", "-F", "#{pane_id}"}, cmd...)
+		return append(splitCmd(pane, cwd, horizontal, before), cmd...)
 	})
+}
+
+// splitCmd splits pane: side by side or one above the other, the new pane
+// after it (right, below) or before it (left, above).
+func splitCmd(pane, cwd string, horizontal, before bool) tmux.Cmd {
+	c := tmux.Cmd{"split-window", "-v"}
+	if horizontal {
+		c[1] = "-h"
+	}
+	if before {
+		c = append(c, "-b")
+	}
+	return append(c, "-t", pane, "-c", cwd, "-P", "-F", "#{pane_id}")
 }
 
 // SideBySide is the narrowest pane a new agent opens beside rather than
@@ -261,12 +270,8 @@ var execFunc = syscall.Exec
 const ShellAgent = "shell"
 
 // SplitShell opens the user's shell (no agent) next to pane, in cwd.
-func (w *WS) SplitShell(ctx context.Context, pane, cwd string, horizontal bool) (string, error) {
-	dir := "-v"
-	if horizontal {
-		dir = "-h"
-	}
-	out, err := w.T.Run(ctx, tmux.Cmd{"split-window", dir, "-t", pane, "-c", cwd, "-P", "-F", "#{pane_id}"})
+func (w *WS) SplitShell(ctx context.Context, pane, cwd string, horizontal, before bool) (string, error) {
+	out, err := w.T.Run(ctx, splitCmd(pane, cwd, horizontal, before))
 	if err != nil {
 		return "", err
 	}

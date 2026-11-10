@@ -750,13 +750,8 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActSplitV:
 		s.spawn(append([]string{"__menu", "--split", "v"}, tgt...))
 	case ActNewAgent:
-		// Side by side when the pane is wide (a cell is about twice as
-		// tall as wide), else one above the other.
-		dir := "v"
-		if s.model.TargetW >= 2*s.model.TargetH {
-			dir = "h"
-		}
-		s.spawn(append([]string{"__menu", "--split", dir}, tgt...))
+		// Which agent, then where (beside, below, above, a new tab).
+		s.spawn(append([]string{"__menu", "--new"}, tgt...))
 	case ActSessions:
 		s.spawn(append([]string{"__menu", "--sessions"}, tgt...))
 	case ActLimits:
