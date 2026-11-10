@@ -236,6 +236,28 @@ func TestCopyTextAndReveal(t *testing.T) {
 		!strings.Contains(ran[0], "ShowItems ['file:///a%20b/c'] ") {
 		t.Errorf("linux %q", ran)
 	}
+
+	// The system's browser (D44): none over SSH; WSL hands Windows its path.
+	if sys("linux", nil, "xdg-open").CanBrowse() {
+		t.Error("a server has a browser")
+	}
+	for _, c := range []struct {
+		s      *System
+		target string
+		want   string
+	}{
+		{sys("darwin", nil), "/a b/x.html", "open /a b/x.html <"},
+		{sys("linux", map[string]string{"WSL_DISTRO_NAME": "U"}), "/mnt/c/p/a.txt", `explorer.exe C:\p\a.txt <`},
+		{sys("linux", map[string]string{"WSL_DISTRO_NAME": "U"}), "http://localhost:3000", "explorer.exe http://localhost:3000 <"},
+		{sys("linux", map[string]string{"WSL_DISTRO_NAME": "U"}, "wslview"), "/x.html", "wslview /x.html <"},
+		{sys("linux", map[string]string{"DISPLAY": ":0"}, "xdg-open"), "/x.html", "xdg-open /x.html <"},
+		{sys("linux", map[string]string{"IMUX_BROWSE_COMMAND": "echo"}), "/x.html", "/bin/sh -c echo sh /x.html <"},
+	} {
+		ran = nil
+		if !c.s.CanBrowse() || c.s.Browse(ctx, c.target) != nil || len(ran) != 1 || ran[0] != c.want {
+			t.Errorf("browse %s: %q, want %q", c.target, ran, c.want)
+		}
+	}
 }
 
 func TestOsaError(t *testing.T) {

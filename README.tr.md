@@ -79,6 +79,16 @@ gibi çalışır: oradan açınca düzenlediğin dosyalar GitHub'ın Copilot ekl
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
 GitHub Copilot'a bir kez giriş yaptırır.
 
+**Bölmede web sayfaları:** gezginde bir HTML dosyasına tıklayınca ajanının yanındaki bir bölmede
+[Carbonyl](https://github.com/fathyb/carbonyl) ile açılır: terminalde çizen bir Chromium (bu yüzden
+SSH ve VS Code tüneli üzerinden de çalışır); başka bir sayfaya tıklayınca orada açılır, ikinci tık
+yeniler. Agent'lar yanındaki **+** → **🌐 Web sayfası…** herhangi bir adresi açar (`localhost:3000`
+ya da sadece `3000`). Tarayıcı 74 MB'lık bir indirmedir (diskte yaklaşık 170 MB) ve yalnızca ilk
+istediğinde iner: tık **Kur** (ya da **Tarayıcıda aç**, ya da **Düzenle**) önerir; Ayarlar →
+**🌐 Web önizleme** de öyle, ayrıca önizlemeyi kapatır (HTML dosyaları o zaman düzenleyicide açılır)
+ya da kaldırır. Sayfada Ctrl+C bölmesini kapatır. `imux web install | remove | open <dosya|url>`
+aynısını kabuktan yapar; `[web] browser` yerine başka bir tarayıcı çalıştırır (ör. `w3m`).
+
 **Bildirimler:** bir ajan işini bitirince (en az 10 saniye çalıştıktan sonra) ya da sana bir şey
 sorunca, o sırada ona bakmıyorsan bildirim gelir: macOS'un bildirim merkezi, Linux masaüstününki
 (`notify-send`), SSH'ta ya da sunucuda ise terminalinin kendi bildirimi (iTerm2, Ghostty, WezTerm,
@@ -116,7 +126,7 @@ görünümü değiştirir.
 | Simge | Görünüm |
 |---|---|
 | 🤖 | **Agent'lar:** projelerin (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan bütün agent'lar, her birinin ne yaptığıyla: çalışırken dönen bir işaret, sana bir şey sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve bunun ne kadar önce olduğu; **Agent'lar** başlığı çalışan agent'ları sayar |
-| 📁 | **Dosyalar:** **Ctrl+P** (ya da başlığındaki 📄) editördeki gibi projede dosya bulur: adından harfler yaz (`sbrnd`, `sidebar/render.go`'yu bulur; `ad:42` 42. satırda açar), Enter açar. Projenin dosyaları, editördeki gibi her biri türünün simgesiyle (Nerd Font varsa Seti'ninkiler, yoksa emoji), açık ya da kapalı klasörler ve düzeyleri gösteren girinti çizgileriyle; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir; değişen dosyalar renklidir. **Sağ tık** editördeki menüyü açar: Yeni dosya / Yeni klasör, Yeniden adlandır, Sil (Çöp Sepeti'ne), Kes / Kopyala / Yapıştır, Yolu / Göreli yolu kopyala, Finder'da göster, Terminalde aç, Yanda aç, Klasörde ara, Karşılaştır, Ajana ekle. İmlecin üzerindeki şey parlar; seçili dosya işaretli kalır |
+| 📁 | **Dosyalar:** **Ctrl+P** (ya da başlığındaki 📄) editördeki gibi projede dosya bulur: adından harfler yaz (`sbrnd`, `sidebar/render.go`'yu bulur; `ad:42` 42. satırda açar), Enter açar. Projenin dosyaları, editördeki gibi her biri türünün simgesiyle (Nerd Font varsa Seti'ninkiler, yoksa emoji), açık ya da kapalı klasörler ve düzeyleri gösteren girinti çizgileriyle; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir (HTML dosyası web önizlemede açılır, aşağıda); değişen dosyalar renklidir. **Sağ tık** editördeki menüyü açar: Yeni dosya / Yeni klasör, Yeniden adlandır, Sil (Çöp Sepeti'ne), Kes / Kopyala / Yapıştır, Yolu / Göreli yolu kopyala, Finder'da göster, Terminalde aç, Yanda aç, Klasörde ara, Karşılaştır, Ajana ekle; HTML ve SVG dosyalarında Önizlemeyi Aç / Tarayıcıda Aç. İmlecin üzerindeki şey parlar; seçili dosya işaretli kalır |
 | 🔍 | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar, dosya dosya, ikonu ve eşleşme sayısıyla (dosyaya tıkla: daralt; hepsi için **⊟ Hepsini kapat** ya da Tab; çok dosya varsa kapalı gelir); Enter dosyayı o satırda açar. Uzun listelerde, diff'lerde ve dosyalarda tıklanıp sürüklenebilen ince bir kaydırma çubuğu var |
 | 🔀 | **Git:** editördeki kaynak kontrolü gibi: hazırlanan ve hazırlanmayan değişiklikler (her dosyanın önce adı, sonra gri klasörü), her dosyada ve hepsi için hazırla, geri al ve at (önce sorar); **Commit…** ve yanında **✨**: ajanın (ya da `git.commit_agent`, örneğin ücretsiz Groq anahtarıyla OpenCode) değişikliklerden mesajı yazar, sen commit eder, düzenler ya da başkasını istersin; ↑↓ sayılarıyla pull / push / senkron; dal menüsü (değiştir, yeni dal); geçmiş. Dosyaya tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
 | 🧩 | **Skill'ler:** projenin `<ad>/SKILL.md` skill'leri; beş agent'tan hangilerinin onu gördüğünü (`✻▲◉◎▣`) ve üstbilgisinde sorun varsa `⚠` uyarısını gösterir. Skill'ler `.agents/skills/` altında tutulur ve beş CLI'da birden çalışması için `.claude/skills/` içine otomatik bağlanır. **✨ Yeni skill…** kimin yazacağını (yeni bir bölmede bir agent, bu bölmedeki agent ya da boş bir `SKILL.md` ile sen) ve skill'in ne yapacağını soran bir pencere açar; agent i-mux'un skill yazma rehberiyle başlar, depoyu inceleyip yazar; bir skill'deki **✨** düğmesi (ya da sağ tık) menüsünü açar: Aç, Görüntüle, Agent'a ekle, Agent ile iyileştir, Tüm agent'larla paylaş, Sil |
@@ -126,7 +136,7 @@ görünümü değiştirir.
 |---|---|
 | bir projeye tıkla · **Projeler** yanındaki **+** (ya da `o`) | o projeye geç (projeyi **kapatmak** için mevcut projeye tıkla ya da herhangi birine sağ tıkla) · başka proje aç: adının birkaç harfini yaz, Enter |
 | bir agent'a sağ tıkla (ya da seçili olana tıkla) | menüsü: **Yeniden adlandır…** (sohbet başka CLI'ya geçse de ad kalır, Geçmiş de konuşmayı bu adla listeler) ya da **Agent'ı kapat…** |
-| bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni agent ya da düz **Terminal** aç, sonra yerini seç: sağda, solda, altta, üstte ya da yeni sekmede (sağa / aşağı için `prefix v` / `prefix -`) |
+| bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni agent ya da düz **Terminal** aç, sonra yerini seç: sağda, solda, altta, üstte ya da yeni sekmede (sağa / aşağı için `prefix v` / `prefix -`); ya da **🌐 Web sayfası…** |
 | **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder (kurulu olmayan biri, onu kuran komutu ve **Şimdi kur** düğmesini gösteren küçük bir pencere açar) |
 | bir bölüm başlığı (PROJELER, AGENT'LAR) | bölümü kapatır / açar |
 | **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar, ad verilenler adıyla (konuşmanın **Yeniden adlandır…** öğesi ad verir; devam edince agent adını geri alır) (📌 Sabitle ya da kaldır…, `p`, birini en üstte tutar; **🔍 Metinlerinde ara…**, `/`, bir konuşmayı içinde geçen herhangi bir şeyle bulur) · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |

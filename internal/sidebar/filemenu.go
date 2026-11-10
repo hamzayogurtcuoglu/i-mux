@@ -9,6 +9,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
 )
 
 // Global options of the explorer's menus (§9.3 "Explorer menus and hover").
@@ -39,6 +40,8 @@ type MenuState struct {
 	Path    string // the menu's path (absolute)
 	Reveal  string // i18n key of the reveal item, "" without a file manager
 	VSCode  bool   // VS Code's CLI is there
+	Web     bool   // web pages open in the preview (Open Preview, D44)
+	Browse  bool   // the system has a browser (Open in Browser)
 }
 
 // FileMenuItems lists an explorer menu as display-menu arguments: name,
@@ -70,6 +73,14 @@ func FileMenuItems(self, client, pane string, st MenuState) []string {
 			add("file.vscode", "c", "vscode")
 		}
 		add("file.view", "v", "view")
+		if webview.Previewable(st.Path) {
+			if st.Web {
+				add("file.preview", "w", "preview")
+			}
+			if st.Browse {
+				add("file.browser", "b", "browser")
+			}
+		}
 	} else {
 		add("file.new_file", "n", "new-file")
 		add("file.new_folder", "N", "new-folder")
@@ -155,6 +166,8 @@ func (s *sidebar) fileMenu(ctx context.Context, client string, a Action, x, y in
 		Path:    abs,
 		Reveal:  s.revealKey,
 		VSCode:  editor.VSCode() != "",
+		Web:     s.webOn(),
+		Browse:  s.browse,
 	}
 	items := FileMenuItems(s.o.Self, client, s.model.Target, st)
 	title := filepath.Base(abs)

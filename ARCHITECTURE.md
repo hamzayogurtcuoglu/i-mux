@@ -2238,6 +2238,7 @@ Agents use their own shell tool to call i-mux. Inside a pane, `TMUX`, `TMUX_PANE
 | `imux limits [--json] [--pager]` | Limits panel. |
 | `imux panes`, `read`, `send`, `wait`, `snippet` | Agent bus (§12). |
 | `imux doctor` | tmux presence/version and terminfo, agents installed (paths, versions, nvm PATH), `~/.imux` perms, socket, watcher status, key hints (VS Code), CLI flag sanity checks via `--help` parsing (never with a prompt). |
+| `imux web [install [--yes]\|remove\|open <file\|url> [--as preview\|browser\|edit]]` | The web preview (D44): whether it is on and installed; install or remove its browser; open a page beside the pane. |
 | `imux config [init\|path\|show]` | Write a commented default config / print the path / print the effective config. |
 | `imux version` | Version, commit, build date. |
 | internal | `__exec <spec>`, `__menu [--sessions\|--session <agent>:<id>]`, `__click <range-arg>`, `__pane-died`, `__watch run\|ensure\|stop\|status`, `__status` |

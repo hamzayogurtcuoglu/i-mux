@@ -84,6 +84,16 @@ on there and files you edit open in Neovim with GitHub's Copilot plugin (Tab acc
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
 
+**Web pages in a pane:** a click on an HTML file in the explorer opens it in a pane beside your
+agent, in [Carbonyl](https://github.com/fathyb/carbonyl), a Chromium that draws in the terminal
+(so it works over SSH and a VS Code tunnel too); a click on another page loads it there, a second
+click reloads it. **+** next to Agents → **🌐 Web page…** opens any address (`localhost:3000`, or
+just `3000`). The browser is a 74 MB download (about 170 MB on disk), made only when you first want
+it: the click offers **Install** (or **Open in browser**, or **Edit**), and so does Settings →
+**🌐 Web preview**, which also turns the preview off (HTML files then open in the editor) or removes
+it. Ctrl+C in the page closes its pane. `imux web install | remove | open <file|url>` does the same
+from a shell; `[web] browser` runs another browser instead (e.g. `w3m`).
+
 **Notifications:** when an agent finishes (after working 10 s or more) or asks you something and you
 are not looking at it, a notification comes: macOS's notification center, the Linux desktop's
 (`notify-send`), or, over SSH or on a server, your terminal's own (iTerm2, Ghostty, WezTerm, kitty,
@@ -121,7 +131,7 @@ them) switches its view.
 | Icon | View |
 |---|---|
 | 🤖 | **Agents:** your projects (branch, uncommitted changes) and every agent working in them, with what each one is doing: a spinner while it works, **Needs you** when it asks you something, a green dot when it finished while you were elsewhere, a ring when idle, and how long ago that changed; the **Agents** title counts the agents at work |
-| 📁 | **Files:** **Ctrl+P** (or 📄 in its title) finds a file of the project like the editor's Quick Open: type letters of its name (`sbrnd` finds `sidebar/render.go`; `name:42` opens at line 42), Enter opens it. The project's files, each with the icon of its type as in the editor (Seti's, with a Nerd Font; emoji otherwise), folders open or closed, indent guides for the levels; click a folder to open it, a file to edit it; changed files are colored. **Right-click** gives the editor's menu: New File / New Folder, Rename, Delete (to the Trash), Cut / Copy / Paste, Copy Path / Copy Relative Path, Reveal in Finder, Open in Terminal, Open to the Side, Find in Folder, Compare, Add to Agent. What the pointer is over lights up; the selected file stays marked |
+| 📁 | **Files:** **Ctrl+P** (or 📄 in its title) finds a file of the project like the editor's Quick Open: type letters of its name (`sbrnd` finds `sidebar/render.go`; `name:42` opens at line 42), Enter opens it. The project's files, each with the icon of its type as in the editor (Seti's, with a Nerd Font; emoji otherwise), folders open or closed, indent guides for the levels; click a folder to open it, a file to edit it (an HTML file opens in the web preview, below); changed files are colored. **Right-click** gives the editor's menu: New File / New Folder, Rename, Delete (to the Trash), Cut / Copy / Paste, Copy Path / Copy Relative Path, Reveal in Finder, Open in Terminal, Open to the Side, Find in Folder, Compare, Add to Agent, and Open Preview / Open in Browser for HTML and SVG files. What the pointer is over lights up; the selected file stays marked |
 | 🔍 | **Search:** every file of the project, results as you type, grouped by file with its icon and number of matches (click a file to fold it, **⊟ Collapse all** or Tab for all; many files start folded); Enter opens the file at the line. Long lists, diffs and files have a thin scroll bar you can click or drag |
 | 🔀 | **Git:** like an editor's source control: staged and unstaged changes (each file's name, then its folder in gray) with stage, unstage and discard (asks first) on each file and for all; **Commit…**, and **✨** next to it: your agent (or `git.commit_agent`, for example OpenCode with a free Groq key) writes the message from the changes, and you commit it, edit it or ask for another; pull / push / sync with ↑↓ counts; the branch menu (switch, new branch); the history. A click on a file shows the whole file with the changes highlighted, side by side when the window is wide |
 | 🧩 | **Skills:** the project's `<name>/SKILL.md` skills across every agent CLI, with which of the five agents see each one (`✻▲◉◎▣`) and a `⚠` when its front matter is broken. Skills live in `.agents/skills/` and are linked into `.claude/skills/` automatically so one skill works in all five CLIs. **✨ New skill…** opens a dialog that asks who writes it (an agent in a new pane, the agent of the current pane, or you from a blank `SKILL.md`) and what it should do; the agent starts with i-mux's skill-writing guide, inspects the repo and writes it; clicking **✨** on a skill (or right-clicking it) opens its menu: Open, View, Add to Agent, Improve with Agent, Share with all agents, Delete |
@@ -131,7 +141,7 @@ them) switches its view.
 |---|---|
 | click a project · **+** next to **Projects** (or `o`) | switch to it (click the current one, or right-click any, to **close** it) · open another project: type a few letters of its name, Enter |
 | right-click an agent (or click the selected one) | its menu: **Rename…** (the name stays when the chat moves to another CLI, and History lists the conversation by it) or **Close agent…** |
-| click an agent · **+** next to **Agents** | go to it (in any project) · open a new agent, or a plain **Terminal**, then pick where: right, left, down, up or a new tab (`prefix v` / `prefix -` for right / down) |
+| click an agent · **+** next to **Agents** | go to it (in any project) · open a new agent, or a plain **Terminal**, then pick where: right, left, down, up or a new tab (`prefix v` / `prefix -` for right / down); or **🌐 Web page…** |
 | click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation (one that is not installed opens a small window with the command that installs it, and **Install now**) |
 | a section title (PROJECTS, AGENTS) | fold or unfold it |
 | **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations, named ones by their name (a conversation's **Rename…** names it; continuing it gives the agent its name back) (📌 Pin or unpin…, `p`, keeps one at the top; **🔍 Search their text…**, `/`, finds a conversation by anything said in it) · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |

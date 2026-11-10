@@ -196,6 +196,9 @@ func (w *WS) NewAgentMenu(p *Pane, client string) *Menu {
 		Name: i18n.T("menu.terminal"), Key: "t",
 		Cmd: w.ui(append([]string{"__menu", "--place", ShellAgent}, uiTarget(p.ID, client)...)...),
 	})
+	if w.Cfg.Web.Enabled {
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("menu.web_page"), Key: "w", Cmd: w.WebPrompt(p.ID, client)})
+	}
 	return m
 }
 

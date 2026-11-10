@@ -1002,12 +1002,12 @@ slow (about a second).
 User request: see web pages (an HTML file, for example) in i-mux; on by default but downloaded only
 when wanted, installed and turned on or off from Settings.
 
-- [ ] **T52.1 The browser and `imux web`** · M
+- [x] **T52.1 The browser and `imux web`** · M
   - AC: D44, §9.3 "Web preview": `imux web [install|remove|open]`; Carbonyl 0.0.3 downloaded, its
     SHA-256 checked, unpacked into `~/.imux/tools`, `--version` run, missing Linux libraries named;
     `[web] enabled` and `browser`; the pane's `imux __web-pane`; unit tests (assets, URLs, unzip
     with modes and no path outside, install from a test server, the pane's command).
-- [ ] **T52.2 Opening pages from the UI** · M
+- [x] **T52.2 Opening pages from the UI** · M
   - AC: a click on an HTML file opens its preview beside the target (not installed: the popup); a
     second click loads it in the same pane; Open Preview and Open in Browser in the file menu;
     **🌐 Web page…** in "+"; the Settings menu; unit tests (menus, popup); e2e with a fake browser

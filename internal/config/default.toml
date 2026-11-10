@@ -117,6 +117,16 @@ images            = true
 # Run this instead to get the images: it prints image file paths, one a line.
 command           = ""
 
+[web]
+# Web pages open in a pane beside the agent, in a browser that draws in the
+# terminal (Carbonyl, a 74 MB download Settings installs when you first want
+# it): a click on an HTML file in the explorer, Open Preview in its menu,
+# "Web page..." in the + of Agents. false: HTML files open in the editor.
+enabled           = true
+# A browser to run instead, with the URL after its words (e.g. "w3m");
+# "" = i-mux's Carbonyl.
+browser           = ""
+
 [completion]
 # Copilot-like suggestions while you edit a file (Tab accepts): files open in
 # Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim).

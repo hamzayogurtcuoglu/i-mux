@@ -6,6 +6,20 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-11-10
+
+### Added
+
+- **Web pages in a pane.** A click on an HTML file in the explorer opens it in a pane beside your
+  agent, in Carbonyl (a Chromium that draws in the terminal, so it works over SSH and a VS Code
+  tunnel too); another page loads in the same pane, a second click reloads it. **+** next to
+  Agents → **🌐 Web page…** opens any address (`localhost:3000`, or just `3000`), and HTML and SVG
+  files have **Open Preview** and **Open in Browser** in their menu. The preview is on by default,
+  but its browser (a 74 MB download) comes only when you first want it: the click offers to
+  install it, to open the page in your browser instead, or to edit the file. Settings →
+  **🌐 Web preview** installs, removes, turns it off or on, and opens a page; `imux web` does the
+  same from a shell, and `[web] browser` runs another browser instead.
+
 ## [0.43.0] - 2026-11-10
 
 ### Added

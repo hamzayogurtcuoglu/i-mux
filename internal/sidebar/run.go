@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -16,6 +17,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
 )
 
 // Options configure a sidebar process.
@@ -52,6 +54,7 @@ type sidebar struct {
 	menuX      int    // where the last right-click was (the menu opens there)
 	menuY      int
 	revealKey  string // i18n key of "Reveal in Finder" & co., "" for none
+	browse     bool   // the system has a browser (Open in Browser)
 	lastReveal string // OptReveal as last seen
 	revealSeen bool
 	revealRow  string // a revealed path to scroll to
@@ -91,7 +94,7 @@ func Run(ctx context.Context, o Options) error {
 	if o.Safety <= 0 {
 		o.Safety = 15 * time.Second
 	}
-	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), save: make(chan struct{}, 1), revealKey: (&fileops.System{}).Reveal()}
+	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), save: make(chan struct{}, 1), revealKey: (&fileops.System{}).Reveal(), browse: (&fileops.System{}).CanBrowse()}
 	restore, err := rawMode(int(o.In.Fd()))
 	if err == nil {
 		defer restore()
@@ -649,6 +652,18 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		}
 		return
 	case ActOpenFile:
+		if s.webOn() && webview.IsHTML(a.Path) && a.Status == "" && s.model.CWD != "" {
+			// A web page opens in the preview beside the target (D44).
+			args := []string{"web", "open", filepath.Join(s.model.CWD, a.Path)}
+			if s.model.Target != "" {
+				args = append(args, "--pane", s.model.Target)
+			}
+			if client != "" {
+				args = append(args, "--client", client)
+			}
+			s.spawn(args)
+			return
+		}
 		s.popup(client, "90%", "90%", "__edit", a.Path)
 		return
 	case ActFileMenu:
@@ -909,6 +924,11 @@ func (s *sidebar) popup(client, w, h string, args ...string) {
 // file with the changes highlighted (imux __diff, D26).
 func DiffShell(self, status, path string) string {
 	return tmux.ShJoin(self, "__diff", status, path)
+}
+
+// webOn reports whether web pages open in the preview ([web] enabled).
+func (s *sidebar) webOn() bool {
+	return s.o.Source != nil && s.o.Source.Cfg != nil && s.o.Source.Cfg.Web.Enabled
 }
 
 // spawn starts imux with args without waiting for it.

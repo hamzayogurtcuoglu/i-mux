@@ -54,6 +54,7 @@ var settingKeys = map[string]settingKey{
 	"notify":       {"notify", "enabled", []string{"on", "off"}, false},
 	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},
 	"paste_images": {"paste", "images", []string{"on", "off"}, false},
+	"web":          {"web", "enabled", []string{"on", "off"}, false},
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane
@@ -90,7 +91,7 @@ func runSettings(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	usage := &UsageError{Msg: i18n.T("cli.usage", "__settings set <key> <value> | menu [commit-agent] | edit")}
+	usage := &UsageError{Msg: i18n.T("cli.usage", "__settings set <key> <value> | menu [commit-agent|web] | edit")}
 	if len(pos) == 0 {
 		return usage
 	}
@@ -159,8 +160,11 @@ func showSettings(e *Env, pane, client, which string) error {
 		return err
 	}
 	m := w.SettingsMenu(pane, client)
-	if which == "commit-agent" {
+	switch which {
+	case "commit-agent":
 		m = w.CommitAgentMenu(pane, client)
+	case "web":
+		m = w.WebMenu(pane, client)
 	}
 	return w.Show(context.Background(), m, client, pane)
 }

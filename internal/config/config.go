@@ -136,6 +136,12 @@ type Completion struct {
 	Enabled bool `toml:"enabled"`
 }
 
+// Web is the [web] section: web pages in a pane (D44).
+type Web struct {
+	Enabled bool   `toml:"enabled"`
+	Browser string `toml:"browser"` // a command run with the URL; "" = i-mux's Carbonyl
+}
+
 // The sidebar's width in columns (tmux.sidebar_width): what the config may
 // say and what dragging its edge may give it.
 const (
@@ -180,6 +186,7 @@ type Config struct {
 	Completion   Completion        `toml:"completion"`
 	Notify       Notify            `toml:"notify"`
 	Paste        Paste             `toml:"paste"`
+	Web          Web               `toml:"web"`
 	Tmux         Tmux              `toml:"tmux"`
 	Agents       map[string]*Agent `toml:"agents"`
 }
@@ -262,6 +269,7 @@ func Default() *Config {
 		Git:    Git{CommitAgent: "auto"},
 		Notify: Notify{Enabled: true, Sound: true},
 		Paste:  Paste{Images: true},
+		Web:    Web{Enabled: true},
 		Bus: Bus{
 			Enabled:         true,
 			IdleAfter:       D(5 * time.Second),

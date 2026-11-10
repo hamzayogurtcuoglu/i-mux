@@ -165,6 +165,10 @@ func (f *fileCtx) do(op string) error {
 		}
 		_, err := f.w.T.Run(ctx, append(c, "-c", tmux.EscapeFormat(f.root), f.self("__edit", f.path)))
 		return err
+	case "preview":
+		return webOpen(f.w, f.path, f.pane, f.client, "preview", false)
+	case "browser":
+		return f.sys.Browse(ctx, f.path)
 	case "vscode":
 		code := editor.VSCode()
 		if code == "" {

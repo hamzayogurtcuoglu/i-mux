@@ -356,6 +356,59 @@ func (s *System) RevealFile(ctx context.Context, path string) error {
 	return s.run(ctx, "", "xdg-open", dir)
 }
 
+// CanBrowse reports whether this machine has a browser Browse can open:
+// macOS, WSL (Windows'), a Linux desktop; not an SSH session.
+func (s *System) CanBrowse() bool {
+	if s.env("IMUX_BROWSE_COMMAND") != "" {
+		return true
+	}
+	return s.goos() == "darwin" || s.wsl() || s.goos() == "linux" && s.desktop() && s.look("xdg-open")
+}
+
+// Browse opens target (a URL, or a file's path) in the system's browser
+// without waiting for it. IMUX_BROWSE_COMMAND (sh, the target in $1)
+// replaces it (tests).
+func (s *System) Browse(ctx context.Context, target string) error {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	if c := s.env("IMUX_BROWSE_COMMAND"); c != "" {
+		return s.run(ctx, "", "/bin/sh", "-c", c, "sh", target)
+	}
+	switch {
+	case s.goos() == "darwin":
+		return s.run(ctx, "", "open", target)
+	case s.wsl():
+		if s.look("wslview") {
+			return s.run(ctx, "", "wslview", target)
+		}
+		if !strings.Contains(target, "://") {
+			w, err := s.output(ctx, "wslpath", "-w", target)
+			if err != nil {
+				return err
+			}
+			target = strings.TrimSpace(string(w))
+		}
+		// explorer.exe exits 1 even when it worked.
+		_ = s.run(ctx, "", "explorer.exe", target)
+		return nil
+	}
+	return s.start("xdg-open", target)
+}
+
+// start starts a program and leaves it (xdg-open may wait for the browser
+// it starts); Run replaces it in tests.
+func (s *System) start(name string, args ...string) error {
+	if s.Run != nil {
+		return s.Run(context.Background(), "", name, args...)
+	}
+	cmd := exec.Command(name, args...)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go func() { _ = cmd.Wait() }()
+	return nil
+}
+
 // Trash moves path to the Trash. IMUX_TRASH_DIR replaces the Trash (a
 // plain folder; tests).
 func (s *System) Trash(ctx context.Context, path string) error {

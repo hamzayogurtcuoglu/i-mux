@@ -34,8 +34,17 @@ func TestNewAgentAndPlaceMenus(t *testing.T) {
 	if m.Title != "New agent with:" || !strings.Contains(m.Items[0].Cmd, "__menu --place claude --pane %3 --client /dev/ttys1") {
 		t.Fatalf("new agent menu %q %+v", m.Title, m.Items[0])
 	}
-	if last := m.Items[len(m.Items)-1]; last.Key != "t" || !strings.Contains(last.Cmd, "__menu --place shell") {
+	if c := cmdOf(m, "t"); !strings.Contains(c, "__menu --place shell") {
+		t.Errorf("terminal: %q", c)
+	}
+	// Then a web page (D44): its prompt, the answer opened beside %3.
+	if last := m.Items[len(m.Items)-1]; last.Key != "w" || !strings.Contains(last.Cmd, "set-option -g @imux_web_pane %3") ||
+		!strings.Contains(last.Cmd, "-I http://localhost:3000") || !strings.Contains(last.Cmd, "web open --from-option") {
 		t.Errorf("new agent menu ends with %+v", last)
+	}
+	w.Cfg.Web.Enabled = false
+	if c := cmdOf(w.NewAgentMenu(p, "/dev/ttys1"), "w"); c != "" {
+		t.Errorf("web page while the preview is off: %q", c)
 	}
 	m = w.PlaceMenu(p, "", "codex")
 	if m.Title != "Codex: open where?" {

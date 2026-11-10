@@ -30,7 +30,16 @@ type Result int
 const (
 	Close Result = iota
 	Install
+	Browser // open the page in the system's browser (the web preview)
+	Edit    // edit the file instead (the web preview)
 )
+
+// Choice is a button of a popup with its own: its label, the letter that
+// presses it ("" for none) and what it means.
+type Choice struct {
+	Label, Key string
+	R          Result
+}
 
 // Model is the popup's state.
 type Model struct {
@@ -39,6 +48,14 @@ type Model struct {
 	Cmd     string // the command that installs it
 	Missing string // a program the command needs that is not here ("npm"), or ""
 
+	// Title, Text, Choices and Hint make another popup (the web preview's,
+	// D44): its title, its paragraphs (one starting with "\t" is dimmed),
+	// its buttons (the first is the default) and the keys line.
+	Title   string
+	Text    []string
+	Choices []Choice
+	Hint    string
+
 	focus int     // the button Enter presses: 0 the first
 	btnY  int     // the buttons' row (1-based)
 	btnX  [][]int // each button's columns: [from, to) (1-based)
@@ -46,13 +63,25 @@ type Model struct {
 
 // buttons are the popup's choices, the default first.
 func (m *Model) buttons() []Result {
+	if len(m.Choices) > 0 {
+		rs := make([]Result, len(m.Choices))
+		for i, c := range m.Choices {
+			rs[i] = c.R
+		}
+		return rs
+	}
 	if m.Missing != "" {
 		return []Result{Close}
 	}
 	return []Result{Install, Close}
 }
 
-func label(r Result) string {
+func (m *Model) label(r Result) string {
+	for _, c := range m.Choices {
+		if c.R == r {
+			return c.Label
+		}
+	}
 	if r == Install {
 		return i18n.T("install.now")
 	}
@@ -62,8 +91,12 @@ func label(r Result) string {
 // Render draws the popup for w columns and h rows.
 func (m *Model) Render(w, h int) []string {
 	w, h = max(w, 24), max(h, 8)
+	title := i18n.T("install.title", m.Name)
+	if m.Title != "" {
+		title = m.Title
+	}
 	out := []string{
-		" " + m.Icon + " " + bold + sidebar.Fit(i18n.T("install.title", m.Name), w-4) + reset,
+		" " + m.Icon + " " + bold + sidebar.Fit(title, w-4) + reset,
 		faint + strings.Repeat("─", w) + reset,
 	}
 	text := func(s, style string) {
@@ -71,7 +104,16 @@ func (m *Model) Render(w, h int) []string {
 			out = append(out, " "+style+l+reset)
 		}
 	}
-	if m.Missing != "" {
+	if m.Title != "" {
+		for _, p := range m.Text {
+			if t, ok := strings.CutPrefix(p, "\t"); ok {
+				text(t, muted)
+			} else {
+				text(p, "")
+			}
+			out = append(out, "")
+		}
+	} else if m.Missing != "" {
 		text(i18n.T("install.needs", m.Name, m.Missing), "")
 		text(howTo(m.Missing), muted)
 		out = append(out, "", " "+muted+i18n.T("install.then")+reset)
@@ -79,11 +121,13 @@ func (m *Model) Render(w, h int) []string {
 		text(i18n.T("install.why", m.Name), "")
 		out = append(out, "")
 	}
-	out = append(out, "   "+cyan+"$ "+sidebar.Fit(m.Cmd, w-6)+reset, "")
+	if m.Cmd != "" {
+		out = append(out, "   "+cyan+"$ "+sidebar.Fit(m.Cmd, w-6)+reset, "")
+	}
 	row, x := "   ", 4
 	m.btnX = nil
 	for i, b := range m.buttons() {
-		t := " " + label(b) + " "
+		t := " " + m.label(b) + " "
 		if i == m.focus {
 			t = selBg + bold + t + reset
 		} else {
@@ -100,7 +144,10 @@ func (m *Model) Render(w, h int) []string {
 		out = append(out, "")
 	}
 	hint := i18n.T("install.hint")
-	if m.Missing != "" {
+	switch {
+	case m.Hint != "":
+		hint = m.Hint
+	case m.Missing != "":
 		hint = i18n.T("install.hint_close")
 	}
 	return append(out[:h-1], " "+faint+sidebar.Fit(hint, w-2)+reset)
@@ -140,13 +187,18 @@ func wrap(s string, w int) []string {
 // Key handles a key; done reports a choice.
 func (m *Model) Key(k string) (Result, bool) {
 	bs := m.buttons()
+	for _, c := range m.Choices {
+		if c.Key != "" && c.Key == k {
+			return c.R, true
+		}
+	}
 	switch k {
 	case "enter":
 		return bs[m.focus], true
 	case "esc", "q", "ctrl-c":
 		return Close, true
 	case "i":
-		if m.Missing == "" {
+		if m.Missing == "" && len(m.Choices) == 0 {
 			return Install, true
 		}
 	case "tab", "right", "l":
