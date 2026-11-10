@@ -997,6 +997,18 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M49: Install a missing agent from its button (added 2026-11-10)
+
+User request: clicking an agent in "Continue this chat in" that is not installed should show a small
+warning popup with how to install it.
+
+- [x] **T49.1 The install popup** · S
+  - AC: D41, §9.3 "Not installed": the popup (title, why, command, Install now / Close; keys,
+    clicks after 400 ms); the program the command needs missing → how to get it, Close only;
+    `[agents.<id>] install`; Install now runs it, then Enter continues the chat; unit tests (the
+    popup, the command); e2e: click → popup → Install now (a fake install) → Enter → the pane runs
+    the agent.
+
 ## M48: Choose where a new agent opens (added 2026-11-10)
 
 User request: after choosing the agent with the "+" of Agents, ask up, down, left, right, or a new

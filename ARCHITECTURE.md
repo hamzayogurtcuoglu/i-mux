@@ -117,6 +117,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D38 | **"Working" means the agent works: the user typing, a resize and a restarted watcher do not count** (added 2026-11-10, v0.40, at the user's request): a pane is working while its agent's screen changes, except when only its input line and what is below it changed (the user typing; the agents' progress lines are above the input), when a quiet pane was resized (the panel opened or closed) or redraws right after it, and when the watcher meets the pane (a restarted watcher takes the last one's times from `activity.json`). The AGENTS title counts the agents at work. | The user saw the spinner turn at a project whose agent did nothing. Any screen change counted as work: every key typed into an agent, every resize, and every restart of the watcher (each install or Settings change), which then also marked every agent "Done". The count answers "how many are still working?" without reading every row. |
 | D39 | **Every sidebar click acts at once; only a tmux menu (before tmux 3.5) and the command prompt wait** (added 2026-11-10, v0.40, at the user's request): a project, an agent in another tab or project, "Continue this chat in", a file and every popup now act on the press. tmux passes a double click's second and third press to a sidebar only when the first press went to that same pane (`MouseDown1Pane` notes the pane in `@imux_press`), and i-mux's popups ignore clicks in their first 400 ms. A sidebar a client shows gathers every 3 s, with its own project's git status at most 2 s old. | The user still found switching on the left slow after v0.39.1: a project took 350 ms (8 projects open: ~354 ms, almost all of it the wait), against ~30 ms for a view. The wait only kept a double click's second press from acting where the first one led; tmux can tell that itself. Freshness: the watcher's false "working" changes (D38) used to make sidebars redraw now and then; without them a file written outside an agent showed after up to 15 s. |
 | D40 | **The "+" of Agents asks which agent, then where it opens** (added 2026-11-10, v0.41, at the user's request): after the agent (or Terminal), a second menu: Right, Left, Down, Up (a new pane beside the target pane; `split-window -b` for left and up) or a new tab. `prefix v` / `prefix -` keep their fixed direction; the project's "No agents" pane still takes the agent in its place. | The user wants to choose the place instead of i-mux picking right or down from the pane's shape, and to open an agent in a new tab from the same button. |
+| D41 | **An agent that is not installed opens a small popup that installs it** (added 2026-11-10, v0.41, at the user's request): a click on it in "Continue this chat in" or the agent bar shows what it is, the command that installs it and **Install now** / **Close**. Install now runs the command in the popup (its output visible), checks the agent is found, then Enter continues the chat in it. When the command needs a program that is missing (npm without Node.js, curl), the popup says how to get it instead. `[agents.<id>] install` replaces i-mux's command. | The user found the one-line hint in the status line easy to miss and unclear; a popup at the click explains and does the step. Running the vendor's own install command (npm, or its install script) is what the user would type. |
 
 ## 4. Components
 
@@ -1126,7 +1127,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
     window of an attached session); looking at it makes it idle;
   - idle: a dim ring; limited: a red pill with the reset time; exited: ✕.
 - **Continue this chat in:** the other agents as buttons (two per row): click switches the target
-  pane with the conversation. Not installed: dim (click shows the install hint); limited: red.
+  pane with the conversation. Not installed: dim (a click opens the install popup, D41, "Not
+  installed"); limited: red.
 - **Toolbar:** Rename, "± N files" (a menu of the changed files; each opens its diff), History,
   Limits, Help.
 - Default width 32. When rows do not fit: blank lines go, then the other projects' agent groups
@@ -1617,6 +1619,24 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   `\e[?2026h` and `\e[?2026l`, and the terminal shows only the result. Checked on tmux 3.2a with
   a client in a pty and a pane updating in the background: no such pair without the override, 51
   pairs in 2.5 s with it.
+
+#### Not installed (v0.41, D41)
+
+- **Where:** a click on an agent that is not installed in "Continue this chat in" or on the agent
+  bar (`imux __click` → `ClickInstall`) opens `imux __install <agent> --pane P --client C` in a
+  popup (72 × 13).
+- **The popup:** the agent's icon and "Codex is not installed", why ("to continue this chat in
+  Codex, install it first"), the command (`$ npm i -g @openai/codex`), and **Install now** (Enter,
+  or `i`) and **Close** (Esc); Tab moves between them, a click chooses one (after the first
+  400 ms, `PopupGuard`).
+- **The command:** `[agents.<id>] install` when set, else i-mux's: npm for Claude Code, Copilot
+  and Codex, the vendor's script for Antigravity and OpenCode (`agent.Install`). When it starts
+  with a program that is not on the PATH (`npm`, `curl`, `brew`), the popup says how to get it
+  (Node.js from nodejs.org or the package manager) and offers only Close.
+- **Install now:** the popup clears, prints the command and runs it with `sh -c` (its output and
+  questions in the popup). Then: found on the PATH → "✓ Codex is installed. Press Enter to
+  continue this chat in Codex" (Enter runs the same switch as a click, `__click imux:<id>`);
+  installed but not on the PATH i-mux uses → says so; failed → the error. Enter closes.
 
 #### Go to File (v0.31, Ctrl+P)
 
