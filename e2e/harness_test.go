@@ -62,6 +62,9 @@ func newH(t *testing.T, extraConfig string) *H {
 	// Never the real Trash or clipboard (explorer menus).
 	t.Setenv("IMUX_TRASH_DIR", filepath.Join(h.Log, "trash"))
 	t.Setenv("IMUX_COPY_COMMAND", "cat > '"+filepath.Join(h.Log, "copied")+"'")
+	// Under WSL never the real Windows Terminal's or VS Code's fonts (the
+	// sidebar's icons in auto mode).
+	t.Setenv("IMUX_WINDOWS_HOME", filepath.Join(h.Log, "windows-home"))
 	t.Setenv("TMUX", "")
 	t.Setenv("TMUX_PANE", "")
 	t.Setenv("SHELL", "/bin/sh")

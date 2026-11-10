@@ -26,10 +26,11 @@ curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/instal
 ```
 
 Betik işletim sisteminize ve işlemcinize uygun sürümü indirir, sağlama toplamını doğrular, `imux`'u
-`~/.local/bin` dizinine kurar, bu dizini kabuğunuzun PATH'ine ekler (zsh, bash ya da fish) ve tmux
-eksikse (3.2+; tıklanabilir agent çubuğu için 3.4+) kurmayı önerir. Ardından yeni bir terminal açın.
-Seçenekler `sh -s --` sonrasına yazılır, örneğin tmux'u sormadan kurmak için `... | sh -s -- --yes`,
-ya da `--version v0.1.0`, `--prefix DİZİN`, `--no-modify-path`.
+`~/.local/bin` dizinine kurar, bu dizini kabuğunuzun PATH'ine ekler (zsh, bash ya da fish), tmux
+eksikse (3.2+; tıklanabilir agent çubuğu için 3.4+) kurmayı önerir ve kenar panelin simgelerinin
+istediği Nerd Font'u önerir (aşağıda). Ardından yeni bir terminal açın. Seçenekler `sh -s --`
+sonrasına yazılır, örneğin tmux'u ve fontu sormadan kurmak için `... | sh -s -- --yes`, ya da
+`--version v0.1.0`, `--prefix DİZİN`, `--no-modify-path`, `--no-font`.
 
 Go 1.27+ ile kendiniz de derleyebilirsiniz:
 
@@ -57,8 +58,13 @@ imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
 ```
 
 Terminalin bir [Nerd Font](https://www.nerdfonts.com) kullanıyorsa şerit editördeki simgeleri
-gösterir (`brew install --cask font-jetbrains-mono-nerd-font`, sonra terminalin ayarlarından seç);
-yoksa emojileri. Açık görünümün simgesine tıklamak, editördeki gibi şeridin yanındaki paneli
+gösterir, yoksa emojileri. **`imux font install`** (Ayarlar'da da var, kurulum betiği de önerir)
+JetBrainsMono Nerd Font'u indirir, sürümün sağlama toplamıyla denetler, yalnızca senin için kurar
+(yönetici izni gerekmez) ve Windows Terminal'in ve VS Code'un terminal fontunu ona ayarlar; eski
+ayarları `settings.json.imux-backup` içinde saklar. WSL'de bunların hepsini metni çizen terminalin
+çalıştığı Windows tarafında yapar. Sonra terminali yeniden başlat; diğer terminallerde (Terminal.app,
+iTerm2, GNOME Terminal ...) ayarlarından "JetBrainsMono Nerd Font"u seç. `imux font` neyin yerinde
+olduğunu gösterir. Açık görünümün simgesine tıklamak, editördeki gibi şeridin yanındaki paneli
 kapatır ve yeri ajana bırakır; herhangi bir görünümün simgesine tıklamak onu yeniden açar.
 Panelin kenarını sürükleyerek onu genişletir ya da daraltırsın: her sekme bu genişliğe geçer ve
 i-mux onu hatırlar (`tmux.sidebar_width`).

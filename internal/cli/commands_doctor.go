@@ -6,6 +6,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/doctor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/nerdfont"
 )
 
 func init() {
@@ -32,6 +33,10 @@ func runDoctor(e *Env, args []string) error {
 	}
 	rep := doctor.Run(context.Background(), doctor.Options{
 		Cfg: cfg, Tmux: w.T, Self: w.Self, CI: *ci, Watcher: watcherStatus, Resolved: w.Bins(),
+		Font: func() bool {
+			s, err := nerdfont.Detect(context.Background())
+			return err == nil && s.Ready()
+		},
 	})
 	fmt.Fprintln(e.Stdout, i18n.T("doctor.header"))
 	for _, r := range rep.Results {

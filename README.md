@@ -32,10 +32,11 @@ curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/instal
 ```
 
 It downloads the release for your OS and CPU, verifies its checksum, installs `imux` to
-`~/.local/bin`, adds that directory to your shell's PATH (zsh, bash or fish) and offers to install
-tmux (3.2+; 3.4+ for the clickable agent bar) if it is missing. Open a new terminal afterwards.
-Options go after `sh -s --`, for example `... | sh -s -- --yes` to install tmux without asking,
-`--version v0.1.0`, `--prefix DIR` or `--no-modify-path`.
+`~/.local/bin`, adds that directory to your shell's PATH (zsh, bash or fish), offers to install
+tmux (3.2+; 3.4+ for the clickable agent bar) if it is missing, and offers the Nerd Font the
+sidebar's icons need (below). Open a new terminal afterwards. Options go after `sh -s --`, for
+example `... | sh -s -- --yes` to install tmux and the font without asking, `--version v0.1.0`,
+`--prefix DIR`, `--no-modify-path` or `--no-font`.
 
 With Go 1.27+ you can also build it yourself:
 
@@ -62,9 +63,14 @@ cd ~/code/my-project
 imux            # start the first installed agent (or: imux claude)
 ```
 
-The rail shows the editor's icons when your terminal uses a [Nerd Font](https://www.nerdfonts.com)
-(`brew install --cask font-jetbrains-mono-nerd-font`, then pick it in the terminal's settings),
-emoji otherwise. A click on the open view's icon closes the panel beside the rail, as in the
+The rail shows the editor's icons when your terminal uses a [Nerd Font](https://www.nerdfonts.com),
+emoji otherwise. **`imux font install`** (also in Settings, and offered by the installer) downloads
+JetBrainsMono Nerd Font, checks it against the release's checksum, installs it for you alone (no
+administrator rights) and sets Windows Terminal's and VS Code's terminal font to it, keeping their
+old settings in `settings.json.imux-backup`. On WSL it does all this on the Windows side, where
+the terminal draws the text. Restart the terminal afterwards; in other terminals (Terminal.app,
+iTerm2, GNOME Terminal ...) pick "JetBrainsMono Nerd Font" in their settings. `imux font` shows
+what is in place. A click on the open view's icon closes the panel beside the rail, as in the
 editor, and gives the agent the room; a click on any view's icon opens it again. Drag the panel's
 edge to make it wider or narrower: every tab takes the width, and i-mux remembers it
 (`tmux.sidebar_width`).

@@ -27,7 +27,7 @@ func TestSettingsMenu(t *testing.T) {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)|c Versions and updates…| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|m Commit messages by: Auto (the pane's agent)|" +
+	want := "u Update i-mux… (dev)|c Versions and updates…| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|m Commit messages by: Auto (the pane's agent)|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
@@ -43,6 +43,7 @@ func TestSettingsMenu(t *testing.T) {
 	for key, want := range map[string]string{
 		"a": "__completion setup --pane %1 --client c1",
 		"i": "__settings set icons nerd --pane %1 --client c1",
+		"f": "font install --popup",
 		"m": "__settings menu commit-agent --pane %1 --client c1",
 		"w": "__settings set on_arrival continue",
 		"n": "__settings set notify off",
@@ -55,7 +56,7 @@ func TestSettingsMenu(t *testing.T) {
 			t.Errorf("%s: %q lacks %q", key, cmd(key), want)
 		}
 	}
-	if !strings.HasPrefix(cmd("a"), "display-popup -E") || !strings.HasPrefix(cmd("o"), "display-popup -E") {
+	if !strings.HasPrefix(cmd("a"), "display-popup -E") || !strings.HasPrefix(cmd("o"), "display-popup -E") || !strings.HasPrefix(cmd("f"), "display-popup -E") {
 		t.Error("setup and editing run in popups")
 	}
 

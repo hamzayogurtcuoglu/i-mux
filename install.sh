@@ -7,14 +7,17 @@
 # when piping, e.g. `curl ... | sh -s -- --yes`):
 #   --prefix DIR       install directory (default ~/.local/bin; env IMUX_INSTALL_DIR)
 #   --version vX.Y.Z   install this release instead of the latest (env IMUX_VERSION)
-#   --yes              install tmux without asking if it is missing
+#   --yes              install tmux (if missing) and the Nerd Font without asking
 #   --no-modify-path   do not add the install directory to your shell profile
+#   --no-font          do not offer the Nerd Font (env IMUX_NO_FONT=1)
 #
 # Downloads the release archive for this OS and architecture, verifies its
 # sha256 against checksums.txt, installs the binary, and puts the install
 # directory on PATH in your shell profile. If tmux is missing it offers to
 # install it with the system package manager; it asks first and says so
-# before it uses sudo.
+# before it uses sudo. Then it offers the Nerd Font the sidebar's icons need
+# (imux font install: for your user only; on WSL in Windows, where the
+# terminal runs, with Windows Terminal and VS Code set to it).
 set -eu
 
 REPO="hamzayogurtcuoglu/i-mux"
@@ -22,6 +25,8 @@ PREFIX="${IMUX_INSTALL_DIR:-${HOME}/.local/bin}"
 VERSION="${IMUX_VERSION:-}"
 YES=0
 MODIFY_PATH=1
+FONT=1
+[ "${IMUX_NO_FONT:-}" = 1 ] && FONT=0
 BASE_URL="${IMUX_INSTALL_BASE_URL:-https://github.com/${REPO}/releases/download}"
 
 say() { printf '%s\n' "$*"; }
@@ -58,8 +63,12 @@ while [ $# -gt 0 ]; do
 		MODIFY_PATH=0
 		shift
 		;;
+	--no-font)
+		FONT=0
+		shift
+		;;
 	-h | --help)
-		sed -n '2,17p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'
+		sed -n '2,20p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'
 		exit 0
 		;;
 	*) die "unknown option: $1" ;;
@@ -260,6 +269,17 @@ else
 		else
 			say "Skipped. Install tmux yourself, then run: imux doctor"
 		fi
+	fi
+fi
+
+# The sidebar's icons need a Nerd Font where the terminal draws text (D34).
+if [ "$FONT" -eq 1 ] && ! "$PREFIX/imux" font --check >/dev/null 2>&1; then
+	say ""
+	say "The sidebar shows the editor's icons when your terminal has a Nerd Font."
+	if confirm "Install JetBrainsMono Nerd Font (7 MB, for you only) and set your terminal to it?"; then
+		"$PREFIX/imux" font install --yes || say "The font was not installed. Try again later with: imux font install"
+	else
+		say "Skipped. Later: imux font install"
 	fi
 fi
 

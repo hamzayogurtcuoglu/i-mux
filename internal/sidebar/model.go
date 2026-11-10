@@ -775,11 +775,9 @@ func (s *Source) iconTheme(term, program string) string {
 }
 
 // nerdProgram is termfont.NerdFont(program), asked once per program (it
-// reads the terminal's preferences).
+// reads the terminal's preferences). An unknown program ("") is asked too:
+// under WSL that is Windows' default terminal.
 func (s *Source) nerdProgram(program string) bool {
-	if program == "" {
-		return false
-	}
 	if s.nerd == nil {
 		s.nerd = map[string]bool{}
 	}

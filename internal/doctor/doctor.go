@@ -81,6 +81,7 @@ type Options struct {
 	Watcher  func() (running bool, pid int)
 	Resolved map[session.AgentID]agent.Resolved // nil = resolve now
 	Users    func() []string                    // other human users; nil = /etc/passwd
+	Font     func() bool                        // the Nerd Font is in place (nerdfont); nil = not checked
 }
 
 // MinVersions are the oldest agent versions imux's parsers and launch
@@ -125,6 +126,13 @@ func Run(ctx context.Context, o Options) *Report {
 		}
 		if others := users(); len(others) > 0 {
 			r.add(Warn, "doctor.argv_exposure", strings.Join(others, ", "))
+		}
+	}
+	if o.Font != nil && !o.CI {
+		if o.Font() {
+			r.add(OK, "doctor.font_ok")
+		} else {
+			r.add(Info, "doctor.font_missing")
 		}
 	}
 	keyHints(r, o.Cfg)

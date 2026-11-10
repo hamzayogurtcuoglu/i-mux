@@ -1,6 +1,7 @@
 // Package termfont tells whether the user's terminal draws Nerd Font icons
 // (ARCHITECTURE "Icons, Settings on the rail, updates"): some terminals
 // bring the symbols, others draw them only when their font is a Nerd Font.
+// Under WSL the terminal runs on Windows: its settings are read there.
 package termfont
 
 import (
@@ -10,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/jsonc"
 )
 
 // nerdRe matches a Nerd Font's name: "JetBrainsMono Nerd Font",
@@ -26,6 +29,55 @@ var Run = func(name string, args ...string) ([]byte, error) { return exec.Comman
 // Home is the user's home folder; tests replace it.
 var Home = func() string { h, _ := os.UserHomeDir(); return h }
 
+// WSL reports Linux running in WSL, whose terminal runs on Windows; tests
+// replace it.
+var WSL = func() bool {
+	if os.Getenv("WSL_DISTRO_NAME") != "" {
+		return true
+	}
+	b, _ := os.ReadFile("/proc/sys/kernel/osrelease")
+	return strings.Contains(strings.ToLower(string(b)), "microsoft")
+}
+
+// winHomeRe finds a Windows user folder in a WSL path entry.
+var winHomeRe = regexp.MustCompile(`^(/mnt/[a-z]/Users/[^/]+)/`)
+
+// WindowsHomes are the Windows user folders WSL sees: $IMUX_WINDOWS_HOME
+// when set, else the ones on PATH (WSL adds the Windows PATH:
+// /mnt/c/Users/<name>/AppData/...), else every folder in /mnt/*/Users.
+// Tests replace it.
+var WindowsHomes = func() []string {
+	if h := os.Getenv("IMUX_WINDOWS_HOME"); h != "" {
+		return []string{h}
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, p := range filepath.SplitList(os.Getenv("PATH")) {
+		if m := winHomeRe.FindStringSubmatch(p + "/"); m != nil && !seen[m[1]] {
+			seen[m[1]] = true
+			out = append(out, m[1])
+		}
+	}
+	if len(out) == 0 {
+		out, _ = filepath.Glob("/mnt/*/Users/*")
+	}
+	return out
+}
+
+// WTSettings are Windows Terminal's settings files under a user's
+// AppData\Local: the Store's release and preview, and an unpackaged install.
+var WTSettings = []string{
+	"Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json",
+	"Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json",
+	"Microsoft/Windows Terminal/settings.json",
+}
+
+// WTFont is where Windows Terminal keeps the font of every profile.
+var WTFont = []string{"profiles", "defaults", "font", "face"}
+
+// VSCodeFont is VS Code's terminal font setting.
+const VSCodeFont = "terminal.integrated.fontFamily"
+
 // NerdFont reports whether terminal program (TERM_PROGRAM, or the client's
 // terminal name) draws Nerd Font icons.
 func NerdFont(program string) bool {
@@ -38,9 +90,44 @@ func NerdFont(program string) bool {
 	case strings.Contains(p, "iterm"):
 		return IsNerdName(itermFont())
 	case p == "vscode":
-		return IsNerdName(vscodeFont())
+		return anyNerd(vscodeFonts())
+	case p == "windowsterminal":
+		return anyNerd(windowsTerminalFonts())
+	case p == "" && WSL():
+		// Started from the Start menu, Windows hands WSL to its default
+		// terminal and tells it nothing (no TERM_PROGRAM, no WT_SESSION).
+		return anyNerd(windowsTerminalFonts()) || anyNerd(vscodeFonts())
 	}
 	return false
+}
+
+func anyNerd(names []string) bool {
+	for _, n := range names {
+		if IsNerdName(n) {
+			return true
+		}
+	}
+	return false
+}
+
+// windowsTerminalFonts are the fonts of the Windows Terminals WSL sees ("" for
+// one that keeps its default, Cascadia Mono).
+func windowsTerminalFonts() []string {
+	if !WSL() {
+		return nil
+	}
+	var out []string
+	for _, home := range WindowsHomes() {
+		for _, rel := range WTSettings {
+			b, err := os.ReadFile(filepath.Join(home, "AppData", "Local", filepath.FromSlash(rel)))
+			if err != nil {
+				continue
+			}
+			face, _ := jsonc.Get(b, WTFont...)
+			out = append(out, face)
+		}
+	}
+	return out
 }
 
 // terminalFont is the font of Terminal.app's default profile: its archived
@@ -79,22 +166,29 @@ func itermFont() string {
 	return m[1]
 }
 
-// vscodeFont is VS Code's terminal font family.
-func vscodeFont() string {
-	for _, dir := range []string{
+// vscodeFonts are VS Code's terminal fonts: macOS's and Linux's settings,
+// and under WSL the Windows user's (VS Code runs there).
+func vscodeFonts() []string {
+	dirs := []string{
 		filepath.Join(Home(), "Library", "Application Support", "Code", "User"),
 		filepath.Join(Home(), ".config", "Code", "User"),
-	} {
+	}
+	if WSL() {
+		for _, home := range WindowsHomes() {
+			dirs = append(dirs, filepath.Join(home, "AppData", "Roaming", "Code", "User"))
+		}
+	}
+	var out []string
+	for _, dir := range dirs {
 		b, err := os.ReadFile(filepath.Join(dir, "settings.json"))
 		if err != nil {
 			continue
 		}
-		m := regexp.MustCompile(`"terminal\.integrated\.fontFamily"\s*:\s*"([^"]*)"`).FindSubmatch(b)
-		if m != nil {
-			return string(m[1])
+		if f, ok := jsonc.Get(b, VSCodeFont); ok {
+			out = append(out, f)
 		}
 	}
-	return ""
+	return out
 }
 
 // printable keeps the readable runs of b (font names inside archived data).

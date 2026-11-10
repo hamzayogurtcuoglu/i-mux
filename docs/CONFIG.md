@@ -57,7 +57,7 @@ line number.
 | `tmux.sidebar_key_prefix` | `"b"` | prefix + key shows or hides the sidebar. |
 | `tmux.split_right_key_prefix` | `"v"` | prefix + key splits the active pane (asks which agent to start). |
 | `tmux.split_down_key_prefix` | `"-"` |  |
-| `tmux.icons` | `"auto"` | Icons of the sidebar's rail: "nerd" = the editor's icons (needs a Nerd Font in the terminal), "emoji", or "auto" = nerd when a Nerd Font is installed or the terminal brings its symbols (Ghostty, WezTerm, kitty), else emoji. |
+| `tmux.icons` | `"auto"` | Icons of the sidebar's rail: "nerd" = the editor's icons (needs a Nerd Font in the terminal: imux font install puts one there), "emoji", or "auto" = nerd when the terminal's font is a Nerd Font (Terminal.app, iTerm2, VS Code, Windows Terminal) or it brings the symbols (Ghostty, WezTerm, kitty), else emoji. |
 | `tmux.tabs` | `true` | Tab bar at the top: each tab (tmux window) with its name and state, and a + that opens a new tab with the agent you pick. |
 | `tmux.new_tab_key_prefix` | `"c"` | prefix + key opens a new tab (asks which agent); prefix + key names the tab. |
 | `tmux.rename_tab_key_prefix` | `","` |  |
@@ -239,8 +239,9 @@ sidebar_key_prefix = "b"
 split_right_key_prefix = "v"
 split_down_key_prefix  = "-"
 # Icons of the sidebar's rail: "nerd" = the editor's icons (needs a Nerd Font in
-# the terminal), "emoji", or "auto" = nerd when a Nerd Font is installed or the
-# terminal brings its symbols (Ghostty, WezTerm, kitty), else emoji.
+# the terminal: imux font install puts one there), "emoji", or "auto" = nerd when
+# the terminal's font is a Nerd Font (Terminal.app, iTerm2, VS Code, Windows
+# Terminal) or it brings the symbols (Ghostty, WezTerm, kitty), else emoji.
 icons             = "auto"
 # Tab bar at the top: each tab (tmux window) with its name and state, and a
 # + that opens a new tab with the agent you pick.

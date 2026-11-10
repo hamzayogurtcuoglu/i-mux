@@ -232,7 +232,12 @@ func (w *WS) AttachArgv(name string) []string {
 func (w *WS) ExecAttach(name string) error {
 	// The terminal this client runs in: the sidebars pick their icons for
 	// it (termfont). Inside tmux TERM_PROGRAM is tmux's, not the terminal's.
-	if prog := os.Getenv("TERM_PROGRAM"); prog != "" && os.Getenv("TMUX") == "" && prog != "tmux" {
+	// Windows Terminal sets no TERM_PROGRAM, only WT_SESSION (passed to WSL).
+	prog := os.Getenv("TERM_PROGRAM")
+	if prog == "" && os.Getenv("WT_SESSION") != "" {
+		prog = "WindowsTerminal"
+	}
+	if prog != "" && os.Getenv("TMUX") == "" && prog != "tmux" {
 		_, _ = w.T.Run(context.Background(), tmux.Cmd{"set-option", "-g", "@imux_terminal", prog})
 	}
 	argv := w.AttachArgv(name)

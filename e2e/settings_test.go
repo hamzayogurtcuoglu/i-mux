@@ -18,7 +18,7 @@ import (
 // redraws with the new icons; the commit-agent submenu sets the agent.
 func TestSettings(t *testing.T) {
 	h := newH(t, sidebarConfig)
-	_, bar := h.startWithSidebar()
+	agent, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
@@ -71,6 +71,31 @@ func TestSettings(t *testing.T) {
 	if !strings.Contains(string(b), "sidebar = true") || !strings.Contains(string(b), "agent_bar = false") {
 		t.Fatalf("other settings lost:\n%s", b)
 	}
+
+	// Install the Nerd Font for the icons… (M43) runs `imux font install` in
+	// a popup: it shows what is there and asks first (no is the answer
+	// here), or says all is set.
+	time.Sleep(300 * time.Millisecond)
+	mark = c.Mark()
+	h.mustImux("settings", "--pane", agent)
+	c.waitScreenAfter(h, mark, "Install the Nerd Font for the icons", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("f")
+	var out string
+	h.waitFor("the font popup", 20*time.Second, func() bool {
+		out = stripANSI(c.Output()[mark:])
+		return strings.Contains(out, "Go ahead? [Y/n]") || strings.Contains(out, "Press Enter to close.")
+	})
+	if !strings.Contains(out, "Sidebar icons: nerd") || !strings.Contains(out, "JetBrainsMono Nerd Font") {
+		t.Fatalf("font popup:\n%s", out)
+	}
+	if strings.Contains(out, "Go ahead? [Y/n]") {
+		mark = c.Mark()
+		c.Write("n\r")
+		c.waitScreenAfter(h, mark, "Nothing changed.", 5*time.Second)
+	}
+	c.Write("\r")
 }
 
 // TestCompletionEdit (T29.4): with AI completion on and set up, a file

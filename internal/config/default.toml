@@ -145,8 +145,9 @@ sidebar_key_prefix = "b"
 split_right_key_prefix = "v"
 split_down_key_prefix  = "-"
 # Icons of the sidebar's rail: "nerd" = the editor's icons (needs a Nerd Font in
-# the terminal), "emoji", or "auto" = nerd when a Nerd Font is installed or the
-# terminal brings its symbols (Ghostty, WezTerm, kitty), else emoji.
+# the terminal: imux font install puts one there), "emoji", or "auto" = nerd when
+# the terminal's font is a Nerd Font (Terminal.app, iTerm2, VS Code, Windows
+# Terminal) or it brings the symbols (Ghostty, WezTerm, kitty), else emoji.
 icons             = "auto"
 # Tab bar at the top: each tab (tmux window) with its name and state, and a
 # + that opens a new tab with the agent you pick.

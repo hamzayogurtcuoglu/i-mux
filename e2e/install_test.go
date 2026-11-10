@@ -59,7 +59,9 @@ func runInstall(t *testing.T, base, path string, args ...string) (string, error)
 	cmd := exec.Command("sh", append([]string{filepath.Join(testutil.ModuleRoot(t), "install.sh")}, args...)...)
 	// HOME is the test's temporary home (testutil.Isolate), so the profile the
 	// script edits is never the developer's.
-	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH="+path, "SHELL=/bin/zsh", "ZDOTDIR=")
+	// IMUX_NO_FONT: the Nerd Font step has its own test (and must not
+	// touch this machine's fonts).
+	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH="+path, "SHELL=/bin/zsh", "ZDOTDIR=", "IMUX_NO_FONT=1")
 	cmd.Stdin = nil
 	out, err := cmd.CombinedOutput()
 	return string(out), err
@@ -164,7 +166,7 @@ func TestInstallScriptAsksForTmux(t *testing.T) {
 	}
 	prefix := filepath.Join(t.TempDir(), "bin")
 	cmd := exec.Command("sh", filepath.Join(testutil.ModuleRoot(t), "install.sh"), "--prefix", prefix, "--version", "v9.9.9", "--no-modify-path")
-	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+fakeRelease(t, bin, false), "PATH="+tools+":"+prefix)
+	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+fakeRelease(t, bin, false), "PATH="+tools+":"+prefix, "IMUX_NO_FONT=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} // no terminal to ask on
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -178,5 +180,60 @@ func TestInstallScriptAsksForTmux(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(prefix, "imux")); err != nil {
 		t.Fatal("imux not installed")
+	}
+}
+
+// TestInstallScriptOffersFont (M43): after the binary the installer offers
+// the Nerd Font the sidebar's icons need. Without a terminal to ask on and
+// without --yes it only says how; --yes runs `imux font install --yes`;
+// --no-font, or a font already in place (`imux font --check`), skips it.
+func TestInstallScriptOffersFont(t *testing.T) {
+	imuxBin(t)
+	if _, err := exec.LookPath("curl"); err != nil {
+		t.Skip("curl not installed")
+	}
+	testutil.Isolate(t)
+	dir := t.TempDir()
+	calls, ready := filepath.Join(dir, "calls"), filepath.Join(dir, "ready")
+	// A fake imux: it logs how it is run; font --check fails until "ready".
+	fake := filepath.Join(dir, "imux")
+	testutil.WriteFile(t, fake, []byte("#!/bin/sh\necho \"$*\" >>'"+calls+"'\n"+
+		"if [ \"$1 $2\" = 'font --check' ] && [ ! -e '"+ready+"' ]; then exit 1; fi\n"))
+	if err := os.Chmod(fake, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	base := fakeRelease(t, fake, false)
+	tm, _ := exec.LookPath("tmux")
+	prefix := filepath.Join(dir, "bin")
+	install := func(args ...string) (string, string) {
+		t.Helper()
+		_ = os.Remove(calls)
+		cmd := exec.Command("sh", append([]string{
+			filepath.Join(testutil.ModuleRoot(t), "install.sh"),
+			"--prefix", prefix, "--version", "v9.9.9", "--no-modify-path",
+		}, args...)...)
+		cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH="+filepath.Dir(tm)+":/usr/bin:/bin", "IMUX_NO_FONT=")
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} // no terminal to ask on
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("install %v: %v\n%s", args, err, out)
+		}
+		b, _ := os.ReadFile(calls)
+		return string(out), string(b)
+	}
+	out, ran := install()
+	if !strings.Contains(out, "Skipped. Later: imux font install") || ran != "font --check\n" {
+		t.Fatalf("without --yes:\n%s\nran %q", out, ran)
+	}
+	out, ran = install("--yes")
+	if ran != "font --check\nfont install --yes\n" || strings.Contains(out, "Skipped") {
+		t.Fatalf("--yes:\n%s\nran %q", out, ran)
+	}
+	if out, ran = install("--yes", "--no-font"); ran != "" || strings.Contains(out, "Nerd Font") {
+		t.Fatalf("--no-font:\n%s\nran %q", out, ran)
+	}
+	testutil.WriteFile(t, ready, nil)
+	if out, ran = install("--yes"); ran != "font --check\n" || strings.Contains(out, "Nerd Font") {
+		t.Fatalf("font in place:\n%s\nran %q", out, ran)
 	}
 }

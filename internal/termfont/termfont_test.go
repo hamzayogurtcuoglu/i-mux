@@ -23,9 +23,10 @@ func TestIsNerdName(t *testing.T) {
 
 func TestNerdFont(t *testing.T) {
 	home := t.TempDir()
-	oldHome, oldRun := Home, Run
-	defer func() { Home, Run = oldHome, oldRun }()
+	oldHome, oldRun, oldWSL := Home, Run, WSL
+	defer func() { Home, Run, WSL = oldHome, oldRun, oldWSL }()
 	Home = func() string { return home }
+	WSL = func() bool { return false }
 	font := "SFMono-Regular"
 	Run = func(name string, args ...string) ([]byte, error) {
 		a := strings.Join(args, " ")
@@ -64,5 +65,59 @@ func TestNerdFont(t *testing.T) {
 	}
 	if !NerdFont("vscode") {
 		t.Error("VS Code with a Nerd Font")
+	}
+}
+
+// TestNerdFontWSL (M43): under WSL the terminal runs on Windows. Windows
+// Terminal's font (its profiles' default) and the Windows user's VS Code
+// settings decide; started from the Start menu (no TERM_PROGRAM) either
+// does.
+func TestNerdFontWSL(t *testing.T) {
+	win := filepath.Join(t.TempDir(), "Users", "me")
+	oldHome, oldWSL, oldHomes := Home, WSL, WindowsHomes
+	defer func() { Home, WSL, WindowsHomes = oldHome, oldWSL, oldHomes }()
+	Home = func() string { return t.TempDir() }
+	WSL = func() bool { return true }
+	WindowsHomes = func() []string { return []string{win} }
+	write := func(rel, body string) {
+		t.Helper()
+		p := filepath.Join(win, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	wt := "AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+	write(wt, `{"profiles": {"defaults": {}, "list": []}}`)
+	if NerdFont("") || NerdFont("WindowsTerminal") {
+		t.Fatal("Windows Terminal with its default font (Cascadia Mono)")
+	}
+	write(wt, "{\n  // mine\n  \"profiles\": {\"defaults\": {\"font\": {\"face\": \"JetBrainsMono NF\"}}, \"list\": [],},\n}")
+	if !NerdFont("") || !NerdFont("WindowsTerminal") {
+		t.Fatal("Windows Terminal with a Nerd Font")
+	}
+	if NerdFont("vscode") {
+		t.Fatal("VS Code without a font set")
+	}
+	write("AppData/Roaming/Code/User/settings.json", `{"terminal.integrated.fontFamily": "CaskaydiaCove Nerd Font"}`)
+	if !NerdFont("vscode") {
+		t.Fatal("the Windows user's VS Code with a Nerd Font")
+	}
+	WSL = func() bool { return false }
+	if NerdFont("") {
+		t.Fatal("outside WSL an unknown terminal draws no icons")
+	}
+}
+
+func TestWindowsHomes(t *testing.T) {
+	t.Setenv("PATH", "/usr/bin:/mnt/c/Users/hamza.y/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/hamza.y/.dotnet/tools:/mnt/c/WINDOWS")
+	if got := WindowsHomes(); len(got) != 1 || got[0] != "/mnt/c/Users/hamza.y" {
+		t.Fatalf("%q", got)
+	}
+	t.Setenv("IMUX_WINDOWS_HOME", "/elsewhere/me")
+	if got := WindowsHomes(); len(got) != 1 || got[0] != "/elsewhere/me" {
+		t.Fatalf("IMUX_WINDOWS_HOME: %q", got)
 	}
 }

@@ -6,6 +6,25 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-11-10
+
+### Added
+
+- **The Nerd Font comes with i-mux.** `imux font install` downloads JetBrainsMono Nerd Font
+  (Nerd Fonts v3.5.1, checked against its checksum), installs it for you alone without
+  administrator rights, sets Windows Terminal's and VS Code's terminal font to it (their old
+  settings stay in `settings.json.imux-backup`, comments and all kept) and switches the sidebar
+  to the editor's icons. On WSL it does this on the Windows side, where the terminal draws the
+  text. It asks first; `imux font` shows what is in place. The installer offers it (`--yes`
+  installs it, `--no-font` skips it), Settings has **Install the Nerd Font for the icons…**, and
+  `imux doctor` says whether it is set up.
+
+### Fixed
+
+- Icons `auto` under WSL: the terminal runs on Windows, so i-mux now reads Windows Terminal's
+  font and the Windows user's VS Code settings (also when WSL was started from the Start menu,
+  which tells it nothing about the terminal).
+
 ## [0.37.0] - 2026-11-10
 
 ### Changed

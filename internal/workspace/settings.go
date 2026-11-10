@@ -125,6 +125,7 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	}
 	m.Items = append(m.Items,
 		MenuItem{Name: i18n.T("settings.icons", labels(icons)), Key: "i", Cmd: set("icons", next(iconsCycle, icons))},
+		MenuItem{Name: i18n.T("settings.font"), Key: "f", Cmd: w.popupCmd("90%", "70%", "font", "install", "--popup")},
 		MenuItem{Name: i18n.T("settings.commit_agent", commit), Key: "m", Cmd: w.ui(append([]string{"__settings", "menu", "commit-agent"}, tgt...)...)},
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrival)), Key: "w", Cmd: set("on_arrival", other)},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: set("on_limit", next(onLimitCycle, cfg.OnLimit))},
