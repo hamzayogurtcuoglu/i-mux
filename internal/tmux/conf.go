@@ -126,7 +126,7 @@ func BoundKeys(in *ConfInput) []string {
 		ks = append(ks, "root MouseUp1StatusLeft", "root MouseUp1StatusRight")
 	}
 	if t.Mouse {
-		ks = append(ks, "root MouseDown3Border")
+		ks = append(ks, "root MouseDown3Border", "root DoubleClick1Pane", "root TripleClick1Pane")
 	}
 	if in.Cfg.Paste.Images {
 		ks = append(ks, "root C-v", "root M-v")
@@ -160,6 +160,14 @@ func GenerateConf(in *ConfInput) string {
 	w("set -as terminal-features ',*:extkeys'")
 	w("%%endif")
 	w("set -g  @imux_loaded 1")
+	w("# Updates of a pane in the background (a sidebar's spinner) reach the terminal as one")
+	w("# synchronized update (DECSET 2026), with the cursor's way back to the active pane: it never")
+	w("# shows in the sidebar mid-update. tmux 3.2's own Sync is an older form; terminals without")
+	w("# 2026 ignore it. Applies to clients that attach after it is set.")
+	w("%%if \"#{!=:#{@imux_sync},1}\"")
+	w("set -as terminal-overrides ',*:Sync=\\E[?2026%%?%%p1%%{1}%%-%%tl%%eh%%;'")
+	w("%%endif")
+	w("set -g  @imux_sync 1")
 	w("set -s  extended-keys on")
 	w("set -s  escape-time 10")
 	w("set -g  history-limit %d", cfg.Tmux.HistoryLimit)
@@ -250,6 +258,15 @@ func GenerateConf(in *ConfInput) string {
 	if cfg.Tmux.Mouse {
 		w("# Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).")
 		w("bind -n MouseDown3Border run-shell -t = -b %s", Quote(UICommand(in.Self, "__menu", pane)))
+		w("# A sidebar acts on a click at once, so a double or triple click on it must not select it")
+		w("# (tmux's own bindings do, 300 ms after a double click: the focus went back to the sidebar).")
+		w("# The click still reaches it; other panes keep tmux's defaults.")
+		const sidebar = "#{==:#{@imux_role},sidebar}"
+		const mouse = "#{||:#{pane_in_mode},#{mouse_any_flag}}"
+		for _, c := range []struct{ key, sel string }{{"DoubleClick1Pane", "select-word"}, {"TripleClick1Pane", "select-line"}} {
+			w("bind -n %s if -F -t= %s { send -M } { select-pane -t=; if -F %s { send -M } { copy-mode -H; send -X %s; run -d0.3; send -X copy-pipe-and-cancel } }",
+				c.key, Quote(sidebar), Quote(mouse), c.sel)
+		}
 	}
 	w("set -g  @imux_keys %s", Quote(strings.Join(BoundKeys(in), ",")))
 	w("")

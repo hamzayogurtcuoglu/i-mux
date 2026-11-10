@@ -448,6 +448,45 @@ func TestMoveWraps(t *testing.T) {
 	}
 }
 
+// TestClickAtOnce: a click that leaves the sidebar under the pointer acts at
+// once; one that opens something over it, or shows another window, waits
+// until a double click would be over.
+func TestClickAtOnce(t *testing.T) {
+	defer func(d time.Duration) { OpenAfter = d }(OpenAfter)
+	OpenAfter = time.Hour
+	s := &sidebar{sel: NoItem, clicks: make(chan Action, 4), model: Model{Panes: []PaneRow{{ID: "%1"}}}}
+	for i, c := range []struct {
+		a   Action
+		now bool
+	}{
+		{Action{Kind: ActView, Section: ViewExplorer}, true},
+		{Action{Kind: ActToggleDir, Path: "src"}, true},
+		{Action{Kind: ActFocus, Pane: "%1"}, true},
+		{Action{Kind: ActFocus, Pane: "%9"}, false}, // in another window
+		{Action{Kind: ActProject, Session: "other"}, false},
+		{Action{Kind: ActNewAgent}, false}, // a menu
+		{Action{Kind: ActOpenFile, Path: "a.go"}, false},
+	} {
+		s.screen = Screen{Lines: []Line{{Text: "row", Action: c.a}}}
+		s.lastClick = time.Time{}
+		s.handle(context.Background(), Event{Kind: EvClick, X: 1, Y: 1})
+		wait := 5 * time.Second
+		if !c.now {
+			wait = 100 * time.Millisecond
+		}
+		select {
+		case a := <-s.clicks:
+			if !c.now || a != c.a {
+				t.Errorf("%d: %+v ran at once", i, a)
+			}
+		case <-time.After(wait):
+			if c.now {
+				t.Errorf("%d: %+v waited", i, c.a)
+			}
+		}
+	}
+}
+
 // realTmux starts a private tmux server for the test.
 func realTmux(t *testing.T) *tmux.Client {
 	t.Helper()

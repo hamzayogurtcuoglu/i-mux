@@ -216,6 +216,31 @@ func TestSidebarDoubleClick(t *testing.T) {
 	}
 }
 
+// TestSidebarDoubleClickFocus: a click on an agent's card focuses its pane at
+// once, and a double click leaves it focused (tmux's own double click,
+// 300 ms after the second press, selected the sidebar again).
+func TestSidebarDoubleClickFocus(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	agentPane, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	h.mustImux("split", "codex", "-h", "--pane", agentPane)
+	h.run("codex", 1)
+	c, _ := h.attach(160, 45)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	// Codex's card, once drawn, is the selected agent's (a click opens its
+	// menu); Claude's focuses Claude.
+	h.rowOf(bar, "◎  Codex")
+	x, y := h.rowOf(bar, "✻  Claude")
+	c.Click(0, x, y)
+	time.Sleep(80 * time.Millisecond)
+	c.Click(0, x, y)
+	h.waitFor("claude pane focused", 5*time.Second, func() bool { return h.paneOpt(agentPane, "#{pane_active}") == "1" })
+	time.Sleep(700 * time.Millisecond) // past tmux's double click
+	if got := h.paneOpt(agentPane, "#{pane_active}"); got != "1" {
+		t.Fatalf("the double click took the focus from the claude pane: active=%s, sidebar active=%s", got, h.paneOpt(bar, "#{pane_active}"))
+	}
+}
+
 // TestSidebarProjectsNamesChanges (T11.6): the sidebar's CHANGES row opens
 // the file's diff, "Name this pane" names the pane (quotes are safe), and
 // the Projects + opens another folder as a project and switches to it;

@@ -40,7 +40,7 @@ type sidebar struct {
 	sel    Item // keyboard selection, NoItem = none
 	scroll int  // first row of the explorer or changes list
 
-	clicks     chan Action // click actions, delivered after ClickDelay
+	clicks     chan Action // click actions, run by the loop (see OpenAfter)
 	lastClick  time.Time
 	lastClickY int // row of the last click
 
@@ -64,15 +64,20 @@ type sidebar struct {
 	save  chan struct{} // ... by sending here
 }
 
-// ClickDelay holds a click's action until tmux's double-click window (300 ms)
-// has passed. tmux reports a second click within it as DoubleClick1Pane
-// later on, and that binding selects the sidebar pane again: it would close
-// a menu the first click opened and take the focus back from the agent pane.
-// A click on the same row within ClickIgnore of the previous one is a double
-// click and is dropped, so an action never runs twice; a quick click on
-// another row (a file right after the view's icon) still counts.
+// A click acts at once when its action leaves this sidebar under the
+// pointer and opens nothing over it (atOnce: a view, a folder, a pane of
+// this window); i-mux's tmux.conf keeps tmux's late double click from
+// selecting the sidebar again (§9.3 "Clicks at once"). The second press of a
+// double click still reaches the sidebar: a click on the same row within
+// ClickIgnore of the previous one is dropped, so an action never runs twice,
+// and a quick click on another row still counts.
+//
+// Any other click waits OpenAfter, until a double click is over: its second
+// press would land on the menu, popup or window the first one opened (and
+// close the menu or choose its item), and before tmux 3.5 the button's
+// release closes a menu.
 var (
-	ClickDelay  = 350 * time.Millisecond
+	OpenAfter   = 350 * time.Millisecond
 	ClickIgnore = 400 * time.Millisecond
 	SpinEvery   = 120 * time.Millisecond
 )
@@ -272,6 +277,27 @@ func isMenu(k ActionKind) bool {
 	return false
 }
 
+// atOnce reports whether a click's action may run at once (see OpenAfter).
+func (s *sidebar) atOnce(a Action) bool {
+	switch a.Kind {
+	case ActNone, ActRefresh, ActView, ActToggleDir, ActFold:
+		return true
+	case ActFocus:
+		return s.here(a.Pane)
+	}
+	return false
+}
+
+// here reports whether pane id is in this sidebar's window.
+func (s *sidebar) here(id string) bool {
+	for _, p := range s.model.Panes {
+		if p.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
 // LeaveAfter is how long the pointer may rest before the way-out check.
 var LeaveAfter = 150 * time.Millisecond
 
@@ -419,7 +445,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		}
 		// Older tmux: wait until the button is released, or the release
 		// closes the menu.
-		time.AfterFunc(ClickDelay, func() { s.clicks <- menu })
+		time.AfterFunc(OpenAfter, func() { s.clicks <- menu })
 		return
 	}
 	if ev.Kind == EvClick {
@@ -441,7 +467,12 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			s.selected = a.Path
 			s.menuX, s.menuY = ev.X, ev.Y
 		}
-		time.AfterFunc(ClickDelay, func() { s.clicks <- a })
+		wait := OpenAfter
+		if s.atOnce(a) {
+			wait = 0
+		}
+		// The loop runs it (after this input's redraw), even at once.
+		time.AfterFunc(wait, func() { s.clicks <- a })
 		return
 	}
 	switch ev.Key {
@@ -733,11 +764,9 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 // focus selects pane id, switching the client to its project and window
 // when it is elsewhere.
 func (s *sidebar) focus(ctx context.Context, id, client string) {
-	for _, p := range s.model.Panes {
-		if p.ID == id {
-			_, _ = s.t.Run(ctx, tmux.Cmd{"select-pane", "-t", id})
-			return
-		}
+	if s.here(id) {
+		_, _ = s.t.Run(ctx, tmux.Cmd{"select-pane", "-t", id})
+		return
 	}
 	cmds := []tmux.Cmd{{"select-window", "-t", id}, {"select-pane", "-t", id}}
 	if client != "" {

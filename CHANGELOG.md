@@ -6,6 +6,22 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.39.1] - 2026-11-10
+
+### Fixed
+
+- **Clicks in the sidebar act at once.** A view on the rail, a folder, a section and an agent of
+  the tab now respond in about 30 ms instead of 350 ms. Every click waited for tmux's double-click
+  time, because tmux's own double click selected the sidebar again and took the focus back from
+  the agent; i-mux now keeps it from selecting a sidebar (other panes keep tmux's). Clicks that
+  open a menu, a popup or a prompt, or go to another tab or project, still wait a moment, so a
+  double click cannot close what the first click opened.
+- **The text cursor no longer flashes in the sidebar.** While agents work the sidebar redraws in
+  the background, and the terminal sometimes showed the cursor there for a moment. tmux now sends
+  such updates as one synchronized update (DECSET 2026: Windows Terminal, iTerm2, kitty, WezTerm
+  and others support it; other terminals ignore it). It takes effect when the terminal attaches
+  again: detach (prefix d) and run `imux attach`.
+
 ## [0.39.0] - 2026-11-10
 
 ### Added

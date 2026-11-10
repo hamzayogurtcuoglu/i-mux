@@ -58,7 +58,7 @@ func TestGenerateConfOptions(t *testing.T) {
 	in.Cfg.Tmux.Mouse = false
 	in.AgentBar = ""
 	got := GenerateConf(in)
-	for _, bad := range []string{"bind -n 'C-\\'", "MouseDown1Status", "MouseDown3Border", "status 2", "status-format[1]"} {
+	for _, bad := range []string{"bind -n 'C-\\'", "MouseDown1Status", "MouseDown3Border", "DoubleClick1Pane", "TripleClick1Pane", "status 2", "status-format[1]"} {
 		if strings.Contains(got, bad) {
 			t.Errorf("unexpected %q in:\n%s", bad, got)
 		}
@@ -170,7 +170,8 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 	if len(f) < 3 || f[0] != "yes" || f[1] != "2" {
 		t.Fatalf("options after load: %q", out)
 	}
-	// terminal-features is appended only once across reloads.
+	// terminal-features and the Sync override are appended only once across
+	// reloads.
 	if err := c.Reload(ctx, conf); err != nil {
 		t.Fatal(err)
 	}
@@ -178,9 +179,22 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 	if n := strings.Count(tf, "extkeys"); n != 1 {
 		t.Fatalf("extkeys feature appears %d times:\n%s", n, tf)
 	}
+	to, _ := c.Do(Cmd{"show-options", "-s", "terminal-overrides"})
+	if n := strings.Count(to, "Sync="); n != 1 || !strings.Contains(to, "?2026") {
+		t.Fatalf("the Sync override appears %d times:\n%s", n, to)
+	}
 	keys, _ := c.Do(Cmd{"list-keys", "-T", "root"})
 	if !strings.Contains(keys, "__menu") {
 		t.Fatalf("root menu key not bound:\n%s", keys)
+	}
+	dbl := ""
+	for _, l := range strings.Split(keys, "\n") {
+		if strings.Contains(l, " DoubleClick1Pane ") {
+			dbl = l
+		}
+	}
+	if !strings.Contains(dbl, "@imux_role") {
+		t.Fatalf("i-mux's double click is not bound: %q", dbl)
 	}
 	// A changed config unbinds keys it no longer uses.
 	in.Cfg.Tmux.MenuKeyRoot = "M-m"
