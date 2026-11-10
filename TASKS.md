@@ -997,6 +997,17 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M48: Choose where a new agent opens (added 2026-11-10)
+
+User request: after choosing the agent with the "+" of Agents, ask up, down, left, right, or a new
+tab.
+
+- [x] **T48.1 The place menu** · S
+  - AC: D40: "+" → the agent menu (`__menu --new`) → the place menu (`__menu --place <agent>`):
+    right, left, down, up (`split --before` for left and up), new tab; Terminal too; the "No
+    agents" pane still fills; unit test (menus and commands); e2e: left, down (Terminal), a new
+    tab (double click on "+").
+
 ## M47: Faster switching on the left (added 2026-11-10)
 
 User report (after v0.39.1): switching on the left is still slow.
