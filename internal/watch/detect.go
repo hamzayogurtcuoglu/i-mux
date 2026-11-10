@@ -21,6 +21,7 @@ type PaneRow struct {
 	Agent   session.AgentID
 	Start   time.Time
 	Dead    bool
+	Width   int
 	Height  int
 	Session string
 	// Unreaped: dead, but tmux has no exit status or signal for it yet,
@@ -71,9 +72,16 @@ type Detector struct {
 	// cooldown. It reports whether it prompted or acted, which starts the
 	// pane's cooldown.
 	OnEvent func(ctx context.Context, ev Event, clients []Client) bool
+	// Seed is when each pane's agent last worked, as the watcher before
+	// this one saw it (its activity file): a pane met for the first time
+	// is not at work until its screen changes.
+	Seed map[string]time.Time
 
 	hashes   map[string]uint64          // pane → hash of the last capture
-	changed  map[string]time.Time       // pane → when its screen last changed
+	screens  map[string]string          // pane → its last capture
+	sizes    map[string]string          // pane → its size ("WxH") at the last capture
+	settle   map[string]bool            // pane → resized while quiet at the last tick
+	changed  map[string]time.Time       // pane → when its agent last worked (its screen changed)
 	asking   map[string]bool            // pane → its last screen asks a question
 	seen     map[string]map[string]bool // pane instance → matched lines
 	cooldown map[string]time.Time       // pane → no prompts until
@@ -81,7 +89,7 @@ type Detector struct {
 }
 
 const (
-	listFormat   = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}"
+	listFormat   = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}\t#{pane_width}"
 	clientFormat = "#{client_name}\t#{client_control_mode}\t#{client_session}\t#{client_activity}"
 )
 
@@ -103,6 +111,7 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	if d.hashes == nil {
 		d.hashes, d.seen, d.cooldown = map[string]uint64{}, map[string]map[string]bool{}, map[string]time.Time{}
 		d.changed = map[string]time.Time{}
+		d.screens, d.sizes, d.settle = map[string]string{}, map[string]string{}, map[string]bool{}
 	}
 	out, err := d.T.Run(ctx,
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", clientFormat},
@@ -122,10 +131,11 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	var panes, agents []PaneRow
 	nudge := false
 	nudges := map[string]int{}
-	for _, r := range tmux.Rows(sec["panes"], 7) {
+	for _, r := range tmux.Rows(sec["panes"], 8) {
 		p := PaneRow{ID: r[0], Agent: session.AgentID(r[1]), Dead: r[3] == "1", Session: r[5]}
 		p.Unreaped = p.Dead && r[6] == ""
 		p.Height, _ = strconv.Atoi(r[4])
+		p.Width, _ = strconv.Atoi(r[7])
 		if ms, err := strconv.ParseInt(r[2], 10, 64); err == nil && ms > 0 {
 			p.Start = time.UnixMilli(ms)
 		}
@@ -182,11 +192,19 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 		h := fnv.New64a()
 		_, _ = h.Write([]byte(screen))
 		sum := h.Sum64()
-		if d.hashes[p.ID] == sum {
+		size := strconv.Itoa(p.Width) + "x" + strconv.Itoa(p.Height)
+		last, known := d.hashes[p.ID]
+		resized := known && d.sizes[p.ID] != size
+		d.sizes[p.ID] = size
+		if known && last == sum {
+			d.settle[p.ID] = false
 			continue
 		}
-		d.hashes[p.ID] = sum
-		d.changed[p.ID] = d.Now()
+		old := d.screens[p.ID]
+		d.hashes[p.ID], d.screens[p.ID] = sum, screen
+		if d.work(p.ID, known, resized, old, screen) {
+			d.changed[p.ID] = d.Now()
+		}
 		if d.asking == nil {
 			d.asking = map[string]bool{}
 		}
@@ -199,6 +217,30 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 		d.OnActivity(d.Now(), d.changed, d.asking)
 	}
 	return !detached, nil
+}
+
+// work reports whether a pane's changed screen is its agent at work. It is
+// not when the watcher meets the pane (it may be one a watcher before this
+// one knew: then it worked when that one saw it last), when a quiet pane was
+// resized (the panel opened or closed) or redraws right after it, or when
+// the user types in the agent's input (Typing).
+func (d *Detector) work(id string, known, resized bool, old, cur string) bool {
+	now := d.Now()
+	settle := d.settle[id]
+	d.settle[id] = false
+	if !known {
+		if t, ok := d.Seed[id]; ok {
+			d.changed[id] = t
+		} else {
+			d.changed[id] = now.Add(-WorkingFor)
+		}
+		return false
+	}
+	if quiet := now.Sub(d.changed[id]) >= WorkingFor; quiet && (resized || settle) {
+		d.settle[id] = resized
+		return false
+	}
+	return !Typing(old, cur)
 }
 
 // scan matches the lines of one changed screen.
@@ -262,6 +304,9 @@ func (d *Detector) prune(panes []PaneRow) {
 	for id := range d.hashes {
 		if !live[id] {
 			delete(d.hashes, id)
+			delete(d.screens, id)
+			delete(d.sizes, id)
+			delete(d.settle, id)
 		}
 	}
 	for id := range d.asking {

@@ -246,3 +246,58 @@ func TestNormalize(t *testing.T) {
 		}
 	}
 }
+
+// TestDetectorWork: only the agent at work makes its pane "working": not
+// the watcher meeting the pane (a restarted watcher keeps the last one's
+// times), not a quiet pane resized or its redraw after that, not the user
+// typing in the agent's input.
+func TestDetectorWork(t *testing.T) {
+	h := newHarness(t)
+	now := testutil.FrozenTime
+	h.f.clients = "/dev/pts/1\t0\tproj\t1\n"
+	panes := func(w int) string {
+		return "%1\tcopilot\t" + ms(now.Add(-time.Hour)) + "\t0\t6\tproj\t\t" + strconv.Itoa(w) + "\n" +
+			"%2\tclaude\t" + ms(now.Add(-time.Hour)) + "\t0\t6\tproj\t\t80\n"
+	}
+	h.f.panes = panes(80)
+	screen := func(progress, input string) string {
+		return "answer\n" + progress + "\n────\n❯ " + input + "\n────\n / commands\n"
+	}
+	h.f.screens["%1"] = screen("", "")
+	h.f.screens["%2"] = "> \n"
+	h.d.Seed = map[string]time.Time{"%2": now.Add(-time.Second)}
+	step := func() { h.clk.Set(h.clk.Now().Add(2500 * time.Millisecond)); h.tick(t) }
+	h.tick(t)
+	if got := h.d.changed["%1"]; now.Sub(got) < WorkingFor {
+		t.Fatalf("a pane met for the first time worked at %v", got)
+	}
+	if got := h.d.changed["%2"]; !got.Equal(now.Add(-time.Second)) {
+		t.Fatalf("the seed was not kept: %v", got)
+	}
+	working := func(p string) bool { return h.clk.Now().Sub(h.d.changed[p]) < WorkingFor }
+
+	h.f.screens["%1"] = screen("", "fix the te")
+	step()
+	if working("%1") {
+		t.Fatal("typing counted as work")
+	}
+	h.f.panes = panes(60) // the panel opened
+	h.f.screens["%1"] = screen("", "fix the t\ne")
+	step()
+	h.f.screens["%1"] = screen("", "fix the te") // the agent redraws
+	step()
+	if working("%1") {
+		t.Fatal("a resize counted as work")
+	}
+	h.f.screens["%1"] = screen("⠋ Thinking", "fix the te")
+	step()
+	if !working("%1") {
+		t.Fatal("the agent's progress line did not count as work")
+	}
+	h.f.panes = panes(80) // resized while working: still at work
+	h.f.screens["%1"] = screen("⠙ Thinking", "")
+	step()
+	if !working("%1") {
+		t.Fatal("work during a resize was lost")
+	}
+}
