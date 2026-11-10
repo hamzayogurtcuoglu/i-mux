@@ -11,6 +11,11 @@ All notable changes to i-mux are listed here. The format follows
 - **Choose where a new agent opens.** The **+** next to **Agents** asks for the agent (or a plain
   Terminal), then where: right, left, below or above the current pane, or in a new tab.
 
+### Fixed
+
+- **The time next to an agent no longer restarts after every update:** a restarted watcher keeps
+  the states it finds and writes only changes.
+
 ## [0.40.0] - 2026-11-10
 
 ### Added

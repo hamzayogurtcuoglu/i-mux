@@ -104,6 +104,24 @@ func (s *PaneStates) Commands(at time.Time, changed map[string]time.Time, asking
 	return cmds
 }
 
+// Load starts from the states tmux has (a watcher before this one wrote
+// them): only real changes are written then, so an agent's "since" time
+// survives a restart of the watcher.
+func (s *PaneStates) Load(ctx context.Context) {
+	out, err := s.T.Run(ctx, tmux.Cmd{"list-panes", "-a", "-F", "#{pane_id}\t#{" + sidebar.OptState + "}"})
+	if err != nil {
+		return
+	}
+	if s.last == nil {
+		s.last = map[string]string{}
+	}
+	for _, r := range tmux.Rows(out, 2) {
+		if r[1] != "" {
+			s.last[r[0]] = r[1]
+		}
+	}
+}
+
 // Apply writes the changed states and signals the sidebars.
 func (s *PaneStates) Apply(ctx context.Context, at time.Time, changed map[string]time.Time, asking map[string]bool) {
 	cmds := s.Commands(at, changed, asking)

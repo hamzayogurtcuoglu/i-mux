@@ -1,12 +1,14 @@
 package watch
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 // A pane is working while its screen changed in the last 3 s, blocked when
@@ -114,5 +116,23 @@ func TestPaneEvents(t *testing.T) {
 	ev = tick(t0.Add(24*time.Second), map[string]time.Time{"%3": t0}, map[string]bool{"%3": true})
 	if len(ev) != 0 {
 		t.Fatalf("a pane just met: %+v", ev)
+	}
+}
+
+// A restarted watcher starts from the states tmux has: one that did not
+// change is not written again (its time stays), one that did is.
+func TestPaneStatesLoad(t *testing.T) {
+	f := &fakeServer{panes: "%1\tidle\n%2\tworking\n%3\t\n"}
+	s := &PaneStates{T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: f}}
+	s.Load(context.Background())
+	now := testutil.FrozenTime
+	got := s.Commands(now, map[string]time.Time{"%1": now.Add(-time.Minute), "%2": now.Add(-time.Minute), "%3": now.Add(-time.Minute)}, nil)
+	var out []string
+	for _, c := range got {
+		out = append(out, strings.Join(c, " "))
+	}
+	j := strings.Join(out, "; ")
+	if strings.Contains(j, "-t %1 ") || !strings.Contains(j, "-t %2 @imux_state idle") || !strings.Contains(j, "-t %2 @imux_done_at") || !strings.Contains(j, "-t %3 @imux_state idle") {
+		t.Fatalf("commands after a restart: %s", j)
 	}
 }

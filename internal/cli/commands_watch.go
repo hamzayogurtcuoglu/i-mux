@@ -90,6 +90,7 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	actor := &watch.Actor{W: w, Log: logger}
 	keeper := &watch.StatusKeeper{W: w}
 	states := &watch.PaneStates{T: tc, Notify: newNotifier(cfg.Notify, tc).Send}
+	states.Load(context.Background())
 	var lastSnap time.Time
 	// A new binary or config restarts the watcher: the last one's activity
 	// keeps every agent's state as it was.
