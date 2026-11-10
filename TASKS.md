@@ -1045,6 +1045,9 @@ show how many agents work.
     layouts), a resize of a quiet pane and its redraw, and a pane met for the first time are not
     work; a resize during work still is; a restarted watcher keeps the last one's times
     (`activity.json`); unit tests (`Typing`, the detector over ticks; fails without the change).
+- [x] **T46.3 The time survives a restart** · XS (v0.41)
+  - AC: a restarted watcher reads the panes' `@imux_state` first and writes only changes (the
+    time next to an agent stayed "<1m" after every install); unit test.
 - [x] **T46.2 The working count** · XS
   - AC: the AGENTS title shows a spinner and "N working" (all projects, not limited ones; the
     number alone below 30 columns; folded, "· panes"); nothing extra when none works; i18n en/tr;

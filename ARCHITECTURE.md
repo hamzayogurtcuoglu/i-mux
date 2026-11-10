@@ -1118,7 +1118,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
     `❯`, `›`, `▌` after box edges, and what is below it changed), not by a resize of a quiet
     pane or its redraw at the next tick (a working pane's changes during a resize still count),
     and not by the watcher meeting the pane (a restarted watcher starts from the last one's
-    `activity.json`, so no agent turns "working", then "Done", after an install);
+    `activity.json`, so no agent turns "working", then "Done", after an install, and from the
+    states tmux has, so it writes only real changes and an agent's time since its state changed
+    survives the restart);
   - **Needs you:** a pill; the watcher sets `@imux_state = blocked` when an idle screen's last lines
     ask a question (Claude's "Do you want to …", a numbered "1. Yes" choice, Codex's "Would you
     like to run …", `(y/n)`, `[Y/n]`);
