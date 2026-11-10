@@ -997,6 +997,23 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M52: Web pages in a pane (added 2026-11-10)
+
+User request: see web pages (an HTML file, for example) in i-mux; on by default but downloaded only
+when wanted, installed and turned on or off from Settings.
+
+- [ ] **T52.1 The browser and `imux web`** · M
+  - AC: D44, §9.3 "Web preview": `imux web [install|remove|open]`; Carbonyl 0.0.3 downloaded, its
+    SHA-256 checked, unpacked into `~/.imux/tools`, `--version` run, missing Linux libraries named;
+    `[web] enabled` and `browser`; the pane's `imux __web-pane`; unit tests (assets, URLs, unzip
+    with modes and no path outside, install from a test server, the pane's command).
+- [ ] **T52.2 Opening pages from the UI** · M
+  - AC: a click on an HTML file opens its preview beside the target (not installed: the popup); a
+    second click loads it in the same pane; Open Preview and Open in Browser in the file menu;
+    **🌐 Web page…** in "+"; the Settings menu; unit tests (menus, popup); e2e with a fake browser
+    (`[web] browser`): a click on index.html opens a pane running it with the file's URL, a second
+    click reuses that pane.
+
 ## M51: Search in History (added 2026-11-10)
 
 User request: a search in History, to find a conversation by text said in it.

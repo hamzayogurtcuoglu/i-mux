@@ -120,6 +120,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D41 | **An agent that is not installed opens a small popup that installs it** (added 2026-11-10, v0.41, at the user's request): a click on it in "Continue this chat in" or the agent bar shows what it is, the command that installs it and **Install now** / **Close**. Install now runs the command in the popup (its output visible), checks the agent is found, then Enter continues the chat in it. When the command needs a program that is missing (npm without Node.js, curl), the popup says how to get it instead. `[agents.<id>] install` replaces i-mux's command. | The user found the one-line hint in the status line easy to miss and unclear; a popup at the click explains and does the step. Running the vendor's own install command (npm, or its install script) is what the user would type. |
 | D42 | **Everything that scrolls shows a scroll bar, and the viewers are i-mux's own pager** (added 2026-11-10, v0.42, at the user's request): a one-column bar at the right edge (a dark `│` track, a lighter `┃` thumb sized to the part shown) in the sidebar's lists (Explorer, Source Control, Skills), search, Go to File, the folder picker, and the diff, file, commit and limits viewers; a click on it scrolls there. The viewers, `less` before, are `internal/pager`: less's keys (↑↓ j k, PgUp PgDn space b, g G, ←→, / n N, q), the wheel, a click or drag on the bar, `v` to edit a file. The search popup draws files with their icons, folder and a count, the matches in color, and starts folded when more than 5 files match; a button folds or unfolds all. | The user could not tell where they were in a long diff or search, and found the search plain ("colorless", every file open, no visible way to fold them). `less` cannot draw a bar; a pager of our own costs ~300 lines and keeps the keys. The bar is thin and dark so it does not fight the text. |
 | D43 | **History searches the conversations' text** (added 2026-11-10, v0.43, at the user's request): History's last item, **🔍 Search their text…** (`/`), opens a popup with every conversation of the folder (pinned first, then the newest; 300 at most) and, as you type, the ones whose messages (or name, or first request) have the text, each with its count and up to three of its messages, the match marked. Enter opens the conversation's menu (resume, continue in another agent, ...). | The user wants to find a conversation by something said in it, not only by its first request. A conversation's file is read whole only when it can hold the text (a byte search first), so a search over a few hundred conversations takes a moment, shown as it goes. |
+| D44 | **Web pages open in a pane, in a browser that draws in the terminal, installed only when wanted** (added 2026-11-10, v0.44, at the user's request): i-mux shows a web page (an HTML file of the project, or a URL such as `http://localhost:3000`) in a pane beside the agent, with Carbonyl (Chromium drawing in the terminal; a 74 MB download, about 170 MB on disk), which Settings installs into `~/.imux/tools` when asked and can remove. It is on by default (`[web] enabled`) and Settings turns it off. A click on an HTML file in the explorer opens its preview; until the browser is installed, a small popup offers to install it, to open the page in the system's browser, or to edit the file. | The user wants to see web pages without leaving i-mux, also over SSH and a VS Code tunnel, where the system's browser runs on another machine; a terminal browser works wherever the terminal does. Nothing is downloaded until the user asks: it is big and many never need it. Carbonyl draws real pages (CSS, JavaScript, images) where w3m or lynx show text only; `[web] browser` runs another program for those who prefer one. |
 
 ## 4. Components
 
@@ -1669,6 +1670,44 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   opens the conversation's menu (`run-shell -b -d 0.15 imux __menu --session …`: after the popup,
   which a menu would replace).
 
+#### Web preview (v0.44, D44)
+
+- **The browser:** Carbonyl 0.0.3 (`fathyb/carbonyl`, BSD-3-Clause): the release's zip for the OS
+  and CPU (Linux and macOS, amd64 and arm64), its SHA-256 pinned in i-mux, unpacked into
+  `~/.imux/tools/carbonyl-0.0.3/`. `[web] browser` names another program instead (run with the
+  URL as its last argument, e.g. `w3m`); then nothing is downloaded.
+- **Installing:** `imux web install` (Settings → Web preview → Install…, in a popup) says what it
+  downloads and where, asks (`--yes` does not), downloads with its progress (`IMUX_WEB_URL` for a
+  mirror), checks the SHA-256, unpacks into a temporary folder renamed when complete (no path may
+  leave it), and runs `carbonyl --version`. On Linux, libraries it needs that are missing (`ldd`)
+  are named with the command that installs them (`sudo apt install libnss3 libexpat1
+  libasound2`), which it offers to run. `imux web remove` deletes it; `imux web` says whether the
+  preview is on and installed.
+- **Opening:** `imux web open <file|url>`: a file becomes a `file://` URL; text without a scheme
+  gets `http://` (localhost and IP addresses, `localhost:3000`) or `https://`. The page opens in
+  a pane right of the target (`split-window -h`), named after the file or the host (`@imux_name`)
+  and marked with its URL (`@imux_web`). When the window has a web pane already, that pane loads
+  the page instead (`respawn-pane -k`), so a second click on a file reloads it. The pane runs
+  `imux __web-pane <url>`: the browser with `COLORTERM=truecolor` (tmux passes RGB on), and
+  `--no-sandbox` only as root. The pane closes when the browser exits (Ctrl+C, or closing the
+  pane); when the browser fails, the pane says why and waits for Enter.
+- **Where:** a click on an HTML file (`.html`, `.htm`, `.xhtml`) in the explorer while the preview
+  is on (off: the editor, as before); the right-click menu of an HTML or SVG file: **Open
+  Preview** (`w`) and **Open in Browser** (`b`); the "+" of Agents: **🌐 Web page…** (a prompt for
+  the URL: the last one, `http://localhost:3000` the first time); Settings → Web preview → **Open
+  a web page…**.
+- **Not installed:** the click (or Open Preview, or a web page) opens a popup (72 × 14): what the
+  preview is, its size, and **Install** (Enter or `i`), **Open in browser** (`b`, when there is
+  one), **Edit** (`e`, for a file), **Close** (Esc). Install runs the installer in the popup;
+  then Enter opens the page.
+- **The system's browser:** `open` (macOS); `wslview`, else `explorer.exe` with the Windows path
+  (WSL); `xdg-open` (a Linux desktop); not offered without one (an SSH session).
+  `IMUX_BROWSE_COMMAND` (sh, the URL or file in `$1`) replaces it (tests).
+- **Settings:** a **🌐 Web preview: On / Off / Not installed** row opens its menu: Install (74 MB)…
+  or Remove; Turn off or Turn on; Open a web page….
+- **In the sidebar:** a web pane is a row under Agents with `⊕` and the page's name; like a
+  terminal, it is not brought back by a restore.
+
 #### Not installed (v0.41, D41)
 
 - **Where:** a click on an agent that is not installed in "Continue this chat in" or on the agent
@@ -2409,6 +2448,7 @@ sequenceDiagram
 | `watch.log` | 0600 | watcher | lifecycle and errors only; rotated at 1 MB (one `.1` kept) |
 | `handoffs/` | 0700 | i-mux | `*.md` handoffs, 0600, pruned after `keep_days` |
 | `launch/` | 0700 | i-mux | launch specs, 0600, deleted by `__exec` on read; leftovers older than 1 h are swept |
+| `tools/` | 0700 | `imux web install` | the web preview's browser (`carbonyl-0.0.3/`, about 170 MB); `imux web remove` deletes it |
 | tmux socket | tmux-managed | tmux | `$TMUX_TMPDIR/tmux-<uid>/imux` (dir 0700) |
 
 Read-only access (never written): `~/.claude/projects`, `~/.gemini/{projects.json,tmp}`,
