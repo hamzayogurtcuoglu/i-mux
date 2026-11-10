@@ -112,6 +112,8 @@ done by tmux on a dedicated socket. i-mux only:
 | D33 | **A skill is written by an agent the user picks, in a new pane that starts with i-mux's skill-writing guide** (added 2026-11-10, v0.37, at the user's request): the Skills view has one **✨ New skill…** button; it opens a dialog (a popup) that asks who writes the skill (an agent in a new pane, the agent of the current pane, or the user from a blank `SKILL.md`), then what it should do (or the template's name) in a real text box. The chosen agent starts beside the current pane with the guide and the description as its first message; with nothing described, the guide tells it to ask first. | The user found two buttons (✨ and ➕) and tmux's one-line prompt in the status line ("a tiny thing at the top") poor for writing a skill: the description is a paragraph, and the user wants to choose the agent rather than always disturb the active one. A new pane keeps the current conversation clean; the agent's own input takes over from there. |
 | D34 | **i-mux installs the Nerd Font its icons need, where the terminal draws text, and sets the terminals it knows to it** (added 2026-11-10, v0.38, at the user's request): `imux font install` (Settings, and the installer, offer it) downloads Nerd Fonts' JetBrainsMono (a pinned release, checked against its SHA-256), installs four styles for the user alone (no administrator rights), sets Windows Terminal's and VS Code's terminal font to it with a backup of their settings, and switches the icons to `nerd`. Under WSL all of this happens on the Windows side. | On a new PC the icons stayed emoji (or "?" boxes when set to `nerd`): no Nerd Font comes with Windows, i-mux only told macOS users to `brew install` one, and under WSL the font must be in Windows (the terminal draws the text there), not in Linux. Changing one value in the terminals' settings, comments and all kept, is what a user would do by hand; the backup undoes it. |
 | D35 | **The explorer marks files by type, as the editor does** (added 2026-11-10, v0.39, at the user's request): each entry has an icon of its kind, folders open and closed, and indent guides mark the levels. With the editor's icons (`nerd`) they are the Nerd Font glyphs of the editor's default file icon theme (Seti) in its colors; with `emoji` an emoji per kind. | The user found the Files view plain: names alone are slow to scan. The editor's own icons, now that i-mux installs their font (D34), make it look like the explorer users know; the emoji keep it readable without the font. |
+| D36 | **A click in the sidebar acts at once, and tmux's double and triple click no longer select a sidebar** (added 2026-11-10, v0.39.1, at the user's request): a click that leaves the sidebar under the pointer and opens nothing over it (a view on the rail, a folder, a section's fold, an agent of the window) runs at once; one that opens a menu, popup or prompt, or shows another window or project, still waits 350 ms. i-mux binds `DoubleClick1Pane` and `TripleClick1Pane` to tmux's own commands, except over a sidebar, where they only pass the click on. | The user found moving between panels slow ("about a second"). Every click waited 350 ms for tmux's double-click time: tmux's own double click, 300 ms after the second press, selects the pane under the pointer, and took the focus back from the agent pane a click had just focused. Without that selection only what a double click's second press (or the button's release) would land on needs the wait: a menu, a popup, another window. |
+| D37 | **i-mux turns on synchronized output (DECSET 2026) for every terminal** (added 2026-11-10, v0.39.1, at the user's request): `terminal-overrides` gets `Sync=\E[?2026%?%p1%{1}%-%tl%eh%;`, the form tmux 3.4+ uses for the terminals it knows. tmux then sends an update of a pane in the background, with the cursor's way back to the active pane, as one synchronized update. | The user saw the text cursor in the sidebar now and then: tmux draws a change in a pane that is not active (the sidebar's spinner while agents work, its hover) by moving the cursor there and back, and Windows Terminal could show a frame in between. tmux 3.2 and 3.3 know only an older form of the sequence and turn it on for no terminal. Windows Terminal 1.24 supports 2026 (as do iTerm2, kitty, WezTerm, foot, Alacritty and Ghostty); a terminal without it ignores the sequence. |
 
 ## 4. Components
 
@@ -852,6 +854,7 @@ set -g  default-terminal "tmux-256color"          # present on the dev machine; 
 set -as terminal-features ",*:RGB"                # truecolor
 set -g  extended-keys on                          # Shift+Enter etc. in agents (verify, Q20)
 set -as terminal-features ",*:extkeys"
+set -as terminal-overrides ',*:Sync=\E[?2026%?%p1%{1}%-%tl%eh%;'  # synchronized output (D37)
 set -s  escape-time 10
 set -g  history-limit 50000
 set -g  mouse on
@@ -871,6 +874,9 @@ bind -n MouseDown1Status if -F '#{m:imux:*,#{mouse_status_range}}' \
   "switch-client -t ="
 # Right-click on a pane border opens that pane's menu ("-t =" targets the pane under the mouse).
 bind -n MouseDown3Border run-shell -t = -b "/abs/imux __menu --pane '#{pane_id}' --client '#{client_name}'"
+# Double and triple clicks: tmux's own, except over a sidebar, which acts on a click at once (D36).
+bind -n DoubleClick1Pane if -F -t= '#{==:#{@imux_role},sidebar}' { send -M } { …tmux's default… }
+bind -n TripleClick1Pane if -F -t= '#{==:#{@imux_role},sidebar}' { send -M } { …tmux's default… }
 set-hook -g pane-died       "run-shell -b \"/abs/imux __pane-died '#{pane_id}' '#{pane_dead_status}'\""
 set-hook -g client-attached "run-shell -b '/abs/imux __watch ensure'"
 source-file -q ~/.imux/tmux.local.conf
@@ -879,6 +885,10 @@ source-file -q ~/.imux/tmux.local.conf
 - The config is regenerated when the binary path or config changes, compared by content hash.
   The running server reloads it with `source-file`.
 - The i-mux binary's absolute path comes from `os.Executable()` (symlinks resolved).
+- Lines that append to a list (`terminal-features`, `terminal-overrides`) are guarded by a server
+  option (`@imux_loaded`, `@imux_sync`), so a reload does not append them again. tmux reads
+  `terminal-overrides` when a client attaches: a terminal attached before an upgrade gets a new
+  override after detaching and attaching again.
 
 ### 9.3 UI: agent bar, menus, session picker, keys
 
@@ -1506,7 +1516,7 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   outside closes it). tmux 3.2–3.4 (Ubuntu 22.04 / 24.04): the item's letter, or ↑↓ and Enter.
 - **Opening at once:** with `-O` the menu ignores the right button's release, so on tmux 3.5+ a
   right-click opens its menu on the press (about 30 ms); older tmux waits for the release
-  (`ClickDelay`), which would close a menu that takes keys only.
+  (`OpenAfter`), which would close a menu that takes keys only.
 - **Nothing drawn under an open menu:** a right-click and opening a menu gather nothing, and the
   sidebar writes a frame only when it differs from the last one. Hooks (a menu moves the focus)
   ask for redraws; before, each rewrote the whole pane and tmux drew it over the menu, which
@@ -1549,6 +1559,37 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
     shell. Open to the Side: `split-window -h` running the editor.
   - Every change redraws the sidebars and reveals the result: `@imux_reveal` (a counter and the
     path) makes each sidebar of that project open the folders above it and select it.
+
+#### Clicks at once (v0.39.1, D36)
+
+- **At once:** a click whose action leaves the sidebar under the pointer and opens nothing over it
+  runs as soon as the sidebar reads it: a view on the rail (open, switch, close the panel), a
+  folder, a section's fold, an agent of the window (its pane gets the focus). In the e2e tests the
+  new view is on screen about 30 ms after the click (350 ms before).
+- **Waits 350 ms (`OpenAfter`):** a click that opens a menu, popup or prompt, or shows another
+  window or project (an agent elsewhere, a project). A double click's second press would land on
+  what the first one opened: a menu closes (on tmux 3.5+, where i-mux's menus take the mouse, it
+  may run the item under the pointer), a popup's program gets the click, another window's sidebar
+  acts on its own row. Before tmux 3.5 the button's release closes a menu too; the same wait holds
+  a right-click's menu there.
+- **Double and triple clicks:** tmux's own `DoubleClick1Pane` (fired 300 ms after the second
+  press) selects the pane under the pointer: it took the focus back from the agent pane a click had
+  just focused, so every click waited for it. i-mux binds `DoubleClick1Pane` and
+  `TripleClick1Pane` to tmux's own commands for every other pane; over a sidebar they only pass
+  the click on (`send -M`; tmux marks the late double click as already sent, so nothing arrives
+  twice). The second press reaches the sidebar as before (`SecondClick1Pane` is unbound, so tmux
+  passes it to the pane): a click on the same row within 400 ms of the last one (`ClickIgnore`) is
+  dropped, so nothing runs twice. tmux counts any press within 300 ms as the second, wherever it
+  is, so i-mux does not swallow it: a quick click on another row still counts. Checked on tmux
+  3.2a with a real client: with tmux's bindings a double or triple click on the sidebar selects it
+  again, with i-mux's the agent pane keeps the focus and the sidebar still gets every press.
+- **The cursor stays put (D37):** tmux draws a change in a pane that is not active by moving the
+  cursor there and back afterwards, and Windows Terminal could show a frame in between: the cursor
+  flashed in the sidebar while it redrew (its spinner, every 120 ms while agents work; hover). With
+  `Sync` in `terminal-overrides` tmux sends that update, the way back included, between
+  `\e[?2026h` and `\e[?2026l`, and the terminal shows only the result. Checked on tmux 3.2a with
+  a client in a pty and a pane updating in the background: no such pair without the override, 51
+  pairs in 2.5 s with it.
 
 #### Go to File (v0.31, Ctrl+P)
 

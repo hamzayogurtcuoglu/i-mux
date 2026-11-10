@@ -980,6 +980,23 @@ Invalid), and nothing restored the sidebars. The skills feature itself was not t
   - AC: `make install-local` (a new file, then `mv`); CONTRIBUTING and AGENTS.md say never to copy
     over a running binary.
 
+## M45: Clicks at once, no cursor in the sidebar (added 2026-11-10)
+
+User report: the text cursor sometimes shows in the left panel, and clicks between panels feel
+slow (about a second).
+
+- [x] **T45.1 Clicks at once** · S
+  - AC: D36, §9.3 "Clicks at once": a click on a view, a folder, a fold or an agent of the window
+    acts at once; menus, popups, prompts and other windows or projects wait `OpenAfter`;
+    `DoubleClick1Pane` and `TripleClick1Pane` keep tmux's defaults except over a sidebar (no
+    `select-pane`), listed in `@imux_keys`; unit tests (which clicks wait; the config: golden,
+    mouse off, loads in a real tmux); e2e: a double click on an agent keeps its pane focused (fails
+    without the bindings), a double-clicked menu stays open.
+- [x] **T45.2 Synchronized output** · XS
+  - AC: D37: `terminal-overrides` gets the DECSET 2026 `Sync` once (guarded by `@imux_sync`, also
+    on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
+    `\e[?2026l`; the config test checks it is there once after reloads.
+
 ## M44: File icons in the explorer (added 2026-11-10)
 
 User request: make the Files view nicer, for example with the file types next to the names.
