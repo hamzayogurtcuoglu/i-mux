@@ -1,0 +1,398 @@
+// Package pager shows text in a popup as less does, with a scroll bar
+// (§9.3 "Scroll bars"): diffs, commits and files. ↑↓ (j k) a line, PgUp PgDn
+// (b, space) a page, Home End (g G) the ends, ←→ (h l) sideways; / searches
+// and n N go to the next and previous match; the wheel scrolls; a click or a
+// drag on the bar moves there; v edits a file (Editable); q or Esc closes.
+package pager
+
+import (
+	"io"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+	"unicode/utf8"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+)
+
+const (
+	reset = "\x1b[0m"
+	faint = "\x1b[38;5;243m"
+	cyan  = "\x1b[36m"
+	hit   = "\x1b[48;5;94m\x1b[38;5;230m"
+)
+
+// Pager is what a pager shows and where.
+type Pager struct {
+	Header []string // drawn rows above the text, not scrolled
+	Lines  []string // the text, drawn (colors kept)
+	Top    int      // the first line shown
+	Left   int      // the first column shown
+	// Editable: line i is the file's line i+1, and v closes the pager with
+	// Edit set, for the caller to open the editor at the first line shown.
+	Editable bool
+	Edit     bool
+
+	plain    []string // Lines without colors, for search
+	query    string   // the last search
+	input    *string  // the search being typed
+	matches  []int    // lines with the query
+	note     string   // a message on the bottom row
+	view, w  int      // the text's rows and the columns of the last Render
+	dragging bool     // the bar's thumb is being dragged
+}
+
+// body is how many rows the text gets on an h-row screen.
+func (p *Pager) body(h int) int { return max(h-len(p.Header)-1, 1) }
+
+func (p *Pager) clamp() {
+	p.Top = min(max(p.Top, 0), max(len(p.Lines)-p.view, 0))
+	p.Left = max(p.Left, 0)
+}
+
+// Render draws the pager on a w×h screen.
+func (p *Pager) Render(w, h int) []string {
+	p.view, p.w = p.body(h), w
+	p.clamp()
+	out := make([]string, 0, h)
+	for _, l := range p.Header {
+		out = append(out, sidebar.Cut(l, 0, w))
+	}
+	bar := sidebar.ScrollBar(len(p.Lines), p.Top, p.view)
+	tw := w
+	if bar != nil {
+		tw = w - 1
+	}
+	for i := 0; i < p.view; i++ {
+		row := strings.Repeat(" ", tw)
+		if n := p.Top + i; n < len(p.Lines) {
+			row = sidebar.Cut(p.mark(n), p.Left, tw) + reset
+		}
+		if bar != nil {
+			row += bar[i]
+		}
+		out = append(out, row)
+	}
+	return append(out, p.footer(w))
+}
+
+// mark is line n with the current search's matches on a background, its
+// own colors kept around them.
+func (p *Pager) mark(n int) string {
+	l := p.Lines[n]
+	pl := p.plainLine(n)
+	if p.query == "" || !strings.Contains(pl, p.query) {
+		return l
+	}
+	in := make([]bool, utf8.RuneCountInString(pl)) // runes inside a match
+	q := utf8.RuneCountInString(p.query)
+	for off := 0; ; {
+		i := strings.Index(pl[off:], p.query)
+		if i < 0 {
+			break
+		}
+		start := utf8.RuneCountInString(pl[:off+i])
+		for k := start; k < start+q && k < len(in); k++ {
+			in[k] = true
+		}
+		off += i + len(p.query)
+	}
+	var b strings.Builder
+	var active []string // the colors set since the last reset
+	r, on := 0, false
+	for i := 0; i < len(l); {
+		if l[i] == 0x1b {
+			j := i + 1
+			for j < len(l) && (l[j] < 0x40 || l[j] > 0x7e || l[j] == '[') {
+				j++
+			}
+			j = min(j+1, len(l))
+			seq := l[i:j]
+			if seq == reset || seq == "\x1b[m" {
+				active = active[:0]
+			} else {
+				active = append(active, seq)
+			}
+			b.WriteString(seq)
+			if on {
+				b.WriteString(hit)
+			}
+			i = j
+			continue
+		}
+		_, size := utf8.DecodeRuneInString(l[i:])
+		want := r < len(in) && in[r]
+		if want != on {
+			if want {
+				b.WriteString(hit)
+			} else {
+				b.WriteString(reset + strings.Join(active, ""))
+			}
+			on = want
+		}
+		b.WriteString(l[i : i+size])
+		r++
+		i += size
+	}
+	if on {
+		b.WriteString(reset)
+	}
+	return b.String()
+}
+
+func (p *Pager) plainLine(n int) string {
+	if len(p.plain) != len(p.Lines) {
+		p.plain = make([]string, len(p.Lines))
+		for i, l := range p.Lines {
+			p.plain[i] = sidebar.Plain(l)
+		}
+	}
+	return p.plain[n]
+}
+
+func (p *Pager) footer(w int) string {
+	if p.input != nil {
+		return " " + cyan + "/" + reset + sidebar.Fit(*p.input+"▏", w-2)
+	}
+	if p.note != "" {
+		return " " + faint + sidebar.Fit(p.note, w-2) + reset
+	}
+	where := ""
+	if n := len(p.Lines); n > p.view {
+		last := min(p.Top+p.view, n)
+		where = i18n.T("pager.where", p.Top+1, last, n, last*100/n) + " · "
+	}
+	return " " + faint + sidebar.Fit(where+i18n.T("pager.hint"), w-2) + reset
+}
+
+// Key applies a key; it reports whether the pager closes.
+func (p *Pager) Key(k string) bool {
+	if p.input != nil {
+		switch k {
+		case "enter":
+			p.search(*p.input)
+			p.input = nil
+		case "esc", "ctrl-c":
+			p.input = nil
+		case "backspace":
+			if r := []rune(*p.input); len(r) > 0 {
+				*p.input = string(r[:len(r)-1])
+			}
+		default:
+			if utf8.RuneCountInString(k) == 1 {
+				*p.input += k
+			}
+		}
+		return false
+	}
+	p.note = ""
+	page := max(p.view-1, 1)
+	switch k {
+	case "q", "esc", "ctrl-c":
+		return true
+	case "down", "j", "enter":
+		p.Top++
+	case "up", "k":
+		p.Top--
+	case "pgdown", " ", "f":
+		p.Top += page
+	case "pgup", "b":
+		p.Top -= page
+	case "home", "g":
+		p.Top = 0
+	case "end", "G":
+		p.Top = len(p.Lines)
+	case "right", "l":
+		p.Left += 8
+	case "left", "h":
+		p.Left -= 8
+	case "/":
+		s := ""
+		p.input = &s
+	case "v":
+		if p.Editable {
+			p.Edit = true
+			return true
+		}
+	case "n":
+		p.next(1)
+	case "N":
+		p.next(-1)
+	}
+	p.clamp()
+	return false
+}
+
+// search finds q's lines and goes to the first one from the top shown on.
+func (p *Pager) search(q string) {
+	p.query, p.matches = q, nil
+	if q == "" {
+		return
+	}
+	for i := range p.Lines {
+		if strings.Contains(p.plainLine(i), q) {
+			p.matches = append(p.matches, i)
+		}
+	}
+	if len(p.matches) == 0 {
+		p.note = i18n.T("pager.not_found", strconv.Quote(q))
+		return
+	}
+	p.Top--
+	p.next(1)
+}
+
+// next goes to the next (d 1) or previous (d -1) line with a match, around
+// the ends.
+func (p *Pager) next(d int) {
+	if len(p.matches) == 0 {
+		return
+	}
+	i := -1
+	for k, n := range p.matches {
+		if d > 0 && n > p.Top && i < 0 {
+			i = k
+		}
+		if d < 0 && n < p.Top {
+			i = k
+		}
+	}
+	if i < 0 {
+		i = 0
+		if d < 0 {
+			i = len(p.matches) - 1
+		}
+	}
+	p.Top = p.matches[i]
+	p.note = i18n.T("pager.match", i+1, len(p.matches), strconv.Quote(p.query))
+	p.clamp()
+}
+
+// Mouse applies a wheel turn, or a click or drag on the bar.
+func (p *Pager) Mouse(ev sidebar.Event) {
+	row := ev.Y - len(p.Header) - 1
+	switch ev.Kind {
+	case sidebar.EvScroll:
+		if ev.Key == "up" {
+			p.Top -= 3
+		} else {
+			p.Top += 3
+		}
+	case sidebar.EvClick:
+		p.dragging = ev.X == p.w && len(p.Lines) > p.view && row >= 0 && row < p.view
+		if p.dragging {
+			p.Top = sidebar.ScrollTo(len(p.Lines), p.view, row)
+		}
+	case sidebar.EvMove:
+		if p.dragging {
+			p.Top = sidebar.ScrollTo(len(p.Lines), p.view, min(max(row, 0), p.view-1))
+		}
+	}
+	p.clamp()
+}
+
+// Run shows p on the terminal until it is closed.
+func Run(p *Pager, in, out *os.File) error {
+	fd := int(in.Fd())
+	restore, err := sidebar.RawMode(fd)
+	if err != nil {
+		return err
+	}
+	defer restore()
+	// Alternate screen, no cursor, the wheel, clicks and drags (1002).
+	_, _ = io.WriteString(out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1002h\x1b[?1006h")
+	defer func() { _, _ = io.WriteString(out, "\x1b[?1002l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
+	winch := make(chan os.Signal, 1)
+	signal.Notify(winch, syscall.SIGWINCH)
+	defer signal.Stop(winch)
+	draw := func() {
+		w, h := sidebar.Size(int(out.Fd()))
+		var sc sidebar.Screen
+		for _, l := range p.Render(w, h) {
+			sc.Lines = append(sc.Lines, sidebar.Line{Text: l})
+		}
+		_, _ = io.WriteString(out, sidebar.Frame(sc, w, h))
+	}
+	var pending []byte
+	draw()
+	for {
+		b, err := sidebar.ReadInput(fd, 50*time.Millisecond)
+		if err != nil {
+			return nil // the popup went away
+		}
+		redraw := false
+		select {
+		case <-winch:
+			redraw = true
+		default:
+		}
+		if b == nil {
+			if redraw {
+				draw()
+			}
+			continue
+		}
+		var evs []sidebar.Event
+		evs, pending = sidebar.Parse(append(pending, b...), true)
+		for _, ev := range evs {
+			switch ev.Kind {
+			case sidebar.EvKey:
+				if p.Key(ev.Key) {
+					return nil
+				}
+			case sidebar.EvPaste:
+				if p.input != nil {
+					*p.input += ev.Text
+				}
+			case sidebar.EvClick:
+				if !sidebar.EarlyClick() {
+					p.Mouse(ev)
+				}
+			default:
+				p.Mouse(ev)
+			}
+		}
+		draw()
+	}
+}
+
+// Text splits drawn text into lines for a pager, tabs expanded to every
+// fourth column (escape sequences take none).
+func Text(s string) []string {
+	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	for i, l := range lines {
+		if !strings.Contains(l, "\t") {
+			continue
+		}
+		var b strings.Builder
+		col := 0
+		for k := 0; k < len(l); {
+			if l[k] == 0x1b {
+				j := k + 1
+				for j < len(l) && (l[j] < 0x40 || l[j] > 0x7e || l[j] == '[') {
+					j++
+				}
+				j = min(j+1, len(l))
+				b.WriteString(l[k:j])
+				k = j
+				continue
+			}
+			r, size := utf8.DecodeRuneInString(l[k:])
+			if r == '\t' {
+				n := 4 - col%4
+				b.WriteString(strings.Repeat(" ", n))
+				col += n
+			} else {
+				b.WriteString(l[k : k+size])
+				col += sidebar.DisplayWidth(string(r))
+			}
+			k += size
+		}
+		lines[i] = strings.TrimRight(b.String(), "\r")
+	}
+	return lines
+}

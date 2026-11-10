@@ -1,6 +1,7 @@
 package gotofile
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,5 +78,24 @@ func TestModel(t *testing.T) {
 		if w == 30 && !strings.Contains(sidebar.Plain(lines[3]), "…") {
 			t.Errorf("long folder not cut: %q", sidebar.Plain(lines[3]))
 		}
+	}
+}
+
+// A list longer than the popup has a scroll bar; a short one none.
+func TestScrollBar(t *testing.T) {
+	var files []string
+	for i := 0; i < 40; i++ {
+		files = append(files, fmt.Sprintf("f%02d.go", i))
+	}
+	m := &Model{Title: "Go to File", Files: files, Recent: files}
+	m.Update()
+	lines := m.Render(60, 12)
+	if p := sidebar.Plain(lines[header]); !strings.HasSuffix(p, "┃") || sidebar.DisplayWidth(p) != 60 {
+		t.Fatalf("first row %q", p)
+	}
+	m.Files, m.Recent = files[:3], files[:3]
+	m.Update()
+	if p := sidebar.Plain(m.Render(60, 12)[header]); strings.HasSuffix(p, "┃") || strings.HasSuffix(p, "│") {
+		t.Fatalf("a bar on a short list: %q", p)
 	}
 }

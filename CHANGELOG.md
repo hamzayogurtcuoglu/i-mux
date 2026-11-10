@@ -6,6 +6,22 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-11-10
+
+### Added
+
+- **Scroll bars.** Everything that scrolls has a thin bar on its right edge that shows where you
+  are: the left panel's file tree, Source Control and Skills, the search, Go to File, the folder
+  picker, and the diff, file and commit viewers. Click or drag it to jump.
+- **A clearer search.** Each file has its icon, its folder and a count of its matches; the
+  matches are colored; **⊟ Collapse all** / **⊞ Expand all** in the title folds or opens every
+  file, and a search that finds more than 5 files starts folded.
+
+### Changed
+
+- The diff, file, commit and limits viewers are i-mux's own pager instead of `less`, with the same
+  keys (↑↓, PgUp/PgDn, Space, g/G, / to search, n/N, q) and the scroll bar.
+
 ## [0.41.0] - 2026-11-10
 
 ### Added

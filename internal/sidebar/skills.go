@@ -159,7 +159,7 @@ func renderSkills(m Model, w, h int) []Line {
 	if h > 0 {
 		n = h - len(out)
 	}
-	return append(out, scrolled(rows, m.Scroll, n)...)
+	return append(out, scrolled(rows, m.Scroll, n, w)...)
 }
 
 // SkillMenuState decides which items a skill menu has.

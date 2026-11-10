@@ -42,6 +42,8 @@ type Model struct {
 	Results []Result
 	Sel     int
 	Top     int
+
+	w, list int // the width and list rows of the last Render
 }
 
 // Update ranks the files for the query.
@@ -166,6 +168,7 @@ func row(r Result, w int) string {
 // Render draws the popup for w columns and h rows.
 func (m *Model) Render(w, h int) []string {
 	list := max(h-header-1, 1)
+	m.w, m.list = w, list
 	if m.Sel < m.Top {
 		m.Top = m.Sel
 	}
@@ -202,6 +205,7 @@ func (m *Model) Render(w, h int) []string {
 		}
 		out = append(out, line)
 	}
+	copy(out[header:], sidebar.WithBar(out[header:], sidebar.ScrollBar(len(m.Results), m.Top, list), w))
 	for len(out) < h-1 {
 		out = append(out, "")
 	}
@@ -298,6 +302,11 @@ func Run(o Options) (string, int, error) {
 					}
 				case sidebar.EvClick:
 					if sidebar.EarlyClick() {
+						continue
+					}
+					if ev.X == m.w && len(m.Results) > m.list && ev.Y > header {
+						m.Top = sidebar.ScrollTo(len(m.Results), m.list, ev.Y-header-1)
+						m.Sel = m.Top
 						continue
 					}
 					if i := m.Top + ev.Y - header - 1; ev.Y > header && i < len(m.Results) {

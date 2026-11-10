@@ -195,6 +195,10 @@ func Run(ctx context.Context, o Options) error {
 			if isMenu(a.Kind) {
 				continue // nothing changed yet; a redraw would only draw under the menu
 			}
+			if a.Kind == ActScroll {
+				s.draw() // the same model, another part of the list
+				continue
+			}
 		case b, ok := <-input:
 			if !ok {
 				return nil
@@ -580,6 +584,10 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	}
 	switch a.Kind {
 	case ActNone:
+		return
+	case ActScroll:
+		s.scroll, _ = strconv.Atoi(a.Section)
+		s.model.Scroll = s.scroll
 		return
 	case ActFocus:
 		s.focus(ctx, a.Pane, client)

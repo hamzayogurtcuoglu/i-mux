@@ -63,3 +63,11 @@ func width(cells []Cell) int {
 	}
 	return n
 }
+
+// ButtonIcons are the button icons of theme (the popups' titles).
+func ButtonIcons(theme string) Icons {
+	if ic, ok := buttonIcons[theme]; ok {
+		return ic
+	}
+	return buttonIcons[IconsEmoji]
+}

@@ -160,13 +160,34 @@ func treeRow(r TreeRow, w int, ic Icons, theme string, selected bool) Line {
 	return Line{Text: text, Action: a}
 }
 
-// scrolled keeps rows [scroll, scroll+n) of list (scroll clamped).
-func scrolled(list []Line, scroll, n int) []Line {
+// scrolled keeps rows [scroll, scroll+n) of list (scroll clamped), with a
+// scroll bar in the last of the w columns when the list does not fit: a
+// click on it scrolls there (§9.3 "Scroll bars").
+func scrolled(list []Line, scroll, n, w int) []Line {
 	if n <= 0 || len(list) <= n {
 		return list
 	}
 	scroll = min(max(scroll, 0), len(list)-n)
-	return list[scroll : scroll+n]
+	bar := ScrollBar(len(list), scroll, n)
+	out := make([]Line, n)
+	for i, l := range list[scroll : scroll+n] {
+		cells := []Cell{{X: 0, W: w - 1, Text: Cut(l.Text, 0, w-1), Action: l.Action}}
+		if len(l.Cells) > 0 {
+			cells = nil
+			for _, c := range l.Cells {
+				if c.X < w-1 {
+					if c.X+c.W > w-1 {
+						c.W = w - 1 - c.X
+						c.Text = Cut(c.Text, 0, c.W)
+					}
+					cells = append(cells, c)
+				}
+			}
+		}
+		cells = append(cells, Cell{X: w - 1, W: 1, Text: bar[i], Action: Action{Kind: ActScroll, Section: strconv.Itoa(ScrollTo(len(list), n, i))}})
+		out[i] = Line{Text: compose(cells, w), Action: l.Action, Cells: cells}
+	}
+	return out
 }
 
 // renderExplorer is the Explorer view: a title with the search button and
@@ -186,7 +207,7 @@ func renderExplorer(m Model, w, h int) []Line {
 	if h > 0 {
 		n = h - 1
 	}
-	return append(out, scrolled(rows, m.Scroll, n)...)
+	return append(out, scrolled(rows, m.Scroll, n, w)...)
 }
 
 // Fold names of the Source Control view (in @imux_fold).
@@ -325,7 +346,7 @@ func renderChanges(m Model, w, h int) []Line {
 	if h > 0 {
 		n = h - len(out)
 	}
-	return append(out, scrolled(rows, m.Scroll, n)...)
+	return append(out, scrolled(rows, m.Scroll, n, w)...)
 }
 
 // railItem is one icon of the activity rail.

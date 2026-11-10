@@ -4,9 +4,11 @@ package searchview
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -26,7 +28,7 @@ const (
 	faint = "\x1b[38;5;243m"
 	cyan  = "\x1b[36m"
 	selBg = "\x1b[48;5;236m"
-	hit   = "\x1b[48;5;58m\x1b[38;5;229m"
+	hit   = "\x1b[48;5;94m\x1b[38;5;230m"
 )
 
 // Row is one line of the result list: a file header or a match.
@@ -47,6 +49,10 @@ type Model struct {
 	Top     int
 	// Folded holds the files whose matches are hidden.
 	Folded map[string]bool
+	Theme  string // file icons: sidebar.IconsNerd or IconsEmoji
+
+	w, list int   // the width and list rows of the last Render
+	btn     []int // the fold-all button's columns, [from, to) (1-based)
 }
 
 // Rows groups the results by file.
@@ -174,19 +180,18 @@ func (m *Model) Key(k string) (choice *search.Match, done, changed bool) {
 	return nil, false, false
 }
 
-func fit(s string, w int) string {
-	if w <= 0 {
-		return ""
-	}
-	r := []rune(s)
-	if len(r) > w {
-		return string(r[:w-1]) + "…"
-	}
-	return s + strings.Repeat(" ", w-len(r))
-}
+func fit(s string, w int) string { return sidebar.Fit(s, w) }
 
-// matchText draws a match's line with the match highlighted, trimmed to w
-// columns around it.
+// Colors of the result list.
+const (
+	text    = "\x1b[38;5;250m"
+	lineNo  = "\x1b[38;5;240m"
+	pill    = "\x1b[48;5;238m\x1b[38;5;252m"
+	pointer = "\x1b[36m"
+)
+
+// matchText draws a match's line in w columns: its text with the match
+// highlighted, scrolled to keep the match in view.
 func matchText(mt *search.Match, w int) string {
 	line := []rune(strings.ReplaceAll(mt.Text, "\t", " "))
 	start := 0
@@ -213,8 +218,60 @@ func matchText(mt *search.Match, w int) string {
 		}
 	}
 	before, match, after := string(line[:col]), string(line[col:col+n]), string(line[col+n:])
-	pad := w - len(line)
-	return before + hit + match + reset + after + strings.Repeat(" ", max(pad, 0))
+	used := sidebar.DisplayWidth(string(line))
+	return text + before + hit + match + reset + text + after + reset + strings.Repeat(" ", max(w-used, 0))
+}
+
+// AutoFold is how many files a search may find before its files start
+// folded, each a row with its count.
+const AutoFold = 5
+
+// FoldMany folds every file when there are more than AutoFold.
+func (m *Model) FoldMany() {
+	m.Folded = nil
+	files := map[string]bool{}
+	for _, r := range m.Results {
+		files[r.Path] = true
+	}
+	if len(files) <= AutoFold {
+		return
+	}
+	m.Folded = files
+	m.Sel, m.Top = 0, 0
+}
+
+// allFolded reports whether every file is folded.
+func (m *Model) allFolded() bool {
+	for _, r := range m.Results {
+		if !m.Folded[r.Path] {
+			return false
+		}
+	}
+	return len(m.Results) > 0
+}
+
+// fileRow draws a file's row: fold arrow, icon, name, folder and count.
+func (m *Model) fileRow(r Row, w int) string {
+	arrow := "▾"
+	if m.Folded[r.File] {
+		arrow = "▸"
+	}
+	icon, iw := sidebar.FileIcon(filepath.Base(r.File), m.Theme)
+	name, dir := filepath.Base(r.File), filepath.Dir(r.File)
+	if dir == "." {
+		dir = ""
+	}
+	c := " " + strconv.Itoa(r.Count) + " "
+	room := w - 5 - iw - len(c) - 1 // " ▾ " icon " " … " " count " "
+	nw := min(sidebar.DisplayWidth(name), max(room, 1))
+	dw := max(room-nw-2, 0)
+	left := " " + muted + arrow + reset + " " + icon + " " + bold + fit(name, nw) + reset
+	if dw > 0 && dir != "" {
+		left += "  " + faint + fit(dir, dw) + reset
+		nw += 2 + dw
+	}
+	pad := max(w-5-iw-nw-len(c)-1, 0)
+	return left + strings.Repeat(" ", pad) + pill + c + reset + " "
 }
 
 // Render draws the popup on a w×h terminal.
@@ -222,6 +279,7 @@ func (m *Model) Render(w, h int) []string {
 	rows := m.Rows()
 	m.fix(rows, 1)
 	list := max(h-4, 1)
+	m.w, m.list = w, list
 	if m.Sel < m.Top {
 		m.Top = m.Sel
 		if m.Top > 0 && rows[m.Top-1].Match == nil {
@@ -231,6 +289,7 @@ func (m *Model) Render(w, h int) []string {
 	if m.Sel >= m.Top+list {
 		m.Top = m.Sel - list + 1
 	}
+	m.Top = min(max(m.Top, 0), max(len(rows)-list, 0))
 	files := 0
 	for _, r := range rows {
 		if r.Match == nil {
@@ -249,35 +308,50 @@ func (m *Model) Render(w, h int) []string {
 			status = i18n.T("search.cut", len(m.Results))
 		}
 	}
+	// The title, with the button that folds or unfolds every file.
+	m.btn = nil
+	btn := ""
+	if files > 0 {
+		btn = i18n.T("search.collapse_all")
+		if m.allFolded() {
+			btn = i18n.T("search.expand_all")
+		}
+	}
+	bw := sidebar.DisplayWidth(btn)
+	ic := sidebar.ButtonIcons(m.Theme).Search
+	iw := sidebar.DisplayWidth(ic)
+	title := " " + pointer + ic + reset + " " + bold + fit(m.Title, max(w-bw-4-iw, 1)) + reset
+	if btn != "" {
+		title += " " + muted + btn + reset + " "
+		m.btn = []int{w - bw, w} // 1-based columns [from, to)
+	}
+	sw := sidebar.DisplayWidth(status)
 	q := m.Query + "▏"
 	out := []string{
-		" " + bold + fit(m.Title, w-1) + reset,
-		" " + cyan + ">" + reset + " " + fit(q, max(w-4-utf8.RuneCountInString(status), 1)) + muted + status + reset + " ",
+		title,
+		" " + pointer + "❯" + reset + " " + fit(q, max(w-4-sw, 1)) + muted + status + reset + " ",
 		faint + strings.Repeat("─", w) + reset,
 	}
-	for i := m.Top; i < len(rows) && i < m.Top+list; i++ {
-		r := rows[i]
+	bar := sidebar.ScrollBar(len(rows), m.Top, list)
+	lw := w
+	if bar != nil {
+		lw = w - 1
+	}
+	for i := 0; i < list && m.Top+i < len(rows); i++ {
+		n := m.Top + i
+		r := rows[n]
+		var line string
 		if r.Match == nil {
-			c := strconv.Itoa(r.Count)
-			arrow := "▾ "
-			if m.Folded[r.File] {
-				arrow = "▸ "
-			}
-			line := " " + muted + arrow + reset + bold + fit(r.File, w-5-len(c)) + reset + " " + muted + c + reset + " "
-			if i == m.Sel {
-				line = selBg + strings.ReplaceAll(line, reset, reset+selBg) + reset
-			}
-			out = append(out, line)
-			continue
+			line = m.fileRow(r, lw)
+		} else {
+			no := strconv.Itoa(r.Match.Line)
+			line = "     " + lineNo + fmt.Sprintf("%5s", no) + reset + "  " + matchText(r.Match, max(lw-13, 1)) + " "
 		}
-		no := strconv.Itoa(r.Match.Line)
-		mark := "  "
-		if i == m.Sel {
-			mark = cyan + "▸ " + reset
+		if n == m.Sel {
+			line = selBg + pointer + "▌" + reset + selBg + strings.ReplaceAll(sidebar.Cut(line, 1, lw-1), reset, reset+selBg) + reset
 		}
-		line := " " + mark + muted + fit(no, 5) + reset + matchText(r.Match, max(w-9, 1)) + " "
-		if i == m.Sel {
-			line = selBg + strings.ReplaceAll(line, reset, reset+selBg) + reset
+		if bar != nil {
+			line += bar[i]
 		}
 		out = append(out, line)
 	}
@@ -290,11 +364,33 @@ func (m *Model) Render(w, h int) []string {
 	return append(out[:h-1], " "+faint+fit(i18n.T("search.hint"), w-1)+reset)
 }
 
+// Click handles a click at (x, y) (1-based): the fold-all button, the
+// scroll bar, a file (fold) or a match (open it).
+func (m *Model) Click(x, y int) *search.Match {
+	rows := m.Rows()
+	switch {
+	case y == 1 && m.btn != nil && x >= m.btn[0] && x < m.btn[1]:
+		m.ToggleAll()
+	case y >= 4 && x == m.w && len(rows) > m.list:
+		m.Top = sidebar.ScrollTo(len(rows), m.list, y-4)
+		m.Sel = m.Top
+	case y >= 4 && m.Top+y-4 < len(rows):
+		r := rows[m.Top+y-4]
+		if r.Match != nil {
+			mt := *r.Match
+			return &mt
+		}
+		m.toggle(r.File, !m.Folded[r.File])
+	}
+	return nil
+}
+
 // Options run the popup on a terminal in project folder Dir.
 type Options struct {
-	In  *os.File
-	Out *os.File
-	Dir string
+	In    *os.File
+	Out   *os.File
+	Dir   string
+	Theme string // the file icons' (sidebar.IconsNerd, IconsEmoji)
 }
 
 type result struct {
@@ -317,7 +413,7 @@ func Run(o Options) (*search.Match, error) {
 	if i := strings.LastIndex(name, "/"); i >= 0 {
 		name = name[i+1:]
 	}
-	m := &Model{Title: i18n.T("search.title", name)}
+	m := &Model{Title: i18n.T("search.title", name), Theme: o.Theme}
 	files := search.Files(context.Background(), o.Dir)
 	results := make(chan result, 4)
 	gen := 0
@@ -383,7 +479,7 @@ func Run(o Options) (*search.Match, error) {
 		case r := <-results:
 			if r.gen == gen {
 				m.Results, m.Cut, m.Busy, m.Sel, m.Top = r.matches, r.cut, false, 1, 0 // the first match
-				m.Folded = nil
+				m.FoldMany()
 				changed = true
 			}
 		default:
@@ -407,13 +503,8 @@ func Run(o Options) (*search.Match, error) {
 					continue
 				}
 				if ev.Kind == sidebar.EvClick && !sidebar.EarlyClick() {
-					rows := m.Rows()
-					if i := m.Top + ev.Y - 4; ev.Y >= 4 && i < len(rows) {
-						if rows[i].Match != nil {
-							mt := *rows[i].Match
-							return &mt, nil
-						}
-						m.toggle(rows[i].File, !m.Folded[rows[i].File])
+					if mt := m.Click(ev.X, ev.Y); mt != nil {
+						return mt, nil
 					}
 					continue
 				}

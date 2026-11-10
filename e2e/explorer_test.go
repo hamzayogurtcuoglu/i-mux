@@ -56,14 +56,15 @@ func TestExplorerAndSearch(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 	c.Write("needle")
 	c.waitScreenAfter(h, mark, "1 results in 1 files", 5*time.Second)
-	c.waitScreenAfter(h, mark, "src/app.go", 5*time.Second)
-	// Tab folds the results, Tab again unfolds them.
+	c.waitScreenAfter(h, mark, "app.go  src", 5*time.Second) // the name, then its folder
+	// Tab folds the results (the title's button says so), Tab again unfolds
+	// them.
 	mark = c.Mark()
 	c.Write("\t")
-	c.waitScreenAfter(h, mark, "▸ src/app.go", 5*time.Second)
+	c.waitScreenAfter(h, mark, "⊞ Expand all", 5*time.Second)
 	mark = c.Mark()
 	c.Write("\t")
-	c.waitScreenAfter(h, mark, "▾ src/app.go", 5*time.Second)
+	c.waitScreenAfter(h, mark, "⊟ Collapse all", 5*time.Second)
 	mark = c.Mark()
 	c.Write("\r")
 	c.waitScreenAfter(h, mark, "EDIT +3 src/app.go", 5*time.Second) // at the line

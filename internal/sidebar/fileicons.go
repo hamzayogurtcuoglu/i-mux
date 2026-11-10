@@ -215,3 +215,7 @@ func (ic fileIcon) draw(theme string) (string, int) {
 	}
 	return ic.emoji, 2
 }
+
+// FileIcon is file name's icon as the explorer draws it in theme, and its
+// width (the search popup's files).
+func FileIcon(name, theme string) (string, int) { return iconOf(name, false, false).draw(theme) }

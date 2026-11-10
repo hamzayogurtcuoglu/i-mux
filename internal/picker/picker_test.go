@@ -1,6 +1,7 @@
 package picker
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
 
 var esc = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]`)
@@ -177,5 +179,29 @@ func TestSections(t *testing.T) {
 		if !c.Selectable() || c.Kind == folders.KindRestore {
 			t.Fatalf("search list %+v", m.List())
 		}
+	}
+}
+
+// A long list has a scroll bar in the last column.
+func TestScrollBar(t *testing.T) {
+	home := t.TempDir()
+	var dirs []string
+	for i := 0; i < 40; i++ {
+		d := filepath.Join(home, fmt.Sprintf("p%02d", i))
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		dirs = append(dirs, d)
+	}
+	m := &Model{Home: home, Cands: folders.Merge(nil, dirs, nil), Shorten: func(s string) string { return s }}
+	lines := m.Render(60, 14)
+	bars := 0
+	for _, l := range lines[3:13] {
+		if p := sidebar.Plain(l); strings.HasSuffix(p, "┃") || strings.HasSuffix(p, "│") {
+			bars++
+		}
+	}
+	if bars != 10 {
+		t.Fatalf("%d rows with a bar:\n%s", bars, strings.Join(lines, "\n"))
 	}
 }

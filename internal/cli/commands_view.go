@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/completion"
@@ -17,6 +15,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/diffview"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/pager"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/searchview"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
@@ -84,24 +83,14 @@ func runDiff(e *Env, args []string) error {
 		lines = diffview.Parse(gitDiff(path, mode))
 	}
 	w, _ := sidebar.Size(int(os.Stdout.Fd()))
-	rows, first := diffview.Render(lines, w, w >= 120)
+	rows, first := diffview.Render(lines, w-1, w >= 120) // a column for the scroll bar
 	added, removed := diffview.Stats(lines)
-	var b bytes.Buffer
-	fmt.Fprintf(&b, " \x1b[1m%s\x1b[0m   \x1b[32m+%d\x1b[0m \x1b[31m−%d\x1b[0m   \x1b[2m%s\x1b[0m\n\n", path, added, removed, i18n.T("view.hint"))
+	header := []string{fmt.Sprintf(" \x1b[1m%s\x1b[0m   \x1b[32m+%d\x1b[0m \x1b[31m−%d\x1b[0m", path, added, removed), ""}
 	if len(rows) == 0 {
-		b.WriteString("  " + i18n.T("view.no_diff") + "\n")
+		rows = []string{"  " + i18n.T("view.no_diff")}
 	}
-	for _, r := range rows {
-		b.WriteString(r + "\n")
-	}
-	start := 1
-	if first >= 0 {
-		start = max(first+2-3, 1) // header lines; a little context above
-	}
-	return page(e, &b, "-R", "-S", "--mouse", "+"+strconv.Itoa(start))
+	return page(e, header, rows, max(first-3, 0)) // a little context above the first change
 }
-
-func bytesBuffer(b []byte) *bytes.Buffer { return bytes.NewBuffer(b) }
 
 // gitDiff is the file's whole-file diff: against HEAD ("head"; against the
 // index in a repository without commits), the staged side or the work tree.
@@ -193,7 +182,7 @@ func runView(e *Env, args []string) error {
 	if len(pos) != 1 {
 		return &UsageError{Msg: i18n.T("cli.usage", "__view [--line N] <path>")}
 	}
-	start := "+" + strconv.Itoa(max(*line-5, 1))
+	top := max(*line-5, 0)
 	if bat, err := exec.LookPath("bat"); err == nil {
 		args := []string{"--color=always", "--paging=never", "--style=numbers,changes"}
 		if *line > 0 {
@@ -201,10 +190,35 @@ func runView(e *Env, args []string) error {
 		}
 		out, err := exec.Command(bat, append(args, "--", pos[0])...).Output()
 		if err == nil {
-			return page(e, bytes.NewBuffer(out), "-R", "-S", "--mouse", start)
+			return pageFile(e, pos[0], pager.Text(string(out)), top)
 		}
 	}
-	return pageFile(e, pos[0], "-N", "-R", "-S", "--mouse", start)
+	b, err := os.ReadFile(pos[0])
+	if err != nil {
+		return err
+	}
+	lines := pager.Text(string(b))
+	for i, l := range lines {
+		mark := "\x1b[38;5;243m"
+		if i+1 == *line {
+			mark = "\x1b[33m"
+		}
+		lines[i] = fmt.Sprintf("%s%5d\x1b[0m  %s", mark, i+1, l)
+	}
+	return pageFile(e, pos[0], lines, top)
+}
+
+// pageFile shows a file's lines in the pager, where v opens the editor at
+// the first line shown.
+func pageFile(e *Env, path string, lines []string, top int) error {
+	if !isTerminal(os.Stdin) || !isTerminal(os.Stdout) {
+		return page(e, nil, lines, top)
+	}
+	p := &pager.Pager{Lines: lines, Top: top, Editable: true}
+	if err := pager.Run(p, os.Stdin, os.Stdout); err != nil || !p.Edit {
+		return err
+	}
+	return runEdit(e, []string{"--line", strconv.Itoa(p.Top + 1), path})
 }
 
 // runSearch is the project search popup (D26); a chosen result opens in the
@@ -214,7 +228,11 @@ func runSearch(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	m, err := searchview.Run(searchview.Options{In: os.Stdin, Out: os.Stdout, Dir: dir})
+	theme := sidebar.IconsEmoji
+	if cfg, err := loadConfig(e); err == nil {
+		theme = sidebar.IconTheme(cfg)
+	}
+	m, err := searchview.Run(searchview.Options{In: os.Stdin, Out: os.Stdout, Dir: dir, Theme: theme})
 	if err != nil || m == nil {
 		return err
 	}
@@ -230,49 +248,14 @@ func ViewArgs(self, path string, line int) []string {
 	return append(a, path)
 }
 
-// page shows text in less (printed as is when less is missing).
-func page(e *Env, text *bytes.Buffer, opts ...string) error {
-	less, err := exec.LookPath("less")
-	if err != nil {
-		_, err := e.Stdout.Write(text.Bytes())
-		return err
-	}
-	cmd := exec.Command(less, opts...)
-	cmd.Env = lessEnv("-X -K")
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = text, os.Stdout, os.Stderr
-	return cmd.Run()
-}
-
-// lessEnv is less's environment: $LESS plus flags, and UTF-8 when no
-// charset is set (under a C locale less shows "·" as <C2><B7>).
-func lessEnv(flags string) []string {
-	env := append(os.Environ(), "LESS="+strings.TrimSpace(os.Getenv("LESS")+" "+flags))
-	if os.Getenv("LESSCHARSET") == "" {
-		env = append(env, "LESSCHARSET=utf-8")
-	}
-	return env
-}
-
-// pageFile shows a file in less.
-func pageFile(e *Env, path string, opts ...string) error {
-	less, err := exec.LookPath("less")
-	if err != nil {
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return err
+// page shows drawn lines in i-mux's pager (§9.3 "Scroll bars") from line
+// top, under header; printed as they are when not on a terminal.
+func page(e *Env, header, lines []string, top int) error {
+	if !isTerminal(os.Stdin) || !isTerminal(os.Stdout) {
+		for _, l := range append(header, lines...) {
+			fmt.Fprintln(e.Stdout, l)
 		}
-		_, err = e.Stdout.Write(b)
-		return err
+		return nil
 	}
-	cmd := exec.Command(less, append(opts, "--", path)...)
-	cmd.Env = lessEnv("-K")
-	if cfg, err := loadConfig(e); err == nil {
-		if v := completion.Visual(); cfg.Completion.Enabled && v != "" {
-			cmd.Env = append(cmd.Env, "VISUAL="+v) // less's v edits, with Copilot
-		} else if ed := editor.Choose(cfg.Editor); ed != nil {
-			cmd.Env = append(cmd.Env, "VISUAL="+strings.Join(ed, " ")) // less's v edits
-		}
-	}
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	return cmd.Run()
+	return pager.Run(&pager.Pager{Header: header, Lines: lines, Top: top}, os.Stdin, os.Stdout)
 }

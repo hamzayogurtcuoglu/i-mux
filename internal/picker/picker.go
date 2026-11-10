@@ -36,6 +36,8 @@ type Model struct {
 	Top      int  // first list row shown
 	Scanning bool // git folders are still being searched
 	Shorten  func(string) string
+
+	w, rows int // the width and list rows of the last Render
 }
 
 // List is what the query shows. With nothing typed: the restore row, the
@@ -179,6 +181,7 @@ func rowsFor(h int) int { return max(h-4, 1) }
 func (m *Model) Render(w, h int) []string {
 	list := m.List()
 	rows := rowsFor(h)
+	m.w, m.rows = w, rows
 	m.fix(list, 1)
 	if m.Sel < m.Top {
 		m.Top = m.Sel
@@ -234,6 +237,7 @@ func (m *Model) Render(w, h int) []string {
 		}
 		out = append(out, line)
 	}
+	copy(out[3:], sidebar.WithBar(out[3:], sidebar.ScrollBar(len(list), m.Top, rows), w))
 	if len(list) == 0 {
 		msg := i18n.T("folders.none")
 		if m.Scanning && !folders.IsPath(m.Query) {
@@ -336,8 +340,14 @@ func Run(o Options) (folders.Cand, bool, error) {
 					continue
 				}
 				if ev.Kind == sidebar.EvClick && !sidebar.EarlyClick() {
-					// A click on a list row opens it.
+					// A click on the scroll bar scrolls; on a list row opens it.
 					list := m.List()
+					if ev.X == m.w && len(list) > m.rows && ev.Y >= 4 {
+						m.Top = sidebar.ScrollTo(len(list), m.rows, ev.Y-4)
+						m.Sel = m.Top
+						m.fix(list, 1)
+						continue
+					}
 					if i := m.Top + ev.Y - 4; ev.Y >= 4 && i < len(list) && list[i].Selectable() {
 						return list[i], true, nil
 					}

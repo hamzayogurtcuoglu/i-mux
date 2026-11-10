@@ -785,6 +785,14 @@ func (s *Source) iconTheme(term, program string) string {
 	return IconsEmoji
 }
 
+// IconTheme is the icon theme a popup draws with: the configured one, else
+// the editor's icons when the terminal (TERM_PROGRAM, or Windows' under WSL)
+// uses a Nerd Font.
+func IconTheme(cfg *config.Config) string {
+	s := &Source{Cfg: cfg}
+	return s.iconTheme(os.Getenv("TERM"), os.Getenv("TERM_PROGRAM"))
+}
+
 // nerdProgram is termfont.NerdFont(program), asked once per program (it
 // reads the terminal's preferences). An unknown program ("") is asked too:
 // under WSL that is Windows' default terminal.

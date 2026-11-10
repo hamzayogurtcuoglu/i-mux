@@ -11,6 +11,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/pager"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -143,7 +144,7 @@ func gitInPopup(e *Env, cwd, op string, args []string) error {
 		}
 		cmd := exec.Command("git", "-C", cwd, "show", "--stat", "--patch", "--color=always", args[0])
 		out, _ := cmd.Output()
-		return page(e, bytesBuffer(out), "-R", "--mouse")
+		return page(e, nil, pager.Text(string(out)), 0)
 	}
 	fmt.Println()
 	if err != nil {

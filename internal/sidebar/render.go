@@ -48,6 +48,7 @@ const (
 	ActGoto                   // Go to File (the editor's Ctrl+P)
 	ActSkillNew               // the New skill dialog: an agent writes a skill, or a blank SKILL.md (D32)
 	ActSkillMenu              // the menu of skill Path (open, view, add, improve, share, delete)
+	ActScroll                 // scroll the list to row Section (a click on its scroll bar)
 )
 
 // Action is a row's action.
@@ -119,7 +120,7 @@ func (s Screen) Items() []Item {
 	for i, l := range s.Lines {
 		if len(l.Cells) > 0 {
 			for j, c := range l.Cells {
-				if c.Action.Kind != ActNone {
+				if c.Action.Kind != ActNone && c.Action.Kind != ActScroll {
 					out = append(out, Item{i, j})
 				}
 			}

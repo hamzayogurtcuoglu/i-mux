@@ -1,14 +1,10 @@
 package cli
 
 import (
-	"bufio"
 	"bytes"
 	"context"
-	"fmt"
-	"os"
-	"os/exec"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/pager"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/panel"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 )
@@ -25,7 +21,7 @@ func init() {
 func runLimits(e *Env, args []string) error {
 	fs := newFlags(e, "limits")
 	asJSON := fs.Bool("json", false, "print JSON (schema: docs/LIMITS.md)")
-	pager := fs.Bool("pager", false, "show in a pager (used by the tmux popup)")
+	paged := fs.Bool("pager", false, "show in a pager (used by the tmux popup)")
 	if _, err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -37,23 +33,12 @@ func runLimits(e *Env, args []string) error {
 	if *asJSON {
 		return rep.JSON(e.Stdout)
 	}
-	if !*pager {
+	if !*paged {
 		return rep.Table(e.Stdout)
 	}
 	var buf bytes.Buffer
 	if err := rep.Table(&buf); err != nil {
 		return err
 	}
-	if less, err := exec.LookPath("less"); err == nil {
-		// Only -R on the command line: BusyBox less (Alpine) rejects -X and
-		// -K and would exit at once; it ignores $LESS, which GNU less reads.
-		cmd := exec.Command(less, "-R", "--mouse")
-		cmd.Env = lessEnv("-X -K")
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = &buf, os.Stdout, os.Stderr
-		return cmd.Run()
-	}
-	_, _ = e.Stdout.Write(buf.Bytes())
-	fmt.Fprint(e.Stdout, i18n.T("limits.press_enter"))
-	_, _ = bufio.NewReader(e.Stdin).ReadString('\n')
-	return nil
+	return page(e, nil, pager.Text(buf.String()), 0)
 }

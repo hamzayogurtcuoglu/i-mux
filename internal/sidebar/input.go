@@ -23,7 +23,7 @@ const (
 // Event is one key press or mouse click.
 type Event struct {
 	Kind EventKind
-	Key  string // "up", "down", "left", "right", "home", "end", "delete", "enter", "esc", "tab", "backtab", "backspace", "ctrl-a", "ctrl-e", "ctrl-u", "ctrl-w", "ctrl-c", or the character
+	Key  string // "up", "down", "left", "right", "home", "end", "delete", "pgup", "pgdown", "enter", "esc", "tab", "backtab", "backspace", "ctrl-a", "ctrl-e", "ctrl-u", "ctrl-w", "ctrl-c", or the character
 	X, Y int
 	Text string // EvPaste: the pasted text
 }
@@ -38,7 +38,7 @@ const (
 )
 
 // Parse decodes terminal input: printable keys, Enter, Tab, Esc, arrows,
-// Home, End and Delete (CSI and SS3 forms), bracketed pastes and SGR mouse
+// Home, End, Delete, PgUp and PgDn (CSI and SS3 forms), bracketed pastes and SGR mouse
 // reports (ESC [ < b ; x ; y M|m), of which only left-button presses become
 // events. It returns the events and the bytes of an incomplete sequence (or
 // paste) to keep for the next read. A lone ESC at the end of the input is
@@ -120,6 +120,10 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 						key("end")
 					case "3":
 						key("delete")
+					case "5":
+						key("pgup")
+					case "6":
+						key("pgdown")
 					}
 				}
 				i = j + 1
