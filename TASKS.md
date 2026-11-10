@@ -980,6 +980,17 @@ Invalid), and nothing restored the sidebars. The skills feature itself was not t
   - AC: `make install-local` (a new file, then `mv`); CONTRIBUTING and AGENTS.md say never to copy
     over a running binary.
 
+## M44: File icons in the explorer (added 2026-11-10)
+
+User request: make the Files view nicer, for example with the file types next to the names.
+
+- [x] **T44.1 Icons by file type, folders, indent guides** · S
+  - AC: D35, §9.3 "File icons in the explorer": an icon per entry (whole names, README /
+    LICENSE, tests, extensions; folders open and closed), Seti's glyphs and colors with the
+    editor's icons and an emoji otherwise, every icon of a theme the same width; faint indent
+    guides; git colors and the selection unchanged; unit tests (the lookup, widths, a row in
+    both themes) and the explorer e2e.
+
 ## M43: The Nerd Font comes with i-mux (added 2026-11-10)
 
 User report: the Nerd Font does not work, and a new PC does not come with it. Cause: i-mux never

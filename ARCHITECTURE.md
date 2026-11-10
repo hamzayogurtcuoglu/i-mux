@@ -111,6 +111,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D32 | **Project skills live in `.agents/skills/`, are linked into `.claude/skills/` for Claude Code, and are written by the active agent** (added 2026-11-09, v0.36, at the user's request): a **🧩 Skills** view on the activity rail lists the project's `<name>/SKILL.md` skills across every CLI's folder, shows which of the five agents see each one (`✻▲◉◎▣`) and any front-matter problem (`⚠`), links `.agents/skills/` into `.claude/skills/` so one skill works in all five CLIs, and has **✨ Write with Agent…** to send a structured skill-authoring prompt to the active agent pane (since v0.37, D33: one **✨ New skill…** button and dialog). | Antigravity, Codex, Copilot CLI and OpenCode read `.agents/skills/`, while Claude Code, Copilot CLI and OpenCode read `.claude/skills/`: keeping the canonical folder in `.agents/skills/` with a relative symlink in `.claude/skills/` covers all five CLIs without copies drifting apart. Letting the active agent write or improve a skill uses its full repo access and requires no separate LLM client. |
 | D33 | **A skill is written by an agent the user picks, in a new pane that starts with i-mux's skill-writing guide** (added 2026-11-10, v0.37, at the user's request): the Skills view has one **✨ New skill…** button; it opens a dialog (a popup) that asks who writes the skill (an agent in a new pane, the agent of the current pane, or the user from a blank `SKILL.md`), then what it should do (or the template's name) in a real text box. The chosen agent starts beside the current pane with the guide and the description as its first message; with nothing described, the guide tells it to ask first. | The user found two buttons (✨ and ➕) and tmux's one-line prompt in the status line ("a tiny thing at the top") poor for writing a skill: the description is a paragraph, and the user wants to choose the agent rather than always disturb the active one. A new pane keeps the current conversation clean; the agent's own input takes over from there. |
 | D34 | **i-mux installs the Nerd Font its icons need, where the terminal draws text, and sets the terminals it knows to it** (added 2026-11-10, v0.38, at the user's request): `imux font install` (Settings, and the installer, offer it) downloads Nerd Fonts' JetBrainsMono (a pinned release, checked against its SHA-256), installs four styles for the user alone (no administrator rights), sets Windows Terminal's and VS Code's terminal font to it with a backup of their settings, and switches the icons to `nerd`. Under WSL all of this happens on the Windows side. | On a new PC the icons stayed emoji (or "?" boxes when set to `nerd`): no Nerd Font comes with Windows, i-mux only told macOS users to `brew install` one, and under WSL the font must be in Windows (the terminal draws the text there), not in Linux. Changing one value in the terminals' settings, comments and all kept, is what a user would do by hand; the backup undoes it. |
+| D35 | **The explorer marks files by type, as the editor does** (added 2026-11-10, v0.39, at the user's request): each entry has an icon of its kind, folders open and closed, and indent guides mark the levels. With the editor's icons (`nerd`) they are the Nerd Font glyphs of the editor's default file icon theme (Seti) in its colors; with `emoji` an emoji per kind. | The user found the Files view plain: names alone are slow to scan. The editor's own icons, now that i-mux installs their font (D34), make it look like the explorer users know; the emoji keep it readable without the font. |
 
 ## 4. Components
 
@@ -1465,6 +1466,22 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   text goes after it.
 - `[paste] images = true` (Settings: "Paste images with Ctrl+V"). `imux doctor` says what reads
   the clipboard here (or what to install: `wl-clipboard`, `xclip`).
+
+#### File icons in the explorer (v0.39, D35)
+
+- **A row:** indent guides (a faint `│` per level, under the arrow of the folder above), a
+  folder's arrow, the entry's icon, its name in its git color, the git letter at the right.
+- **Which icon** (`iconOf`, `fileicons.go`): a folder's (closed `U+E5FF`, open `U+E5FE`);
+  else by the whole name, any case (the agents' instructions `AGENTS.md` / `CLAUDE.md` /
+  `GEMINI.md` take the rail's Agents icon, `SKILL.md` the Skills one; manifests, lock files,
+  `Makefile`, `Dockerfile`, `CHANGELOG.md`, `TASKS.md` ...); then names starting with README or
+  LICENSE; then the extension (about 60 languages and file kinds); else a plain file. A test
+  file (`x_test.go`, `x.test.ts`, `x.spec.js`, `test_x.py` ...) gets a beaker in its language's
+  color.
+- **Themes:** `nerd` draws Seti's glyphs (and codicons) from the Nerd Font, one column each, in
+  Seti's palette in 256 colors (Go in its own cyan); `emoji` draws an emoji per kind, two columns
+  each (none needs a variation selector, whose width terminals disagree on). Within a theme every
+  icon has the same width, so the names line up.
 
 #### Explorer menus and hover (v0.30, D31)
 
