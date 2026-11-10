@@ -997,6 +997,27 @@ them, and have the active LLM agent write or improve them.
     (`✻▲◉◎▣`), and description or validation warning; skill menu (Open, View, Add to Agent,
     Improve with Agent, Share with all agents, Delete); unit and e2e tests; README.
 
+## M42: One New skill button and dialog (added 2026-11-10)
+
+User request: writing a skill was poor: a ✨ button and a ➕ next to it, and a tiny prompt in the
+status line. One button should ask which agent writes the skill, then open a pane with that
+agent, starting with i-mux's skill-writing prompt; a separate popup is fine.
+
+- [x] **T42.1 The New skill dialog** · S
+  - AC: `internal/skilldialog` (D33, §9.3 "Skills"): step 1 picks an agent for a new pane (the
+    current pane's first; not installed ones cannot be chosen), the current pane's agent or a
+    blank template, by arrows, letters or a click; step 2 is a wrapped text box (cursor keys,
+    Home/End, Delete, Ctrl+W, Ctrl+U, bracketed paste and unbracketed newlines) or the template's
+    name with its path and a taken-name warning; the sidebar's input parser learns Home, End,
+    Delete, Ctrl+A/E/W and bracketed paste; unit tests.
+- [x] **T42.2 One button, the agent in a new pane** · S · deps: T42.1
+  - AC: the Skills view's single ✨ New skill… button (and the empty space's menu) opens the
+    dialog in a popup sized to the client; `WritePrompt` puts the guide first and the description
+    last (empty: the agent asks first, in the UI's language); `workspace.StartPrompt` opens the
+    agent beside the target pane (below when narrow, in the "No agents" pane's place), named
+    "new skill"; "this pane" pastes it there; the template is created and edited in the same
+    popup; tmux's command-prompt is no longer used for skills; e2e with the fake agents; README.
+
 ---
 
 ## Testing strategy

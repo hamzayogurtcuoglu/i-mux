@@ -108,7 +108,8 @@ done by tmux on a dedicated socket. i-mux only:
 | D29 | **Commit messages are written by the user's own agents, run once without a UI** (added 2026-11-08, v0.23, at the user's request): the ✨ button in Source Control sends the changes to the agent of the pane the sidebar follows (or `git.commit_agent`) in its print mode and offers the reply; it never commits by itself. | Like the editor's "generate commit message", without an API or key of imux's own: the user's plans and keys (Claude, Codex, Copilot, Antigravity, or OpenCode with a free NVIDIA / Groq key) already pay for it. |
 | D31 | **The sidebar draws backgrounds for hover and selection, and asks for every mouse motion** (added 2026-11-08, v0.30, at the user's request): a row or button under the pointer gets a background, the selected explorer row another; explorer menus follow the editor's. | The user could not tell which row the pointer or a menu was on. The "foreground colors only" rule (any theme keeps its background) gives way where the editor itself uses backgrounds; the sidebar's text colors already assume a dark theme. Motion reports cost a redraw only when the item under the pointer changes. |
 | D30 | **AI completion in the editor is Neovim with GitHub's copilot.vim, in a profile i-mux manages** (added 2026-11-08, v0.25, at the user's request): when Settings turns it on, file edits open `nvim` with `NVIM_APPNAME=imux-nvim`; i-mux writes that profile's `init.lua` (mouse, Ctrl+S / Ctrl+Q, Tab accepts) and keeps copilot.vim in it. | Inline suggestions are an editor feature, and i-mux edits in an external terminal editor. Neovim with the official plugin gives the editor's Copilot suggestions with the user's Copilot plan; micro has no such plugin; our own editor would be a project of its own. A separate profile leaves the user's own Neovim setup untouched. |
-| D32 | **Project skills live in `.agents/skills/`, are linked into `.claude/skills/` for Claude Code, and are written by the active agent** (added 2026-11-09, v0.36, at the user's request): a **🧩 Skills** view on the activity rail lists the project's `<name>/SKILL.md` skills across every CLI's folder, shows which of the five agents see each one (`✻▲◉◎▣`) and any front-matter problem (`⚠`), links `.agents/skills/` into `.claude/skills/` so one skill works in all five CLIs, and has **✨ Write with Agent…** to send a structured skill-authoring prompt to the active agent pane. | Antigravity, Codex, Copilot CLI and OpenCode read `.agents/skills/`, while Claude Code, Copilot CLI and OpenCode read `.claude/skills/`: keeping the canonical folder in `.agents/skills/` with a relative symlink in `.claude/skills/` covers all five CLIs without copies drifting apart. Letting the active agent write or improve a skill uses its full repo access and requires no separate LLM client. |
+| D32 | **Project skills live in `.agents/skills/`, are linked into `.claude/skills/` for Claude Code, and are written by the active agent** (added 2026-11-09, v0.36, at the user's request): a **🧩 Skills** view on the activity rail lists the project's `<name>/SKILL.md` skills across every CLI's folder, shows which of the five agents see each one (`✻▲◉◎▣`) and any front-matter problem (`⚠`), links `.agents/skills/` into `.claude/skills/` so one skill works in all five CLIs, and has **✨ Write with Agent…** to send a structured skill-authoring prompt to the active agent pane (since v0.37, D33: one **✨ New skill…** button and dialog). | Antigravity, Codex, Copilot CLI and OpenCode read `.agents/skills/`, while Claude Code, Copilot CLI and OpenCode read `.claude/skills/`: keeping the canonical folder in `.agents/skills/` with a relative symlink in `.claude/skills/` covers all five CLIs without copies drifting apart. Letting the active agent write or improve a skill uses its full repo access and requires no separate LLM client. |
+| D33 | **A skill is written by an agent the user picks, in a new pane that starts with i-mux's skill-writing guide** (added 2026-11-10, v0.37, at the user's request): the Skills view has one **✨ New skill…** button; it opens a dialog (a popup) that asks who writes the skill (an agent in a new pane, the agent of the current pane, or the user from a blank `SKILL.md`), then what it should do (or the template's name) in a real text box. The chosen agent starts beside the current pane with the guide and the description as its first message; with nothing described, the guide tells it to ask first. | The user found two buttons (✨ and ➕) and tmux's one-line prompt in the status line ("a tiny thing at the top") poor for writing a skill: the description is a paragraph, and the user wants to choose the agent rather than always disturb the active one. A new pane keeps the current conversation clean; the agent's own input takes over from there. |
 
 ## 4. Components
 
@@ -1616,7 +1617,7 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Back:** continuing a named conversation from History (`switch` / `split --from-session`)
   names the pane after it.
 
-#### Skills (v0.36, D32)
+#### Skills (v0.36, D32; the New skill dialog v0.37, D33)
 
 - **Where:** **🧩 Skills** on the activity rail (Nerd Font: `extensions` U+EAE6; key `5` in the
   sidebar), view `skills`.
@@ -1630,14 +1631,28 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Validation:** checks `SKILL.md` for YAML front matter (`---`), `name` (lowercase letters,
   digits and single hyphens, ≤ 64 chars, matching the folder) and `description` (non-empty, ≤ 1024
   chars). A problem marks the row with `⚠` and explains it on the subtitle line.
-- **Authoring and actions:** **✨ Write with Agent…** asks what the skill should teach the agent
-  and pastes `skills.WritePrompt` into the target agent pane; **➕** asks for a name, writes a
-  starter `SKILL.md` in `.agents/skills/<name>/`, links `.claude/skills/<name>`, and opens the
-  editor popup. Clicking a skill edits its `SKILL.md`; clicking **✨** on a skill row (or
-  right-clicking the row) opens its menu: **Open**, **View**, **Add to Agent**, **Improve with
-  Agent**, **Share with all agents**, and **Delete** (to the Trash, removing its links too). Every
-  menu and prompt passes paths and pane ids in `@imux_skill*` options, never in the prompt's
-  template.
+- **Authoring and actions:** one full-width **✨ New skill…** button (v0.37, D33) opens the New
+  skill dialog (`internal/skilldialog`, `imux __skill dialog` → a popup of at most 78×22 running
+  `imux __skill new`). Step 1 asks who writes the skill: an agent in a new pane (config order;
+  the current pane's agent chosen first, not-installed ones dimmed, a limited one marked), `h`
+  the agent of the current pane ("knows this conversation"), or `t` a blank `SKILL.md`. Step 2 is
+  a text box (word wrap, ←→↑↓, Home/End, Delete, Ctrl+W, Ctrl+U, bracketed paste; an Enter that
+  arrives with more text is a pasted newline) for what the skill should do, under a summary of
+  the guide the agent gets; or the template's name, with its slug's path and a warning when it is
+  taken. The dialog only asks: an agent's answer goes to `@imux_skill_text` and `imux __skill
+  write --agent A | --here` runs in the background once the popup closes. `skills.WritePrompt`
+  puts i-mux's guide first (where to save, front matter, description rules, checked steps) and
+  the description last; with an empty description the agent is told to ask first, in the UI's
+  language. `--agent` starts the agent with it as its first message (`workspace.StartPrompt`:
+  beside the target pane, below it when the pane is narrower than 120 columns, or in the "No
+  agents" pane's place; named "new skill"; pasted when the template takes no prompt); `--here`
+  pastes it into the target pane. A template is created, linked and opened in the editor in the
+  same popup. Right-clicking the view's empty space offers **New skill…** and **Blank
+  SKILL.md…** (the dialog at the name). Clicking a skill edits its `SKILL.md`; clicking **✨**
+  on a skill row (or right-clicking the row) opens its menu: **Open**, **View**, **Add to
+  Agent**, **Improve with Agent**, **Share with all agents**, and **Delete** (to the Trash,
+  removing its links too). Every menu and dialog passes paths and pane ids in `@imux_skill*`
+  options, never in a menu's command or a popup's.
 
 #### Versions and updates (v0.34)
 
