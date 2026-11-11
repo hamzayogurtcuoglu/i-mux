@@ -616,8 +616,8 @@ var tr = map[string]string{
 	"editor.now":                  "✓ Dosyalar artık %s ile açılır.",
 	"editor.install_cmd":          "%s kurulu değil; şununla kurulur: %s",
 	"editor.install_ask":          "Şimdi kurulsun mu? [E/h] ",
-	"html.window":                 "🌐 Kendi penceresinde, canlı",
-	"html.tab":                    "Tarayıcı sekmesinde, canlı",
+	"html.window":                 "Tarayıcıda aç",
+	"html.tab":                    "Yeni sekmede aç",
 	"html.edit":                   "Düzenle",
 	"html.view":                   "Görüntüle",
 

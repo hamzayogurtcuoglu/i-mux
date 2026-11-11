@@ -1176,7 +1176,7 @@ func TestFileMenus(t *testing.T) {
 	}
 	// A click on an HTML file asks how to open it (D51).
 	html := HTMLMenuItems("/bin/imux", "/dev/ttys1", "%3")
-	if got := names(html); got != "🌐 In its own window, live|In a browser tab, live|-|Edit|View" {
+	if got := names(html); got != "Open in browser|Open in a new tab|-|Edit|View" {
 		t.Errorf("html menu %s", got)
 	}
 	for i, op := range map[int]string{2: "preview-window", 5: "preview-tab", 9: "open", 12: "view"} {

@@ -615,8 +615,8 @@ var en = map[string]string{
 	"editor.now":                  "✓ Files open in %s.",
 	"editor.install_cmd":          "%s is not installed; it installs with: %s",
 	"editor.install_ask":          "Install it now? [Y/n] ",
-	"html.window":                 "🌐 In its own window, live",
-	"html.tab":                    "In a browser tab, live",
+	"html.window":                 "Open in browser",
+	"html.tab":                    "Open in a new tab",
 	"html.edit":                   "Edit",
 	"html.view":                   "View",
 

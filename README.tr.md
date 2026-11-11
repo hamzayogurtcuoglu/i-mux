@@ -81,9 +81,9 @@ Copilot eklentili Neovim'inde açılır (Tab
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
 GitHub Copilot'a bir kez giriş yaptırır.
 
-**Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca nasıl açılacağını sorar: **kendi
-penceresinde** (sekme ya da adres çubuğu olmadan; Chrome'un ya da Edge'in, WSL'de Windows'unki),
-**tarayıcı sekmesinde**, **Düzenle** ya da **Görüntüle**. Sayfayı i-mux `localhost` üzerinden sunar;
+**Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca nasıl açılacağını sorar: **Tarayıcıda
+aç** (kendi penceresinde, sekme ya da adres çubuğu olmadan; Chrome'un ya da Edge'in, WSL'de
+Windows'unki), **Yeni sekmede aç**, **Düzenle** ya da **Görüntüle**. Sayfayı i-mux `localhost` üzerinden sunar;
 bir ajan onu ya da kullandığı bir dosyayı yeniden yazınca sayfa kendini yeniler. Başka bir sayfaya
 tıklayınca o pencerede açılır. Agent'lar yanındaki **+** → **🌐 Web sayfası…** herhangi bir adresi
 açar (`localhost:5173`, ya da sadece `5173`). Kurulacak bir şey yok.

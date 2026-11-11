@@ -18,6 +18,9 @@ All notable changes to i-mux are listed here. The format follows
 
 ### Changed
 
+- **A short HTML menu.** A click on an HTML file offers **Open in browser**, **Open in a new tab**,
+  **Edit** and **View**, without the 🌐 and the "live" on each line (pages still reload by
+  themselves).
 - **tmux 3.4 is no longer "old"** in Versions and updates: with menus clickable everywhere, it has
   every feature.
 

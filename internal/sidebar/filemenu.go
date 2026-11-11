@@ -172,8 +172,9 @@ func (s *sidebar) fileMenu(ctx context.Context, client string, a Action, x, y in
 }
 
 // HTMLMenuItems is the menu a click on an HTML file opens (D51), as
-// display-menu arguments: in its own window or a browser tab, live (D47),
-// edit, view. Like the explorer's, its commands are `imux __file`.
+// display-menu arguments: open in the browser (its own window) or in a new
+// tab, both live (D47), edit, view. Like the explorer's, its commands are
+// `imux __file`.
 func HTMLMenuItems(self, client, pane string) []string {
 	var items []string
 	add := func(label, key, op string) {

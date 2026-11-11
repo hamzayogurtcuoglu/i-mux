@@ -16,7 +16,7 @@ import (
 )
 
 // TestLivePreview (T55.2, T58.1): a click on index.html asks how to open
-// it; in its own window serves the project and opens the page in the
+// it; "Open in browser" serves the project and opens the page in the
 // browser (a fake that writes down the URL); the
 // page has the live reload script, its event stream hears "reload" when
 // the file changes, and a click on another page shows it in that page
@@ -39,9 +39,9 @@ func TestLivePreview(t *testing.T) {
 	x, y := h.rowOf(bar, "index.html")
 	mark := c.Mark()
 	c.Click(0, x, y)
-	// It asks how to open it (D51): in its own window.
-	c.waitScreenAfter(h, mark, "In its own window, live", 5*time.Second)
-	c.waitScreenAfter(h, mark, "In a browser tab, live", 5*time.Second)
+	// It asks how to open it (D51): Open in browser.
+	c.waitScreenAfter(h, mark, "Open in browser", 5*time.Second)
+	c.waitScreenAfter(h, mark, "Open in a new tab", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 	c.Write("w")
 	var u string
@@ -111,7 +111,7 @@ func TestLivePreview(t *testing.T) {
 	x, y = h.rowOf(bar, "about.html")
 	mark = c.Mark()
 	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "In its own window, live", 5*time.Second)
+	c.waitScreenAfter(h, mark, "Open in browser", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 	c.Write("w")
 	next("show /about.html")

@@ -1014,7 +1014,7 @@ yellow dots mean nothing to the user; the spinner should turn only while an agen
     and a click on Back to the terminal detaches; a menu opened while a status-line message is
     shown (the commit message's "Write another") shows its items. Versions and updates calls
     tmux old below 3.4, not 3.5 (menus no longer need it).
-- [ ] **T60.2 Short HTML labels** · XS
+- [x] **T60.2 Short HTML labels** · XS
   - AC: D51: Open in browser / Open in a new tab / Edit / View, no 🌐 (en, tr); unit test.
 - [ ] **T60.3 No dots** · XS
   - AC: D56: no dirty dot on project rows, no "Done" dot on project and agent rows, no green
