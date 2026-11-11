@@ -1031,7 +1031,7 @@ User request: the number of working agents on the rail's Agents icon too.
 User request: files open in nano, and the README says to install micro by hand; the editor should
 have a scroll bar too.
 
-- [ ] **T53.1 Getting micro, scroll bars in the editors** · M
+- [x] **T53.1 Getting micro, scroll bars in the editors** · M
   - AC: D45, §9.3 "Editing" and "Getting micro": the first edit without an editor asks once (Get
     micro / Use nano, remembered); micro 2.0.15 downloaded, its SHA-256 checked, unpacked into
     `~/.imux/tools`, used before `$VISUAL`; `imux editor [install]`; Settings → Get the micro

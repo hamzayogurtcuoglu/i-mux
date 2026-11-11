@@ -117,8 +117,11 @@ doctor` checks that it can run. Add a key inside OpenCode with `/connect` (pick 
 paste the key from build.nvidia.com or console.groq.com; no account needed), then choose a model
 with `/models`.
 
-Files open in your editor: `editor` in the config, else micro (the easiest in a terminal: `brew
-install micro`), `$VISUAL`, `$EDITOR`, nano, vim. The mouse wheel scrolls everywhere.
+Files open in your editor: `editor` in the config, else micro, `$VISUAL`, `$EDITOR`, nano, vim.
+Without an editor of your own, the first file you open offers to get micro for you (5 MB, once;
+also Settings → **Get the micro editor…**, or `imux editor install`): the mouse, Ctrl+S / Ctrl+Q,
+Ctrl+C / Ctrl+V, colors for code and a scroll bar. nano shows where you are at its right edge too.
+The mouse wheel scrolls everywhere.
 
 Run `imux` in your home folder and it asks which project to open: type a few letters of its name.
 **Recent** projects come first and reopen as you left them: the same tabs, names and agents, each

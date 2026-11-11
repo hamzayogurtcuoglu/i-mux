@@ -112,8 +112,11 @@ ardından `opencode upgrade --major` çalıştır. `imux doctor` çalışabildi�
 ya da Groq'u seç, build.nvidia.com ya da console.groq.com'dan aldığın anahtarı yapıştır; hesap
 gerekmez), sonra `/models` ile modeli seç.
 
-Dosyalar editöründe açılır: config'teki `editor`, yoksa micro (terminalde en kolayı: `brew install
-micro`), `$VISUAL`, `$EDITOR`, nano, vim. Fare tekerleği her yerde kaydırır.
+Dosyalar editöründe açılır: config'teki `editor`, yoksa micro, `$VISUAL`, `$EDITOR`, nano, vim.
+Kendi editörün yoksa, açtığın ilk dosya micro'yu senin için getirmeyi önerir (bir kez, 5 MB; ayrıca
+Ayarlar → **micro düzenleyicisini getir…** ya da `imux editor install`): fare, Ctrl+S / Ctrl+Q,
+Ctrl+C / Ctrl+V, renkli kod ve kaydırma çubuğu. nano da sağ kenarında nerede olduğunu gösterir.
+Fare tekerleği her yerde kaydırır.
 
 `imux`'u ana klasöründe çalıştırırsan hangi projeyi açacağını sorar: adının birkaç harfini yaz.
 **Son kullanılanlar** en üstte gelir ve bıraktığın gibi açılır: aynı sekmeler, adlar ve agent'lar,

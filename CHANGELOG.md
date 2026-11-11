@@ -10,6 +10,12 @@ All notable changes to i-mux are listed here. The format follows
 
 ### Added
 
+- **micro comes with i-mux.** Without an editor of your own, the first file you open asks once
+  whether to get micro (5 MB): an editor with the mouse, Ctrl+S / Ctrl+Q, Ctrl+C / Ctrl+V and
+  colors for code. Enter gets it and opens the file in it; **Use nano** keeps nano. Settings →
+  **Get the micro editor…** and `imux editor install` get it later.
+- **Scroll bars in the editor.** micro shows its scroll bar, and nano (5.0 and later) its
+  position indicator at the right edge; nano also takes the mouse.
 - **A badge on the Agents icon.** While agents work, the rail's 🤖 icon has their number on a blue
   badge, as an editor's activity bar does, so you see it with the panel on another view or closed.
 

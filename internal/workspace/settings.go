@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -136,6 +137,12 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	m.Items = append(m.Items,
 		MenuItem{Name: i18n.T("settings.icons", labels(icons)), Key: "i", Cmd: set("icons", next(iconsCycle, icons))},
 		MenuItem{Name: i18n.T("settings.font"), Key: "f", Cmd: w.popupCmd("90%", "70%", "font", "install", "--popup")},
+	)
+	if !editor.Chosen(cfg.Editor) && !editor.HasMicro() && editor.CanGetMicro() {
+		// Files open in nano or vi: micro is one click away (D45).
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.micro", editor.MicroMB), Key: "e", Cmd: w.popupCmd("80%", "50%", "editor", "install", "--yes", "--popup")})
+	}
+	m.Items = append(m.Items,
 		MenuItem{Name: i18n.T("settings.commit_agent", commit), Key: "m", Cmd: w.ui(append([]string{"__settings", "menu", "commit-agent"}, tgt...)...)},
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrival)), Key: "w", Cmd: set("on_arrival", other)},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: set("on_limit", next(onLimitCycle, cfg.OnLimit))},

@@ -2,11 +2,13 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
 )
@@ -20,16 +22,28 @@ func cmdOf(m *Menu, key string) string {
 	return ""
 }
 
+// noMicro makes micro missing and no editor chosen (D45).
+func noMicro(t *testing.T) {
+	t.Helper()
+	look, ours := editor.LookPath, editor.OurMicro
+	editor.LookPath = func(string) (string, error) { return "", errors.New("no") }
+	editor.OurMicro = func() string { return "" }
+	t.Cleanup(func() { editor.LookPath, editor.OurMicro = look, ours })
+	t.Setenv("VISUAL", "")
+	t.Setenv("EDITOR", "")
+}
+
 func TestSettingsMenu(t *testing.T) {
 	i18n.SetLocale("en")
 	w, f, _ := testWS(t)
+	noMicro(t)
 	m := w.SettingsMenu("%1", "c1")
 	var names []string
 	for _, it := range m.Items {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)|c Versions and updates…| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|p 🌐 Web preview: Not installed|i Icons: Auto|f Install the Nerd Font for the icons…|m Commit messages by: Auto (the pane's agent)|" +
+	want := "u Update i-mux… (dev)|c Versions and updates…| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|p 🌐 Web preview: Not installed|i Icons: Auto|f Install the Nerd Font for the icons…|e Get the micro editor (5 MB)…|m Commit messages by: Auto (the pane's agent)|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
@@ -46,6 +60,7 @@ func TestSettingsMenu(t *testing.T) {
 		"a": "__completion setup --pane %1 --client c1",
 		"i": "__settings set icons nerd --pane %1 --client c1",
 		"f": "font install --popup",
+		"e": "editor install --yes --popup",
 		"m": "__settings menu commit-agent --pane %1 --client c1",
 		"w": "__settings set on_arrival continue",
 		"n": "__settings set notify off",
@@ -64,6 +79,16 @@ func TestSettingsMenu(t *testing.T) {
 
 	if c := cmd("u"); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, "update --popup") {
 		t.Errorf("update row %q", c)
+	}
+	// With micro there, or an editor chosen, there is nothing to get.
+	t.Setenv("EDITOR", "vim")
+	if c := cmdOf(w.SettingsMenu("%1", "c1"), "e"); c != "" {
+		t.Errorf("micro offered with $EDITOR set: %q", c)
+	}
+	t.Setenv("EDITOR", "")
+	editor.OurMicro = func() string { return "/home/u/.imux/tools/micro-2.0.15/micro" }
+	if c := cmdOf(w.SettingsMenu("%1", "c1"), "e"); c != "" {
+		t.Errorf("micro offered while installed: %q", c)
 	}
 	if c := cmd("c"); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, "versions --popup") {
 		t.Errorf("versions row %q", c)

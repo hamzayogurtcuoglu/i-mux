@@ -149,6 +149,10 @@ func runEdit(e *Env, args []string) error {
 		return err
 	}
 	argv, env := editorCmd(cfg, pos[0], *line)
+	if offerMicro(cfg, argv) {
+		askMicro(e, cfg, filepath.Base(argv[0]))
+		argv, env = editorCmd(cfg, pos[0], *line)
+	}
 	if argv == nil {
 		return runView(e, args)
 	}
