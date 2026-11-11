@@ -1019,7 +1019,7 @@ yellow dots mean nothing to the user; the spinner should turn only while an agen
 - [x] **T60.3 No dots** · XS
   - AC: D56: no dirty dot on project rows, no "Done" dot on project and agent rows, no green
     glyph in the tab bar; unit tests (the rows, the tab state).
-- [ ] **T60.4 Working means the agent says so** · S
+- [x] **T60.4 Working means the agent says so** · S
   - AC: D55: for Claude Code, Codex, Copilot and Antigravity a screen change is work only while
     the screen shows their busy line; OpenCode as before; unit tests (a list moved through
     without the busy line, the busy line of each agent, an unknown agent); e2e: the fake agents

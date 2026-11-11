@@ -82,6 +82,7 @@ type Detector struct {
 	sizes    map[string]string          // pane → its size ("WxH") at the last capture
 	settle   map[string]bool            // pane → resized while quiet at the last tick
 	changed  map[string]time.Time       // pane → when its agent last worked (its screen changed)
+	busy     map[string]bool            // pane → its last screen shows its agent's busy line (D55)
 	asking   map[string]bool            // pane → its last screen asks a question
 	seen     map[string]map[string]bool // pane instance → matched lines
 	cooldown map[string]time.Time       // pane → no prompts until
@@ -110,7 +111,7 @@ const maxNudges = 3
 func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	if d.hashes == nil {
 		d.hashes, d.seen, d.cooldown = map[string]uint64{}, map[string]map[string]bool{}, map[string]time.Time{}
-		d.changed = map[string]time.Time{}
+		d.changed, d.busy = map[string]time.Time{}, map[string]bool{}
 		d.screens, d.sizes, d.settle = map[string]string{}, map[string]string{}, map[string]bool{}
 	}
 	out, err := d.T.Run(ctx,
@@ -198,11 +199,16 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 		d.sizes[p.ID] = size
 		if known && last == sum {
 			d.settle[p.ID] = false
+			if d.busy[p.ID] {
+				d.changed[p.ID] = d.Now() // it still says it works (a long tool call)
+			}
 			continue
 		}
 		old := d.screens[p.ID]
 		d.hashes[p.ID], d.screens[p.ID] = sum, screen
-		if d.work(p.ID, known, resized, old, screen) {
+		busy, says := Busy(p.Agent, screen)
+		d.busy[p.ID] = busy
+		if d.work(p.ID, known, resized, old, screen, busy, says) {
 			d.changed[p.ID] = d.Now()
 		}
 		if d.asking == nil {
@@ -222,9 +228,11 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 // work reports whether a pane's changed screen is its agent at work. It is
 // not when the watcher meets the pane (it may be one a watcher before this
 // one knew: then it worked when that one saw it last), when a quiet pane was
-// resized (the panel opened or closed) or redraws right after it, or when
-// the user types in the agent's input (Typing).
-func (d *Detector) work(id string, known, resized bool, old, cur string) bool {
+// resized (the panel opened or closed) or redraws right after it, when an
+// agent that says when it works (says) does not show its busy line (D55:
+// the user moved through one of its lists), or when the user types in the
+// agent's input (Typing).
+func (d *Detector) work(id string, known, resized bool, old, cur string, busy, says bool) bool {
 	now := d.Now()
 	settle := d.settle[id]
 	d.settle[id] = false
@@ -239,6 +247,9 @@ func (d *Detector) work(id string, known, resized bool, old, cur string) bool {
 	if quiet := now.Sub(d.changed[id]) >= WorkingFor; quiet && (resized || settle) {
 		d.settle[id] = resized
 		return false
+	}
+	if says {
+		return busy
 	}
 	return !Typing(old, cur)
 }
@@ -312,6 +323,11 @@ func (d *Detector) prune(panes []PaneRow) {
 	for id := range d.asking {
 		if !live[id] {
 			delete(d.asking, id)
+		}
+	}
+	for id := range d.busy {
+		if !live[id] {
+			delete(d.busy, id)
 		}
 	}
 	for id := range d.cooldown {

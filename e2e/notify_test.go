@@ -14,8 +14,9 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// workThenAsk makes the fake agent work 13 s, stop, then ask.
-const workThenAsk = "i=0; while [ $i -lt 26 ]; do echo working $i; sleep 0.5; i=$((i+1)); done; sleep 6; echo 'Do you want to proceed? (y/n)'\n"
+// workThenAsk makes the fake agent work 13 s, redrawing one progress line
+// like Claude Code's (D55) and clearing it at the end, then ask.
+const workThenAsk = "i=0; while [ $i -lt 26 ]; do printf '\\r✻ Working %s… (esc to interrupt)' $i; sleep 0.5; i=$((i+1)); done; printf '\\r\\033[K'; echo done; sleep 6; echo 'Do you want to proceed? (y/n)'\n"
 
 // TestNotifications (T32.3): an agent that worked and stopped, then asks,
 // gives one "finished" and one "needs you" notification, through the

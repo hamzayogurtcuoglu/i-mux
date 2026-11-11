@@ -23,7 +23,7 @@ func (h *H) stdinOf(agent string, n int) string {
 // busy pane; the rate limit stops a ping-pong loop.
 func TestBusExchange(t *testing.T) {
 	h := newH(t, "[bus]\nrate_per_minute = 4\nidle_after = \"1s\"\n")
-	h.control("codex", "while :; do printf '\\r%s' \"$(date +%N)\"; sleep 0.1; done\n") // a busy pane
+	h.control("codex", "while :; do printf '\\r• Working (%s • esc to interrupt)' \"$(date +%N)\"; sleep 0.1; done\n") // a busy pane (D55)
 	a := h.startSession("claude")
 	h.run("claude", 1)
 	b := strings.TrimSpace(h.mustImux("split", "antigravity", "-h", "--pane", a))

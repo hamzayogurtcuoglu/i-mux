@@ -414,13 +414,14 @@ func TestSidebarNeedsYou(t *testing.T) {
 	})
 }
 
-// TestSidebarTypingIsNotWork (T46.1, T46.2): keys typed into an agent's
-// input do not make it "working"; its own output above the input does, and
-// the AGENTS title counts it.
+// TestSidebarTypingIsNotWork (T46.1, T46.2, T60.4): keys typed into an
+// agent's input do not make it "working"; its progress line above the input
+// (with Claude Code's "esc to interrupt", D55) does, and the AGENTS title
+// counts it.
 func TestSidebarTypingIsNotWork(t *testing.T) {
 	h := newH(t, sidebarConfig)
 	// An input line; a progress line above it once the "go" file exists.
-	h.control("claude", "printf '> '\n(while [ ! -e \"$log/go\" ]; do sleep 0.1; done; i=0; while [ $i -lt 40 ]; do printf '\\033[H\\033[2J* working %d\\n> ' $i; sleep 0.2; i=$((i+1)); done) &\n")
+	h.control("claude", "printf '> '\n(while [ ! -e \"$log/go\" ]; do sleep 0.1; done; i=0; while [ $i -lt 40 ]; do printf '\\033[H\\033[2J✻ Working %d… (esc to interrupt)\\n> ' $i; sleep 0.2; i=$((i+1)); done) &\n")
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)

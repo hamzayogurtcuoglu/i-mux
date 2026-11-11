@@ -250,21 +250,29 @@ func TestNormalize(t *testing.T) {
 // TestDetectorWork: only the agent at work makes its pane "working": not
 // the watcher meeting the pane (a restarted watcher keeps the last one's
 // times), not a quiet pane resized or its redraw after that, not the user
-// typing in the agent's input.
+// typing in the agent's input, and for an agent that says when it works
+// (Copilot here) not a screen without its busy line (D55: the user moving
+// through one of its lists); its busy line on a still screen is work.
 func TestDetectorWork(t *testing.T) {
 	h := newHarness(t)
 	now := testutil.FrozenTime
 	h.f.clients = "/dev/pts/1\t0\tproj\t1\n"
 	panes := func(w int) string {
 		return "%1\tcopilot\t" + ms(now.Add(-time.Hour)) + "\t0\t6\tproj\t\t" + strconv.Itoa(w) + "\n" +
-			"%2\tclaude\t" + ms(now.Add(-time.Hour)) + "\t0\t6\tproj\t\t80\n"
+			"%2\tclaude\t" + ms(now.Add(-time.Hour)) + "\t0\t6\tproj\t\t80\n" +
+			"%3\topencode\t" + ms(now.Add(-time.Hour)) + "\t0\t6\tproj\t\t80\n"
 	}
 	h.f.panes = panes(80)
-	screen := func(progress, input string) string {
-		return "answer\n" + progress + "\n────\n❯ " + input + "\n────\n / commands\n"
+	screen := func(progress, input string, busy bool) string {
+		footer := " Autopilot · 12 KiB"
+		if busy {
+			footer = " Autopilot · ◉ Working · 12 KiB ctrl+c interrupt"
+		}
+		return "answer\n" + progress + "\n────\n❯ " + input + "\n────\n" + footer + "\n"
 	}
-	h.f.screens["%1"] = screen("", "")
+	h.f.screens["%1"] = screen("", "", false)
 	h.f.screens["%2"] = "> \n"
+	h.f.screens["%3"] = "answer\n> \n"
 	h.d.Seed = map[string]time.Time{"%2": now.Add(-time.Second)}
 	step := func() { h.clk.Set(h.clk.Now().Add(2500 * time.Millisecond)); h.tick(t) }
 	h.tick(t)
@@ -276,28 +284,53 @@ func TestDetectorWork(t *testing.T) {
 	}
 	working := func(p string) bool { return h.clk.Now().Sub(h.d.changed[p]) < WorkingFor }
 
-	h.f.screens["%1"] = screen("", "fix the te")
+	h.f.screens["%1"] = screen("", "fix the te", false)
 	step()
 	if working("%1") {
 		t.Fatal("typing counted as work")
 	}
 	h.f.panes = panes(60) // the panel opened
-	h.f.screens["%1"] = screen("", "fix the t\ne")
+	h.f.screens["%1"] = screen("", "fix the t\ne", false)
 	step()
-	h.f.screens["%1"] = screen("", "fix the te") // the agent redraws
+	h.f.screens["%1"] = screen("", "fix the te", false) // the agent redraws
 	step()
 	if working("%1") {
 		t.Fatal("a resize counted as work")
 	}
-	h.f.screens["%1"] = screen("⠋ Thinking", "fix the te")
+	// The user moves through one of Copilot's lists: above the input too.
+	h.f.screens["%1"] = screen("▸ Current session\n  Issue\n  Pull request", "#", false)
+	step()
+	h.f.screens["%1"] = screen("  Current session\n▸ Issue\n  Pull request", "#", false)
+	step()
+	if working("%1") {
+		t.Fatal("moving through a list counted as work")
+	}
+	h.f.screens["%1"] = screen("⠋ Thinking", "", true)
 	step()
 	if !working("%1") {
-		t.Fatal("the agent's progress line did not count as work")
+		t.Fatal("the agent at work did not count")
 	}
 	h.f.panes = panes(80) // resized while working: still at work
-	h.f.screens["%1"] = screen("⠙ Thinking", "")
+	h.f.screens["%1"] = screen("⠙ Thinking", "", true)
 	step()
 	if !working("%1") {
 		t.Fatal("work during a resize was lost")
+	}
+	step() // a long tool call: the screen stays, saying it works
+	step()
+	if !working("%1") {
+		t.Fatal("a still screen with the busy line stopped counting")
+	}
+	h.f.screens["%1"] = screen("done", "", false)
+	step()
+	step()
+	if working("%1") {
+		t.Fatal("still working after the busy line went")
+	}
+	// OpenCode says nothing: its screen changing is work (D38).
+	h.f.screens["%3"] = "answer\nmore\n> \n"
+	step()
+	if !working("%3") {
+		t.Fatal("an agent without a busy line did not work")
 	}
 }

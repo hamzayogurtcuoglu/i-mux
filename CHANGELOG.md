@@ -15,6 +15,9 @@ All notable changes to i-mux are listed here. The format follows
   draws its menus itself, in a small popup where the menu was: the item under the pointer lights
   up; a click, Enter or the item's key chooses; Esc, `q` or ✕ closes it. tmux 3.5+ keeps its own
   menus.
+- **The spinner turns only while an agent works.** Claude Code, Codex, Copilot and Antigravity count
+  as working only while they show their own busy line (`esc to interrupt`, `ctrl+c interrupt`), so
+  moving through a list in the Copilot CLI no longer turns it.
 
 ### Changed
 
