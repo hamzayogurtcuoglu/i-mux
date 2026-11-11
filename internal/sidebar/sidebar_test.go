@@ -269,6 +269,10 @@ func TestRender(t *testing.T) {
 			t.Errorf("%q: %+v, want %+v", c.row, got, c.want)
 		}
 	}
+	// History is alone on its row (D57: no Image button).
+	if l, _ := find(sc, "📜 History"); strings.Contains(Plain(l.Text), "📎") || strings.Contains(Plain(l.Text), "Image") {
+		t.Errorf("an Image button: %q", Plain(l.Text))
+	}
 	// The "+" of the headers.
 	if l, _ := find(sc, "PROJECTS"); l.ActionAt(40) != (Action{Kind: ActOpen}) || l.ActionAt(10) != (Action{Kind: ActFold, Section: SecProjects}) {
 		t.Error("Projects +")

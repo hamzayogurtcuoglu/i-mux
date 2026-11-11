@@ -96,7 +96,6 @@ var tr = map[string]string{
 	"rail.settings":                   "Ayarlar",
 	"settings.title":                  "i-mux · Ayarlar",
 	"settings.paste_images":           "Ctrl+V ile resim yapıştır: %s",
-	"sidebar.paste_image":             "Resim",
 	"paste.none":                      "Panoda resim yok (önce bir ekran görüntüsü ya da resim dosyası kopyala)",
 	"paste.no_tool":                   "Panodaki resim okunamıyor: %s",
 	"paste.done":                      "📎 %d resim yapıştırıldı",

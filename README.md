@@ -103,8 +103,8 @@ GNOME Terminal …). It works with the terminal closed too. Turn it and its soun
 **Pasting images:** copy a screenshot (or image files in Finder / your file manager) and press
 **Ctrl+V** in any agent's pane, as many times as you like: i-mux saves the image under
 `~/.imux/images/` and gives the agent its path, the way a dropped file arrives (Antigravity gets
-`@path`). **Alt+V** and the sidebar's 📎 do the same; use them where the terminal keeps Ctrl+V
-for itself (Windows Terminal). With no image on the clipboard Ctrl+V reaches the agent as usual.
+`@path`). **Alt+V** does the same; use it where the terminal keeps Ctrl+V for itself (Windows
+Terminal). With no image on the clipboard Ctrl+V reaches the agent as usual.
 It reads the macOS clipboard, Wayland's (`wl-clipboard`), X11's (`xclip`), and from WSL the
 Windows clipboard: copy on Windows, paste in WSL. Over SSH the clipboard is on the other machine,
 so it cannot work there. `imux doctor` says what it uses; Settings turns it off.

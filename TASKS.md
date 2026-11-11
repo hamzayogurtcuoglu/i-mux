@@ -1002,7 +1002,7 @@ slow (about a second).
 User request: the Image button next to History is needless, since an image is pasted with Ctrl+V
 anyway.
 
-- [ ] **T61.1 No Image button** · XS
+- [x] **T61.1 No Image button** · XS
   - AC: D57: the row under "Continue this chat in" shows History alone; the button's action, icon
     and label go; Ctrl+V and Alt+V still paste images (their e2e tests stay); a unit test (no 📎
     in the toolbar); the button's e2e test goes.

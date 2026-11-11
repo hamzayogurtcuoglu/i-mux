@@ -97,18 +97,3 @@ func TestPasteImageNoAgent(t *testing.T) {
 		t.Fatal("an image pasted into a pane with no agent")
 	}
 }
-
-// TestPasteImageButton (T33.3): the sidebar's 📎 pastes into the agent.
-func TestPasteImageButton(t *testing.T) {
-	dir, cfg := fakeClipboard(t)
-	h := newH(t, sidebarConfig+cfg)
-	agentPane, bar := h.startWithSidebar()
-	h.run("claude", 1)
-	c, _ := h.attach(140, 40)
-	c.waitScreen(h, "AGENTS", 10*time.Second)
-	x, y := h.rowOf(bar, "📎")
-	c.Click(0, x, y)
-	h.waitFor("the path in the agent's pane", 10*time.Second, func() bool {
-		return strings.Contains(h.capture(agentPane), dir+"/shot\\ 1.png")
-	})
-}

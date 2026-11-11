@@ -686,15 +686,6 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.prompt(ctx, client, i18n.T("prompt.commit"), "",
 			"set-option -g @imux_git \"%%%\" ; "+tmux.RunShell(s.o.Self, s.gitArgs("commit", client, false)...)+"")
 		return
-	case ActPasteImage:
-		if s.model.Target != "" {
-			args := []string{"__paste-image", "--pane", s.model.Target}
-			if client != "" {
-				args = append(args, "--client", client)
-			}
-			s.spawn(args)
-		}
-		return
 	case ActSettings:
 		args := []string{"__settings", "menu"}
 		if client != "" {

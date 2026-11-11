@@ -44,7 +44,6 @@ const (
 	ActRefresh                // redraw
 	ActSuggest                // an agent writes a commit message (D29)
 	ActSettings               // the Settings menu
-	ActPasteImage             // paste the clipboard's image into the target pane
 	ActGoto                   // Go to File (the editor's Ctrl+P)
 	ActSkillNew               // the New skill dialog: an agent writes a skill, or a blank SKILL.md (D32)
 	ActSkillMenu              // the menu of skill Path (open, view, add, improve, share, delete)
@@ -540,8 +539,9 @@ func continueRows(m Model, w int) []Line {
 	return out
 }
 
-// toolbar is the bottom block: History. Renaming is on the agent's row
-// (its menu), which names the pane the user means.
+// toolbar is the bottom block: History (D57: no Image button; Ctrl+V and
+// Alt+V paste images). Renaming is on the agent's row (its menu), which
+// names the pane the user means.
 func toolbar(m Model, w int) []Line {
 	btn := func(x, cw int, sym, label string, a Action) Cell {
 		return Cell{X: x, W: cw, Text: muted + sym + reset + " " + fit(label, cw-1-DisplayWidth(sym)), Action: a}
@@ -550,7 +550,6 @@ func toolbar(m Model, w int) []Line {
 	half := (w - 1) / 2
 	cells := []Cell{
 		btn(1, half, ic.History, i18n.T("sidebar.history"), Action{Kind: ActSessions}),
-		btn(1+half, w-1-half, ic.Image, i18n.T("sidebar.paste_image"), Action{Kind: ActPasteImage}),
 	}
 	return []Line{{Text: compose(cells, w), Cells: cells}}
 }

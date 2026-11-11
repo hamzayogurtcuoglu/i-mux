@@ -95,7 +95,6 @@ var en = map[string]string{
 	"rail.settings":                   "Settings",
 	"settings.title":                  "i-mux · Settings",
 	"settings.paste_images":           "Paste images with Ctrl+V: %s",
-	"sidebar.paste_image":             "Image",
 	"paste.none":                      "No image on the clipboard (copy a screenshot or an image file first)",
 	"paste.no_tool":                   "Cannot read images from the clipboard: %s",
 	"paste.done":                      "📎 %d image(s) pasted",

@@ -6,6 +6,13 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-11-11
+
+### Removed
+
+- **The Image button** next to History in the sidebar. Ctrl+V in an agent's pane already pastes a
+  copied image (Alt+V where the terminal keeps Ctrl+V for itself, as Windows Terminal does).
+
 ## [0.47.0] - 2026-11-11
 
 ### Fixed

@@ -56,7 +56,7 @@ func runPasteImage(e *Env, args []string) error {
 		}
 	}
 	say := func(msg string) {
-		if *keyF == "" { // a click on 📎: say why nothing came
+		if *keyF == "" { // run by hand, not by a key: say why nothing came
 			w.Message(ctx, *clientF, p.ID, msg)
 		}
 	}

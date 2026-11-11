@@ -100,8 +100,8 @@ kitty, GNOME Terminal …). Terminal kapalıyken de çalışır. Bildirimi ve se
 **Resim yapıştırma:** bir ekran görüntüsü (ya da Finder'da / dosya yöneticinde resim dosyaları)
 kopyala ve herhangi bir ajanın panelinde **Ctrl+V**'ye bas; istediğin kadar tekrarlayabilirsin.
 i-mux resmi `~/.imux/images/` altına kaydeder ve yolunu ajana, sürüklenip bırakılmış bir dosya
-gibi verir (Antigravity `@yol` alır). **Alt+V** ve kenar çubuğundaki 📎 de aynısını yapar; Ctrl+V'yi
-terminalin kendisi yakalıyorsa (Windows Terminal) bunları kullan. Panoda resim yoksa Ctrl+V her
+gibi verir (Antigravity `@yol` alır). **Alt+V** de aynısını yapar; Ctrl+V'yi terminalin
+kendisi yakalıyorsa (Windows Terminal) onu kullan. Panoda resim yoksa Ctrl+V her
 zamanki gibi ajana gider. macOS panosunu, Wayland'inkini (`wl-clipboard`), X11'inkini (`xclip`), WSL'de
 ise Windows panosunu okur: Windows'ta kopyala, WSL'de yapıştır. SSH'ta pano öbür makinede kaldığı
 için orada çalışmaz. `imux doctor` neyi kullandığını söyler; Ayarlar'dan kapatılabilir.
