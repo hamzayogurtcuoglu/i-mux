@@ -210,3 +210,22 @@ func TestWebSettingsAndPrompt(t *testing.T) {
 		t.Errorf("odd page: %s", c)
 	}
 }
+
+// A VS Code terminal's BROWSER helper is kept at attach (D47); a BROWSER
+// of one's own (a terminal browser) or one without VS Code's socket is not.
+func TestVSCodeBrowser(t *testing.T) {
+	env := func(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
+	helper := "/home/u/.vscode-server/cli/servers/Stable-abc/server/bin/helpers/browser.sh"
+	if b, i := VSCodeBrowser(env(map[string]string{"BROWSER": helper, "VSCODE_IPC_HOOK_CLI": "/tmp/vscode-ipc-1.sock"})); b != helper || i != "/tmp/vscode-ipc-1.sock" {
+		t.Errorf("VS Code: %q %q", b, i)
+	}
+	for _, m := range []map[string]string{
+		{"BROWSER": "w3m", "VSCODE_IPC_HOOK_CLI": "/tmp/s"},
+		{"BROWSER": helper},
+		{},
+	} {
+		if b, i := VSCodeBrowser(env(m)); b != "" || i != "" {
+			t.Errorf("%v: %q %q", m, b, i)
+		}
+	}
+}
