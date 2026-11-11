@@ -997,6 +997,31 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M59: Green CI on tmux 3.8 and Arch Linux (added 2026-11-11)
+
+Report: the CI pipelines fail. The e2e jobs failed on most pushes since 2026-11-09, each time in
+other tests (macOS more often); the release smoke test fails on Arch Linux. Run against tmux 3.2a,
+3.4 and 3.8 (macOS's Homebrew tmux): three tests failed every time on 3.8 and two now and then on
+all three.
+
+- [ ] **T59.1 A double click's second press on tmux 3.7+** · S
+  - AC: D53, §9.3 "A double click's second press": a sidebar click that shows the client another
+    project or tab sets `@imux_moved` to that client, tmux clears it 0.5 s later, and
+    `MouseDown1Pane` drops that client's presses on a sidebar while it is set; unit tests (the
+    binding in the config golden files, the commands of a switch); e2e: a double click on another
+    project stays there on tmux 3.8 (it went there and back).
+- [ ] **T59.2 e2e tests that hold on tmux 3.8 and a slow runner** · S
+  - AC: `rowOf` takes a sidebar frame only when it was drawn for the pane's height as well as its
+    width (after a client attaches the rail is still packed for the detached size for a moment,
+    and a click on 🔀 hit 🔍), and its timeout shows the sidebar; the project row is found by its
+    badge (`B  blog`), not by a working spinner after the name; Settings closes with `q` (tmux 3.8
+    holds a lone Escape 500 ms while the terminal has not answered its queries, and the test
+    terminal never does: the Escape closed the next menu); the suite passes on tmux 3.2a, 3.4 and
+    3.8, the flaky ones 8 times in a row on each.
+- [ ] **T59.3 The release smoke test on Arch Linux** · XS
+  - AC: the Arch container installs curl with `pacman -Syu` (a partial upgrade, `-Sy`, pulled
+    openssl 4 against packages built for openssl 3 and failed).
+
 ## M58: HTML asks, the tabs over the terminal (added 2026-11-11)
 
 User request: a click on an HTML file should ask how to open it (then Settings need not); the tab

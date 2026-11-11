@@ -129,6 +129,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D50 | **A setting opens a menu of its values; the editor is one of them** (added 2026-11-11, v0.46, at the user's request): a click on a Settings row (or Enter on it, or its letter) opens a small menu of its values with `●` on the current one; choosing one saves it and opens Settings again. Nothing cycles any more. **Editor** lists Auto (micro, `$VISUAL`, `$EDITOR`, nano), micro (got when missing, D45), nano, Neovim, and Neovim + Copilot, which is AI completion (D30) and replaces its row. | Cycling hid the other values and made the user step through them; a list shows them all, as the commit agent's menu already did. The user wants to pick the editor among the ones i-mux knows, not only to turn AI completion on. |
 | D51 | **A click on an HTML file asks how to open it** (added 2026-11-11, v0.46, at the user's request; changes D47): a menu at the click offers **In its own window, live**, **In a browser tab, live**, **Edit** and **View**; Settings has no row for it any more (`[web] enabled = false` makes the click edit at once). | The user wants to choose each time (the page to look at, or its source to fix) rather than once in Settings. |
 | D52 | **The tab bar starts where the terminal does** (added 2026-11-11, v0.46, at the user's request): the tabs begin above the agent's pane, past the sidebar, wherever the panel's edge is: dragged, closed to the rail, hidden (`prefix b`), or a pane zoomed (then at the left edge). Only tmux formats do it, so nothing has to keep it in step. | Over the sidebar the tabs ran into the rail and the panel's title; above the terminal they sit over what they switch. |
+| D53 | **After a click showed another project or tab, that client's presses on a sidebar are dropped for 0.5 s** (added 2026-11-11, v0.46.1, from a failing CI run; completes D39): the sidebar that switches the client sets `@imux_moved` to the client's name in the same tmux call, with `run-shell -b -C -d 0.5` clearing it; `MouseDown1Pane` drops a press on a sidebar while it names that client. | tmux 3.7 reports a press in another pane as a new press (`MouseDown1Pane`), not as the second press of a double click (`SecondClick1Pane`), so D39's guard missed it there: a double click on project B went to B and back to A. Homebrew's tmux on macOS is 3.8; the macOS e2e job caught it. tmux has no clock in milliseconds to compare presses, so the sidebar marks the switch and tmux ends the mark. |
 
 ## 4. Components
 
@@ -1669,6 +1670,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   with a real client: a quick second click on another row of the same sidebar arrives; after a
   switch neither the second nor the third press reaches the new sidebar (with tmux's bindings
   they did); a double click on another pane is unchanged.
+  tmux 3.7 and later report a press in another pane as a new press (`MouseDown1Pane`), so a
+  click that switches the client also marks it (D53): `@imux_moved` holds the client's name,
+  set in the switch's own tmux call and cleared by tmux 0.5 s later (`run-shell -b -C -d 0.5`),
+  and `MouseDown1Pane` drops that client's presses on a sidebar meanwhile.
 - **Popups:** a double click's second press lands on the popup the first one opened (outside it
   tmux drops it). i-mux's popups that take clicks (search, Go to File, the folder picker, the
   skill dialog) ignore clicks in their first 400 ms (`sidebar.PopupGuard`). An editor gets it as a
