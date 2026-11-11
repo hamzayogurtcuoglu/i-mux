@@ -127,6 +127,8 @@ done by tmux on a dedicated socket. i-mux only:
 | D48 | **A button leaves i-mux: back to the terminal, or quit with every agent** (added 2026-11-11, v0.46, at the user's request): the tab bar ends on the right with **⏻ Exit**; its menu has **Back to the terminal** (this client detaches: the agents keep running, `imux` brings them back) and **Quit i-mux…** (after a confirm: the open projects are recorded, every agent stops, the tmux server ends; the next `imux` offers them back). `imux quit` does the same from a shell. | The user did not know how to leave i-mux for the shell. tmux's ways (`prefix d`, closing the terminal) are invisible and keep the agents running without saying so; a button with both choices says what each one does. |
 | D49 | **`imux` asks which project to open, unless it starts in one that is open** (added 2026-11-11, v0.46, at the user's request; extends D22): outside tmux and without arguments, `imux` in the folder of an open project attaches to it; anywhere else, when projects are open or the last session can be restored, it shows the project picker with **↺ Restore last session** first (when there is one), then **this folder**, then the open and recent projects. With nothing open and nothing to restore it opens its folder as before (the home folder: the picker). | The user's workspace stopped coming back: the picker that offers it showed only in the home folder, so `imux` started elsewhere made a new project without a word, and the last session was offered only from home. |
 | D50 | **A setting opens a menu of its values; the editor is one of them** (added 2026-11-11, v0.46, at the user's request): a click on a Settings row (or Enter on it, or its letter) opens a small menu of its values with `●` on the current one; choosing one saves it and opens Settings again. Nothing cycles any more. **Editor** lists Auto (micro, `$VISUAL`, `$EDITOR`, nano), micro (got when missing, D45), nano, Neovim, and Neovim + Copilot, which is AI completion (D30) and replaces its row. | Cycling hid the other values and made the user step through them; a list shows them all, as the commit agent's menu already did. The user wants to pick the editor among the ones i-mux knows, not only to turn AI completion on. |
+| D51 | **A click on an HTML file asks how to open it** (added 2026-11-11, v0.46, at the user's request; changes D47): a menu at the click offers **In its own window, live**, **In a browser tab, live**, **Edit** and **View**; Settings has no row for it any more (`[web] enabled = false` makes the click edit at once). | The user wants to choose each time (the page to look at, or its source to fix) rather than once in Settings. |
+| D52 | **The tab bar starts where the terminal does** (added 2026-11-11, v0.46, at the user's request): the tabs begin above the agent's pane, past the sidebar, wherever the panel's edge is: dragged, closed to the rail, hidden (`prefix b`), or a pane zoomed (then at the left edge). Only tmux formats do it, so nothing has to keep it in step. | Over the sidebar the tabs ran into the rail and the panel's title; above the terminal they sit over what they switch. |
 
 ## 4. Components
 
@@ -1169,6 +1171,13 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - Clicks on imux ranges act on `MouseUp1Status` (window ranges keep `MouseDown1Status`): a menu
   that opens while the button is still down is closed by the release (measured: 0 of 4 menus
   survived a 600 ms press; 2 of 4 a 30 ms click).
+- **Over the terminal** (v0.46, D52): the bar starts with as many blanks as the window's sidebar
+  is wide, plus its border: `#{?window_zoomed_flag,,#{P:#{?#{==:#{@imux_role},sidebar},#{p/#{e|+:#{pane_width},1}/:},}}}`
+  (tmux 3.2 expands a modifier's argument given between `/`s), so the first tab is above the
+  agent's pane and moves with the panel's edge; tmux redraws the bar when a pane is resized or
+  closed. Before tmux 3.4 the blanks are the current window's range (a click there is a click
+  on the current tab).
+- **⏻ Exit** at the right end (D48, §9.3 "Leaving i-mux").
 - The state glyph always takes its column (a space when idle) so the × and later tabs stay put.
 - Every range is followed by a cell outside any range: tmux 3.4 makes a range one cell longer
   than drawn, so a range right after another lost its first cell (the × of the current tab took
@@ -1760,9 +1769,11 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   The message says where: "🌐 index.html is open in Chrome · it reloads when its files change".
 - **Addresses:** `imux web open <url>` and **+** → **🌐 Web page…** open an address (a dev server:
   `localhost:5173`, or just `5173`) the same way, without serving.
-- **Where:** a click on an HTML file (`.html`, `.htm`, `.xhtml`) in the explorer while `[web]
-  enabled`; **Open Preview** (`w`) in the menu of HTML and SVG files; **+** → **🌐 Web page…**;
-  Settings → **🌐 HTML files open: in a window / in a browser tab / in the editor** (`p` cycles).
+- **Where:** a click on an HTML file (`.html`, `.htm`, `.xhtml`) in the explorer opens a menu
+  at the click (v0.46, D51): **🌐 In its own window, live** (`w`), **In a browser tab, live**
+  (`t`), **Edit** (`e`), **View** (`v`); with `[web] enabled = false` the click edits at once.
+  **Open Preview** (`w`) in the menu of HTML and SVG files opens it as `[web] open` says
+  (window by default); **+** → **🌐 Web page…** opens an address.
 - **v0.44's terminal browser (D44) is gone:** `imux __watch run` deletes the
   `~/.imux/tools/carbonyl-*` it left.
 

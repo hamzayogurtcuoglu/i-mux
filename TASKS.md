@@ -997,6 +997,20 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M58: HTML asks, the tabs over the terminal (added 2026-11-11)
+
+User request: a click on an HTML file should ask how to open it (then Settings need not); the tab
+bar should start above the terminal, not at the far left, also when the panel opens or closes.
+
+- [ ] **T58.1 How to open an HTML file** · S
+  - AC: D51: a click on an HTML file opens a menu at the click (window, tab, edit, view); the
+    Settings row is gone; unit tests (the menu's items and commands); e2e: the menu's window
+    item opens the page live.
+- [ ] **T58.2 The tab bar over the terminal** · S
+  - AC: D52: the bar is padded by the sidebar's width and border (none when zoomed or without a
+    sidebar); unit tests (the format, the config golden files); e2e: the first tab starts at the
+    agent pane's column, and moves when the panel closes to the rail.
+
 ## M57: Settings as menus, the editor among them (added 2026-11-11)
 
 User request: Settings rows should not flip through values; a click or Enter should open a popup
