@@ -1020,7 +1020,7 @@ all three.
     twice at once (from tmux 3.5 the menu opens on the first press, and a second press after it is
     drawn closes it); the suite passes on tmux 3.2a, 3.4 and 3.8, the flaky ones 8 times in a row
     on each.
-- [ ] **T59.3 The release smoke test on Arch Linux** · XS
+- [x] **T59.3 The release smoke test on Arch Linux** · XS
   - AC: the Arch container installs curl with `pacman -Syu` (a partial upgrade, `-Sy`, pulled
     openssl 4 against packages built for openssl 3 and failed).
 

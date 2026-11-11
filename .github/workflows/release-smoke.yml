@@ -100,7 +100,9 @@ jobs:
           - image: alpine:latest
             prep: apk add --no-cache curl
           - image: archlinux:latest
-            prep: pacman -Sy --noconfirm curl
+            # -Syu: Arch has no partial upgrades (-Sy pulled openssl 4 against
+            # packages built for openssl 3, and pacman refused).
+            prep: pacman -Syu --noconfirm curl
     runs-on: ubuntu-latest
     timeout-minutes: 20
     container: ${{ matrix.image }}
