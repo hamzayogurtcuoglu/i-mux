@@ -7,8 +7,9 @@ import (
 
 // ParseCommandLine splits a tmux command string as imux writes them (menu
 // items, bindings) into commands: words separated by spaces, ' ; ' between
-// commands, single-quoted words taken as they are ('\'' joining a quote
-// in), double-quoted words with \ and \" escapes.
+// commands, single-quoted words taken as they are, double-quoted words with
+// \ and \" escapes, and elsewhere a backslash escaping the next character
+// (which joins a quote into a single-quoted word).
 func ParseCommandLine(s string) ([]Cmd, error) {
 	var cmds []Cmd
 	var cur Cmd

@@ -333,3 +333,19 @@ func TestPlanKeepsInput(t *testing.T) {
 		t.Errorf("plan changed its input: %q", in)
 	}
 }
+
+// psmux splits a { } block only at " ; ": every ";" ending a command in a
+// block gets a blank before it; quoted text and formats stay as they are.
+func TestSpaceBlockSeps(t *testing.T) {
+	for in, want := range map[string]string{
+		"bind -n X if -F -t= '#{a}' {} { set -gF @p '#{mouse_pane}'; select-pane -t=; send -M }": "bind -n X if -F -t= '#{a}' {} { set -gF @p '#{mouse_pane}' ; select-pane -t= ; send -M }",
+		"bind -n Y if -F 'x;y' { copy-mode -H; send -X a } { run 'a; b' }":                       "bind -n Y if -F 'x;y' { copy-mode -H ; send -X a } { run 'a; b' }",
+		"bind -n Z run-shell \"a\\\"; b\"; set -g x 1":                                           "bind -n Z run-shell \"a\\\"; b\"; set -g x 1",
+		"bind a { x ; y }\nset -g y z;w":                                                         "bind a { x ; y }\nset -g y z;w",
+		"# tmux's own\nbind b { x; y }":                                                          "# tmux's own\nbind b { x ; y }",
+	} {
+		if got := spaceBlockSeps(in); got != want {
+			t.Errorf("spaceBlockSeps(%q)\n got %q\nwant %q", in, got, want)
+		}
+	}
+}

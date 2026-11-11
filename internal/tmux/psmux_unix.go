@@ -23,6 +23,9 @@ func (c *Client) spawnPsmux([]string, []Cmd) error { return errors.New("tmux: ps
 // GlobalizeFormat returns s: tmux ids are unique on its server.
 func GlobalizeFormat(s string) string { return s }
 
+// spaceBlockSeps returns conf: tmux reads "a; b" in a { } block.
+func spaceBlockSeps(conf string) string { return conf }
+
 // EnvPane is the pane imux runs in ($TMUX_PANE).
 func EnvPane() string { return os.Getenv("TMUX_PANE") }
 

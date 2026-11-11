@@ -54,6 +54,13 @@ func TestGenerateConfPsmux(t *testing.T) {
 	if !strings.Contains(got, "--pane #{pane_id}~#{session_name} --client #{client_name}~#{client_session}") {
 		t.Error("menu binding does not pass session-qualified ids")
 	}
+	// psmux splits a block's commands only at " ; " (select-pane -t=; send
+	// -M took every click on a pane with it).
+	for _, l := range lines {
+		if strings.HasPrefix(l, "bind -n MouseDown1Pane ") && !strings.Contains(l, "select-pane -t= ; send -M }") {
+			t.Errorf("press binding: %s", l)
+		}
+	}
 	// psmux shows #{pane_title} only: the last pane-border-format wins.
 	var border string
 	for _, l := range lines {

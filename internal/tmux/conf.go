@@ -341,7 +341,7 @@ func GenerateConf(in *ConfInput) string {
 		w("%s", l)
 	}
 	w("source-file -q %s", Quote(in.LocalConf))
-	return GlobalizeFormat(b.String())
+	return GlobalizeFormat(spaceBlockSeps(b.String()))
 }
 
 // WriteConf writes content to path if it differs from what is there (by

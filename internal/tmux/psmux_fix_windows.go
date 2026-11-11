@@ -3,8 +3,9 @@
 package tmux
 
 // Work-arounds for psmux behaviors that differ from tmux: pane borders show
-// only #{pane_title}, split-window has no -b, and resize-pane -x/-y acts on
-// the active pane and takes a share of the window, not cells.
+// only #{pane_title}, split-window has no -b, resize-pane -x/-y acts on
+// the active pane and takes a share of the window, not cells, and a { }
+// block splits its commands only at " ; ".
 
 import (
 	"context"
@@ -203,4 +204,40 @@ func (c *Client) legacyPsmux() bool {
 	}
 	legacy.bins[c.Bin] = old
 	return old
+}
+
+// spaceBlockSeps puts a blank before every ";" that ends a command in a
+// { } block of conf. psmux splits a block's commands only at " ; ": it read
+// "select-pane -t=; send -M" as select-pane -t "=;", which failed, so the
+// press binding never passed a click on. Quoted text is left as it is.
+func spaceBlockSeps(conf string) string {
+	var b strings.Builder
+	b.Grow(len(conf) + 64)
+	depth, quote := 0, byte(0)
+	for i := 0; i < len(conf); i++ {
+		c := conf[i]
+		switch {
+		case c == '\n':
+			// A line ends quotes too: comments have apostrophes.
+			depth, quote = 0, 0
+		case quote != 0:
+			if c == '\\' && quote == '"' && i+1 < len(conf) {
+				b.WriteByte(c)
+				i++
+				c = conf[i]
+			} else if c == quote {
+				quote = 0
+			}
+		case c == '\'' || c == '"':
+			quote = c
+		case c == '{' && (i == 0 || conf[i-1] == ' ') && i+1 < len(conf) && (conf[i+1] == ' ' || conf[i+1] == '}'):
+			depth++
+		case c == '}' && depth > 0 && (i+1 == len(conf) || conf[i+1] == ' ' || conf[i+1] == '\n'):
+			depth--
+		case c == ';' && depth > 0 && i > 0 && conf[i-1] != ' ':
+			b.WriteByte(' ')
+		}
+		b.WriteByte(c)
+	}
+	return b.String()
 }
