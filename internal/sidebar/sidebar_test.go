@@ -133,6 +133,57 @@ func TestAgentsWorkingCount(t *testing.T) {
 	}
 }
 
+// TestAgentsBadge (D46): the rail's Agents icon has the number of working
+// agents on blue, "9+" above nine, nothing at zero; on any view, with the
+// panel closed, with either icon theme, and the rail keeps its width.
+func TestAgentsBadge(t *testing.T) {
+	i18n.SetLocale("en")
+	iconRow := func(m Model) Line {
+		for _, l := range Render(m, 41, 30, NoItem).Lines {
+			if strings.Contains(l.Text, railIcons[m.Icons][0]) {
+				return l
+			}
+		}
+		t.Fatalf("no Agents icon (%s)", m.Icons)
+		return Line{}
+	}
+	m := model() // one working agent (a limited one is not counted)
+	for _, theme := range []string{IconsEmoji, IconsNerd} {
+		m.Icons = theme
+		row := iconRow(m)
+		plain := Plain(row.Text)
+		col := DisplayWidth(plain[:strings.Index(plain, " 1 ")+1]) // the badge's column
+		if col != badgeAt || !strings.Contains(row.Text, badgeStyle+"1") {
+			t.Errorf("%s: badge at column %d in %q", theme, col, row.Text)
+		}
+		if n := DisplayWidth(Plain(row.Text)); n != 41 {
+			t.Errorf("%s: %d columns", theme, n)
+		}
+	}
+	m.View, m.Icons = ViewExplorer, IconsEmoji
+	if !strings.Contains(iconRow(m).Text, badgeStyle+"1") {
+		t.Error("no badge with the explorer open")
+	}
+	m.Closed = true
+	if row := iconRow(m); !strings.Contains(row.Text, badgeStyle+"1") || DisplayWidth(Plain(row.Text)) > 41 {
+		t.Errorf("closed panel: %q", Plain(row.Text))
+	}
+	m.Closed = false
+	var many []PaneRow
+	for i := 0; i < 12; i++ {
+		many = append(many, PaneRow{ID: "%9" + strconv.Itoa(i), Agent: "claude", State: StateWorking})
+	}
+	m.Projects = append(m.Projects, ProjectRow{Session: "big-1", Name: "big", Panes: many})
+	if row := iconRow(m); !strings.Contains(row.Text, badgeStyle+"9+") || DisplayWidth(Plain(row.Text)) != 41 {
+		t.Errorf("13 working: %q", Plain(row.Text))
+	}
+	m = model()
+	m.Projects[0].Panes[0].State = StateIdle
+	if row := iconRow(m); strings.Contains(row.Text, badgeStyle) {
+		t.Errorf("a badge with nothing at work: %q", Plain(row.Text))
+	}
+}
+
 func TestRender(t *testing.T) {
 	i18n.SetLocale("en")
 	for _, w := range []int{29, 41, 51} {

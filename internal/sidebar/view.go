@@ -430,6 +430,20 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 	if alert {
 		iconColor = yellow
 	}
+	bg := ""
+	if active {
+		bg = selBg
+	}
+	// The Agents icon's badge (D46): how many agents work, in the item's
+	// 7th and 8th columns, one blank after the icon's two.
+	if n := workingCount(m); it.view == ViewAgents && n > 0 {
+		num := strconv.Itoa(n)
+		if n > 9 {
+			num = "9+"
+		}
+		pre := max(badgeAt-left-DisplayWidth(it.icon), 0)
+		gap = strings.Repeat(" ", pre) + badgeStyle + num + reset + bg + strings.Repeat(" ", max(iw-badgeAt-len(num), 0))
+	}
 	line, cw := faint+"│"+reset, railW
 	if m.Closed {
 		line, cw = "", ClosedWidth
@@ -441,6 +455,13 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 	return Cell{X: 0, W: cw, Text: strings.Repeat(" ", left) + iconColor + it.icon + reset + gap + line, Action: a},
 		Cell{X: 0, W: cw, Text: color + lt + reset + line, Action: a}
 }
+
+// The badge of a rail icon: its column in the item, and its colors (bold
+// white on the editor's blue).
+const (
+	badgeAt    = 6
+	badgeStyle = "\x1b[1;38;5;231;48;5;25m"
+)
 
 // withRail puts the activity rail on the left of the view's lines: the views
 // at the top, Limits and Help at the bottom; labels under the icons when the

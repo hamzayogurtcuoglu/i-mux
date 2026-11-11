@@ -6,6 +6,13 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-11-11
+
+### Added
+
+- **A badge on the Agents icon.** While agents work, the rail's 🤖 icon has their number on a blue
+  badge, as an editor's activity bar does, so you see it with the panel on another view or closed.
+
 ## [0.44.0] - 2026-11-10
 
 ### Added

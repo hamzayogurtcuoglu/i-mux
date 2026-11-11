@@ -356,14 +356,9 @@ func headerWith(name, text string, folded bool, right string, rw, w int, plus Ac
 // (a spinner and "2 working"; "2" alone when the panel is narrow) and,
 // folded, how many panes there are.
 func agentsCount(m Model, w int) (string, int) {
-	panes, working := 0, 0
+	panes, working := 0, workingCount(m)
 	for _, pr := range m.Projects {
-		for _, p := range pr.Panes {
-			panes++
-			if p.State == StateWorking && p.Limited == "" {
-				working++
-			}
-		}
+		panes += len(pr.Panes)
 	}
 	right, rw := "", 0
 	if working > 0 {
@@ -382,6 +377,20 @@ func agentsCount(m Model, w int) (string, int) {
 		right, rw = right+muted+n+reset, rw+runes(n)
 	}
 	return right, rw
+}
+
+// workingCount is how many agents work now, in every project (a limited
+// one does not).
+func workingCount(m Model) int {
+	n := 0
+	for _, pr := range m.Projects {
+		for _, p := range pr.Panes {
+			if p.State == StateWorking && p.Limited == "" {
+				n++
+			}
+		}
+	}
+	return n
 }
 
 // projectRow: avatar, name, branch, dirty dot and the roll-up state.

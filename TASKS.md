@@ -1021,7 +1021,7 @@ Replaces M52.
 
 User request: the number of working agents on the rail's Agents icon too.
 
-- [ ] **T54.1 A badge on the Agents icon** · S
+- [x] **T54.1 A badge on the Agents icon** · S
   - AC: D46: a blue number right of the icon while agents work (all projects, limited ones not
     counted), `9+` above nine, none at zero; with the panel closed and on another view; unit
     tests (the rail with 0, 3 and 12 working; emoji and Nerd Font icons keep their width).
