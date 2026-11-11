@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -148,4 +149,20 @@ func askMicro(e *Env, cfg *config.Config, name string) {
 		fmt.Fprint(e.Stdout, "\n"+i18n.T("editor.fallback", name))
 		_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
 	}
+}
+
+// askYes asks q; Enter or y is a yes, no input at all a no.
+func askYes(e *Env, in io.Reader, q string) bool {
+	fmt.Fprint(e.Stdout, q)
+	line, err := bufio.NewReader(in).ReadString('\n')
+	a := strings.ToLower(strings.TrimSpace(line))
+	if err != nil && a == "" {
+		fmt.Fprintln(e.Stdout)
+		return false
+	}
+	switch a {
+	case "", "y", "yes", "e", "evet":
+		return true
+	}
+	return false
 }

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/clipimage"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
 )
 
 // ErrExists is a name that is taken.
@@ -222,6 +223,10 @@ type System struct {
 	Now    func() time.Time
 	// ReadFile reads /proc/version (WSL); nil = os.ReadFile.
 	ReadFile func(string) ([]byte, error)
+	// Exists reports a file (a browser's program); nil = os.Stat.
+	Exists func(string) bool
+	// WinHomes are the Windows user folders (WSL); nil = termfont's.
+	WinHomes func() []string
 }
 
 func (s *System) goos() string {
@@ -356,43 +361,150 @@ func (s *System) RevealFile(ctx context.Context, path string) error {
 	return s.run(ctx, "", "xdg-open", dir)
 }
 
-// CanBrowse reports whether this machine has a browser Browse can open:
-// macOS, WSL (Windows'), a Linux desktop; not an SSH session.
-func (s *System) CanBrowse() bool {
-	if s.env("IMUX_BROWSE_COMMAND") != "" {
-		return true
-	}
-	return s.goos() == "darwin" || s.wsl() || s.goos() == "linux" && s.desktop() && s.look("xdg-open")
+// ErrNoBrowser means there is no browser here to open a page in (an SSH
+// session without a desktop).
+var ErrNoBrowser = errors.New("no browser on this machine")
+
+// chromium is a browser that opens a page in a window of its own (--app):
+// its name, the Windows ProgId prefix of its links, where it is on
+// Windows (under Program Files, Program Files (x86) and the user's
+// AppData\Local), on macOS and, by program name, on Linux.
+type chromium struct {
+	name, progID, win, mac string
+	linux                  []string
 }
 
-// Browse opens target (a URL, or a file's path) in the system's browser
-// without waiting for it. IMUX_BROWSE_COMMAND (sh, the target in $1)
-// replaces it (tests).
-func (s *System) Browse(ctx context.Context, target string) error {
+var chromiums = []chromium{
+	{"Chrome", "ChromeHTML", "Google/Chrome/Application/chrome.exe", "Google Chrome.app", []string{"google-chrome", "google-chrome-stable"}},
+	{"Edge", "MSEdgeHTM", "Microsoft/Edge/Application/msedge.exe", "Microsoft Edge.app", []string{"microsoft-edge", "microsoft-edge-stable"}},
+	{"Brave", "BraveHTML", "BraveSoftware/Brave-Browser/Application/brave.exe", "Brave Browser.app", []string{"brave-browser", "brave"}},
+	{"Vivaldi", "VivaldiHTM", "Vivaldi/Application/vivaldi.exe", "Vivaldi.app", []string{"vivaldi"}},
+	{"Chromium", "ChromiumHTM", "Chromium/Application/chrome.exe", "Chromium.app", []string{"chromium", "chromium-browser"}},
+}
+
+func (s *System) exists(p string) bool {
+	if s.Exists != nil {
+		return s.Exists(p)
+	}
+	fi, err := os.Stat(p)
+	return err == nil && !fi.IsDir()
+}
+
+// winDefault is the Windows user's browser for https links: its ProgId
+// (ChromeHTML, MSEdgeHTM, FirefoxURL-…), "" when unknown.
+func (s *System) winDefault(ctx context.Context) string {
+	out, err := s.output(ctx, "reg.exe", "query", `HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice`, "/v", "ProgId")
+	if err != nil {
+		return ""
+	}
+	for _, l := range strings.Split(string(out), "\n") {
+		if f := strings.Fields(l); len(f) == 3 && f[0] == "ProgId" {
+			return f[2]
+		}
+	}
+	return ""
+}
+
+// winExe finds a Chromium browser's program on Windows (a WSL path).
+func (s *System) winExe(c chromium) string {
+	var dirs []string
+	for _, pf := range []string{"Program Files", "Program Files (x86)"} {
+		dirs = append(dirs, "/mnt/c/"+pf)
+	}
+	for _, h := range s.winHomes() {
+		dirs = append(dirs, filepath.Join(h, "AppData", "Local"))
+	}
+	for _, d := range dirs {
+		if p := filepath.Join(d, filepath.FromSlash(c.win)); s.exists(p) {
+			return p
+		}
+	}
+	return ""
+}
+
+func (s *System) winHomes() []string {
+	if s.WinHomes != nil {
+		return s.WinHomes()
+	}
+	return termfont.WindowsHomes()
+}
+
+// OpenPage opens u in a browser and says which (its name, "" when the
+// system's default): in a window of its own when window (the app window of
+// Chrome, Edge, Brave, Vivaldi or Chromium: no tabs, no address bar), else
+// a tab of the default browser. Under WSL it is Windows' browser: the
+// default one when it is Chromium-based, else Edge. IMUX_BROWSE_COMMAND
+// (sh, the URL in $1) replaces it (tests).
+func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	if c := s.env("IMUX_BROWSE_COMMAND"); c != "" {
-		return s.run(ctx, "", "/bin/sh", "-c", c, "sh", target)
+		return "", s.run(ctx, "", "/bin/sh", "-c", c, "sh", u)
 	}
 	switch {
-	case s.goos() == "darwin":
-		return s.run(ctx, "", "open", target)
 	case s.wsl():
-		if s.look("wslview") {
-			return s.run(ctx, "", "wslview", target)
-		}
-		if !strings.Contains(target, "://") {
-			w, err := s.output(ctx, "wslpath", "-w", target)
-			if err != nil {
-				return err
+		progID := s.winDefault(ctx)
+		var def *chromium // the default browser, when Chromium-based
+		for i, c := range chromiums {
+			if progID != "" && strings.HasPrefix(progID, c.progID) {
+				def = &chromiums[i]
 			}
-			target = strings.TrimSpace(string(w))
+		}
+		if window {
+			c := def
+			if c == nil {
+				c = &chromiums[1] // Edge: Windows has it
+			}
+			if exe := s.winExe(*c); exe != "" {
+				return c.name, s.start(exe, "--app="+u)
+			}
 		}
 		// explorer.exe exits 1 even when it worked.
-		_ = s.run(ctx, "", "explorer.exe", target)
-		return nil
+		_ = s.run(ctx, "", "explorer.exe", u)
+		if def != nil {
+			return def.name, nil
+		}
+		return "", nil
+	case s.goos() == "darwin":
+		if window {
+			for _, c := range chromiums {
+				for _, dir := range []string{"/Applications", filepath.Join(s.env("HOME"), "Applications")} {
+					if app := filepath.Join(dir, c.mac); s.exists(filepath.Join(app, "Contents", "Info.plist")) {
+						return c.name, s.start("open", "-na", app, "--args", "--app="+u)
+					}
+				}
+			}
+		}
+		return "", s.start("open", u)
+	case s.goos() == "linux" && s.desktop():
+		if window {
+			for _, c := range chromiums {
+				for _, bin := range c.linux {
+					if s.look(bin) {
+						return c.name, s.start(bin, "--app="+u)
+					}
+				}
+			}
+		}
+		if s.look("xdg-open") {
+			return "", s.start("xdg-open", u)
+		}
 	}
-	return s.start("xdg-open", target)
+	return "", ErrNoBrowser
+}
+
+// Raise brings the window whose title starts with title to the front: on
+// Windows (from WSL), in the background, as well as Windows lets it.
+func (s *System) Raise(title string) {
+	title = strings.TrimSpace(title)
+	if title == "" || !s.wsl() {
+		return
+	}
+	if r := []rune(title); len(r) > 120 {
+		title = string(r[:120])
+	}
+	ps := "(New-Object -ComObject WScript.Shell).AppActivate('" + strings.ReplaceAll(title, "'", "''") + "') | Out-Null"
+	_ = s.start("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps)
 }
 
 // start starts a program and leaves it (xdg-open may wait for the browser

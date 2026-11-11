@@ -30,8 +30,6 @@ type Result int
 const (
 	Close Result = iota
 	Install
-	Browser // open the page in the system's browser (the web preview)
-	Edit    // edit the file instead (the web preview)
 )
 
 // Choice is a button of a popup with its own: its label, the letter that
@@ -48,9 +46,9 @@ type Model struct {
 	Cmd     string // the command that installs it
 	Missing string // a program the command needs that is not here ("npm"), or ""
 
-	// Title, Text, Choices and Hint make another popup (the web preview's,
-	// D44): its title, its paragraphs (one starting with "\t" is dimmed),
-	// its buttons (the first is the default) and the keys line.
+	// Title, Text, Choices and Hint make another popup (the one that
+	// offers micro, D45): its title, its paragraphs (one starting with "\t"
+	// is dimmed), its buttons (the first is the default) and the keys line.
 	Title   string
 	Text    []string
 	Choices []Choice

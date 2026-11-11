@@ -12,7 +12,6 @@ import (
 	upd "github.com/hamzayogurtcuoglu/i-mux/internal/update"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/versions"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
 )
 
 // Settings rows cycle through these values (§9.3 "Settings").
@@ -114,14 +113,15 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	}
 	label, flip = onOff(cfg.Paste.Images)
 	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.paste_images", label), Key: "v", Cmd: set("paste_images", flip)})
-	web := i18n.T("settings.off")
+	// Where HTML files open (D47): a window, a tab, the editor.
+	web, nextWeb := i18n.T("settings.web_window"), "tab"
 	switch {
-	case cfg.Web.Enabled && webview.Installed(cfg):
-		web = i18n.T("settings.on_plain")
-	case cfg.Web.Enabled:
-		web = i18n.T("settings.web_not_installed")
+	case !cfg.Web.Enabled:
+		web, nextWeb = i18n.T("settings.web_editor"), "window"
+	case cfg.Web.Open == "tab":
+		web, nextWeb = i18n.T("settings.web_tab"), "off"
 	}
-	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.web", web), Key: "p", Cmd: w.ui(append([]string{"__settings", "menu", "web"}, tgt...)...)})
+	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.web", web), Key: "p", Cmd: set("web", nextWeb)})
 	icons := cfg.Tmux.Icons
 	if icons == "" {
 		icons = "auto"
@@ -152,36 +152,6 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	return m
 }
 
-// WebMenu is Settings → Web preview (D44): install or remove its browser,
-// turn the preview on or off, open a page.
-func (w *WS) WebMenu(pane, client string) *Menu {
-	tgt := settingsTarget(pane, client)
-	cfg := w.Cfg
-	installed := webview.Installed(cfg)
-	m := &Menu{Title: i18n.T("settings.web_title")}
-	if !installed && cfg.Web.Browser == "" {
-		m.Items = append(m.Items, MenuItem{
-			Name: i18n.T("settings.web_install", webview.DownloadMB), Key: "i",
-			Cmd: w.popupCmd("80%", "60%", "web", "install", "--yes", "--popup"),
-		})
-	}
-	if installed && cfg.Web.Enabled {
-		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.web_open"), Key: "o", Cmd: w.WebPrompt(pane, client)})
-	}
-	if cfg.Web.Enabled {
-		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.web_turn_off"), Key: "t", Cmd: w.ui(append([]string{"__settings", "set", "web", "off"}, tgt...)...)})
-	} else {
-		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.web_turn_on"), Key: "t", Cmd: w.ui(append([]string{"__settings", "set", "web", "on"}, tgt...)...)})
-	}
-	if installed && cfg.Web.Browser == "" {
-		m.Items = append(m.Items, Separator(), MenuItem{
-			Name: i18n.T("settings.web_remove", webview.DiskMB), Key: "r",
-			Cmd: w.ui(append([]string{"web", "remove"}, tgt...)...),
-		})
-	}
-	return m
-}
-
 // Options a web page's prompt leaves its answer and target in.
 const (
 	OptWebURL    = "@imux_web_url" // the page typed last
@@ -189,9 +159,10 @@ const (
 	OptWebClient = "@imux_web_client"
 )
 
-// WebPrompt asks on client for a page to open beside pane (D44), starting
-// with the last one (http://localhost:3000 the first time). As in
-// NamePrompt, nothing but the answer goes through the template.
+// WebPrompt asks on client for a page to open in the browser (D47): an
+// address, or a file of pane's project; it starts with the last one
+// (http://localhost:3000 the first time). As in NamePrompt, nothing but
+// the answer goes through the template.
 func (w *WS) WebPrompt(pane, client string) string {
 	last := "http://localhost:3000"
 	if out, err := w.T.Run(context.Background(), tmux.Cmd{"show-options", "-gqv", OptWebURL}); err == nil {

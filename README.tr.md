@@ -79,15 +79,15 @@ gibi çalışır: oradan açınca düzenlediğin dosyalar GitHub'ın Copilot ekl
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
 GitHub Copilot'a bir kez giriş yaptırır.
 
-**Bölmede web sayfaları:** gezginde bir HTML dosyasına tıklayınca ajanının yanındaki bir bölmede
-[Carbonyl](https://github.com/fathyb/carbonyl) ile açılır: terminalde çizen bir Chromium (bu yüzden
-SSH ve VS Code tüneli üzerinden de çalışır); başka bir sayfaya tıklayınca orada açılır, ikinci tık
-yeniler. Agent'lar yanındaki **+** → **🌐 Web sayfası…** herhangi bir adresi açar (`localhost:3000`
-ya da sadece `3000`). Tarayıcı 74 MB'lık bir indirmedir (diskte yaklaşık 170 MB) ve yalnızca ilk
-istediğinde iner: tık **Kur** (ya da **Tarayıcıda aç**, ya da **Düzenle**) önerir; Ayarlar →
-**🌐 Web önizleme** de öyle, ayrıca önizlemeyi kapatır (HTML dosyaları o zaman düzenleyicide açılır)
-ya da kaldırır. Sayfada Ctrl+C bölmesini kapatır. `imux web install | remove | open <dosya|url>`
-aynısını kabuktan yapar; `[web] browser` yerine başka bir tarayıcı çalıştırır (ör. `w3m`).
+**Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca, i-mux onu `localhost` üzerinden
+sunar ve tarayıcında kendi penceresinde açar (sekme ya da adres çubuğu olmadan; Chrome'un ya da
+Edge'in, WSL'de Windows'unki); bir ajan sayfayı ya da kullandığı bir dosyayı yeniden yazınca sayfa
+kendini yeniler. Başka bir sayfaya tıklayınca o pencerede açılır. Agent'lar yanındaki **+** →
+**🌐 Web sayfası…** herhangi bir adresi açar (`localhost:5173`, ya da sadece `5173`). Kurulacak bir
+şey yok. Ayarlar → **🌐 HTML dosyaları** pencere, tarayıcı sekmesi ve düzenleyici arasında geçer.
+VS Code'un terminalinden (tünel üzerinden de) sayfalar VS Code'un çalıştığı yerde açılır; düz SSH'de
+adres panoya gelir. `imux web` sunulanları listeler, `imux web open <dosya|url>` bir sayfa açar,
+`imux web stop` durdurur.
 
 **Bildirimler:** bir ajan işini bitirince (en az 10 saniye çalıştıktan sonra) ya da sana bir şey
 sorunca, o sırada ona bakmıyorsan bildirim gelir: macOS'un bildirim merkezi, Linux masaüstününki
@@ -129,7 +129,7 @@ görünümü değiştirir.
 | Simge | Görünüm |
 |---|---|
 | 🤖 | **Agent'lar:** projelerin (branch, kaydedilmemiş değişiklik) ve içlerinde çalışan bütün agent'lar, her birinin ne yaptığıyla: çalışırken dönen bir işaret, sana bir şey sorduğunda **Sıra sende**, sen başka yerdeyken işini bitirdiyse yeşil nokta, boştayken halka ve bunun ne kadar önce olduğu; **Agent'lar** başlığı çalışan agent'ları sayar, 🤖 simgesindeki mavi rozet de; her görünümde gözünün önündedir |
-| 📁 | **Dosyalar:** **Ctrl+P** (ya da başlığındaki 📄) editördeki gibi projede dosya bulur: adından harfler yaz (`sbrnd`, `sidebar/render.go`'yu bulur; `ad:42` 42. satırda açar), Enter açar. Projenin dosyaları, editördeki gibi her biri türünün simgesiyle (Nerd Font varsa Seti'ninkiler, yoksa emoji), açık ya da kapalı klasörler ve düzeyleri gösteren girinti çizgileriyle; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir (HTML dosyası web önizlemede açılır, aşağıda); değişen dosyalar renklidir. **Sağ tık** editördeki menüyü açar: Yeni dosya / Yeni klasör, Yeniden adlandır, Sil (Çöp Sepeti'ne), Kes / Kopyala / Yapıştır, Yolu / Göreli yolu kopyala, Finder'da göster, Terminalde aç, Yanda aç, Klasörde ara, Karşılaştır, Ajana ekle; HTML ve SVG dosyalarında Önizlemeyi Aç / Tarayıcıda Aç. İmlecin üzerindeki şey parlar; seçili dosya işaretli kalır |
+| 📁 | **Dosyalar:** **Ctrl+P** (ya da başlığındaki 📄) editördeki gibi projede dosya bulur: adından harfler yaz (`sbrnd`, `sidebar/render.go`'yu bulur; `ad:42` 42. satırda açar), Enter açar. Projenin dosyaları, editördeki gibi her biri türünün simgesiyle (Nerd Font varsa Seti'ninkiler, yoksa emoji), açık ya da kapalı klasörler ve düzeyleri gösteren girinti çizgileriyle; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir (HTML dosyası tarayıcında canlı açılır, aşağıda); değişen dosyalar renklidir. **Sağ tık** editördeki menüyü açar: Yeni dosya / Yeni klasör, Yeniden adlandır, Sil (Çöp Sepeti'ne), Kes / Kopyala / Yapıştır, Yolu / Göreli yolu kopyala, Finder'da göster, Terminalde aç, Yanda aç, Klasörde ara, Karşılaştır, Ajana ekle; HTML ve SVG dosyalarında Önizlemeyi Aç. İmlecin üzerindeki şey parlar; seçili dosya işaretli kalır |
 | 🔍 | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar, dosya dosya, ikonu ve eşleşme sayısıyla (dosyaya tıkla: daralt; hepsi için **⊟ Hepsini kapat** ya da Tab; çok dosya varsa kapalı gelir); Enter dosyayı o satırda açar. Uzun listelerde, diff'lerde ve dosyalarda tıklanıp sürüklenebilen ince bir kaydırma çubuğu var |
 | 🔀 | **Git:** editördeki kaynak kontrolü gibi: hazırlanan ve hazırlanmayan değişiklikler (her dosyanın önce adı, sonra gri klasörü), her dosyada ve hepsi için hazırla, geri al ve at (önce sorar); **Commit…** ve yanında **✨**: ajanın (ya da `git.commit_agent`, örneğin ücretsiz Groq anahtarıyla OpenCode) değişikliklerden mesajı yazar, sen commit eder, düzenler ya da başkasını istersin; ↑↓ sayılarıyla pull / push / senkron; dal menüsü (değiştir, yeni dal); geçmiş. Dosyaya tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
 | 🧩 | **Skill'ler:** projenin `<ad>/SKILL.md` skill'leri; beş agent'tan hangilerinin onu gördüğünü (`✻▲◉◎▣`) ve üstbilgisinde sorun varsa `⚠` uyarısını gösterir. Skill'ler `.agents/skills/` altında tutulur ve beş CLI'da birden çalışması için `.claude/skills/` içine otomatik bağlanır. **✨ Yeni skill…** kimin yazacağını (yeni bir bölmede bir agent, bu bölmedeki agent ya da boş bir `SKILL.md` ile sen) ve skill'in ne yapacağını soran bir pencere açar; agent i-mux'un skill yazma rehberiyle başlar, depoyu inceleyip yazar; bir skill'deki **✨** düğmesi (ya da sağ tık) menüsünü açar: Aç, Görüntüle, Agent'a ekle, Agent ile iyileştir, Tüm agent'larla paylaş, Sil |

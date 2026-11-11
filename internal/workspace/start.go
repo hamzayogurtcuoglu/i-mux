@@ -249,6 +249,18 @@ func (w *WS) ExecAttach(name string) error {
 	if prog != "" && os.Getenv("TMUX") == "" && prog != "tmux" {
 		_, _ = w.T.Run(context.Background(), tmux.Cmd{"set-option", "-g", "@imux_terminal", prog})
 	}
+	if os.Getenv("TMUX") == "" {
+		// VS Code's terminal (also over a tunnel): pages open where VS Code
+		// runs, through its BROWSER helper (D47); another terminal: not.
+		b, ipc := VSCodeBrowser(os.Getenv)
+		set := func(opt, v string) tmux.Cmd {
+			if v == "" {
+				return tmux.Cmd{"set-option", "-gu", opt}
+			}
+			return tmux.Cmd{"set-option", "-g", opt, v}
+		}
+		_, _ = w.T.Run(context.Background(), set(OptBrowser, b), set(OptVSCodeIPC, ipc))
+	}
 	argv := w.AttachArgv(name)
 	bin, err := exec.LookPath(argv[0])
 	if err != nil {
@@ -261,6 +273,25 @@ func (w *WS) ExecAttach(name string) error {
 		}
 	}
 	return execFunc(bin, argv, env)
+}
+
+// Options a VS Code terminal leaves when it attaches (§9.3 "Live preview
+// in the browser"): its BROWSER helper, which opens a page where VS Code
+// runs (forwarding the port), and the IPC socket the helper needs.
+const (
+	OptBrowser   = "@imux_browser"
+	OptVSCodeIPC = "@imux_vscode_ipc"
+)
+
+// VSCodeBrowser is what ExecAttach keeps of a terminal's environment: its
+// BROWSER when it is VS Code's helper, and VSCODE_IPC_HOOK_CLI; "" for
+// other terminals.
+func VSCodeBrowser(getenv func(string) string) (helper, ipc string) {
+	b, i := getenv("BROWSER"), getenv("VSCODE_IPC_HOOK_CLI")
+	if i == "" || !strings.HasSuffix(b, "/helpers/browser.sh") {
+		return "", ""
+	}
+	return b, i
 }
 
 // execFunc is syscall.Exec; tests replace it.

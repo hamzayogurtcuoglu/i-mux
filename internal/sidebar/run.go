@@ -54,7 +54,6 @@ type sidebar struct {
 	menuX      int    // where the last right-click was (the menu opens there)
 	menuY      int
 	revealKey  string // i18n key of "Reveal in Finder" & co., "" for none
-	browse     bool   // the system has a browser (Open in Browser)
 	lastReveal string // OptReveal as last seen
 	revealSeen bool
 	revealRow  string // a revealed path to scroll to
@@ -94,7 +93,7 @@ func Run(ctx context.Context, o Options) error {
 	if o.Safety <= 0 {
 		o.Safety = 15 * time.Second
 	}
-	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), save: make(chan struct{}, 1), revealKey: (&fileops.System{}).Reveal(), browse: (&fileops.System{}).CanBrowse()}
+	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), save: make(chan struct{}, 1), revealKey: (&fileops.System{}).Reveal()}
 	restore, err := rawMode(int(o.In.Fd()))
 	if err == nil {
 		defer restore()
@@ -653,7 +652,7 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		return
 	case ActOpenFile:
 		if s.webOn() && webview.IsHTML(a.Path) && a.Status == "" && s.model.CWD != "" {
-			// A web page opens in the preview beside the target (D44).
+			// A web page opens in the browser, served live (D47).
 			args := []string{"web", "open", filepath.Join(s.model.CWD, a.Path)}
 			if s.model.Target != "" {
 				args = append(args, "--pane", s.model.Target)

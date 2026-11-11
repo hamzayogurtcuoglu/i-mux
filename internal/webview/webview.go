@@ -1,15 +1,19 @@
-// Package webview is the web preview (D44): the terminal browser i-mux
-// installs when asked (Carbonyl), the URLs it opens and the command its pane
-// runs. The tmux side and the popups are in cli and installview.
+// Package webview is the live preview (D47): a small HTTP server per
+// folder that serves its pages on localhost and reloads them when their
+// files change, and the records the CLI finds those servers by. Opening
+// the browser is fileops'.
 package webview
 
 import (
-	"archive/zip"
+	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"net"
 	"net/http"
@@ -18,96 +22,16 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 )
 
-// Version is the Carbonyl release i-mux installs.
-const Version = "0.0.3"
-
-// Sizes the messages give, in MB.
-const (
-	DownloadMB = 74
-	DiskMB     = 170
-)
-
-// Asset is one of the release's zips: its name, size in bytes and SHA-256.
-type Asset struct {
-	Name string
-	Size int64
-	Sum  string
-}
-
-// assets by GOOS/GOARCH; the sums were taken from the files GitHub serves
-// and are checked on every download.
-var assets = map[string]Asset{
-	"linux/amd64":  {"carbonyl.linux-amd64.zip", 78049320, "46a902ea29bb32f773fb4ee341423705b92345a810422b8df93eaea6a1ec7ad2"},
-	"linux/arm64":  {"carbonyl.linux-arm64.zip", 80183490, "5b75c99138cdabe454935e2c60994adce0bd4571f16e4eecfdf867c59a1197be"},
-	"darwin/amd64": {"carbonyl.macos-amd64.zip", 77040274, "29717506254364de1988a070cd3877c7de31c9de91c0878535ac71b33d7029a3"},
-	"darwin/arm64": {"carbonyl.macos-arm64.zip", 68738483, "8cf9197264d8ea94a8ff9d00eebf35d8d094c7f84b8530f1bd41f9eaaed98064"},
-}
-
-// AssetFor is the zip for goos and goarch.
-func AssetFor(goos, goarch string) (Asset, bool) {
-	a, ok := assets[goos+"/"+goarch]
-	return a, ok
-}
-
-// URL is where a is downloaded from; IMUX_WEB_URL replaces it (a mirror;
-// tests).
-func URL(a Asset) string {
-	if u := os.Getenv("IMUX_WEB_URL"); u != "" {
-		return u
-	}
-	return "https://github.com/fathyb/carbonyl/releases/download/v" + Version + "/" + a.Name
-}
-
-// Dir is the unpacked Carbonyl.
-func Dir() string { return filepath.Join(paths.Tools(), "carbonyl-"+Version) }
-
-// Bin is its program.
-func Bin() string { return filepath.Join(Dir(), "carbonyl") }
-
-// Browser is the command the preview runs a URL with: [web] browser's words
-// (its program found on the PATH), else i-mux's Carbonyl; nil when it is
-// not installed.
-func Browser(cfg *config.Config) []string {
-	if f := strings.Fields(cfg.Web.Browser); len(f) > 0 {
-		p, err := exec.LookPath(f[0])
-		if err != nil {
-			return nil
-		}
-		return append([]string{p}, f[1:]...)
-	}
-	if fi, err := os.Stat(Bin()); err == nil && fi.Mode().IsRegular() && fi.Mode()&0o111 != 0 {
-		return []string{Bin()}
-	}
-	return nil
-}
-
-// Installed reports whether the preview has its browser.
-func Installed(cfg *config.Config) bool { return Browser(cfg) != nil }
-
-// Command is the pane's command for u. Carbonyl's Chromium will not run as
-// root without --no-sandbox.
-func Command(cfg *config.Config, u string, root bool) []string {
-	b := Browser(cfg)
-	if b == nil {
-		return nil
-	}
-	if cfg.Web.Browser == "" && root {
-		b = append(b, "--no-sandbox")
-	}
-	return append(b, u)
-}
-
-// IsHTML reports a web page file: a click on it in the explorer opens it in
-// the preview.
+// IsHTML reports a web page file: a click on it in the explorer opens its
+// preview.
 func IsHTML(name string) bool {
 	switch strings.ToLower(filepath.Ext(name)) {
 	case ".html", ".htm", ".xhtml":
@@ -123,18 +47,26 @@ func Previewable(name string) bool {
 
 var portOnly = regexp.MustCompile(`^:?[0-9]{1,5}([/?#].*)?$`)
 
-// Target turns what the user gave into a URL: an existing file (absolute,
-// ~/…, or relative to dir) a file:// URL; a port ("3000", ":3000/api")
-// http://localhost:3000; text without a scheme http:// (localhost and IP
-// addresses) or https://. Blank stays "".
-func Target(s, dir string) string {
+// Target turns what the user gave into a file or a URL: an existing path
+// (absolute, ~/…, or relative to dir) stays a path (absolute); a port
+// ("3000", ":3000/api") is http://localhost:3000; text without a scheme
+// gets http:// (localhost and IP addresses) or https://. Blank stays "".
+func Target(s, dir string) (file, u string) {
 	s = strings.TrimSpace(s)
-	if s == "" || strings.Contains(s, "://") {
-		return s
+	if s == "" {
+		return "", ""
 	}
-	for _, scheme := range []string{"about:", "data:", "view-source:"} {
+	if strings.HasPrefix(s, "file://") {
+		if pu, err := url.Parse(s); err == nil {
+			return pu.Path, ""
+		}
+	}
+	if strings.Contains(s, "://") {
+		return "", s
+	}
+	for _, scheme := range []string{"about:", "data:"} {
 		if strings.HasPrefix(s, scheme) {
-			return s
+			return "", s
 		}
 	}
 	p := s
@@ -145,10 +77,10 @@ func Target(s, dir string) string {
 		p = filepath.Join(dir, p)
 	}
 	if _, err := os.Stat(p); err == nil {
-		return FileURL(p)
+		return p, ""
 	}
 	if portOnly.MatchString(s) {
-		return "http://localhost:" + strings.TrimPrefix(s, ":")
+		return "", "http://localhost:" + strings.TrimPrefix(s, ":")
 	}
 	host := s
 	if i := strings.IndexAny(host, "/?#"); i >= 0 {
@@ -159,32 +91,17 @@ func Target(s, dir string) string {
 	}
 	host = strings.Trim(host, "[]")
 	if host == "localhost" || strings.HasSuffix(host, ".localhost") || net.ParseIP(host) != nil {
-		return "http://" + s
+		return "", "http://" + s
 	}
-	return "https://" + s
+	return "", "https://" + s
 }
 
-// FileURL is the file:// URL of absolute path p.
-func FileURL(p string) string { return (&url.URL{Scheme: "file", Path: p}).String() }
-
-// FilePath is the path of a file:// URL ("" for other URLs).
-func FilePath(u string) string {
-	pu, err := url.Parse(u)
-	if err != nil || pu.Scheme != "file" {
-		return ""
-	}
-	return pu.Path
-}
-
-// Label names a page's pane: a file's name, else its host and path
-// ("localhost:3000", "go.dev/doc").
+// Label names a page in messages: a file's name, else the URL's host and
+// path ("localhost:3000", "go.dev/doc").
 func Label(u string) string {
 	pu, err := url.Parse(u)
-	switch {
-	case err != nil:
+	if err != nil {
 		return u
-	case pu.Scheme == "file":
-		return filepath.Base(pu.Path)
 	}
 	if l := pu.Host + strings.TrimSuffix(pu.Path, "/"); l != "" {
 		return l
@@ -192,291 +109,230 @@ func Label(u string) string {
 	return u
 }
 
-// Errors of Install.
-var (
-	ErrChecksum    = errors.New("the download does not match its checksum")
-	ErrUnsupported = errors.New("no Carbonyl build for this system")
+// RootFor is the folder a file is served from: the project when the file
+// is in it, else the file's folder (a folder: itself).
+func RootFor(file, project string) string {
+	if project != "" {
+		if rel, err := filepath.Rel(project, file); err == nil && filepath.IsLocal(rel) {
+			return project
+		}
+	}
+	if fi, err := os.Stat(file); err == nil && fi.IsDir() {
+		return file
+	}
+	return filepath.Dir(file)
+}
+
+// URLPath is file's path on the server of root: escaped, "/" for root,
+// with a trailing "/" for a folder.
+func URLPath(root, file string) string {
+	rel, err := filepath.Rel(root, file)
+	if err != nil || rel == "." {
+		return "/"
+	}
+	p := "/" + filepath.ToSlash(rel)
+	if fi, err := os.Stat(file); err == nil && fi.IsDir() {
+		p += "/"
+	}
+	return (&url.URL{Path: p}).EscapedPath()
+}
+
+// Base and Span are the ports servers take: Base plus a number from the
+// folder's path, so a folder keeps its port across restarts (an open page
+// reconnects); the next free one when it is taken.
+const (
+	Base = 43000
+	Span = 1000
 )
 
-// sum is the checksum Install wants for a (tests replace it).
-var sum = func(a Asset) string { return a.Sum }
-
-// Installer downloads and unpacks Carbonyl.
-type Installer struct {
-	Out          io.Writer // progress and steps
-	Bar          bool      // redraw the progress on one line (a terminal)
-	GOOS, GOARCH string    // "" = this machine's
+// PortFor is root's port.
+func PortFor(root string) int {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(root))
+	return Base + int(h.Sum32()%Span)
 }
 
-// Install puts Carbonyl into Dir: the release's zip, checked, unpacked into
-// a temporary folder that is renamed when complete.
-func (in *Installer) Install(ctx context.Context) error {
-	goos, goarch := in.GOOS, in.GOARCH
-	if goos == "" {
-		goos, goarch = runtime.GOOS, runtime.GOARCH
+// Info is a running server's record (~/.imux/web/<hash>.json).
+type Info struct {
+	Root  string `json:"root"`
+	Port  int    `json:"port"`
+	PID   int    `json:"pid"`
+	Token string `json:"token"`
+}
+
+// URL is the address of path (URLPath) on the server.
+func (i *Info) URL(p string) string { return "http://localhost:" + strconv.Itoa(i.Port) + p }
+
+func recordFile(root string) string {
+	h := sha256.Sum256([]byte(root))
+	return filepath.Join(paths.Web(), hex.EncodeToString(h[:6])+".json")
+}
+
+func readRecord(file string) *Info {
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return nil
 	}
-	a, ok := AssetFor(goos, goarch)
-	if !ok {
-		return fmt.Errorf("%w (%s/%s)", ErrUnsupported, goos, goarch)
+	var i Info
+	if json.Unmarshal(b, &i) != nil || i.Port == 0 {
+		return nil
 	}
-	if err := paths.EnsureDir(paths.Tools()); err != nil {
-		return err
-	}
-	part := filepath.Join(paths.Tools(), a.Name+".part")
-	defer os.Remove(part)
-	if err := in.fetch(ctx, URL(a), part, a.Size); err != nil {
-		return err
-	}
-	in.say(i18n.T("web.checking"))
-	if err := check(part, sum(a)); err != nil {
-		return err
-	}
-	in.say(i18n.T("web.unpacking"))
-	tmp, err := os.MkdirTemp(paths.Tools(), ".carbonyl-")
+	return &i
+}
+
+// TokenHeader carries a server's token on the CLI's requests: no page can
+// send it (it is not a header a page may set without the server's CORS).
+const TokenHeader = "X-Imux-Token"
+
+var client = &http.Client{Timeout: 2 * time.Second}
+
+func (i *Info) call(ctx context.Context, method, path string, v any) error {
+	req, err := http.NewRequestWithContext(ctx, method, "http://127.0.0.1:"+strconv.Itoa(i.Port)+path, nil)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
-	if err := Unzip(part, tmp); err != nil {
-		return err
-	}
-	src := filepath.Join(tmp, "carbonyl-"+Version)
-	if fi, err := os.Stat(filepath.Join(src, "carbonyl")); err != nil || !fi.Mode().IsRegular() {
-		return fmt.Errorf("%s has no carbonyl-%s/carbonyl", a.Name, Version)
-	}
-	if err := os.RemoveAll(Dir()); err != nil {
-		return err
-	}
-	return os.Rename(src, Dir())
-}
-
-func (in *Installer) say(s string) {
-	if in.Out != nil {
-		fmt.Fprintln(in.Out, "  "+s)
-	}
-}
-
-// Remove deletes Carbonyl and what a broken install left.
-func Remove() error {
-	if err := os.RemoveAll(Dir()); err != nil {
-		return err
-	}
-	left, _ := filepath.Glob(filepath.Join(paths.Tools(), ".carbonyl-*"))
-	parts, _ := filepath.Glob(filepath.Join(paths.Tools(), "carbonyl.*.part"))
-	for _, p := range append(left, parts...) {
-		_ = os.RemoveAll(p)
-	}
-	return nil
-}
-
-func check(file, want string) error {
-	f, err := os.Open(file)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return err
-	}
-	if hex.EncodeToString(h.Sum(nil)) != want {
-		return ErrChecksum
-	}
-	return nil
-}
-
-func (in *Installer) fetch(ctx context.Context, u, file string, size int64) error {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := http.DefaultClient.Do(req)
+	req.Host = "localhost"
+	req.Header.Set(TokenHeader, i.Token)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download %s: %s", u, resp.Status)
+		return fmt.Errorf("%s %s: %s", method, path, resp.Status)
 	}
-	total := resp.ContentLength
-	if total <= 0 {
-		total = size
-	}
-	f, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-	p := &progress{out: in.Out, bar: in.Bar, total: total}
-	if in.Out != nil && !in.Bar {
-		fmt.Fprintln(in.Out, "  "+i18n.T("web.downloading")+" "+u)
-	}
-	_, err = io.Copy(io.MultiWriter(f, p), resp.Body)
-	p.end()
-	if err != nil {
-		f.Close()
-		return err
-	}
-	return f.Close()
+	return json.NewDecoder(resp.Body).Decode(v)
 }
 
-// progress draws a download's bar: ━━━━━─────  42%  31.2 of 74.4 MB.
-type progress struct {
-	out      io.Writer
-	bar      bool
-	total, n int64
-	last     time.Time
+// Status is what a server says about itself.
+type Status struct {
+	Root  string `json:"root"`
+	PID   int    `json:"pid"`
+	Pages int    `json:"pages"`           // pages open
+	Shown bool   `json:"shown,omitempty"` // Show: an open page shows it
+	Title string `json:"title,omitempty"` // Show: that page's title
 }
 
-func (p *progress) Write(b []byte) (int, error) {
-	p.n += int64(len(b))
-	if now := time.Now(); p.bar && p.out != nil && now.Sub(p.last) >= 100*time.Millisecond {
-		p.last = now
-		p.draw()
+// Ping asks the server how it is; an error means it does not run.
+func (i *Info) Ping(ctx context.Context) (Status, error) {
+	var st Status
+	err := i.call(ctx, http.MethodGet, "/__imux/ping", &st)
+	if err == nil && st.Root != i.Root {
+		err = errors.New("another folder's server")
 	}
-	return len(b), nil
+	return st, err
 }
 
-func (p *progress) end() {
-	if p.bar && p.out != nil {
-		p.draw()
-		fmt.Fprintln(p.out)
-	}
+// Show makes the page last opened on the server show path; not Shown when
+// no page is open (the browser must open it).
+func (i *Info) Show(ctx context.Context, path string) (Status, error) {
+	var st Status
+	err := i.call(ctx, http.MethodPost, "/__imux/open?path="+url.QueryEscape(path), &st)
+	return st, err
 }
 
-func (p *progress) draw() {
-	pct := 0
-	if p.total > 0 {
-		pct = int(min(p.n*100/p.total, 100))
-	}
-	const width = 30
-	done := pct * width / 100
-	mb := func(n int64) float64 { return float64(n) / (1 << 20) }
-	fmt.Fprintf(p.out, "\r  %s \x1b[36m%s\x1b[38;5;238m%s\x1b[0m %3d%%  %s\x1b[K", i18n.T("web.downloading"),
-		strings.Repeat("━", done), strings.Repeat("─", width-done), pct, i18n.T("web.progress", mb(p.n), mb(p.total)))
-}
-
-// Unzip unpacks zip file into dir: folders and regular files, with their
-// modes. Any other entry, or a path that would leave dir, is an error.
-func Unzip(file, dir string) error {
-	r, err := zip.OpenReader(file)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = r.Close() }()
-	for _, f := range r.File {
-		name := filepath.FromSlash(strings.TrimSuffix(f.Name, "/"))
-		if !filepath.IsLocal(name) {
-			return fmt.Errorf("unsafe path in %s: %q", filepath.Base(file), f.Name)
-		}
-		dst := filepath.Join(dir, name)
-		switch m := f.Mode(); {
-		case m.IsDir():
-			if err := os.MkdirAll(dst, 0o755); err != nil {
-				return err
-			}
-		case m.IsRegular():
-			if err := extract(f, dst, m.Perm()|0o600); err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("unexpected entry in %s: %q", filepath.Base(file), f.Name)
-		}
-	}
-	return nil
-}
-
-func extract(f *zip.File, dst string, perm os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
-	}
-	rc, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = rc.Close() }()
-	w, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(w, rc); err != nil {
-		w.Close()
-		return err
-	}
-	return w.Close()
-}
-
-// CheckVersion runs the browser with --version ("Carbonyl 0.0.3").
-func CheckVersion(ctx context.Context, argv []string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, argv[0], append(argv[1:len(argv):len(argv)], "--version")...).CombinedOutput()
-	return strings.TrimSpace(string(out)), err
-}
-
-// Missing lists the shared libraries bin needs that this machine lacks
-// (ldd's "not found"; Linux only).
-func Missing(ctx context.Context, bin string) []string {
-	if runtime.GOOS != "linux" {
+// Find returns root's running server, nil when there is none.
+func Find(ctx context.Context, root string) *Info {
+	i := readRecord(recordFile(root))
+	if i == nil || i.Root != root {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-	out, _ := exec.CommandContext(ctx, "ldd", bin).Output()
-	return ParseLdd(string(out))
+	if _, err := i.Ping(ctx); err != nil {
+		return nil
+	}
+	return i
 }
 
-// ParseLdd lists the libraries ldd's output did not find.
-func ParseLdd(out string) []string {
-	var libs []string
-	for _, l := range strings.Split(out, "\n") {
-		name, rest, ok := strings.Cut(strings.TrimSpace(l), " => ")
-		if ok && strings.HasPrefix(strings.TrimSpace(rest), "not found") {
-			libs = append(libs, name)
+// Ensure returns root's server, starting `self __web-serve root` (detached,
+// its errors in ~/.imux/web/serve.log) when none runs.
+func Ensure(ctx context.Context, self, root string) (*Info, error) {
+	if i := Find(ctx, root); i != nil {
+		return i, nil
+	}
+	if err := paths.EnsureDir(paths.Web()); err != nil {
+		return nil, err
+	}
+	logf, err := os.OpenFile(filepath.Join(paths.Web(), "serve.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, paths.FileMode)
+	if err != nil {
+		return nil, err
+	}
+	defer logf.Close()
+	cmd := exec.Command(self, "__web-serve", root)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, logf
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	pid := cmd.Process.Pid
+	exited := make(chan error, 1)
+	go func() { exited <- cmd.Wait() }()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		select {
+		case err := <-exited:
+			return nil, fmt.Errorf("the server stopped: %v (see %s)", err, paths.Shorten(logf.Name()))
+		case <-time.After(30 * time.Millisecond):
+		}
+		if i := readRecord(recordFile(root)); i != nil && i.PID == pid {
+			if _, err := i.Ping(ctx); err == nil {
+				return i, nil
+			}
 		}
 	}
-	return libs
+	_ = cmd.Process.Kill()
+	return nil, errors.New("the server did not start")
 }
 
-// debPackages hold the libraries Carbonyl needs on Debian and Ubuntu.
-var debPackages = map[string]string{
-	"libnss3.so":     "libnss3",
-	"libnssutil3.so": "libnss3",
-	"libsmime3.so":   "libnss3",
-	"libnspr4.so":    "libnspr4",
-	"libplc4.so":     "libnspr4",
-	"libplds4.so":    "libnspr4",
-	"libexpat.so.1":  "libexpat1",
-	"libasound.so.2": "libasound2",
-}
-
-// Packages are the Debian and Ubuntu packages with libs (unknown ones are
-// left out); t64 names ALSA's as Ubuntu 24.04 and Debian 13 do.
-func Packages(libs []string, t64 bool) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, l := range libs {
-		p, ok := debPackages[l]
-		if !ok {
-			continue
-		}
-		if p == "libasound2" && t64 {
-			p = "libasound2t64"
-		}
-		if !seen[p] {
-			seen[p] = true
-			out = append(out, p)
+// All lists the running servers.
+func All(ctx context.Context) []*Info {
+	files, _ := filepath.Glob(filepath.Join(paths.Web(), "*.json"))
+	var out []*Info
+	for _, f := range files {
+		if i := readRecord(f); i != nil {
+			if _, err := i.Ping(ctx); err == nil {
+				out = append(out, i)
+				continue
+			}
+			_ = os.Remove(f) // a server that died
 		}
 	}
 	return out
 }
 
-// AptPackages are Packages for this machine; nil without apt-get.
-func AptPackages(ctx context.Context, libs []string) []string {
-	if _, err := exec.LookPath("apt-get"); err != nil {
-		return nil
+// Stop ends the server and removes its record.
+func (i *Info) Stop() {
+	if i.PID > 0 {
+		_ = syscall.Kill(i.PID, syscall.SIGTERM)
 	}
-	t64 := exec.CommandContext(ctx, "apt-cache", "show", "libasound2t64").Run() == nil
-	return Packages(libs, t64)
+	_ = os.Remove(recordFile(i.Root))
+}
+
+// RemoveOld deletes what v0.44's terminal browser (Carbonyl, D44) left in
+// ~/.imux/tools.
+func RemoveOld() {
+	for _, pat := range []string{"carbonyl-*", ".carbonyl-*", "carbonyl.*.part"} {
+		old, _ := filepath.Glob(filepath.Join(paths.Tools(), pat))
+		for _, p := range old {
+			_ = os.RemoveAll(p)
+		}
+	}
+}
+
+func randomHex(n int) string {
+	b := make([]byte, n)
+	_, _ = io.ReadFull(rand.Reader, b)
+	return hex.EncodeToString(b)
+}
+
+// inject puts the live reload script into a page: before </body>, else
+// </html>, else at its end.
+func inject(page []byte) []byte {
+	tag := []byte(`<script src="/__imux/live.js"></script>`)
+	lower := bytes.ToLower(page)
+	for _, end := range []string{"</body>", "</html>"} {
+		if i := bytes.LastIndex(lower, []byte(end)); i >= 0 {
+			return append(append(append([]byte{}, page[:i]...), tag...), page[i:]...)
+		}
+	}
+	return append(append([]byte{}, page...), tag...)
 }

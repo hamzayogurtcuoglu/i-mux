@@ -19,6 +19,21 @@ All notable changes to i-mux are listed here. The format follows
 - **A badge on the Agents icon.** While agents work, the rail's 🤖 icon has their number on a blue
   badge, as an editor's activity bar does, so you see it with the panel on another view or closed.
 
+### Changed
+
+- **Web pages open in your browser, live.** A click on an HTML file serves its project on
+  `localhost` and opens the page in a window of its own (Chrome's or Edge's app window: no tabs, no
+  address bar; under WSL, Windows' browser), or a tab (Settings). The page reloads by itself when
+  it or a file it uses changes, and a click on another page shows it in that window. Pages load
+  what `file://` blocks (a report's data next to it). From VS Code's terminal, also over a tunnel,
+  they open where VS Code runs. Nothing to download. `imux web` lists the served folders, `imux
+  web stop` stops them.
+
+### Removed
+
+- The in-terminal browser of 0.44.0 (Carbonyl), which drew pages too coarsely; its 170 MB folder in
+  `~/.imux/tools` is deleted.
+
 ## [0.44.0] - 2026-11-10
 
 ### Added

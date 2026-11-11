@@ -61,6 +61,7 @@ func WorkspaceFile() string  { return filepath.Join(Home(), "workspace.json") }
 func ClaudeSettings() string { return filepath.Join(Home(), "claude-settings.json") }
 func ClaudeUsage() string    { return filepath.Join(Home(), "usage", "claude.json") }
 func Tools() string          { return filepath.Join(Home(), "tools") }
+func Web() string            { return filepath.Join(Home(), "web") }
 
 // Ensure creates Home and its subdirectories with DirMode. Existing
 // directories that are too permissive are tightened.

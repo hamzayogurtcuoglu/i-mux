@@ -236,27 +236,87 @@ func TestCopyTextAndReveal(t *testing.T) {
 		!strings.Contains(ran[0], "ShowItems ['file:///a%20b/c'] ") {
 		t.Errorf("linux %q", ran)
 	}
+}
 
-	// The system's browser (D44): none over SSH; WSL hands Windows its path.
-	if sys("linux", nil, "xdg-open").CanBrowse() {
-		t.Error("a server has a browser")
+// TestOpenPage (D47): a page opens in an app window of the default browser
+// when it is Chromium-based (Windows' under WSL), else Edge; in a tab with
+// explorer.exe, open or xdg-open; nowhere over SSH.
+func TestOpenPage(t *testing.T) {
+	ctx := context.Background()
+	var ran []string
+	sys := func(goos string, env map[string]string, progID string, files, tools []string) *System {
+		return &System{
+			GOOS:   goos,
+			Getenv: func(k string) string { return env[k] },
+			LookPath: func(n string) (string, error) {
+				for _, x := range tools {
+					if x == n {
+						return "/usr/bin/" + n, nil
+					}
+				}
+				return "", errors.New("no")
+			},
+			Run: func(_ context.Context, _ string, name string, args ...string) error {
+				ran = append(ran, name+" "+strings.Join(args, " "))
+				return nil
+			},
+			Output: func(_ context.Context, name string, args ...string) ([]byte, error) {
+				if name == "reg.exe" && progID != "" {
+					return []byte("\r\nHKEY_CURRENT_USER\\...\\UserChoice\r\n    ProgId    REG_SZ    " + progID + "\r\n\r\n"), nil
+				}
+				return nil, errors.New("no")
+			},
+			ReadFile: func(string) ([]byte, error) { return nil, errors.New("no") },
+			Exists: func(p string) bool {
+				for _, f := range files {
+					if f == p {
+						return true
+					}
+				}
+				return false
+			},
+			WinHomes: func() []string { return []string{"/mnt/c/Users/u"} },
+		}
 	}
+	wsl := map[string]string{"WSL_DISTRO_NAME": "U"}
+	chrome := "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
+	edge := "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+	brave := "/mnt/c/Users/u/AppData/Local/BraveSoftware/Brave-Browser/Application/brave.exe"
+	const u = "http://localhost:43123/a b.html"
 	for _, c := range []struct {
+		what   string
 		s      *System
-		target string
+		window bool
+		name   string
 		want   string
 	}{
-		{sys("darwin", nil), "/a b/x.html", "open /a b/x.html <"},
-		{sys("linux", map[string]string{"WSL_DISTRO_NAME": "U"}), "/mnt/c/p/a.txt", `explorer.exe C:\p\a.txt <`},
-		{sys("linux", map[string]string{"WSL_DISTRO_NAME": "U"}), "http://localhost:3000", "explorer.exe http://localhost:3000 <"},
-		{sys("linux", map[string]string{"WSL_DISTRO_NAME": "U"}, "wslview"), "/x.html", "wslview /x.html <"},
-		{sys("linux", map[string]string{"DISPLAY": ":0"}, "xdg-open"), "/x.html", "xdg-open /x.html <"},
-		{sys("linux", map[string]string{"IMUX_BROWSE_COMMAND": "echo"}), "/x.html", "/bin/sh -c echo sh /x.html <"},
+		{"wsl chrome window", sys("linux", wsl, "ChromeHTML", []string{chrome, edge}, nil), true, "Chrome", chrome + " --app=" + u},
+		{"wsl brave per user", sys("linux", wsl, "BraveHTML", []string{brave, edge}, nil), true, "Brave", brave + " --app=" + u},
+		{"wsl firefox: edge", sys("linux", wsl, "FirefoxURL-308046B0AF4A39CB", []string{edge}, nil), true, "Edge", edge + " --app=" + u},
+		{"wsl tab", sys("linux", wsl, "ChromeHTML", []string{chrome}, nil), false, "Chrome", "explorer.exe " + u},
+		{"wsl no chromium: tab", sys("linux", wsl, "", nil, nil), true, "", "explorer.exe " + u},
+		{"mac chrome", sys("darwin", map[string]string{"HOME": "/Users/u"}, "", []string{"/Applications/Google Chrome.app/Contents/Info.plist"}, nil), true, "Chrome", "open -na /Applications/Google Chrome.app --args --app=" + u},
+		{"mac tab", sys("darwin", nil, "", nil, nil), true, "", "open " + u},
+		{"linux chromium", sys("linux", map[string]string{"DISPLAY": ":0"}, "", nil, []string{"chromium", "xdg-open"}), true, "Chromium", "chromium --app=" + u},
+		{"linux tab", sys("linux", map[string]string{"DISPLAY": ":0"}, "", nil, []string{"chromium", "xdg-open"}), false, "", "xdg-open " + u},
+		{"test command", sys("linux", map[string]string{"IMUX_BROWSE_COMMAND": "echo"}, "", nil, nil), true, "", "/bin/sh -c echo sh " + u},
 	} {
 		ran = nil
-		if !c.s.CanBrowse() || c.s.Browse(ctx, c.target) != nil || len(ran) != 1 || ran[0] != c.want {
-			t.Errorf("browse %s: %q, want %q", c.target, ran, c.want)
+		name, err := c.s.OpenPage(ctx, u, c.window)
+		if err != nil || name != c.name || len(ran) != 1 || ran[0] != c.want {
+			t.Errorf("%s: %q %v %q, want %q %q", c.what, name, err, ran, c.name, c.want)
 		}
+	}
+	ran = nil
+	if _, err := sys("linux", nil, "", nil, []string{"xdg-open"}).OpenPage(ctx, u, true); !errors.Is(err, ErrNoBrowser) || len(ran) != 0 {
+		t.Errorf("over SSH: %v %q", err, ran)
+	}
+	// Raise: Windows only, the title quoted for PowerShell.
+	ran = nil
+	sys("linux", wsl, "", nil, nil).Raise("Bob's report")
+	sys("darwin", nil, "", nil, nil).Raise("x")
+	if len(ran) != 1 || !strings.Contains(ran[0], "AppActivate('Bob''s report')") {
+		t.Errorf("raise %q", ran)
 	}
 }
 

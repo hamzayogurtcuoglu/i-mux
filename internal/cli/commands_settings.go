@@ -54,7 +54,7 @@ var settingKeys = map[string]settingKey{
 	"notify":       {"notify", "enabled", []string{"on", "off"}, false},
 	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},
 	"paste_images": {"paste", "images", []string{"on", "off"}, false},
-	"web":          {"web", "enabled", []string{"on", "off"}, false},
+	"web":          {"web", "open", []string{"window", "tab", "off"}, true},
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane
@@ -91,7 +91,7 @@ func runSettings(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	usage := &UsageError{Msg: i18n.T("cli.usage", "__settings set <key> <value> | menu [commit-agent|web] | edit")}
+	usage := &UsageError{Msg: i18n.T("cli.usage", "__settings set <key> <value> | menu [commit-agent] | edit")}
 	if len(pos) == 0 {
 		return usage
 	}
@@ -150,6 +150,13 @@ func setSetting(name, value string) error {
 	if err := paths.Ensure(); err != nil {
 		return err
 	}
+	if name == "web" {
+		// Where HTML files open (D47): off is the editor; a window or a
+		// tab turns the preview on.
+		if err := config.Set(paths.Config(), "web", "enabled", config.Bool(value != "off")); err != nil || value == "off" {
+			return err
+		}
+	}
 	return config.Set(paths.Config(), k.section, k.key, v)
 }
 
@@ -160,11 +167,8 @@ func showSettings(e *Env, pane, client, which string) error {
 		return err
 	}
 	m := w.SettingsMenu(pane, client)
-	switch which {
-	case "commit-agent":
+	if which == "commit-agent" {
 		m = w.CommitAgentMenu(pane, client)
-	case "web":
-		m = w.WebMenu(pane, client)
 	}
 	return w.Show(context.Background(), m, client, pane)
 }

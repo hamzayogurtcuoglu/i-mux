@@ -136,10 +136,11 @@ type Completion struct {
 	Enabled bool `toml:"enabled"`
 }
 
-// Web is the [web] section: web pages in a pane (D44).
+// Web is the [web] section: the live preview in the browser (D47).
 type Web struct {
-	Enabled bool   `toml:"enabled"`
-	Browser string `toml:"browser"` // a command run with the URL; "" = i-mux's Carbonyl
+	Enabled bool   `toml:"enabled"` // a click on an HTML file opens its preview
+	Open    string `toml:"open"`    // window | tab
+	Browser string `toml:"browser"` // a command that opens the URL; "" = the system's
 }
 
 // The sidebar's width in columns (tmux.sidebar_width): what the config may
@@ -269,7 +270,7 @@ func Default() *Config {
 		Git:    Git{CommitAgent: "auto"},
 		Notify: Notify{Enabled: true, Sound: true},
 		Paste:  Paste{Images: true},
-		Web:    Web{Enabled: true},
+		Web:    Web{Enabled: true, Open: "window"},
 		Bus: Bus{
 			Enabled:         true,
 			IdleAfter:       D(5 * time.Second),
@@ -422,6 +423,7 @@ func (c *Config) validate(src []byte) error {
 		{"on_exit", c.OnExit, []string{"shell", "close"}},
 		{"inject", c.Handoff.Inject, []string{"argv", "paste"}},
 		{"locale", c.Locale, []string{"", "en", "tr"}},
+		{"open", c.Web.Open, []string{"window", "tab"}},
 	}
 	for _, e := range enums {
 		if !slices.Contains(e.allowed, e.val) {

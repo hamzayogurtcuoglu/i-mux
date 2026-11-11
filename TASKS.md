@@ -1002,13 +1002,13 @@ slow (about a second).
 User request: the terminal browser of M52 draws pages badly ("beyond terrible"); something else.
 Replaces M52.
 
-- [ ] **T55.1 The live server** · M
+- [x] **T55.1 The live server** · M
   - AC: D47, §9.3 "Live preview in the browser": `imux __web-serve` per folder on 127.0.0.1, a
     port from the folder's path, its record in `~/.imux/web`; Host checked, no dot paths, nothing
     outside the folder, folder lists, no caching; `live.js` injected; pages reload when a served
     file changes; idle exit; `imux web [open|stop]`; unit tests (serving, injection, Host, dot
     paths, links out, listing, reload on change, open with and without the token, the port).
-- [ ] **T55.2 Opening the browser** · M
+- [x] **T55.2 Opening the browser** · M
   - AC: WSL: an app window of the default browser when Chromium-based, else Edge; a tab with
     `explorer.exe`; VS Code's helper; macOS; Linux; no browser: the URL in the message and the
     clipboard; an open page shows the next one and is raised; Settings cycles window / tab /

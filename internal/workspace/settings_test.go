@@ -3,14 +3,12 @@ package workspace
 import (
 	"context"
 	"errors"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
 )
 
 func cmdOf(m *Menu, key string) string {
@@ -43,7 +41,7 @@ func TestSettingsMenu(t *testing.T) {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)|c Versions and updates…| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|p 🌐 Web preview: Not installed|i Icons: Auto|f Install the Nerd Font for the icons…|e Get the micro editor (5 MB)…|m Commit messages by: Auto (the pane's agent)|" +
+	want := "u Update i-mux… (dev)|c Versions and updates…| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|p 🌐 HTML files open: in a window, live|i Icons: Auto|f Install the Nerd Font for the icons…|e Get the micro editor (5 MB)…|m Commit messages by: Auto (the pane's agent)|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
@@ -172,46 +170,43 @@ func TestWindowsWithoutSidebar(t *testing.T) {
 	}
 }
 
-// Settings → Web preview (D44): install until its browser is there, then
-// open a page and remove it; on or off either way.
-func TestWebMenu(t *testing.T) {
+// Settings → where HTML files open (D47): the row cycles a window, a tab,
+// the editor; "+" → Web page… asks for the page to open, starting with the
+// last one.
+func TestWebSettingsAndPrompt(t *testing.T) {
 	i18n.SetLocale("en")
 	w, f, _ := testWS(t)
-	keys := func(m *Menu) string {
-		var k []string
-		for _, it := range m.Items {
-			k = append(k, it.Key)
+	row := func() MenuItem {
+		for _, it := range w.SettingsMenu("%1", "c1").Items {
+			if it.Key == "p" {
+				return it
+			}
 		}
-		return strings.Join(k, "")
+		t.Fatal("no web row")
+		return MenuItem{}
 	}
-	m := w.WebMenu("%1", "c1")
-	if m.Title != "Web preview" || keys(m) != "it" || !strings.Contains(cmdOf(m, "i"), "web install --yes --popup") ||
-		!strings.Contains(cmdOf(m, "t"), "__settings set web off --pane %1 --client c1") {
-		t.Fatalf("not installed: %q %+v", keys(m), m.Items)
-	}
-	if err := os.MkdirAll(webview.Dir(), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(webview.Bin(), []byte("#!/bin/sh\n"), 0o700); err != nil {
-		t.Fatal(err)
+	for _, c := range []struct {
+		enabled  bool
+		open     string
+		name, to string
+	}{
+		{true, "window", "🌐 HTML files open: in a window, live", "set web tab"},
+		{true, "tab", "🌐 HTML files open: in a browser tab, live", "set web off"},
+		{false, "tab", "🌐 HTML files open: in the editor", "set web window"},
+	} {
+		w.Cfg.Web.Enabled, w.Cfg.Web.Open = c.enabled, c.open
+		if it := row(); it.Name != c.name || !strings.Contains(it.Cmd, "__settings "+c.to+" --pane %1 --client c1") {
+			t.Errorf("%v %s: %+v", c.enabled, c.open, it)
+		}
 	}
 	f.replies["show-options"] = "http://localhost:5173\n"
-	m = w.WebMenu("%1", "c1")
-	if keys(m) != "otr" || !strings.Contains(cmdOf(m, "r"), "web remove --pane %1 --client c1") {
-		t.Fatalf("installed: %q %+v", keys(m), m.Items)
-	}
-	if c := cmdOf(m, "o"); !strings.Contains(c, "set-option -g @imux_web_pane %1 ; set-option -g @imux_web_client c1 ; command-prompt -t c1 -I http://localhost:5173") ||
+	if c := w.WebPrompt("%1", "c1"); !strings.Contains(c, "set-option -g @imux_web_pane %1 ; set-option -g @imux_web_client c1 ; command-prompt -t c1 -I http://localhost:5173") ||
 		!strings.Contains(c, `set-option -g @imux_web_url "%%%"`) || !strings.Contains(c, "web open --from-option") {
 		t.Errorf("open a page: %s", c)
 	}
 	// A page with a comma or # would not survive -I: the prompt starts empty.
 	f.replies["show-options"] = "http://x/#a,b\n"
-	if c := cmdOf(w.WebMenu("%1", "c1"), "o"); !strings.Contains(c, "-I '' -p") {
+	if c := w.WebPrompt("%1", "c1"); !strings.Contains(c, "-I '' -p") {
 		t.Errorf("odd page: %s", c)
-	}
-	w.Cfg.Web.Enabled = false
-	m = w.WebMenu("%1", "c1")
-	if keys(m) != "tr" || !strings.Contains(cmdOf(m, "t"), "__settings set web on") {
-		t.Errorf("off: %q %+v", keys(m), m.Items)
 	}
 }

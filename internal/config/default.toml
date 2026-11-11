@@ -118,13 +118,15 @@ images            = true
 command           = ""
 
 [web]
-# Web pages open in a pane beside the agent, in a browser that draws in the
-# terminal (Carbonyl, a 74 MB download Settings installs when you first want
-# it): a click on an HTML file in the explorer, Open Preview in its menu,
-# "Web page..." in the + of Agents. false: HTML files open in the editor.
+# A click on an HTML file in the explorer opens it in your browser, served by
+# i-mux on localhost, and the page reloads itself when its files change (Live
+# Preview; nothing to install). false: HTML files open in the editor.
 enabled           = true
-# A browser to run instead, with the URL after its words (e.g. "w3m");
-# "" = i-mux's Carbonyl.
+# "window": a window of its own, without tabs or an address bar (Chrome or Edge;
+# under WSL, Windows' own); "tab": a tab of your default browser.
+open              = "window"
+# A command that opens pages instead, the URL after its words (e.g. "firefox");
+# "" = the system's browser.
 browser           = ""
 
 [completion]

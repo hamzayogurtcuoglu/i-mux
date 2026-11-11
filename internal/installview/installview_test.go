@@ -68,18 +68,18 @@ func TestInstallPopupMissingTool(t *testing.T) {
 	}
 }
 
-// A popup with its own title, text and buttons (the web preview's, D44):
-// each button's letter presses it, Enter the first.
+// A popup with its own title, text and buttons (the one that offers micro,
+// D45): each button's letter presses it, Enter the first.
 func TestChoicesPopup(t *testing.T) {
 	i18n.SetLocale("en")
 	m := &Model{
-		Icon: "⊕", Title: "Web preview is not installed",
-		Text:    []string{"index.html can open in a pane.", "\tA 74 MB download."},
-		Choices: []Choice{{"Install", "i", Install}, {"Open in browser", "b", Browser}, {"Edit", "e", Edit}, {"Close", "", Close}},
-		Hint:    "Enter choose · Esc close",
+		Icon: "✎", Title: "Files open in nano",
+		Text:    []string{"i-mux can get micro.", "\tA 5 MB download."},
+		Choices: []Choice{{"Get micro", "g", Install}, {"Use nano", "n", Close}},
+		Hint:    "Enter choose · Esc use nano",
 	}
 	s := screen(m)
-	for _, want := range []string{"⊕ Web preview is not installed", "index.html can open in a pane.", "A 74 MB download.", " Install ", "[ Open in browser ]", "[ Edit ]", "Enter choose"} {
+	for _, want := range []string{"✎ Files open in nano", "i-mux can get micro.", "A 5 MB download.", " Get micro ", "[ Use nano ]", "Enter choose"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("missing %q in\n%s", want, s)
 		}
@@ -87,15 +87,22 @@ func TestChoicesPopup(t *testing.T) {
 	if strings.Contains(s, "$ ") || strings.Contains(s, "Install now") {
 		t.Errorf("the agent's popup shows through:\n%s", s)
 	}
-	for k, want := range map[string]Result{"b": Browser, "e": Edit, "i": Install, "enter": Install, "esc": Close} {
-		if r, done := m.Key(k); !done || r != want {
+	for k, want := range map[string]Result{"g": Install, "n": Close, "i": Close, "enter": Install, "esc": Close} {
+		r, done := m.Key(k)
+		if k == "i" {
+			if done {
+				t.Errorf("i chose %v in a popup without it", r)
+			}
+			continue
+		}
+		if !done || r != want {
 			t.Errorf("%s: %v %v", k, r, done)
 		}
 	}
 	lines := m.Render(60, 12)
 	row := sidebar.Plain(lines[m.btnY-1])
-	x := sidebar.DisplayWidth(row[:strings.Index(row, "Edit")]) + 1
-	if r, done := m.Click(x, m.btnY); !done || r != Edit {
-		t.Errorf("click on Edit: %v %v (row %q)", r, done, row)
+	x := sidebar.DisplayWidth(row[:strings.Index(row, "Use nano")]) + 1
+	if r, done := m.Click(x, m.btnY); !done || r != Close {
+		t.Errorf("click on Use nano: %v %v (row %q)", r, done, row)
 	}
 }

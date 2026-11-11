@@ -1118,18 +1118,14 @@ func TestFileMenus(t *testing.T) {
 	if got != want {
 		t.Errorf("file menu\n got %s\nwant %s", got, want)
 	}
-	// A web page or an SVG: Open Preview while the preview is on, Open in
-	// Browser where there is one (D44).
-	web := MenuState{Kind: MenuFile, Path: "/home/u/p/index.html", Web: true, Browse: true}
-	if got := names(FileMenuItems("/bin/imux", "", "%3", web)); !strings.HasPrefix(got, "Open|Open to the Side|View|Open Preview|Open in Browser|-") {
-		t.Errorf("html menu %s", got)
+	// A web page or an SVG: Open Preview, the live preview (D47).
+	for _, p := range []string{"/home/u/p/index.html", "/home/u/p/logo.svg"} {
+		web := MenuState{Kind: MenuFile, Path: p}
+		if got := names(FileMenuItems("/bin/imux", "", "%3", web)); !strings.HasPrefix(got, "Open|Open to the Side|View|Open Preview|-") {
+			t.Errorf("%s menu %s", p, got)
+		}
 	}
-	web.Web, web.Path = false, "/home/u/p/logo.svg"
-	if got := names(FileMenuItems("/bin/imux", "", "%3", web)); !strings.HasPrefix(got, "Open|Open to the Side|View|Open in Browser|-") {
-		t.Errorf("svg menu, preview off %s", got)
-	}
-	st.Web, st.Browse = true, true
-	if got := names(FileMenuItems("/bin/imux", "", "%3", st)); strings.Contains(got, "Preview") || strings.Contains(got, "Browser") {
+	if got := names(FileMenuItems("/bin/imux", "", "%3", st)); strings.Contains(got, "Preview") {
 		t.Errorf("a .go file previews: %s", got)
 	}
 	st.Clip, st.Compare = true, "/home/u/p/b.go"

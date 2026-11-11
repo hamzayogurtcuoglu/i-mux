@@ -14,6 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -140,6 +141,7 @@ func runWatch(e *Env, args []string) error {
 			if cfg.UpdateCheck {
 				go checkUpdates(context.Background())
 			}
+			webview.RemoveOld() // v0.44's terminal browser, replaced by the live preview (D47)
 			tk, tc, err := newTicker(cfg, logger)
 			return tk, tc, cfg.Limits.PollInterval.Duration, cfg.Limits.IdleInterval.Duration, err
 		})

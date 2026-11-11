@@ -450,9 +450,6 @@ func projectRow(pr ProjectRow, w, tick int) Line {
 // agentRow: icon, name, time since the state changed and the state.
 func agentRow(p PaneRow, w int, now time.Time, tick int) Line {
 	sym, color := icon(p.Agent)
-	if p.Web {
-		sym, color = "⊕", "\x1b[38;5;39m"
-	}
 	name := p.Display(i18n.T("sidebar.shell"))
 	nameStyle := ""
 	if p.State == StateIdle || p.State == StateShell || p.State == StateExited {

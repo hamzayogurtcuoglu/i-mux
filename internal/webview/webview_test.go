@@ -1,37 +1,20 @@
 package webview
 
 import (
-	"archive/zip"
-	"bytes"
+	"bufio"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
-	"io/fs"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
-
-func TestAssets(t *testing.T) {
-	for _, p := range [][2]string{{"linux", "amd64"}, {"linux", "arm64"}, {"darwin", "amd64"}, {"darwin", "arm64"}} {
-		a, ok := AssetFor(p[0], p[1])
-		if !ok || len(a.Sum) != 64 || a.Size < 60<<20 || !strings.HasPrefix(URL(a), "https://github.com/fathyb/carbonyl/releases/download/v0.0.3/carbonyl.") {
-			t.Errorf("%v: %+v %s", p, a, URL(a))
-		}
-	}
-	if _, ok := AssetFor("windows", "amd64"); ok {
-		t.Error("a Windows build")
-	}
-}
 
 func TestTarget(t *testing.T) {
 	dir := t.TempDir()
@@ -40,43 +23,34 @@ func TestTarget(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for in, want := range map[string]string{
-		"":                       "",
-		"  https://go.dev/doc  ": "https://go.dev/doc",
-		"localhost:3000":         "http://localhost:3000",
-		"3000":                   "http://localhost:3000",
-		":8080/x":                "http://localhost:8080/x",
-		"3000/api?q=1":           "http://localhost:3000/api?q=1",
-		":8080":                  "http://localhost:8080",
-		"127.0.0.1:8000/a?b=1":   "http://127.0.0.1:8000/a?b=1",
-		"[::1]:3000":             "http://[::1]:3000",
-		"app.localhost:5173":     "http://app.localhost:5173",
-		"go.dev/doc":             "https://go.dev/doc",
-		"about:blank":            "about:blank",
-		"index.html":             "file://" + dir + "/index.html",
-		"a b.html":               "file://" + dir + "/a%20b.html",
-		dir + "/index.html":      "file://" + dir + "/index.html",
-		"missing.html":           "https://missing.html",
+	for in, want := range map[string][2]string{
+		"":                          {"", ""},
+		"  https://go.dev/doc  ":    {"", "https://go.dev/doc"},
+		"localhost:3000":            {"", "http://localhost:3000"},
+		"3000":                      {"", "http://localhost:3000"},
+		":8080/x":                   {"", "http://localhost:8080/x"},
+		"3000/api?q=1":              {"", "http://localhost:3000/api?q=1"},
+		"127.0.0.1:8000/a":          {"", "http://127.0.0.1:8000/a"},
+		"[::1]:3000":                {"", "http://[::1]:3000"},
+		"app.localhost:5173":        {"", "http://app.localhost:5173"},
+		"go.dev/doc":                {"", "https://go.dev/doc"},
+		"about:blank":               {"", "about:blank"},
+		"index.html":                {dir + "/index.html", ""},
+		"a b.html":                  {dir + "/a b.html", ""},
+		"file://" + dir + "/a.html": {dir + "/a.html", ""},
+		"missing.html":              {"", "https://missing.html"},
 	} {
-		if got := Target(in, dir); got != want {
-			t.Errorf("Target(%q) = %q, want %q", in, got, want)
+		if f, u := Target(in, dir); f != want[0] || u != want[1] {
+			t.Errorf("Target(%q) = %q %q, want %q", in, f, u, want)
 		}
-	}
-	u := Target("a b.html", dir)
-	if FilePath(u) != filepath.Join(dir, "a b.html") || FilePath("http://x/y") != "" || Label(u) != "a b.html" {
-		t.Errorf("file %q: %q %q", u, FilePath(u), Label(u))
 	}
 	for u, want := range map[string]string{"http://localhost:3000/": "localhost:3000", "https://go.dev/doc/": "go.dev/doc", "about:blank": "about:blank"} {
 		if got := Label(u); got != want {
 			t.Errorf("Label(%q) = %q, want %q", u, got, want)
 		}
 	}
-}
-
-func TestFiles(t *testing.T) {
 	for name, want := range map[string][2]bool{
-		"index.html": {true, true}, "A.HTM": {true, true}, "x.xhtml": {true, true},
-		"logo.svg": {false, true}, "README.md": {false, false}, "html": {false, false},
+		"index.html": {true, true}, "A.HTM": {true, true}, "logo.svg": {false, true}, "README.md": {false, false},
 	} {
 		if got := [2]bool{IsHTML(name), Previewable(name)}; got != want {
 			t.Errorf("%s: %v, want %v", name, got, want)
@@ -84,146 +58,252 @@ func TestFiles(t *testing.T) {
 	}
 }
 
-type entry struct {
-	name string
-	mode fs.FileMode
-	body string
+func TestRootAndPort(t *testing.T) {
+	proj := t.TempDir()
+	sub := filepath.Join(proj, "artifacts", "run 1")
+	if err := os.MkdirAll(sub, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	page := filepath.Join(sub, "index.html")
+	testutil.WriteFile(t, page, []byte("x"))
+	out := filepath.Join(t.TempDir(), "x.html")
+	if RootFor(page, proj) != proj || RootFor(out, proj) != filepath.Dir(out) || RootFor(sub, "") != sub {
+		t.Error("roots")
+	}
+	if p := URLPath(proj, page); p != "/artifacts/run%201/index.html" {
+		t.Errorf("path %q", p)
+	}
+	if URLPath(proj, sub) != "/artifacts/run%201/" || URLPath(proj, proj) != "/" {
+		t.Error("folder paths")
+	}
+	if p := PortFor(proj); p < Base || p >= Base+Span || p != PortFor(proj) {
+		t.Errorf("port %d", p)
+	}
+	if string(inject([]byte("<HTML><BODY>x</BODY></HTML>"))) != `<HTML><BODY>x<script src="/__imux/live.js"></script></BODY></HTML>` {
+		t.Error("injected before </BODY>")
+	}
 }
 
-func makeZip(t *testing.T, entries []entry) string {
+// site is a folder to serve: pages, data, secrets and a link out.
+func site(t *testing.T) string {
 	t.Helper()
-	var b bytes.Buffer
-	zw := zip.NewWriter(&b)
-	for _, e := range entries {
-		h := &zip.FileHeader{Name: e.name, Method: zip.Deflate}
-		h.SetMode(e.mode)
-		w, err := zw.CreateHeader(h)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := w.Write([]byte(e.body)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := zw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	p := filepath.Join(t.TempDir(), "x.zip")
-	if err := os.WriteFile(p, b.Bytes(), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
-
-var fakeCarbonyl = []entry{
-	{"carbonyl-0.0.3/", fs.ModeDir | 0o755, ""},
-	{"carbonyl-0.0.3/carbonyl", 0o755, "#!/bin/sh\necho Carbonyl 0.0.3\n"},
-	{"carbonyl-0.0.3/icudtl.dat", 0o644, "data"},
-}
-
-func TestUnzip(t *testing.T) {
-	dir := t.TempDir()
-	if err := Unzip(makeZip(t, fakeCarbonyl), dir); err != nil {
-		t.Fatal(err)
-	}
-	bin, err := os.Stat(filepath.Join(dir, "carbonyl-0.0.3", "carbonyl"))
-	if err != nil || bin.Mode()&0o100 == 0 {
-		t.Fatalf("the program is not executable: %v %v", bin, err)
-	}
-	if d, err := os.Stat(filepath.Join(dir, "carbonyl-0.0.3", "icudtl.dat")); err != nil || d.Mode()&0o100 != 0 {
-		t.Errorf("data: %v %v", d, err)
-	}
-	for _, bad := range [][]entry{
-		{{"../evil", 0o644, "x"}},
-		{{"/etc/evil", 0o644, "x"}},
-		{{"carbonyl-0.0.3/link", fs.ModeSymlink | 0o777, "/etc/passwd"}},
+	root := t.TempDir()
+	for name, body := range map[string]string{
+		"index.html":    "<html><head><title>Run 1</title></head><body><h1>hi</h1></body></html>",
+		"sub/page.htm":  "<p>no body",
+		"data.json":     `{"a":1}`,
+		".env":          "SECRET=1",
+		"docs/a b.txt":  "a",
+		"docs/.hidden":  "h",
+		"latin1.html":   `<meta charset="windows-1254"><p>x`,
+		"assets/app.js": "console.log(1)",
 	} {
-		if err := Unzip(makeZip(t, bad), t.TempDir()); err == nil {
-			t.Errorf("%q unpacked", bad[0].name)
-		}
+		testutil.WriteFile(t, filepath.Join(root, filepath.FromSlash(name)), []byte(body))
 	}
-}
-
-// Install downloads the zip, checks it, unpacks it into ~/.imux/tools;
-// a download that is not the release's leaves nothing.
-func TestInstall(t *testing.T) {
-	i18n.SetLocale("en")
-	testutil.Isolate(t)
-	zipFile := makeZip(t, fakeCarbonyl)
-	body, err := os.ReadFile(zipFile)
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	testutil.WriteFile(t, outside, []byte("outside"))
+	if err := os.Symlink(outside, filepath.Join(root, "out.txt")); err != nil {
+		t.Fatal(err)
+	}
+	real, err := filepath.EvalSymlinks(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := sha256.Sum256(body)
-	good := hex.EncodeToString(h[:])
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(body) }))
-	defer srv.Close()
-	t.Setenv("IMUX_WEB_URL", srv.URL)
-	old := sum
-	defer func() { sum = old }()
-	cfg := config.Default()
+	return real
+}
 
-	sum = func(Asset) string { return strings.Repeat("0", 64) }
-	var out bytes.Buffer
-	in := &Installer{Out: &out, Bar: true, GOOS: "linux", GOARCH: "amd64"}
-	if err := in.Install(context.Background()); !errors.Is(err, ErrChecksum) || Installed(cfg) {
-		t.Fatalf("a wrong download: %v, installed %v", err, Installed(cfg))
-	}
-
-	sum = func(Asset) string { return good }
-	out.Reset()
-	if err := in.Install(context.Background()); err != nil {
+func get(t *testing.T, srv *httptest.Server, path, host string) (*http.Response, string) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, srv.URL+path, nil)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "100%") || !Installed(cfg) {
-		t.Fatalf("installed %v, output %q", Installed(cfg), out.String())
+	if host != "" {
+		req.Host = host
 	}
-	if v, err := CheckVersion(context.Background(), Browser(cfg)); err != nil || v != "Carbonyl 0.0.3" {
-		t.Errorf("version %q %v", v, err)
+	c := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := Command(cfg, "file:///x.html", true); !reflect.DeepEqual(got, []string{Bin(), "--no-sandbox", "file:///x.html"}) {
-		t.Errorf("as root: %q", got)
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	return resp, string(b)
+}
+
+// TestServeFiles: pages get the live reload script, nothing is cached, a
+// folder lists its files; dot paths, links out, other hosts and calls
+// without the token are refused.
+func TestServeFiles(t *testing.T) {
+	root := site(t)
+	s := &Server{Root: root, Token: "tok", ID: "run1"}
+	srv := httptest.NewServer(s)
+	defer srv.Close()
+
+	resp, body := get(t, srv, "/", "")
+	if resp.StatusCode != 200 || !strings.Contains(body, `<h1>hi</h1><script src="/__imux/live.js"></script></body>`) ||
+		resp.Header.Get("Cache-Control") != "no-store" || resp.Header.Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Errorf("index: %d %v %q", resp.StatusCode, resp.Header, body)
 	}
-	if got := Command(cfg, "file:///x.html", false); !reflect.DeepEqual(got, []string{Bin(), "file:///x.html"}) {
-		t.Errorf("command: %q", got)
+	if _, body := get(t, srv, "/sub/page.htm", "localhost:9"); !strings.HasSuffix(body, `<p>no body<script src="/__imux/live.js"></script>`) {
+		t.Errorf("no </body>: %q", body)
 	}
-	if left, _ := filepath.Glob(filepath.Join(filepath.Dir(Dir()), "*")); len(left) != 1 {
-		t.Errorf("left in tools: %q", left)
+	if resp, _ := get(t, srv, "/latin1.html", ""); resp.Header.Get("Content-Type") != "text/html" {
+		t.Errorf("a page's own charset: %q", resp.Header.Get("Content-Type"))
 	}
-	if err := Remove(); err != nil || Installed(cfg) {
-		t.Errorf("remove: %v", err)
+	if resp, body := get(t, srv, "/data.json", ""); body != `{"a":1}` || !strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
+		t.Errorf("data: %q %q", resp.Header.Get("Content-Type"), body)
 	}
-	if err := (&Installer{GOOS: "windows", GOARCH: "amd64"}).Install(context.Background()); !errors.Is(err, ErrUnsupported) {
-		t.Errorf("windows: %v", err)
+	if resp, _ := get(t, srv, "/docs", ""); resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != "/docs/" {
+		t.Errorf("folder without /: %d %q", resp.StatusCode, resp.Header.Get("Location"))
+	}
+	if _, body := get(t, srv, "/docs/", ""); !strings.Contains(body, `href="a%20b.txt"`) || strings.Contains(body, ".hidden") || !strings.Contains(body, "live.js") {
+		t.Errorf("listing %q", body)
+	}
+	if _, body := get(t, srv, "/__imux/live.js", ""); !strings.Contains(body, "EventSource") {
+		t.Errorf("live.js %q", body)
+	}
+	for _, c := range []struct{ path, host string }{
+		{"/.env", ""}, {"/docs/.hidden", ""}, {"/out.txt", ""}, {"/../etc/passwd", ""}, {"/missing", ""},
+	} {
+		if resp, _ := get(t, srv, c.path, c.host); resp.StatusCode != http.StatusNotFound {
+			t.Errorf("%s: %d", c.path, resp.StatusCode)
+		}
+	}
+	for _, host := range []string{"evil.example:80", "localhost.evil.example"} {
+		if resp, _ := get(t, srv, "/", host); resp.StatusCode != http.StatusForbidden {
+			t.Errorf("host %s: %d", host, resp.StatusCode)
+		}
+	}
+	if resp, _ := get(t, srv, "/__imux/ping", ""); resp.StatusCode != http.StatusForbidden {
+		t.Errorf("ping without the token: %d", resp.StatusCode)
 	}
 }
 
-// [web] browser runs another program; it is "installed" when on the PATH.
-func TestCustomBrowser(t *testing.T) {
+// TestLiveReload: an open page hears hello, then reload when a file it
+// loaded changes; Show sends the page opened last to another page. Every
+// event has data (a browser drops one without), and none is "open" (the
+// name of EventSource's own event).
+func TestLiveReload(t *testing.T) {
+	root := site(t)
+	s := &Server{Root: root, Token: "tok", ID: "run1", Poll: 50 * time.Millisecond}
+	srv := httptest.NewServer(s)
+	defer srv.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.loop(ctx, cancel)
+
+	resp, err := http.Get(srv.URL + "/__imux/events?page=%2F&title=Run%201")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	events := make(chan string, 16)
+	go func() {
+		sc := bufio.NewScanner(resp.Body)
+		ev := ""
+		for sc.Scan() {
+			switch l := sc.Text(); {
+			case strings.HasPrefix(l, "event: "):
+				ev = strings.TrimPrefix(l, "event: ")
+			case strings.HasPrefix(l, "data: "):
+				events <- ev + " " + strings.TrimPrefix(l, "data: ")
+			}
+		}
+	}()
+	next := func(want string) {
+		t.Helper()
+		select {
+		case got := <-events:
+			if got != want {
+				t.Fatalf("event %q, want %q", got, want)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("no %q", want)
+		}
+	}
+	next("hello run1")
+	get(t, srv, "/", "") // the page loads index.html: it is watched
+	later := time.Now().Add(time.Hour)
+	if err := os.WriteFile(filepath.Join(root, "index.html"), []byte("<body>new</body>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(filepath.Join(root, "index.html"), later, later); err != nil {
+		t.Fatal(err)
+	}
+	next("reload changed")
+
+	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/__imux/open?path=%2Fsub%2Fpage.htm", nil)
+	req.Header.Set(TokenHeader, "tok")
+	r, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var st Status
+	_ = json.NewDecoder(r.Body).Decode(&st)
+	r.Body.Close()
+	if !st.Shown || st.Title != "Run 1" || st.Pages != 1 || st.Root != root {
+		t.Fatalf("show: %+v", st)
+	}
+	next("show /sub/page.htm")
+}
+
+// TestServeAndFind: Serve records its port; Find and All find it, Stop
+// (here: the context) ends it and removes the record; an idle server stops.
+func TestServeAndFind(t *testing.T) {
 	testutil.Isolate(t)
-	cfg := config.Default()
-	cfg.Web.Browser = "sh -x"
-	got := Command(cfg, "http://x", true)
-	if len(got) != 3 || filepath.Base(got[0]) != "sh" || got[1] != "-x" || got[2] != "http://x" {
-		t.Errorf("custom: %q", got)
+	root := site(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- Serve(ctx, root) }()
+	var info *Info
+	deadline := time.Now().Add(5 * time.Second)
+	for info == nil && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+		info = Find(context.Background(), root)
 	}
-	cfg.Web.Browser = "no-such-browser-imux"
-	if Installed(cfg) || Command(cfg, "http://x", false) != nil {
-		t.Error("a missing browser is installed")
+	if info == nil || info.PID != os.Getpid() || len(All(context.Background())) != 1 {
+		t.Fatalf("not found: %+v", info)
+	}
+	if st, err := info.Show(context.Background(), "/"); err != nil || st.Shown {
+		t.Errorf("show with no page: %+v %v", st, err)
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("did not stop")
+	}
+	if Find(context.Background(), root) != nil {
+		t.Error("found after it stopped")
+	}
+	if _, err := os.Stat(recordFile(root)); !os.IsNotExist(err) {
+		t.Errorf("record left: %v", err)
+	}
+
+	t.Setenv("IMUX_WEB_IDLE", "100ms")
+	go func() { done <- Serve(context.Background(), root) }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("an idle server kept running")
 	}
 }
 
-func TestMissingLibraries(t *testing.T) {
-	out := "\tlinux-vdso.so.1 (0x00007ffd)\n\tlibnss3.so => not found\n\tlibnssutil3.so => not found\n" +
-		"\tlibasound.so.2 => not found\n\tlibexpat.so.1 => /lib/x86_64-linux-gnu/libexpat.so.1 (0x7f)\n\tlibfoo.so.9 => not found\n"
-	libs := ParseLdd(out)
-	if !reflect.DeepEqual(libs, []string{"libnss3.so", "libnssutil3.so", "libasound.so.2", "libfoo.so.9"}) {
-		t.Fatalf("libs %q", libs)
+// The script listens to the events the server sends, and not to "open".
+func TestLiveJS(t *testing.T) {
+	for _, ev := range []string{`"hello"`, `"reload"`, `"show"`} {
+		if !strings.Contains(liveJS, "addEventListener("+ev) {
+			t.Errorf("live.js does not listen to %s", ev)
+		}
 	}
-	if got := Packages(libs, false); !reflect.DeepEqual(got, []string{"libnss3", "libasound2"}) {
-		t.Errorf("packages %q", got)
-	}
-	if got := Packages(libs, true); !reflect.DeepEqual(got, []string{"libnss3", "libasound2t64"}) {
-		t.Errorf("t64 packages %q", got)
+	if strings.Contains(liveJS, `addEventListener("open"`) {
+		t.Error(`live.js listens to "open", which EventSource fires when it connects`)
 	}
 }
