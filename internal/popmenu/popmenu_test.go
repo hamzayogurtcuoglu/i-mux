@@ -211,7 +211,7 @@ func TestShow(t *testing.T) {
 		"display-message", "-d", "1", "-c", "/dev/pts/3", "", ";",
 		"display-popup", "-c", "/dev/pts/3", "-t", "%3", "-E", "-w", itoa(w), "-h", itoa(h), "-x", "C", "-y", "C", tmux.ShJoin("/opt/imux", "__menu-popup", id), ";",
 		"source-file", "-q", out, ";",
-		"run-shell", "-b", "rm -f " + out,
+		"run-shell", "-b", tmux.EscapeFormat("rm -f " + tmux.ShQuote(out)),
 	}
 	if !reflect.DeepEqual(sp.args, want) || !reflect.DeepEqual(sp.env, []string{"TMUX_PANE=%3"}) {
 		t.Fatalf("spawned %q env %q\nwant %q", sp.args, sp.env, want)
