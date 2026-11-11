@@ -193,7 +193,7 @@ func TestPsmuxMenu(t *testing.T) {
 	want := Cmd{"display-menu", "-T", "Sessions # proj", "-y", "10",
 		"Claude # 1", "1", "run-shell x",
 		"",
-		"Disabled # item", " ", "",
+		"Disabled # item", "", "",
 		"Last", "l", "run-shell y"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("psmuxMenu:\n got %q\nwant %q", got, want)

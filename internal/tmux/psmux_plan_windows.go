@@ -383,7 +383,7 @@ func psmuxMenu(cmd Cmd) Cmd {
 		disabled := strings.HasPrefix(name, "-")
 		name = strings.ReplaceAll(strings.TrimPrefix(name, "-"), "##", "#")
 		if disabled {
-			key, c = " ", ""
+			key, c = "", ""
 		}
 		out = append(out, name, key, c)
 		i += 3
