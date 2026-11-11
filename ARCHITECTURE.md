@@ -121,6 +121,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D42 | **Everything that scrolls shows a scroll bar, and the viewers are i-mux's own pager** (added 2026-11-10, v0.42, at the user's request): a one-column bar at the right edge (a dark `│` track, a lighter `┃` thumb sized to the part shown) in the sidebar's lists (Explorer, Source Control, Skills), search, Go to File, the folder picker, and the diff, file, commit and limits viewers; a click on it scrolls there. The viewers, `less` before, are `internal/pager`: less's keys (↑↓ j k, PgUp PgDn space b, g G, ←→, / n N, q), the wheel, a click or drag on the bar, `v` to edit a file. The search popup draws files with their icons, folder and a count, the matches in color, and starts folded when more than 5 files match; a button folds or unfolds all. | The user could not tell where they were in a long diff or search, and found the search plain ("colorless", every file open, no visible way to fold them). `less` cannot draw a bar; a pager of our own costs ~300 lines and keeps the keys. The bar is thin and dark so it does not fight the text. |
 | D43 | **History searches the conversations' text** (added 2026-11-10, v0.43, at the user's request): History's last item, **🔍 Search their text…** (`/`), opens a popup with every conversation of the folder (pinned first, then the newest; 300 at most) and, as you type, the ones whose messages (or name, or first request) have the text, each with its count and up to three of its messages, the match marked. Enter opens the conversation's menu (resume, continue in another agent, ...). | The user wants to find a conversation by something said in it, not only by its first request. A conversation's file is read whole only when it can hold the text (a byte search first), so a search over a few hundred conversations takes a moment, shown as it goes. |
 | D44 | **Web pages open in a pane, in a browser that draws in the terminal, installed only when wanted** (added 2026-11-10, v0.44, at the user's request): i-mux shows a web page (an HTML file of the project, or a URL such as `http://localhost:3000`) in a pane beside the agent, with Carbonyl (Chromium drawing in the terminal; a 74 MB download, about 170 MB on disk), which Settings installs into `~/.imux/tools` when asked and can remove. It is on by default (`[web] enabled`) and Settings turns it off. A click on an HTML file in the explorer opens its preview; until the browser is installed, a small popup offers to install it, to open the page in the system's browser, or to edit the file. | The user wants to see web pages without leaving i-mux, also over SSH and a VS Code tunnel, where the system's browser runs on another machine; a terminal browser works wherever the terminal does. Nothing is downloaded until the user asks: it is big and many never need it. Carbonyl draws real pages (CSS, JavaScript, images) where w3m or lynx show text only; `[web] browser` runs another program for those who prefer one. |
+| D45 | **Files open in micro, which i-mux gets when asked, and the editor shows where you are in the file** (added 2026-11-11, v0.45, at the user's request): when no editor is chosen (`editor`, `$VISUAL`, `$EDITOR`) and micro is not installed, the first file opened asks once: **Get micro** (micro 2.0.15, a 5 MB download, its SHA-256 pinned, into `~/.imux/tools`) or **Use nano**; Settings → **Get the micro editor…** asks again. micro runs with its scroll bar (`-scrollbar true`), nano 5.0+ with its position indicator and the mouse (`--indicator --mouse`). | The user opened a file, got nano, and read in the README that micro has to be installed by hand. i-mux recommends micro, so it brings it, as it brings the Nerd Font: micro works like the editors people know (mouse, Ctrl+S, Ctrl+Q, Ctrl+C / Ctrl+V), and its release is one static program (no package manager, no sudo). It is a program from the network, so it is asked for once (Enter takes it). |
 
 ## 4. Components
 
@@ -1342,9 +1343,19 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   (checkout) and "New branch…". HISTORY: `git log -n 15`; a click shows the commit
   (`git show --stat --patch`). Every action refreshes the view at once.
 - **Editing:** a file click in the explorer or Enter on a search result opens the editor in a
-  popup at the line: `editor` in the config, else micro, $VISUAL, $EDITOR, nano, vim
-  (`+set mouse=a`). Right-click on a file: Edit, View, Open in VS Code (when its `code` CLI or app
-  is found). In the file viewer `v` opens the editor at the first line shown.
+  popup at the line: `editor` in the config, else micro (on the PATH, or the one i-mux got: D45),
+  $VISUAL, $EDITOR, nano, vim (`+set mouse=a`). micro gets `-scrollbar true` (a `┃` at the
+  right edge), nano 5.0+ `--indicator --mouse`. Right-click on a file: Edit, View, Open in VS Code
+  (when its `code` CLI or app is found). In the file viewer `v` opens the editor at the first line
+  shown.
+- **Getting micro (D45):** when the editor would be nano or vi because nothing else is chosen or
+  installed, the editor popup first shows a small dialog: "Files open in nano", what micro is,
+  **Get micro** (Enter, `g`) and **Use nano** (`n`, remembered in `state.json`). Get micro
+  downloads `micro-2.0.15-<os>.tar.gz` (linux64-static, linux-arm64, osx, macos-arm64; 5 MB;
+  `IMUX_MICRO_URL` for a mirror) with its progress, checks its SHA-256, unpacks `micro` into
+  `~/.imux/tools/micro-2.0.15/`, and opens the file in it. `imux editor` says which editor files
+  open in; `imux editor install` gets micro; Settings → **Get the micro editor…** (when micro is
+  missing) runs it in a popup.
 - **Mouse:** the viewers (i-mux's pager, D42), the folder picker and the search popup scroll with
   the wheel and their scroll bar; search results fold per file (click the file, ← →) and all at
   once (Tab, or the button in the title).
@@ -2449,7 +2460,7 @@ sequenceDiagram
 | `watch.log` | 0600 | watcher | lifecycle and errors only; rotated at 1 MB (one `.1` kept) |
 | `handoffs/` | 0700 | i-mux | `*.md` handoffs, 0600, pruned after `keep_days` |
 | `launch/` | 0700 | i-mux | launch specs, 0600, deleted by `__exec` on read; leftovers older than 1 h are swept |
-| `tools/` | 0700 | `imux web install` | the web preview's browser (`carbonyl-0.0.3/`, about 170 MB); `imux web remove` deletes it |
+| `tools/` | 0700 | `imux editor install` | micro (`micro-2.0.15/micro`, 12 MB) when i-mux got it (D45) |
 | tmux socket | tmux-managed | tmux | `$TMUX_TMPDIR/tmux-<uid>/imux` (dir 0700) |
 
 Read-only access (never written): `~/.claude/projects`, `~/.gemini/{projects.json,tmp}`,

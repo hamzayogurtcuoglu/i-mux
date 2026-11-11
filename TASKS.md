@@ -997,6 +997,19 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M53: micro comes with i-mux; the editor shows where you are (added 2026-11-11)
+
+User request: files open in nano, and the README says to install micro by hand; the editor should
+have a scroll bar too.
+
+- [ ] **T53.1 Getting micro, scroll bars in the editors** · M
+  - AC: D45, §9.3 "Editing" and "Getting micro": the first edit without an editor asks once (Get
+    micro / Use nano, remembered); micro 2.0.15 downloaded, its SHA-256 checked, unpacked into
+    `~/.imux/tools`, used before `$VISUAL`; `imux editor [install]`; Settings → Get the micro
+    editor…; micro with `-scrollbar true`, nano 5.0+ with `--indicator --mouse`; unit tests
+    (assets, the tarball, the editor's argv, the dialog); e2e: a file opened without an editor
+    asks, Use nano opens nano's stand-in and is not asked again.
+
 ## M52: Web pages in a pane (added 2026-11-10)
 
 User request: see web pages (an HTML file, for example) in i-mux; on by default but downloaded only
