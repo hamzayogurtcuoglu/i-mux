@@ -431,8 +431,24 @@ func (v Version) String() string {
 // ParseVersion parses `tmux -V` output: "tmux 3.2a", "tmux next-3.5",
 // "tmux 3.8". Development builds ("tmux master", "tmux openbsd-7.6") count as
 // newer than any release. It reports false if nothing was recognized.
+// psmux (Windows) prints the tmux it matches, then its own version:
+// "tmux 3.4.0\npsmux 3.4.0 (20aa1d7 2026-10-13)". The tmux line gates
+// features; psmux's own number ("3.4.0") is what String shows.
 func ParseVersion(s string) (Version, bool) {
 	s = strings.TrimSpace(s)
+	for _, l := range strings.Split(s, "\n") {
+		if f := strings.Fields(l); len(f) >= 2 && f[0] == "psmux" {
+			first, _, _ := strings.Cut(s, "\n")
+			if first = strings.TrimSpace(first); !strings.HasPrefix(first, "tmux ") {
+				first = "tmux " + f[1] // only psmux's own line
+			}
+			v, ok := ParseVersion(first)
+			if ok {
+				v.Raw = f[1]
+			}
+			return v, ok
+		}
+	}
 	raw := strings.TrimPrefix(s, "tmux ")
 	v := Version{Raw: raw}
 	if raw == "" {

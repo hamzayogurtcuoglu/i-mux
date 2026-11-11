@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -245,13 +246,34 @@ func Rank(query string, cands []Cand, shorten func(string) string) []Cand {
 	return res
 }
 
-// IsPath reports whether the query is a path to browse ("/…", "~", "~/…").
+// IsPath reports whether the query is a path to browse ("/…", "~", "~/…",
+// and on Windows "C:\…", "C:/…", "~\…").
 func IsPath(query string) bool {
-	return strings.HasPrefix(query, "/") || query == "~" || strings.HasPrefix(query, "~/")
+	query = slashes(query)
+	return strings.HasPrefix(query, "/") || query == "~" || strings.HasPrefix(query, "~/") || isDrivePath(query)
+}
+
+// slashes writes a Windows path with forward slashes, which the browsing
+// below (and Windows itself) take; other systems keep the query as typed.
+func slashes(query string) string {
+	if runtime.GOOS == "windows" {
+		return strings.ReplaceAll(query, `\`, "/")
+	}
+	return query
+}
+
+// isDrivePath reports whether query starts with a Windows drive ("C:/").
+func isDrivePath(query string) bool {
+	if runtime.GOOS != "windows" || len(query) < 2 || query[1] != ':' {
+		return false
+	}
+	c := query[0] | 0x20
+	return c >= 'a' && c <= 'z'
 }
 
 // Expand turns "~" and "~/x" into home paths.
 func Expand(query, home string) string {
+	query = slashes(query)
 	switch {
 	case query == "~":
 		return home
@@ -265,7 +287,8 @@ func Expand(query, home string) string {
 // directory part whose name starts with the rest (case-insensitive), hidden
 // ones only when the rest starts with ".". "~/code/ac" lists ~/code/ac*.
 func Browse(query, home string) []Cand {
-	p := Expand(query, home)
+	query = slashes(query)
+	p := slashes(Expand(query, home))
 	dir, prefix := p, ""
 	if !strings.HasSuffix(query, "/") && query != "~" {
 		i := strings.LastIndex(p, "/")
@@ -300,7 +323,8 @@ func Browse(query, home string) []Cand {
 // Complete is the query after Tab on cand while browsing: its path in the
 // query's style (~ kept) with a trailing "/".
 func Complete(query, home string, c Cand) string {
-	p := c.Path
+	// Queries are typed with "/" (Browse splits on it), on Windows too.
+	p, home := filepath.ToSlash(c.Path), filepath.ToSlash(home)
 	if strings.HasPrefix(query, "~") && (p == home || strings.HasPrefix(p, home+"/")) {
 		p = "~" + strings.TrimPrefix(p, home)
 	}

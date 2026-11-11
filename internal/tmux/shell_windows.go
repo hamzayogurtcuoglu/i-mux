@@ -21,6 +21,10 @@ import (
 // pane's view mode, so imux reports results with display-message instead.
 const Silent = " *>&1 | Out-Null; exit 0"
 
+// HookTargetsActive reports whether hooks expand #{pane_id} as the active
+// pane instead of the pane the event is about: psmux does.
+const HookTargetsActive = true
+
 // quoteJoinsSingle reports whether the multiplexer's command parser joins
 // 'a'\”b' into one word (tmux does; psmux does not).
 const quoteJoinsSingle = false
@@ -114,6 +118,13 @@ func platformConfLate() []string {
 		"set -g  pane-border-format ' #{pane_title} '",
 		"set -g  allow-set-title off",
 	}
+}
+
+// nativeTabs reports whether the tab bar is psmux's own window list: psmux
+// 3.4.0 has no click ranges (#[range=...]) in status-format, so imux's tab
+// bar and agent bar could not be clicked; its window list can.
+func nativeTabs(v Version) bool {
+	return v.Major < 3 || (v.Major == 3 && v.Minor <= 4)
 }
 
 // LoginShell is the argv that starts sh in a pane: PowerShell without its

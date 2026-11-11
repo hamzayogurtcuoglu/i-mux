@@ -40,6 +40,10 @@ func ShEnv(name, value string) string { return name + "=" + ShQuote(value) + " "
 // platformConf is extra tmux.conf lines this system needs (none on Unix).
 func platformConf() []string { return nil }
 
+// nativeTabs reports whether the tab bar is the multiplexer's own window
+// list: never with tmux.
+func nativeTabs(Version) bool { return false }
+
 // platformConfLate is extra lines after imux's own (none on Unix).
 func platformConfLate() []string { return nil }
 
@@ -48,3 +52,7 @@ func LoginShell(sh string) []string { return []string{sh, "-l"} }
 
 // FallbackShell is the shell when neither tmux nor $SHELL names one.
 func FallbackShell() string { return "/bin/sh" }
+
+// HookTargetsActive reports whether hooks expand #{pane_id} as the active
+// pane instead of the pane the event is about (false: tmux names it).
+const HookTargetsActive = false

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"unicode/utf8"
 
@@ -81,7 +82,7 @@ func (m *Model) List() []folders.Cand {
 		out = append(out, recent...)
 	}
 	if len(git) > 0 {
-		out = append(out, folders.Cand{Kind: folders.KindHeader, Label: i18n.T("folders.on_this_mac")})
+		out = append(out, folders.Cand{Kind: folders.KindHeader, Label: i18n.T(thisComputer())})
 		out = append(out, git...)
 	}
 	return out
@@ -284,7 +285,7 @@ func Run(o Options) (folders.Cand, bool, error) {
 		if p == o.Home {
 			return "~"
 		}
-		if strings.HasPrefix(p, o.Home+"/") {
+		if strings.HasPrefix(p, o.Home+string(filepath.Separator)) {
 			return "~" + p[len(o.Home):]
 		}
 		return p
@@ -370,4 +371,13 @@ func Run(o Options) (folders.Cand, bool, error) {
 		}
 		draw()
 	}
+}
+
+// thisComputer is the i18n key of the header over the folders found on the
+// computer.
+func thisComputer() string {
+	if runtime.GOOS == "windows" {
+		return "folders.on_this_pc"
+	}
+	return "folders.on_this_mac"
 }

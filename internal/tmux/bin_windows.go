@@ -17,12 +17,19 @@ const Name = "psmux"
 var defaultBin = sync.OnceValue(findPsmux)
 
 // DefaultBin is the multiplexer imux runs when IMUX_TMUX_BIN is not set:
-// psmux from PATH, else where imux's installer or winget put it. Another
+// the psmux next to imux.exe (install.ps1 puts the tested build there),
+// else psmux from PATH, else where winget, scoop or cargo put it. Another
 // program called tmux on PATH is not used: tmux ports for Windows cannot run
 // the shell commands imux's bindings need.
 func DefaultBin() string { return defaultBin() }
 
 func findPsmux() string {
+	if self, err := os.Executable(); err == nil {
+		p := filepath.Join(filepath.Dir(self), "psmux.exe")
+		if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
+			return p
+		}
+	}
 	if p, err := exec.LookPath("psmux"); err == nil {
 		return p
 	}

@@ -34,7 +34,8 @@ type ConfInput struct {
 // Clickable reports whether the status line (agent bar, tab bar) gets
 // click handling.
 func (in *ConfInput) Clickable() bool {
-	return (in.AgentBar != "" || in.Cfg.Tmux.Tabs) && in.Cfg.Tmux.Mouse && in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
+	return (in.AgentBar != "" || in.Cfg.Tmux.Tabs) && in.Cfg.Tmux.Mouse && in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1]) &&
+		!nativeTabs(in.Version)
 }
 
 // oldTabClicks reports whether the tab bar's × and + take clicks through
@@ -45,6 +46,9 @@ func (in *ConfInput) Clickable() bool {
 func (in *ConfInput) oldTabClicks() bool {
 	return in.Cfg.Tmux.Tabs && in.Cfg.Tmux.Mouse && !in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
 }
+
+// tabName is a tab's name and state in the tab bar.
+const tabName = "#{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }"
 
 // TabPad is the tab bar's start: a blank as wide as the window's sidebar and
 // its border, so that the tabs begin above the agent's pane (D52); nothing
@@ -90,7 +94,7 @@ func TabFormat(old bool) string {
 	}
 	// The state glyph always takes its column (a space when idle), so the
 	// × and the next tabs do not move when an agent starts or stops.
-	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }"
+	tab := " #I " + tabName
 	// Every range is followed by a cell outside any range: tmux 3.4 makes a
 	// range one cell longer than drawn, so a range right after another loses
 	// its first cell (the current tab took the click on its ×). The × takes
@@ -213,7 +217,17 @@ func GenerateConf(in *ConfInput) string {
 	w("set -g  status-right-length 80")
 	w("set -g  status-left-length 32") // session names are <dir>-<hash>; the default 10 cuts them
 	w("set -gq @imux_status ''")
-	if cfg.Tmux.Tabs {
+	if cfg.Tmux.Tabs && nativeTabs(in.Version) {
+		w("# Tab bar at the top, drawn by the multiplexer's own window list (it has no click ranges).")
+		w("set -g  status-position top")
+		w("set -g  status-style %s", Quote("bg=default,fg=colour245"))
+		w("set -gu status-format[0]")
+		w("set -g  status-left '#[default]'")
+		w("set -g  status-justify left")
+		w("set -g  window-status-separator ''")
+		w("set -g  window-status-format %s", Quote(" #I "+tabName+" "))
+		w("set -g  window-status-current-format %s", Quote("#[bg=colour236 fg=colour255 bold] #I "+tabName+" #[default]"))
+	} else if cfg.Tmux.Tabs {
 		w("# Tab bar at the top: the session's windows, and + for a new tab.")
 		w("set -g  status-position top")
 		w("set -g  status-style %s", Quote("bg=default,fg=colour245"))
