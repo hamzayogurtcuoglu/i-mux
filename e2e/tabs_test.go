@@ -4,10 +4,13 @@ package e2e
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
 
 var styleRe = regexp.MustCompile(`#\[[^\]]*\]`)
@@ -21,11 +24,29 @@ func (h *H) tabBar(pane string) string {
 	return styleRe.ReplaceAllString(strings.TrimSuffix(left, "\n"), "")
 }
 
-// tabCol returns the client column (1-based) of text in the tab bar.
+// tabCol returns the client column (1-based) of text in the tab bar. The bar
+// starts past the window's sidebar (D52), so it is read once the sidebar has
+// its width (43, or the rail's with the panel closed) and not while it still
+// has the one it grew to with an attaching client: the tabs move left when it
+// takes its width back.
 func (h *H) tabCol(pane, text string) int {
 	h.t.Helper()
+	settled := func() bool {
+		for _, l := range strings.Split(strings.TrimSpace(h.mustTmux("list-panes", "-t", pane, "-F", "#{@imux_role} #{pane_width} #{window_width}")), "\n") {
+			f := strings.Fields(l)
+			if len(f) == 3 && f[0] == "sidebar" && f[1] != "43" && f[1] != strconv.Itoa(sidebar.ClosedWidth) {
+				if ww, _ := strconv.Atoi(f[2]); ww >= 56 {
+					return false
+				}
+			}
+		}
+		return true
+	}
 	var bar string
 	h.waitFor("tab bar shows "+text, 10*time.Second, func() bool {
+		if !settled() {
+			return false
+		}
 		bar = h.tabBar(pane)
 		return strings.Contains(bar, text)
 	})

@@ -77,7 +77,10 @@ func TestSettings(t *testing.T) {
 	h.waitFor("nerd icons on the rail", 10*time.Second, func() bool {
 		return strings.Contains(h.screen(bar), "")
 	})
-	c.Write("\x1b")
+	// q closes the menu at once: tmux 3.8 holds a lone Escape 500 ms while
+	// the terminal has not answered its queries (this one never does), and
+	// then it closed the next menu.
+	c.Write("q")
 	// Only those lines changed: the rest of the file stays.
 	b, _ := os.ReadFile(filepath.Join(h.Homes.Imux, "config.toml"))
 	if !strings.Contains(string(b), "sidebar = true") || !strings.Contains(string(b), "agent_bar = false") {

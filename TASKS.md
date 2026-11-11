@@ -1010,14 +1010,16 @@ all three.
     `MouseDown1Pane` drops that client's presses on a sidebar while it is set; unit tests (the
     binding in the config golden files, the commands of a switch); e2e: a double click on another
     project stays there on tmux 3.8 (it went there and back).
-- [ ] **T59.2 e2e tests that hold on tmux 3.8 and a slow runner** · S
+- [x] **T59.2 e2e tests that hold on tmux 3.8 and a slow runner** · S
   - AC: `rowOf` takes a sidebar frame only when it was drawn for the pane's height as well as its
     width (after a client attaches the rail is still packed for the detached size for a moment,
     and a click on 🔀 hit 🔍), and its timeout shows the sidebar; the project row is found by its
     badge (`B  blog`), not by a working spinner after the name; Settings closes with `q` (tmux 3.8
     holds a lone Escape 500 ms while the terminal has not answered its queries, and the test
-    terminal never does: the Escape closed the next menu); the suite passes on tmux 3.2a, 3.4 and
-    3.8, the flaky ones 8 times in a row on each.
+    terminal never does: the Escape closed the next menu); a double click on a menu button presses
+    twice at once (from tmux 3.5 the menu opens on the first press, and a second press after it is
+    drawn closes it); the suite passes on tmux 3.2a, 3.4 and 3.8, the flaky ones 8 times in a row
+    on each.
 - [ ] **T59.3 The release smoke test on Arch Linux** · XS
   - AC: the Arch container installs curl with `pacman -Syu` (a partial upgrade, `-Sy`, pulled
     openssl 4 against packages built for openssl 3 and failed).

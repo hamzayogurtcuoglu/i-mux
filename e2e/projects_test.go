@@ -64,7 +64,7 @@ func TestOpenPickerAndClose(t *testing.T) {
 		return newBar != ""
 	})
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.rowOf(newBar, " blog ")
+	x, y = h.rowOf(newBar, "B  blog") // its badge: AGENTS has a "blog" heading too
 	mark = c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Close project", 5*time.Second)

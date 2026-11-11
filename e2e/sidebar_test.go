@@ -77,11 +77,17 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 	})
 	width, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_width}")))
 	var lines []string
-	h.waitFor("sidebar line "+text, 10*time.Second, func() bool {
-		lines = strings.Split(h.screen(bar), "\n")
-		// Drawn for this width: the "+" of Projects is in the last but one
-		// column (a capture right after a resize still shows the old frame).
-		if len(lines) == 0 || sidebar.DisplayWidth(strings.TrimRight(lines[0], " ")) != width-1 {
+	drawn := false
+	found := func() bool {
+		lines = strings.Split(strings.TrimSuffix(h.screen(bar), "\n"), "\n")
+		// Drawn for this size (a capture right after a resize still shows
+		// the old frame): for its width the "+" of Projects is in the last
+		// but one column, for its height the rail's Help is on the last row
+		// (the rail packs its icons tighter on a short pane: right after a
+		// client attached, 🔀 was where 🔍 is now).
+		drawn = len(lines) > 1 && sidebar.DisplayWidth(strings.TrimRight(lines[0], " ")) == width-1 &&
+			strings.TrimSpace(lines[len(lines)-1]) != ""
+		if !drawn {
 			return false
 		}
 		for _, l := range lines {
@@ -90,7 +96,13 @@ func (h *H) rowOf(bar, text string) (x, y int) {
 			}
 		}
 		return false
-	})
+	}
+	for deadline := time.Now().Add(10 * time.Second); !found(); time.Sleep(50 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			h.t.Fatalf("timed out after 10s waiting for sidebar line %s (a frame drawn for the %s pane: %v):\n%s",
+				text, h.paneOpt(bar, "#{pane_width}x#{pane_height}"), drawn, strings.Join(lines, "\n"))
+		}
+	}
 	pos := strings.Fields(h.mustTmux("display-message", "-p", "-t", bar, "#{pane_left} #{pane_top} #{status-position} #{status}"))
 	left, _ := strconv.Atoi(pos[0])
 	top, _ := strconv.Atoi(pos[1])
@@ -201,9 +213,10 @@ func TestSidebarDoubleClick(t *testing.T) {
 	c.waitScreen(h, "AGENTS", 10*time.Second)
 	x, y := h.plusOf(bar, "AGENTS")
 	mark := c.Mark()
-	c.Click(0, x, y)
-	time.Sleep(80 * time.Millisecond)
-	c.Click(0, x, y)
+	// Both presses at once: from tmux 3.5 the menu opens on the first press
+	// and takes the mouse, so a second press that comes after it is drawn
+	// lands outside it and closes it, as a click outside any menu does.
+	c.Write(sgrMouse(0, x, y, 'M') + sgrMouse(0, x, y, 'm') + sgrMouse(0, x, y, 'M') + sgrMouse(0, x, y, 'm'))
 	c.waitScreenAfter(h, mark, "New agent with:", 5*time.Second)
 	time.Sleep(600 * time.Millisecond) // past the double-click window
 	c.Write("x")

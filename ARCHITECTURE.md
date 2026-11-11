@@ -1659,7 +1659,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Waits 350 ms (`OpenAfter`):** a click that opens a tmux menu where menus take no mouse (tmux
   before 3.5: the button's release closes one, and so does a double click's second press), and one
   that opens the command prompt (rename, commit message). On tmux 3.5+ menus open on the press
-  (`-M -O`); a right-click's menu follows the same rule.
+  (`-M -O`); a right-click's menu follows the same rule. There a double click's second press,
+  when it comes after the menu is drawn, lands outside it and closes it, as a second click outside
+  a menu does (the e2e test presses twice at once).
 - **A double click's second press:** it acts again only where the first one did.
   `MouseDown1Pane` is tmux's own plus `set -gF @imux_press '#{mouse_pane}'`; `SecondClick1Pane`
   and i-mux's `TripleClick1Pane` pass the press to a sidebar only when it is that pane (any other
