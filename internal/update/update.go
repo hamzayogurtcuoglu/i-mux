@@ -199,7 +199,7 @@ func removeOld(exe string) int {
 	prefix := strings.ToLower(base + OldSuffix)
 	for _, e := range entries {
 		name := strings.ToLower(e.Name())
-		if e.IsDir() || !(name == prefix || strings.HasPrefix(name, prefix+".")) {
+		if e.IsDir() || (name != prefix && !strings.HasPrefix(name, prefix+".")) {
 			continue
 		}
 		if os.Remove(filepath.Join(dir, e.Name())) == nil {

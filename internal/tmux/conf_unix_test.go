@@ -2,7 +2,35 @@
 
 package tmux
 
-import "testing"
+import (
+	"flag"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+var update = flag.Bool("update", false, "rewrite golden files")
+
+func golden(t *testing.T, name, got string) {
+	t.Helper()
+	p := filepath.Join("testdata", name)
+	if *update {
+		if err := os.MkdirAll("testdata", 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	want, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("%v (run go test ./internal/tmux -update)", err)
+	}
+	if string(want) != got {
+		t.Fatalf("%s differs from golden file; run with -update to accept.\n--- got ---\n%s", name, got)
+	}
+}
 
 // The golden files are tmux's config, with sh command lines; on Windows the
 // config is psmux's (see conf_windows_test.go).

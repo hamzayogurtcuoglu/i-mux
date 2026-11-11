@@ -184,17 +184,21 @@ func TestPercentResize(t *testing.T) {
 }
 
 func TestPsmuxMenu(t *testing.T) {
-	got := psmuxMenu(Cmd{"display-menu", "-c", "client-1", "-t", "%3", "-T", "Sessions ## proj", "-x", "C", "-y", "10",
+	got := psmuxMenu(Cmd{
+		"display-menu", "-c", "client-1", "-t", "%3", "-T", "Sessions ## proj", "-x", "C", "-y", "10",
 		"--",
 		"Claude ## 1", "1", "run-shell x",
 		"",
 		"-Disabled ## item", "", "",
-		"Last", "l", "run-shell y"})
-	want := Cmd{"display-menu", "-T", "Sessions # proj", "-y", "10",
+		"Last", "l", "run-shell y",
+	})
+	want := Cmd{
+		"display-menu", "-T", "Sessions # proj", "-y", "10",
 		"Claude # 1", "1", "run-shell x",
 		"",
 		"Disabled # item", "", "",
-		"Last", "l", "run-shell y"}
+		"Last", "l", "run-shell y",
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("psmuxMenu:\n got %q\nwant %q", got, want)
 	}

@@ -535,7 +535,7 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 // lets it.
 func (s *System) Raise(title string) {
 	title = strings.TrimSpace(title)
-	if title == "" || !(s.wsl() || s.goos() == "windows") {
+	if title == "" || (!s.wsl() && s.goos() != "windows") {
 		return
 	}
 	if r := []rune(title); len(r) > 120 {

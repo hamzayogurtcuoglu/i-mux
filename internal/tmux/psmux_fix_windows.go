@@ -46,8 +46,10 @@ func (c *Client) refreshTitles(ctx context.Context, route string, panes []string
 			continue
 		}
 		seen[p] = true
-		o, err := c.execRoute(ctx, route, []Cmd{{"display-message", "-p", "-t", p,
-			"#{@imux_name}\t#{@imux_label}\t#{@imux_flag}\t#{pane_current_command}"}})
+		o, err := c.execRoute(ctx, route, []Cmd{{
+			"display-message", "-p", "-t", p,
+			"#{@imux_name}\t#{@imux_label}\t#{@imux_flag}\t#{pane_current_command}",
+		}})
 		f := strings.Split(strings.TrimRight(o, "\r\n"), "\t")
 		if err != nil || len(f) != 4 {
 			continue

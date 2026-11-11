@@ -8,7 +8,8 @@ import (
 func TestParseCommandLine(t *testing.T) {
 	for in, want := range map[string][]Cmd{
 		"switch-client -c '/dev/pts/1~p' -t %1~p ; select-pane -t %1~p": {
-			{"switch-client", "-c", "/dev/pts/1~p", "-t", "%1~p"}, {"select-pane", "-t", "%1~p"}},
+			{"switch-client", "-c", "/dev/pts/1~p", "-t", "%1~p"}, {"select-pane", "-t", "%1~p"},
+		},
 		`set-option -g @x "a \"b\" c\\d"`: {{"set-option", "-g", "@x", `a "b" c\d`}},
 		`display 'it'\''s'`:               {{"display", "it's"}},
 		"kill-pane":                       {{"kill-pane"}},

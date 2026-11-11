@@ -165,7 +165,7 @@ func Signal(pid int, sig os.Signal) error {
 		}
 		h, err := windows.OpenEvent(windows.EVENT_MODIFY_STATE, false, name)
 		if err == nil {
-			defer windows.CloseHandle(h)
+			defer func() { _ = windows.CloseHandle(h) }()
 			return windows.SetEvent(h)
 		}
 		if sig == SIGUSR1 {
@@ -193,7 +193,7 @@ func Alive(pid int) bool {
 	if err != nil {
 		return errors.Is(err, windows.ERROR_ACCESS_DENIED)
 	}
-	defer windows.CloseHandle(h)
+	defer func() { _ = windows.CloseHandle(h) }()
 	var code uint32
 	if err := windows.GetExitCodeProcess(h, &code); err != nil {
 		return false

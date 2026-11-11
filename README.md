@@ -59,6 +59,12 @@ your shell profile (marked `# Added by the imux installer`).
 
 ## Windows
 
+> **Recommendation:** For the most stable everyday experience on Windows today, we recommend running
+> i-mux inside **WSL 2** with the one-line `install.sh` command above (full `tmux` support with zero
+> extra setup). Native Windows support below runs on [psmux](https://github.com/marlocarlo/psmux) and
+> currently requires building `psmux` from its `main` branch (`scripts\build-psmux.ps1`) until a release
+> newer than `3.4.0` is published on winget.
+
 i-mux also runs natively on Windows, without WSL, on [psmux](https://github.com/marlocarlo/psmux):
 a native Windows multiplexer that speaks tmux's commands. In PowerShell:
 

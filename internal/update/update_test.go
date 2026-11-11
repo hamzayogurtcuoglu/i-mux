@@ -66,8 +66,10 @@ func TestInstallCmd(t *testing.T) {
 // run as a file by PowerShell, the folder passed as one argument.
 func TestInstaller(t *testing.T) {
 	c := WindowsInstallCmd(`C:\Temp\imux-install-1.ps1`, "0.40.0", `C:\Users\o'me\AppData\Local\Programs\imux`)
-	want := []string{"powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", `C:\Temp\imux-install-1.ps1`,
-		"-Version", "v0.40.0", "-InstallDir", `C:\Users\o'me\AppData\Local\Programs\imux`, "-NoModifyPath", "-NoFont", "-NoPsmux"}
+	want := []string{
+		"powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", `C:\Temp\imux-install-1.ps1`,
+		"-Version", "v0.40.0", "-InstallDir", `C:\Users\o'me\AppData\Local\Programs\imux`, "-NoModifyPath", "-NoFont", "-NoPsmux",
+	}
 	if strings.Join(c, "|") != strings.Join(want, "|") {
 		t.Fatalf("%q", c)
 	}

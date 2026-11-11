@@ -290,7 +290,7 @@ const (
 func VSCodeBrowser(getenv func(string) string) (helper, ipc string) {
 	b, i := getenv("BROWSER"), getenv("VSCODE_IPC_HOOK_CLI")
 	h := filepath.ToSlash(b)
-	if i == "" || !(strings.HasSuffix(h, "/helpers/browser.sh") || strings.HasSuffix(h, "/helpers/browser.cmd")) {
+	if i == "" || (!strings.HasSuffix(h, "/helpers/browser.sh") && !strings.HasSuffix(h, "/helpers/browser.cmd")) {
 		return "", ""
 	}
 	return b, i

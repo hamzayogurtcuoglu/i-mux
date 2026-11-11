@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,8 +33,10 @@ func find(name string) (string, bool) {
 	if p, err := LookPath(name); err == nil {
 		return p, true
 	}
-	if p := GitTool(name); p != "" {
-		return p, true
+	if runtime.GOOS == "windows" {
+		if p := GitTool(name); p != "" {
+			return p, true
+		}
 	}
 	return "", false
 }

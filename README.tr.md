@@ -53,6 +53,12 @@ Kaldırmak için `~/.local/bin/imux` ve `~/.imux` silin, kabuk profilinize eklen
 
 ## Windows
 
+> **Öneri:** Bugün Windows'ta en kararlı günlük kullanım için i-mux'u **WSL 2** içinde yukarıdaki tek
+> satırlık `install.sh` komutuyla çalıştırmanızı öneririz (ek kurulum gerektirmeden tam `tmux`
+> desteği). Aşağıdaki WSL'siz yerli Windows desteği [psmux](https://github.com/marlocarlo/psmux)
+> üzerinde çalışır ve winget'te `3.4.0` sonrası yeni bir sürüm yayınlanana kadar `psmux`'un `main`
+> dalından derlenmesini (`scripts\build-psmux.ps1`) gerektirir.
+
 i-mux Windows'ta WSL olmadan, doğrudan da çalışır: tmux'un komutlarını konuşan yerli bir Windows
 çoklayıcısı olan [psmux](https://github.com/marlocarlo/psmux) üzerinde. PowerShell'de:
 

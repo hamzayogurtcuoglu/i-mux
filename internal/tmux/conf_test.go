@@ -2,7 +2,6 @@ package tmux
 
 import (
 	"context"
-	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,29 +11,6 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 )
-
-var update = flag.Bool("update", false, "rewrite golden files")
-
-func golden(t *testing.T, name, got string) {
-	t.Helper()
-	p := filepath.Join("testdata", name)
-	if *update {
-		if err := os.MkdirAll("testdata", 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(p, []byte(got), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		return
-	}
-	want, err := os.ReadFile(p)
-	if err != nil {
-		t.Fatalf("%v (run go test ./internal/tmux -update)", err)
-	}
-	if string(want) != got {
-		t.Fatalf("%s differs from golden file; run with -update to accept.\n--- got ---\n%s", name, got)
-	}
-}
 
 func confInput(ver string) *ConfInput {
 	v, _ := ParseVersion("tmux " + ver)

@@ -178,7 +178,7 @@ func Unzip(file, dir string) error {
 	if err != nil {
 		return err
 	}
-	defer zr.Close()
+	defer func() { _ = zr.Close() }()
 	for _, zf := range zr.File {
 		name := filepath.FromSlash(strings.TrimSuffix(zf.Name, "/"))
 		if name == "." || name == "" {
@@ -200,7 +200,7 @@ func Unzip(file, dir string) error {
 				return err
 			}
 			err = write(r, dst, mode.Perm()|0o600)
-			r.Close()
+			_ = r.Close()
 			if err != nil {
 				return err
 			}
