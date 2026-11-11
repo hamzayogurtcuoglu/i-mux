@@ -27,6 +27,8 @@ All notable changes to i-mux are listed here. The format follows
 - **`imux` asks which project again.** Outside an open project's folder, while projects are open or
   a last session can be restored, `imux` shows the picker: **Restore last session** first, then
   **this folder**, then your recent projects. In an open project's folder it goes straight there.
+- **A click on an HTML file asks how to open it:** in a window of its own, live; in a browser tab,
+  live; to edit; or to view. The Settings row for it is gone.
 - **The tabs start over the terminal**, past the sidebar, and follow it when the panel opens,
   closes or is resized (at the left edge with the pane zoomed or no sidebar).
 

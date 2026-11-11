@@ -596,7 +596,7 @@ var en = map[string]string{
 	"fetch.progress":     "%.1f of %.1f MB",
 	"fetch.checking":     "Checking the download…",
 
-	// Settings as menus, the editor (D50)
+	// Settings as menus, the editor (D50), HTML files (D51)
 	"settings.editor":             "Editor: %s",
 	"settings.editor_title":       "Files open in",
 	"settings.editor_auto":        "Auto (%s)",
@@ -616,6 +616,10 @@ var en = map[string]string{
 	"editor.now":                  "✓ Files open in %s.",
 	"editor.install_cmd":          "%s is not installed; it installs with: %s",
 	"editor.install_ask":          "Install it now? [Y/n] ",
+	"html.window":                 "🌐 In its own window, live",
+	"html.tab":                    "In a browser tab, live",
+	"html.edit":                   "Edit",
+	"html.view":                   "View",
 
 	// leaving i-mux (D48)
 	"tabs.exit":          "⏻ Exit",
@@ -632,9 +636,9 @@ var en = map[string]string{
 
 	// live preview (D47)
 	"cmd.web":           "Open web pages in your browser: an HTML file of the project, served with live reload, or an address.",
-	"web.status_window": "HTML files open in a window of their own, live.",
-	"web.status_tab":    "HTML files open in a browser tab, live.",
-	"web.status_off":    "HTML files open in the editor (Settings turns the preview on).",
+	"web.status_window": "A click on an HTML file asks how to open it; Open Preview opens a window of its own, live.",
+	"web.status_tab":    "A click on an HTML file asks how to open it; Open Preview opens a browser tab, live.",
+	"web.status_off":    "HTML files open in the editor ([web] enabled = true in the config makes a click ask).",
 	"web.none":          "No folder is served.",
 	"web.serving":       "%s → %s (%d open)",
 	"web.stopped":       "Live preview servers stopped: %d",

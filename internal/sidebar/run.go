@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -305,6 +304,8 @@ func (s *sidebar) waits(ctx context.Context, a Action) bool {
 		return true // the command prompt
 	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm, ActSuggest:
 		return !s.t.MenuTakesMouse(ctx)
+	case ActOpenFile:
+		return s.htmlAsk(a) && !s.t.MenuTakesMouse(ctx) // a menu: how to open it (D51)
 	}
 	return isMenu(a.Kind) && !s.t.MenuTakesMouse(ctx)
 }
@@ -484,6 +485,9 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		switch a.Kind {
 		case ActOpenFile, ActToggleDir:
 			s.selected = a.Path
+			if s.htmlAsk(a) {
+				s.menuX, s.menuY = ev.X, ev.Y // the menu opens at the click
+			}
 		case ActSkillMenu:
 			s.selected = a.Path
 			s.menuX, s.menuY = ev.X, ev.Y
@@ -504,7 +508,11 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 	case "backtab":
 		s.move(-1)
 	case "enter":
-		s.do(ctx, s.screen.ActionOf(s.sel))
+		a := s.screen.ActionOf(s.sel)
+		if s.htmlAsk(a) {
+			s.menuX, s.menuY = 4, s.sel.Row+1
+		}
+		s.do(ctx, a)
 	case "esc", "q":
 		s.sel = NoItem
 		s.focusTarget(ctx)
@@ -651,16 +659,9 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		}
 		return
 	case ActOpenFile:
-		if s.webOn() && webview.IsHTML(a.Path) && a.Status == "" && s.model.CWD != "" {
-			// A web page opens in the browser, served live (D47).
-			args := []string{"web", "open", filepath.Join(s.model.CWD, a.Path)}
-			if s.model.Target != "" {
-				args = append(args, "--pane", s.model.Target)
-			}
-			if client != "" {
-				args = append(args, "--client", client)
-			}
-			s.spawn(args)
+		if s.htmlAsk(a) {
+			// A web page: ask how to open it (D51).
+			s.htmlMenu(ctx, client, a, s.menuX, s.menuY)
 			return
 		}
 		s.popup(client, "90%", "90%", "__edit", a.Path)
@@ -925,9 +926,12 @@ func DiffShell(self, status, path string) string {
 	return tmux.ShJoin(self, "__diff", status, path)
 }
 
-// webOn reports whether web pages open in the preview ([web] enabled).
-func (s *sidebar) webOn() bool {
-	return s.o.Source != nil && s.o.Source.Cfg != nil && s.o.Source.Cfg.Web.Enabled
+// htmlAsk reports whether a click on a opens the menu that asks how to
+// open a web page (D51): an HTML file of the explorer, while [web]
+// enabled.
+func (s *sidebar) htmlAsk(a Action) bool {
+	return a.Kind == ActOpenFile && webview.IsHTML(a.Path) && a.Status == "" && s.model.CWD != "" &&
+		s.o.Source != nil && s.o.Source.Cfg != nil && s.o.Source.Cfg.Web.Enabled
 }
 
 // spawn starts imux with args without waiting for it.

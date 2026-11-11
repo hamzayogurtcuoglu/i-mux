@@ -15,8 +15,9 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestLivePreview (T55.2): a click on index.html serves the project and
-// opens the page in the browser (a fake that writes down the URL); the
+// TestLivePreview (T55.2, T58.1): a click on index.html asks how to open
+// it; in its own window serves the project and opens the page in the
+// browser (a fake that writes down the URL); the
 // page has the live reload script, its event stream hears "reload" when
 // the file changes, and a click on another page shows it in that page
 // instead of opening a new one.
@@ -38,6 +39,11 @@ func TestLivePreview(t *testing.T) {
 	x, y := h.rowOf(bar, "index.html")
 	mark := c.Mark()
 	c.Click(0, x, y)
+	// It asks how to open it (D51): in its own window.
+	c.waitScreenAfter(h, mark, "In its own window, live", 5*time.Second)
+	c.waitScreenAfter(h, mark, "In a browser tab, live", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	c.Write("w")
 	var u string
 	h.waitFor("the browser", 10*time.Second, func() bool {
 		b, _ := os.ReadFile(opened)
@@ -105,6 +111,9 @@ func TestLivePreview(t *testing.T) {
 	x, y = h.rowOf(bar, "about.html")
 	mark = c.Mark()
 	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "In its own window, live", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	c.Write("w")
 	next("show /about.html")
 	c.waitScreenAfter(h, mark, "about.html is in its preview window", 5*time.Second)
 	if b, _ := os.ReadFile(opened); strings.Count(string(b), "\n") != 1 {

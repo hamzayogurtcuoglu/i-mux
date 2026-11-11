@@ -171,6 +171,47 @@ func (s *sidebar) fileMenu(ctx context.Context, client string, a Action, x, y in
 	_ = s.t.Spawn(c)
 }
 
+// HTMLMenuItems is the menu a click on an HTML file opens (D51), as
+// display-menu arguments: in its own window or a browser tab, live (D47),
+// edit, view. Like the explorer's, its commands are `imux __file`.
+func HTMLMenuItems(self, client, pane string) []string {
+	var items []string
+	add := func(label, key, op string) {
+		args := []string{"__file", op}
+		if client != "" {
+			args = append(args, "--client", client)
+		}
+		if pane != "" {
+			args = append(args, "--pane", pane)
+		}
+		items = append(items, tmux.EscapeFormat(i18n.T(label)), key, tmux.RunShell(self, args...))
+	}
+	add("html.window", "w", "preview-window")
+	add("html.tab", "t", "preview-tab")
+	items = append(items, "")
+	add("html.edit", "e", "open")
+	add("html.view", "v", "view")
+	return items
+}
+
+// htmlMenu asks how to open the HTML file of a, at (x, y) in the sidebar.
+func (s *sidebar) htmlMenu(ctx context.Context, client string, a Action, x, y int) {
+	root := s.model.CWD
+	abs := filepath.Join(root, a.Path)
+	if _, err := s.t.Run(ctx,
+		tmux.Cmd{"set-option", "-g", OptFile, abs},
+		tmux.Cmd{"set-option", "-g", OptFileRoot, root}); err != nil {
+		return
+	}
+	c := append(s.t.Menu(ctx), "-t", s.o.Pane)
+	if client != "" {
+		c = append(c, "-c", client)
+	}
+	px, py := MenuAt(x, y)
+	c = append(append(c, "-T", tmux.EscapeFormat(filepath.Base(abs)), "-x", px, "-y", py, "--"), HTMLMenuItems(s.o.Self, client, s.model.Target)...)
+	_ = s.t.Spawn(c)
+}
+
 // MenuAt is display-menu's -x and -y for a menu whose top left corner is
 // at column x, row y (1-based) of the target pane. tmux works them out:
 // popup_pane_left / popup_pane_top are in its own coordinates (the

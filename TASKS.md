@@ -1002,7 +1002,7 @@ slow (about a second).
 User request: a click on an HTML file should ask how to open it (then Settings need not); the tab
 bar should start above the terminal, not at the far left, also when the panel opens or closes.
 
-- [ ] **T58.1 How to open an HTML file** · S
+- [x] **T58.1 How to open an HTML file** · S
   - AC: D51: a click on an HTML file opens a menu at the click (window, tab, edit, view); the
     Settings row is gone; unit tests (the menu's items and commands); e2e: the menu's window
     item opens the page live.

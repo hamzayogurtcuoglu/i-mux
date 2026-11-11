@@ -81,12 +81,12 @@ Copilot eklentili Neovim'inde açılır (Tab
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
 GitHub Copilot'a bir kez giriş yaptırır.
 
-**Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca, i-mux onu `localhost` üzerinden
-sunar ve tarayıcında kendi penceresinde açar (sekme ya da adres çubuğu olmadan; Chrome'un ya da
-Edge'in, WSL'de Windows'unki); bir ajan sayfayı ya da kullandığı bir dosyayı yeniden yazınca sayfa
-kendini yeniler. Başka bir sayfaya tıklayınca o pencerede açılır. Agent'lar yanındaki **+** →
-**🌐 Web sayfası…** herhangi bir adresi açar (`localhost:5173`, ya da sadece `5173`). Kurulacak bir
-şey yok. Ayarlar → **🌐 HTML dosyaları** pencere, tarayıcı sekmesi ve düzenleyici arasında geçer.
+**Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca nasıl açılacağını sorar: **kendi
+penceresinde** (sekme ya da adres çubuğu olmadan; Chrome'un ya da Edge'in, WSL'de Windows'unki),
+**tarayıcı sekmesinde**, **Düzenle** ya da **Görüntüle**. Sayfayı i-mux `localhost` üzerinden sunar;
+bir ajan onu ya da kullandığı bir dosyayı yeniden yazınca sayfa kendini yeniler. Başka bir sayfaya
+tıklayınca o pencerede açılır. Agent'lar yanındaki **+** → **🌐 Web sayfası…** herhangi bir adresi
+açar (`localhost:5173`, ya da sadece `5173`). Kurulacak bir şey yok.
 VS Code'un terminalinden (tünel üzerinden de) sayfalar VS Code'un çalıştığı yerde açılır; düz SSH'de
 adres panoya gelir. `imux web` sunulanları listeler, `imux web open <dosya|url>` bir sayfa açar,
 `imux web stop` durdurur.

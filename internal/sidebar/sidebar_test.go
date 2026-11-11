@@ -1141,6 +1141,16 @@ func TestFileMenus(t *testing.T) {
 	if got := names(items); got != "New File…|New Folder…|-|Find in Folder…|-|Paste|-|Copy Path|-|Collapse Folders" {
 		t.Errorf("root menu %s", got)
 	}
+	// A click on an HTML file asks how to open it (D51).
+	html := HTMLMenuItems("/bin/imux", "/dev/ttys1", "%3")
+	if got := names(html); got != "🌐 In its own window, live|In a browser tab, live|-|Edit|View" {
+		t.Errorf("html menu %s", got)
+	}
+	for i, op := range map[int]string{2: "preview-window", 5: "preview-tab", 9: "open", 12: "view"} {
+		if !strings.Contains(html[i], "__file "+op+" --client /dev/ttys1 --pane %3") {
+			t.Errorf("html item %d: %s", i, html[i])
+		}
+	}
 	if x, y := MenuAt(5, 7); x != "#{e|+:#{popup_pane_left},4}" || y != "#{e|+:#{popup_pane_top},6}" {
 		t.Errorf("position %s %s", x, y)
 	}

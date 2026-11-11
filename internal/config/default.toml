@@ -118,12 +118,14 @@ images            = true
 command           = ""
 
 [web]
-# A click on an HTML file in the explorer opens it in your browser, served by
-# i-mux on localhost, and the page reloads itself when its files change (Live
-# Preview; nothing to install). false: HTML files open in the editor.
+# A click on an HTML file in the explorer asks how to open it: in your browser,
+# served by i-mux on localhost, the page reloading itself when its files change
+# (Live Preview; nothing to install), or to edit or view it. false: the click
+# edits it at once.
 enabled           = true
-# "window": a window of its own, without tabs or an address bar (Chrome or Edge;
-# under WSL, Windows' own); "tab": a tab of your default browser.
+# How Open Preview and `imux web open` show a page: "window": a window of its
+# own, without tabs or an address bar (Chrome or Edge; under WSL, Windows' own);
+# "tab": a tab of your default browser.
 open              = "window"
 # A command that opens pages instead, the URL after its words (e.g. "firefox");
 # "" = the system's browser.

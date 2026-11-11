@@ -47,8 +47,8 @@ line number.
 | `notify.command` | `""` | Run this instead, with the title and the message as arguments (e.g. a push to your phone); "" = the system's notifications. |
 | `paste.images` | `true` | Ctrl+V (or Alt+V, or 📎 in the sidebar) in an agent's pane pastes the image on the clipboard (a screenshot) or copied image files: macOS, Linux with wl-clipboard or xclip, and WSL (the Windows clipboard). With no image the key goes to the pane as before. |
 | `paste.command` | `""` | Run this instead to get the images: it prints image file paths, one a line. |
-| `web.enabled` | `true` | A click on an HTML file in the explorer opens it in your browser, served by i-mux on localhost, and the page reloads itself when its files change (Live Preview; nothing to install). false: HTML files open in the editor. |
-| `web.open` | `"window"` | "window": a window of its own, without tabs or an address bar (Chrome or Edge; under WSL, Windows' own); "tab": a tab of your default browser. |
+| `web.enabled` | `true` | A click on an HTML file in the explorer asks how to open it: in your browser, served by i-mux on localhost, the page reloading itself when its files change (Live Preview; nothing to install), or to edit or view it. false: the click edits it at once. |
+| `web.open` | `"window"` | How Open Preview and `imux web open` show a page: "window": a window of its own, without tabs or an address bar (Chrome or Edge; under WSL, Windows' own); "tab": a tab of your default browser. |
 | `web.browser` | `""` | A command that opens pages instead, the URL after its words (e.g. "firefox"); "" = the system's browser. |
 | `completion.enabled` | `false` | Copilot-like suggestions while you edit a file (Tab accepts): files open in Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim). Settings (⚙ on the rail) → Editor → Neovim + Copilot turns it on, sets it up and signs you in. |
 | `tmux.menu_key_root` | `'C-\'` | Key that opens the pane menu without the prefix. "" disables it. |
@@ -216,12 +216,14 @@ images            = true
 command           = ""
 
 [web]
-# A click on an HTML file in the explorer opens it in your browser, served by
-# i-mux on localhost, and the page reloads itself when its files change (Live
-# Preview; nothing to install). false: HTML files open in the editor.
+# A click on an HTML file in the explorer asks how to open it: in your browser,
+# served by i-mux on localhost, the page reloading itself when its files change
+# (Live Preview; nothing to install), or to edit or view it. false: the click
+# edits it at once.
 enabled           = true
-# "window": a window of its own, without tabs or an address bar (Chrome or Edge;
-# under WSL, Windows' own); "tab": a tab of your default browser.
+# How Open Preview and `imux web open` show a page: "window": a window of its
+# own, without tabs or an address bar (Chrome or Edge; under WSL, Windows' own);
+# "tab": a tab of your default browser.
 open              = "window"
 # A command that opens pages instead, the URL after its words (e.g. "firefox");
 # "" = the system's browser.

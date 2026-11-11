@@ -85,12 +85,12 @@ right there. It says what an older tmux lacks and how to get a newer one on your
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
 
-**Web pages, live:** a click on an HTML file in the explorer opens it in your browser, in a window
-of its own (no tabs or address bar; Chrome's or Edge's, under WSL Windows' own), served by i-mux on
-`localhost`; when an agent rewrites the page, or a file it uses, it reloads by itself. A click on
-another page shows it in that window. **+** next to Agents → **🌐 Web page…** opens any address
-(`localhost:5173`, or just `5173`). Nothing to install. Settings → **🌐 HTML files open** switches
-between a window, a tab of your browser and the editor. From VS Code's terminal (also over a
+**Web pages, live:** a click on an HTML file in the explorer asks how to open it: **in its own
+window** (no tabs or address bar; Chrome's or Edge's, under WSL Windows' own), **in a browser tab**,
+**Edit** or **View**. The page is served by i-mux on `localhost`; when an agent rewrites it, or a
+file it uses, it reloads by itself. A click on another page shows it in that window. **+** next to
+Agents → **🌐 Web page…** opens any address (`localhost:5173`, or just `5173`). Nothing to
+install. From VS Code's terminal (also over a
 tunnel) pages open where VS Code runs; over plain SSH the address goes to your clipboard.
 `imux web` lists what is served, `imux web open <file|url>` opens a page, `imux web stop` stops.
 

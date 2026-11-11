@@ -597,7 +597,7 @@ var tr = map[string]string{
 	"fetch.progress":     "%.1f / %.1f MB",
 	"fetch.checking":     "İndirilen dosya kontrol ediliyor…",
 
-	// Settings as menus, the editor (D50)
+	// Settings as menus, the editor (D50), HTML files (D51)
 	"settings.editor":             "Düzenleyici: %s",
 	"settings.editor_title":       "Dosyalar şurada açılır",
 	"settings.editor_auto":        "Otomatik (%s)",
@@ -617,6 +617,10 @@ var tr = map[string]string{
 	"editor.now":                  "✓ Dosyalar artık %s ile açılır.",
 	"editor.install_cmd":          "%s kurulu değil; şununla kurulur: %s",
 	"editor.install_ask":          "Şimdi kurulsun mu? [E/h] ",
+	"html.window":                 "🌐 Kendi penceresinde, canlı",
+	"html.tab":                    "Tarayıcı sekmesinde, canlı",
+	"html.edit":                   "Düzenle",
+	"html.view":                   "Görüntüle",
 
 	// leaving i-mux (D48)
 	"tabs.exit":          "⏻ Çık",
@@ -633,9 +637,9 @@ var tr = map[string]string{
 
 	// live preview (D47)
 	"cmd.web":           "Web sayfalarını tarayıcında açar: projenin bir HTML dosyasını canlı yenilemeyle sunar, ya da bir adresi açar.",
-	"web.status_window": "HTML dosyaları kendi penceresinde, canlı açılır.",
-	"web.status_tab":    "HTML dosyaları tarayıcı sekmesinde, canlı açılır.",
-	"web.status_off":    "HTML dosyaları düzenleyicide açılır (Ayarlar önizlemeyi açar).",
+	"web.status_window": "HTML dosyasına tıklayınca nasıl açılacağı sorulur; Önizlemeyi Aç kendi penceresinde, canlı açar.",
+	"web.status_tab":    "HTML dosyasına tıklayınca nasıl açılacağı sorulur; Önizlemeyi Aç tarayıcı sekmesinde, canlı açar.",
+	"web.status_off":    "HTML dosyaları düzenleyicide açılır (config'te [web] enabled = true tıklamada sordurur).",
 	"web.none":          "Sunulan klasör yok.",
 	"web.serving":       "%s → %s (%d açık)",
 	"web.stopped":       "Durdurulan canlı önizleme sunucusu: %d",

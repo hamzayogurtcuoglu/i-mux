@@ -167,6 +167,10 @@ func (f *fileCtx) do(op string) error {
 		return err
 	case "preview":
 		return webOpen(ctx, f.w, f.path, f.pane, f.client, "", false)
+	case "preview-window":
+		return webOpen(ctx, f.w, f.path, f.pane, f.client, "window", false)
+	case "preview-tab":
+		return webOpen(ctx, f.w, f.path, f.pane, f.client, "tab", false)
 	case "vscode":
 		code := editor.VSCode()
 		if code == "" {
