@@ -8,7 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 
 // SetUmask makes every file and directory created by this process private.
 // It is called once at startup.
-func SetUmask() { syscall.Umask(0o077) }
+func SetUmask() { sysx.SetUmask() }
 
 // UserHome returns $HOME, falling back to os.UserHomeDir.
 func UserHome() string {

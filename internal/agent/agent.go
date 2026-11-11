@@ -14,12 +14,12 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Info describes one agent CLI.
@@ -266,7 +266,7 @@ func prependDir(dir, pathEnv string) string {
 
 func isExecutable(p string) bool {
 	fi, err := os.Stat(p)
-	return err == nil && !fi.IsDir() && fi.Mode()&0o111 != 0
+	return err == nil && !fi.IsDir() && sysx.Executable(fi)
 }
 
 var versionRe = regexp.MustCompile(`\d+\.\d+(?:\.\d+)?(?:[-+][0-9A-Za-z.\-]+)?`)
@@ -303,8 +303,7 @@ func Probe(ctx context.Context, path, pathEnv string, withStderr bool, args ...s
 	if withStderr {
 		cmd.Stderr = &out
 	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	sysx.KillGroupOnCancel(cmd)
 	cmd.WaitDelay = time.Second
 	_ = cmd.Run() // a non-zero exit or a timeout still returns what was printed
 	return out.Bytes()

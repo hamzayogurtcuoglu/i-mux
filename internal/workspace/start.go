@@ -9,13 +9,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -294,8 +294,8 @@ func VSCodeBrowser(getenv func(string) string) (helper, ipc string) {
 	return b, i
 }
 
-// execFunc is syscall.Exec; tests replace it.
-var execFunc = syscall.Exec
+// execFunc is sysx.Exec; tests replace it.
+var execFunc = sysx.Exec
 
 // ShellAgent is the name menus and commands use for a plain terminal.
 const ShellAgent = "shell"

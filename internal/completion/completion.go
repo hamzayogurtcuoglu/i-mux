@@ -14,6 +14,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // AppName is the Neovim profile (NVIM_APPNAME).
@@ -107,7 +109,7 @@ func NodeVersion(node string) int {
 
 func executable(p string) bool {
 	fi, err := os.Stat(p)
-	return err == nil && fi.Mode().IsRegular() && fi.Mode().Perm()&0o111 != 0
+	return err == nil && fi.Mode().IsRegular() && sysx.Executable(fi)
 }
 
 // Ready reports whether edits can open in the profile: Neovim is there,

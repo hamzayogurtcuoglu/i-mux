@@ -174,7 +174,7 @@ func defaultAction(e *Env, args []string) error {
 			cwd = c.Path
 		}
 	}
-	if pane := os.Getenv("TMUX_PANE"); pane != "" && w.T.Inside(os.Getenv("TMUX")) {
+	if pane := tmux.EnvPane(); pane != "" && w.T.Inside(os.Getenv("TMUX")) {
 		p, err := w.NewWindow(ctx, pane, id, cwd)
 		if err != nil {
 			return err

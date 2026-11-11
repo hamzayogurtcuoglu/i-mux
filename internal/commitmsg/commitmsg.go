@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff/redact"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Limits.
@@ -240,8 +240,7 @@ func Execute(ctx context.Context, r Run, dir, pathEnv string) (string, error) {
 	cmd := exec.CommandContext(ctx, r.Argv[0], r.Argv[1:]...)
 	// The agent may start children (node, a shell): on timeout the whole
 	// group goes, and pipes they hold do not keep us waiting.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	sysx.KillGroupOnCancel(cmd)
 	cmd.WaitDelay = 2 * time.Second
 	cmd.Dir = dir
 	cmd.Env = os.Environ()

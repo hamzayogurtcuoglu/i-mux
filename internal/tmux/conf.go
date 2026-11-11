@@ -105,17 +105,13 @@ func TabFormat(old bool) string {
 		"#[align=right]" + quitRange + "#[fg=colour245] " + i18n.T("tabs.exit") + " #[norange default] "
 }
 
-// Silent is appended to every shell command imux's bindings, hooks and menu
-// items run: tmux shows any output of run-shell (or a non-zero exit) in the
-// pane's view mode, so imux reports results with display-message instead.
-const Silent = " >/dev/null 2>&1 || true"
-
-// UICommand returns the sh command line that runs imux with args silently.
-// args are sh words; formats (#{pane_id}) are expanded by run-shell before
-// the shell sees them, and the values imux puts there (pane ids, client
-// names, agent-bar ranges, exit statuses, agent:id) need no sh quoting.
+// UICommand returns the shell command line that runs imux with args
+// silently. args are shell words; formats (#{pane_id}) are expanded by
+// run-shell before the shell sees them, and the values imux puts there (pane
+// ids, client names, agent-bar ranges, exit statuses, agent:id) need no
+// quoting.
 func UICommand(self string, args ...string) string {
-	return ShQuote(self) + " " + strings.Join(args, " ") + Silent
+	return ShCall(self) + " " + strings.Join(args, " ") + Silent
 }
 
 // RunShell returns the tmux command `run-shell -b '<imux> args...'`.
@@ -187,6 +183,9 @@ func GenerateConf(in *ConfInput) string {
 	w("# tmux %s, agent bar: %s, clickable: %s", in.Version, onOff(in.AgentBar != ""), onOff(in.Clickable()))
 	w("")
 	w("set -g  default-terminal %s", Quote(term))
+	for _, l := range platformConf() {
+		w("%s", l)
+	}
 	w("%%if \"#{!=:#{@imux_loaded},1}\"")
 	w("set -as terminal-features ',*:RGB'")
 	w("set -as terminal-features ',*:extkeys'")
@@ -324,8 +323,11 @@ func GenerateConf(in *ConfInput) string {
 		}
 	}
 	w("")
+	for _, l := range platformConfLate() {
+		w("%s", l)
+	}
 	w("source-file -q %s", Quote(in.LocalConf))
-	return b.String()
+	return GlobalizeFormat(b.String())
 }
 
 // WriteConf writes content to path if it differs from what is there (by

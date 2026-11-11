@@ -4,11 +4,10 @@ import (
 	"context"
 	"io"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -140,8 +139,8 @@ func RunEmpty(ctx context.Context, o EmptyOptions) error {
 	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 
 	sigs := make(chan os.Signal, 4)
-	signal.Notify(sigs, syscall.SIGWINCH, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT)
-	defer signal.Stop(sigs)
+	sysx.Notify(sigs, sysx.SIGWINCH, sysx.SIGTERM, sysx.SIGHUP, sysx.SIGINT)
+	defer sysx.Stop(sigs)
 	input := make(chan []byte, 8)
 	go func() {
 		buf := make([]byte, 1024)
@@ -180,7 +179,7 @@ func RunEmpty(ctx context.Context, o EmptyOptions) error {
 		case <-ctx.Done():
 			return nil
 		case sig := <-sigs:
-			if sig != syscall.SIGWINCH {
+			if sig != sysx.SIGWINCH {
 				return nil
 			}
 			draw()

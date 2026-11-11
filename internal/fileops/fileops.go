@@ -17,11 +17,11 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/clipimage"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // ErrExists is a name that is taken.
@@ -149,7 +149,7 @@ func Paste(src, dir string, move bool) (string, error) {
 		if err == nil {
 			return to, nil
 		}
-		if !errors.Is(err, syscall.EXDEV) {
+		if !sysx.CrossDevice(err) {
 			return "", err
 		}
 		// Another disk: copy, then remove.
