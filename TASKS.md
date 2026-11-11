@@ -997,6 +997,15 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M54: The Agents icon counts the working agents (added 2026-11-11)
+
+User request: the number of working agents on the rail's Agents icon too.
+
+- [ ] **T54.1 A badge on the Agents icon** · S
+  - AC: D46: a blue number right of the icon while agents work (all projects, limited ones not
+    counted), `9+` above nine, none at zero; with the panel closed and on another view; unit
+    tests (the rail with 0, 3 and 12 working; emoji and Nerd Font icons keep their width).
+
 ## M53: micro comes with i-mux; the editor shows where you are (added 2026-11-11)
 
 User request: files open in nano, and the README says to install micro by hand; the editor should
