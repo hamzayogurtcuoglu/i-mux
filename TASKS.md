@@ -997,6 +997,34 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M60: Menus that take the mouse, a simpler sidebar (added 2026-11-11)
+
+User request: a click on a menu closes it without choosing, so it has to be used with the
+keyboard; the HTML menu's labels are long and have a needless icon; the sidebar's green and
+yellow dots mean nothing to the user; the spinner should turn only while an agent really works
+(it turned while the user moved through a list in the Copilot CLI).
+
+- [ ] **T60.1 Menus in a popup before tmux 3.5** · M
+  - AC: D54, §9.3 "Menus on tmux before 3.5": every menu goes through `ShowMenu`; before 3.5 a
+    popup the size of the menu at its place, with the title, items, keys and separators; hover
+    selects, a click, Enter or a key chooses, Esc/q/✕ close; the command runs after the popup
+    closed, its formats expanded for the menu's pane and client; the sidebar no longer waits
+    `OpenAfter` before menus; unit tests (reading a display-menu, the size, the keys and clicks,
+    the command the choice writes); e2e on tmux 3.2a and 3.4: a click on ⏻ Exit opens its menu
+    and a click on Back to the terminal detaches; a menu opened while a status-line message is
+    shown (the commit message's "Write another") shows its items. Versions and updates calls
+    tmux old below 3.4, not 3.5 (menus no longer need it).
+- [ ] **T60.2 Short HTML labels** · XS
+  - AC: D51: Open in browser / Open in a new tab / Edit / View, no 🌐 (en, tr); unit test.
+- [ ] **T60.3 No dots** · XS
+  - AC: D56: no dirty dot on project rows, no "Done" dot on project and agent rows, no green
+    glyph in the tab bar; unit tests (the rows, the tab state).
+- [ ] **T60.4 Working means the agent says so** · S
+  - AC: D55: for Claude Code, Codex, Copilot and Antigravity a screen change is work only while
+    the screen shows their busy line; OpenCode as before; unit tests (a list moved through
+    without the busy line, the busy line of each agent, an unknown agent); e2e: the fake agents
+    print a busy line while they work.
+
 ## M59: Green CI on tmux 3.8 and Arch Linux (added 2026-11-11)
 
 Report: the CI pipelines fail. The e2e jobs failed on most pushes since 2026-11-09, each time in

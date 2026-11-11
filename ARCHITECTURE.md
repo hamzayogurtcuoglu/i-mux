@@ -127,9 +127,12 @@ done by tmux on a dedicated socket. i-mux only:
 | D48 | **A button leaves i-mux: back to the terminal, or quit with every agent** (added 2026-11-11, v0.46, at the user's request): the tab bar ends on the right with **⏻ Exit**; its menu has **Back to the terminal** (this client detaches: the agents keep running, `imux` brings them back) and **Quit i-mux…** (after a confirm: the open projects are recorded, every agent stops, the tmux server ends; the next `imux` offers them back). `imux quit` does the same from a shell. | The user did not know how to leave i-mux for the shell. tmux's ways (`prefix d`, closing the terminal) are invisible and keep the agents running without saying so; a button with both choices says what each one does. |
 | D49 | **`imux` asks which project to open, unless it starts in one that is open** (added 2026-11-11, v0.46, at the user's request; extends D22): outside tmux and without arguments, `imux` in the folder of an open project attaches to it; anywhere else, when projects are open or the last session can be restored, it shows the project picker with **↺ Restore last session** first (when there is one), then **this folder**, then the open and recent projects. With nothing open and nothing to restore it opens its folder as before (the home folder: the picker). | The user's workspace stopped coming back: the picker that offers it showed only in the home folder, so `imux` started elsewhere made a new project without a word, and the last session was offered only from home. |
 | D50 | **A setting opens a menu of its values; the editor is one of them** (added 2026-11-11, v0.46, at the user's request): a click on a Settings row (or Enter on it, or its letter) opens a small menu of its values with `●` on the current one; choosing one saves it and opens Settings again. Nothing cycles any more. **Editor** lists Auto (micro, `$VISUAL`, `$EDITOR`, nano), micro (got when missing, D45), nano, Neovim, and Neovim + Copilot, which is AI completion (D30) and replaces its row. | Cycling hid the other values and made the user step through them; a list shows them all, as the commit agent's menu already did. The user wants to pick the editor among the ones i-mux knows, not only to turn AI completion on. |
-| D51 | **A click on an HTML file asks how to open it** (added 2026-11-11, v0.46, at the user's request; changes D47): a menu at the click offers **In its own window, live**, **In a browser tab, live**, **Edit** and **View**; Settings has no row for it any more (`[web] enabled = false` makes the click edit at once). | The user wants to choose each time (the page to look at, or its source to fix) rather than once in Settings. |
+| D51 | **A click on an HTML file asks how to open it** (added 2026-11-11, v0.46, at the user's request; changes D47): a menu at the click offers **Open in browser**, **Open in a new tab**, **Edit** and **View** (v0.47: shorter, without the 🌐); Settings has no row for it any more (`[web] enabled = false` makes the click edit at once). | The user wants to choose each time (the page to look at, or its source to fix) rather than once in Settings. |
 | D52 | **The tab bar starts where the terminal does** (added 2026-11-11, v0.46, at the user's request): the tabs begin above the agent's pane, past the sidebar, wherever the panel's edge is: dragged, closed to the rail, hidden (`prefix b`), or a pane zoomed (then at the left edge). Only tmux formats do it, so nothing has to keep it in step. | Over the sidebar the tabs ran into the rail and the panel's title; above the terminal they sit over what they switch. |
 | D53 | **After a click showed another project or tab, that client's presses on a sidebar are dropped for 0.5 s** (added 2026-11-11, v0.46.1, from a failing CI run; completes D39): the sidebar that switches the client sets `@imux_moved` to the client's name in the same tmux call, with `run-shell -b -C -d 0.5` clearing it; `MouseDown1Pane` drops a press on a sidebar while it names that client. | tmux 3.7 reports a press in another pane as a new press (`MouseDown1Pane`), not as the second press of a double click (`SecondClick1Pane`), so D39's guard missed it there: a double click on project B went to B and back to A. Homebrew's tmux on macOS is 3.8; the macOS e2e job caught it. tmux has no clock in milliseconds to compare presses, so the sidebar marks the switch and tmux ends the mark. |
+| D54 | **Menus take the mouse on every tmux: before 3.5 i-mux draws them in a popup** (added 2026-11-11, v0.47, at the user's request): on tmux 3.2 to 3.4 every menu i-mux opens (display-menu) is shown by `imux __menu-popup` in a popup the size of the menu, where the menu would be: its title, its items with their keys, separators. The item under the pointer lights up; a click or Enter chooses one, and so does its key; Esc, q and ✕ close it. The chosen command runs once the popup has closed, as display-menu runs it: its formats expanded for the menu's pane and client. tmux 3.5+ keeps its own menus (`-M -O`). | On tmux before 3.5 a menu that a mouse binding did not open takes no mouse: a click closed it without choosing anything, and the user had to use the keyboard. Every i-mux menu is opened by a program (the sidebar, a click handler), never by tmux's mouse bindings. A popup's program gets the mouse on every tmux. |
+| D55 | **"Working" is what the agent says: Claude Code, Codex, Copilot and Antigravity work while they show their busy line** (added 2026-11-11, v0.47, at the user's request; refines D38): a screen change of these agents counts as work only while the screen's last 16 non-blank lines show what the agent shows while it works, and only then: `esc to interrupt` (Claude Code's and Codex's progress line, Antigravity's "Press esc to interrupt generation"), `ctrl+c interrupt` (Copilot's footer). Other agents (OpenCode) keep D38's rule. | The spinner turned while the user moved through a list in the Copilot CLI (its screen changed above the input line too), not only after a prompt. Each of these CLIs shows how to interrupt it exactly while it works. |
+| D56 | **No dots for uncommitted changes or for "Done"** (added 2026-11-11, v0.47, at the user's request): a project row shows its name and branch; the yellow dot (uncommitted changes) and the green dot (an agent finished while the user looked elsewhere) are gone from the sidebar and the tab bar, and a finished agent is idle (its notification still says it finished). Working, Needs you, limited and exited stay. | The user did not know what the dots meant. The rail's Git icon counts the changed files, and Source Control lists them. |
 
 ## 4. Components
 
@@ -1109,9 +1112,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   ⧉ History  ◔ Limits  ? Help
 ```
 
-- **Projects:** a coloured letter avatar (colour from the name), the name, the branch, a yellow
-  dot when it has uncommitted changes, and the most urgent state of its agents
-  (Needs you > Done > working > idle). Click: switch to it. **+** (header): open a project.
+- **Projects:** a coloured letter avatar (colour from the name), the name, the branch and the most
+  urgent state of its agents (Needs you > limited > working; nothing when they are idle; no dot for
+  uncommitted changes or a finished agent since v0.47, D56). Click: switch to it. **+** (header):
+  open a project.
 - **Agents:** every project's agent panes, grouped under the project's name. The title counts the
   agents at work (a spinner and "2 working", the number alone in a narrow panel; folded, also the
   number of panes). A row: the agent's
@@ -1125,7 +1129,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   program name), else the agent's name.
 - **States:**
   - working: a braille spinner, animated every 120 ms from the cached model (no tmux exec) while
-    a visible agent works (D38): its screen changed in the last 3 s, but not by the user typing
+    a visible agent works (D38): its screen changed in the last 3 s, while it showed its busy line
+    for the agents that have one (D55: `esc to interrupt` for Claude Code, Codex and Antigravity,
+    `ctrl+c interrupt` for Copilot, among the last 16 non-blank lines), but not by the user typing
     (only the input line, the last line among the bottom 12 that starts like a prompt: `>`,
     `❯`, `›`, `▌` after box edges, and what is below it changed), not by a resize of a quiet
     pane or its redraw at the next tick (a working pane's changes during a resize still count),
@@ -1136,10 +1142,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   - **Needs you:** a pill; the watcher sets `@imux_state = blocked` when an idle screen's last lines
     ask a question (Claude's "Do you want to …", a numbered "1. Yes" choice, Codex's "Would you
     like to run …", `(y/n)`, `[Y/n]`);
-  - **Done:** a green dot: the state went working → idle (`@imux_state_at`) after the user last
-    looked at the pane (`@imux_seen`, written by the sidebar for the active pane of the current
-    window of an attached session); looking at it makes it idle;
-  - idle: a dim ring; limited: a red pill with the reset time; exited: ✕.
+  - idle: a dim ring, also for an agent that finished while the user looked elsewhere (v0.47,
+    D56: its green "Done" dot is gone; `@imux_done_at` and `@imux_seen` are still kept); limited:
+    a red pill with the reset time; exited: ✕.
 - **Continue this chat in:** the other agents as buttons (two per row): click switches the target
   pane with the conversation. Not installed: dim (a click opens the install popup, D41, "Not
   installed"); limited: red.
@@ -1165,7 +1170,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Name:** the user's (`@imux_tab`, set with `prefix ,`), else the name of the tab's target agent
   (`@imux_tab_auto`, kept by the tab's sidebar), else the window name. `#` is escaped.
 - **State:** the most urgent of the tab's panes as a coloured glyph (`@imux_tab_state`, kept by
-  the sidebar): `!` needs you, `●` green done, `●` blue working, `◆` limited; nothing when idle.
+  the sidebar): `!` needs you, `●` blue working, `◆` limited; nothing when idle (v0.47, D56: no
+  green "done").
 - Keys: `prefix c` new tab (asks for the agent), `prefix ,` rename the tab, `prefix 1..9` /
   `prefix n` / `prefix p` select (tmux's).
 - The agent bar (`tmux.agent_bar`) stays an option on a second status line.
@@ -1656,10 +1662,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   itself is drawn from the model (the row it selected); the action's redraw is the one gather
   (two before). In the e2e tests with eight projects open a project is shown ~5 ms after the press
   (~354 ms before) and a view ~0-15 ms after it.
-- **Waits 350 ms (`OpenAfter`):** a click that opens a tmux menu where menus take no mouse (tmux
-  before 3.5: the button's release closes one, and so does a double click's second press), and one
-  that opens the command prompt (rename, commit message). On tmux 3.5+ menus open on the press
-  (`-M -O`); a right-click's menu follows the same rule. There a double click's second press,
+- **Waits 350 ms (`OpenAfter`):** a click that opens the command prompt (rename, commit message).
+  Menus open on the press: on tmux 3.5+ tmux's own (`-M -O`), before 3.5 i-mux's popup menu
+  (v0.47, D54; it ignores clicks in its first 400 ms, like i-mux's other popups); a right-click's
+  menu too. There a double click's second press,
   when it comes after the menu is drawn, lands outside it and closes it, as a second click outside
   a menu does (the e2e test presses twice at once).
 - **A double click's second press:** it acts again only where the first one did.
@@ -1741,6 +1747,42 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   opens the conversation's menu (`run-shell -b -d 0.15 imux __menu --session …`: after the popup,
   which a menu would replace).
 
+#### Menus on tmux before 3.5 (v0.47, D54)
+
+```
+┌──────────────────────────┐
+│ New agent with:        ✕ │
+│  Claude                c │
+│  Codex                 x │
+│  ──────────────────────  │
+│  Terminal              t │
+└──────────────────────────┘
+```
+
+- **Where:** every menu i-mux opens goes through `tmux.Client.ShowMenu` (the sidebar's, `w.Show`).
+  On tmux 3.5+ it spawns the display-menu (`-M -O`). Before 3.5 it writes the menu (title, items,
+  keys, commands, the menu's client and pane) to `~/.imux/menus/<id>.json` and spawns, in one tmux
+  client, `display-popup -c <client> -t <pane> -E -w W -h H -x X -y Y '<imux> __menu-popup <id>'`
+  then `source-file -q <id>.tmux` and `run-shell -b 'rm -f <id>.tmux'`: tmux runs the chosen
+  command once the popup has closed (a popup or a menu cannot open over another one), in a
+  client whose `TMUX_PANE` is the menu's pane. The popup has the menu's `-x`/`-y` and its size
+  (the longest row, the items and the title; tmux keeps it on the screen). On tmux 3.3 and 3.4
+  the chain starts with `display-message -d 1 -c <client> ''`: a status-line message freezes the
+  client's terminal, and those versions then draw none of a popup's output until it goes (one
+  shown with `-d 0`, such as "✨ Writing a commit message…", stays until a key). tmux 3.2 draws a
+  popup through the freeze, and needs it there.
+- **The popup:** the title (bold) and ✕ on the first row, then the items: the name, its key on
+  the right (dim), disabled items dim, separators as a line. The item under the pointer is
+  selected (blue); the arrow keys, Home and End move the selection (`k`/`j` too when no item has
+  them as keys); a click, Enter or an item's key chooses; Esc, `q`, Ctrl+C, Ctrl+G and a click on
+  ✕ close; the wheel scrolls a menu taller than the screen. Clicks in its first 400 ms are
+  dropped (a double click's second press). A click outside the popup does nothing (tmux keeps
+  popups open).
+- **The choice:** `imux __menu-popup` expands the command's formats as display-menu does
+  (`display-message -p -c <client> -t <pane>`, with `%` doubled for its strftime; without `-c` on
+  tmux 3.2, whose display-message takes `-c` as a flag and picks the client), writes it to
+  `<id>.tmux` and exits; nothing is written when the popup is closed.
+
 #### Live preview in the browser (v0.45, D47)
 
 - **Serving:** `imux web open <file>` serves the file's project (the pane's project folder when
@@ -1777,8 +1819,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Addresses:** `imux web open <url>` and **+** → **🌐 Web page…** open an address (a dev server:
   `localhost:5173`, or just `5173`) the same way, without serving.
 - **Where:** a click on an HTML file (`.html`, `.htm`, `.xhtml`) in the explorer opens a menu
-  at the click (v0.46, D51): **🌐 In its own window, live** (`w`), **In a browser tab, live**
-  (`t`), **Edit** (`e`), **View** (`v`); with `[web] enabled = false` the click edits at once.
+  at the click (v0.46, D51): **Open in browser** (`w`), **Open in a new tab** (`t`), **Edit**
+  (`e`), **View** (`v`) (v0.47: shorter, without the 🌐; both open the page live); with
+  `[web] enabled = false` the click edits at once.
   **Open Preview** (`w`) in the menu of HTML and SVG files opens it as `[web] open` says
   (window by default); **+** → **🌐 Web page…** opens an address.
 - **v0.44's terminal browser (D44) is gone:** `imux __watch run` deletes the
@@ -1966,12 +2009,12 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 
 - **Where:** Settings → **Versions and updates…** (key `c`), a popup running `imux versions
   --popup`; `imux versions` prints the same list. The row reads `⚠ Versions and updates… (tmux
-  3.2a is old)` when tmux is older than 3.5.
+  3.2a is old)` when tmux is older than 3.4 (v0.47: menus take the mouse on every tmux, D54).
 - **Rows:** i-mux (`imux update`; "the newest" when the last check says so), tmux, then the agents
   in config order. Each shows the version read now (agents: `--version`, which also refreshes
   state.json's bin cache, kept for a day otherwise) and what updates it.
-- **tmux:** below 3.2 i-mux does not run; below 3.4 the agent bar takes no clicks; below 3.5 menus
-  do not take the mouse. The command is the package manager's, picked like install.sh does
+- **tmux:** below 3.2 i-mux does not run; below 3.4 the agent bar takes no clicks. The command is
+  the package manager's, picked like install.sh does
   (Homebrew's tmux → `brew upgrade tmux`). apt is asked first (`apt-cache policy`, in the C
   locale): a candidate with the same upstream version (Ubuntu 22.04: 3.2a-4ubuntu0.2 → 0.3) adds
   nothing, so the row says that apt has no newer tmux and points to Homebrew. After an update the
