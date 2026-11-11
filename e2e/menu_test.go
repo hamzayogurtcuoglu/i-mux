@@ -3,7 +3,6 @@
 package e2e
 
 import (
-	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -25,17 +24,17 @@ func TestPaneMenu(t *testing.T) {
 	for _, want := range []string{"i-mux · Antigravity", "Switch to Codex (with context)", "Copilot (with context) (not installed)", "Sessions…", "Close pane"} {
 		c.waitScreen(h, want, 2*time.Second)
 	}
-	var menus int
-	for _, r := range h.records() {
-		if slices.Contains(r.Args, "display-menu") {
-			menus++
-			if !strings.Contains(strings.Join(r.Args, " "), "-c "+client+" -t "+second+" -T i-mux · Antigravity -x C -y C") {
-				t.Errorf("display-menu args %q", r.Args)
-			}
+	shows := h.menuShows()
+	for _, r := range shows {
+		a := strings.Join(r.Args, " ")
+		menu := strings.Contains(a, "-c "+client+" -t "+second+" -T i-mux · Antigravity -x C -y C")
+		popup := strings.Contains(a, "-c "+client+" -t "+second+" -E") && strings.Contains(a, "-x C -y C")
+		if !menu && !popup {
+			t.Errorf("menu args %q", r.Args)
 		}
 	}
-	if menus != 1 {
-		t.Fatalf("%d display-menu calls, want 1", menus)
+	if len(shows) != 1 {
+		t.Fatalf("%d menus shown, want 1", len(shows))
 	}
 
 	// Choosing "Close pane" with its mnemonic kills that pane only.

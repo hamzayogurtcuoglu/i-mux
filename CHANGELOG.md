@@ -6,6 +6,21 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-11-11
+
+### Fixed
+
+- **Menus take clicks on every tmux.** Before tmux 3.5 (Ubuntu 22.04 has 3.2a, Ubuntu 24.04 3.4) a
+  click on a menu closed it without choosing anything, so menus needed the keyboard. There i-mux now
+  draws its menus itself, in a small popup where the menu was: the item under the pointer lights
+  up; a click, Enter or the item's key chooses; Esc, `q` or ✕ closes it. tmux 3.5+ keeps its own
+  menus.
+
+### Changed
+
+- **tmux 3.4 is no longer "old"** in Versions and updates: with menus clickable everywhere, it has
+  every feature.
+
 ## [0.46.1] - 2026-11-11
 
 ### Fixed

@@ -61,10 +61,12 @@ func TestSettingsMenu(t *testing.T) {
 			t.Errorf("%s: %q", key, c)
 		}
 	}
-	// A tmux that lacks features says so on the row (tmux -V's reply).
+	// A tmux that lacks features says so on the row (tmux -V's reply); 3.4
+	// has them all (menus take the mouse on every tmux, D54).
 	for v, want := range map[string]string{
 		"tmux 3.2a": "⚠ Versions and updates… (tmux 3.2a is old)",
-		"tmux 3.4":  "⚠ Versions and updates… (tmux 3.4 is old)",
+		"tmux 3.3a": "⚠ Versions and updates… (tmux 3.3a is old)",
+		"tmux 3.4":  "Versions and updates…",
 		"tmux 3.5a": "Versions and updates…",
 	} {
 		f.replies[""] = v

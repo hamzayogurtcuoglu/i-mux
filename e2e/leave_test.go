@@ -45,6 +45,34 @@ func TestTabsOverTheTerminal(t *testing.T) {
 	over("the tab at the left edge, zoomed", func() int { return 3 })
 }
 
+// TestMenuClick (T60.1): before tmux 3.5 a menu is i-mux's popup (D54), and
+// a click on its item chooses it (tmux's own menu closed without choosing).
+func TestMenuClick(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	if tmuxVersion(t, h).AtLeast(3, 5) {
+		t.Skip("tmux's own menus take the mouse")
+	}
+	agentPane, _ := h.startWithSidebar()
+	h.run("claude", 1)
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	time.Sleep(500 * time.Millisecond)
+	mark := c.Mark()
+	c.Click(0, 140-4, 1) // ⏻ Exit
+	c.waitScreenAfter(h, mark, "Back to the terminal", 5*time.Second)
+	time.Sleep(600 * time.Millisecond) // past the popup's first 400 ms
+	// The popup: its border, the title row, then Back, a separator and Quit
+	// (6 rows). tmux centers it with its top at (rows-1)/2 + h/2 - h.
+	const rows, h0 = 40, 6
+	y := (rows-1)/2 + h0/2 - h0 + 1 + 2
+	mark = c.Mark()
+	c.Click(0, 70, y)
+	c.waitScreenAfter(h, mark, "detached", 5*time.Second)
+	if got := h.paneOpt(agentPane, "#{@imux_agent}|#{pane_dead}"); got != "claude|0" {
+		t.Fatalf("the agent after detaching: %q", got)
+	}
+}
+
 // TestExitButton (T56.1, T56.2): ⏻ Exit at the right of the tab bar opens
 // its menu; Back to the terminal detaches the client and the agents keep
 // running. Quit ends the server; `imux` started elsewhere then offers the

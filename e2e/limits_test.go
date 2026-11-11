@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
 )
 
 const fastLimits = "[limits]\npoll_interval = \"200ms\"\nidle_interval = \"500ms\"\n"
@@ -16,11 +17,14 @@ func limitLine(agent, delay, line string) string {
 	return "sleep " + delay + "; echo \"" + line + "\"\n"
 }
 
-// watcherMenus counts display-menu calls by the watcher titled "hit its limit".
+// watcherMenus counts the watcher's "hit its limit" menus: display-menu
+// titled so (tmux 3.5+), or i-mux's popup menu shown by the watcher (D54).
 func (h *H) watcherMenus() int {
+	_, pid := watch.Status()
 	n := 0
-	for _, r := range h.records() {
-		if strings.Contains(strings.Join(r.Args, " "), "hit its limit") && strings.Contains(strings.Join(r.Args, " "), "display-menu") {
+	for _, r := range h.menuShows() {
+		a := strings.Join(r.Args, " ")
+		if strings.Contains(a, "hit its limit") || r.Pid == pid && strings.Contains(a, "__menu-popup") {
 			n++
 		}
 	}
@@ -63,10 +67,12 @@ func TestLimitAsk(t *testing.T) {
 	c.waitScreen(h, "Claude hit its limit (resets ", 8*time.Second)
 	c.waitScreen(h, "Antigravity (with context)", 2*time.Second)
 	var found bool
-	for _, r := range h.records() {
+	for _, r := range h.menuShows() {
 		a := strings.Join(r.Args, " ")
-		// display-menu, with -M -O where tmux has them (3.5).
-		if strings.Contains(a, " display-menu ") && strings.Contains(a, "-c "+client+" -t "+pane+" -T Claude hit its limit") {
+		// display-menu, with -M -O where tmux has them (3.5); before, i-mux's
+		// popup menu (D54), whose title is on the screen above.
+		if strings.Contains(a, "-c "+client+" -t "+pane+" -T Claude hit its limit") ||
+			strings.Contains(a, "display-popup -c "+client+" -t "+pane+" -E") {
 			found = true
 		}
 	}

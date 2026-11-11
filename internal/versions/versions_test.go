@@ -87,10 +87,10 @@ func TestTmuxRow(t *testing.T) {
 			name: "as root, no sudo",
 			bins: map[string]string{"tmux": "/usr/bin/tmux", "apt-get": "/usr/bin/apt-get"},
 			outputs: map[string]string{
-				"/usr/bin/tmux -V": "tmux 3.4\n",
-				aptTmux:            "tmux:\n  Installed: 3.4-1\n  Candidate: 3.5a-1\n",
+				"/usr/bin/tmux -V": "tmux 3.3a\n",
+				aptTmux:            "tmux:\n  Installed: 3.3a-3\n  Candidate: 3.4-1\n",
 			},
-			root: true, status: Old, fix: "apt-get install -y --only-upgrade tmux", note: "3.5+: menus take the mouse",
+			root: true, status: Old, fix: "apt-get install -y --only-upgrade tmux", note: "3.4+: the agent bar takes clicks",
 		},
 		{
 			name:    "apt has none newer, Homebrew is there",
@@ -101,13 +101,19 @@ func TestTmuxRow(t *testing.T) {
 		{
 			name:    "Homebrew's tmux",
 			bins:    map[string]string{"tmux": "/opt/homebrew/bin/tmux", "brew": "/opt/homebrew/bin/brew"},
-			outputs: map[string]string{"/opt/homebrew/bin/tmux -V": "tmux 3.4\n"},
+			outputs: map[string]string{"/opt/homebrew/bin/tmux -V": "tmux 3.3a\n"},
 			status:  Old, fix: "brew upgrade tmux",
 		},
 		{
 			name:    "new enough",
 			bins:    map[string]string{"tmux": "/opt/homebrew/bin/tmux", "brew": "/opt/homebrew/bin/brew"},
 			outputs: map[string]string{"/opt/homebrew/bin/tmux -V": "tmux 3.6\n"},
+			status:  OK,
+		},
+		{
+			name:    "3.4: menus take the mouse there too (D54)",
+			bins:    map[string]string{"tmux": "/usr/bin/tmux", "apt-get": "/usr/bin/apt-get"},
+			outputs: map[string]string{"/usr/bin/tmux -V": "tmux 3.4\n", aptTmux: "tmux:\n  Installed: 3.4-1\n  Candidate: 3.5a-1\n"},
 			status:  OK,
 		},
 		{
@@ -185,7 +191,7 @@ func TestFormat(t *testing.T) {
 	i18n.SetLocale("en")
 	rows := []Row{
 		{Key: "u", Name: "i-mux", Version: "0.33.0", Note: "the newest"},
-		{Key: "t", Name: "tmux", Version: "3.2a", Status: Old, Note: "works; 3.5+: menus take the mouse\napt has no newer tmux here"},
+		{Key: "t", Name: "tmux", Version: "3.2a", Status: Old, Note: "works; 3.4+: the agent bar takes clicks\napt has no newer tmux here"},
 		{Key: "c", Name: "Claude Code", Version: "2.1.319", Show: "claude update"},
 		{Key: "x", Name: "Codex CLI", Status: Missing, Note: "not installed · install: npm i -g @openai/codex"},
 		{Key: "q", Name: "Odd", Status: Unknown, Show: "odd update"},
@@ -194,7 +200,7 @@ func TestFormat(t *testing.T) {
 	t.Logf("\n%s", got)
 	for _, want := range []string{
 		"  u  i-mux        0.33.0   ✓ the newest\n",
-		"  t  tmux         3.2a     ⚠ works; 3.5+: menus take the mouse\n                           apt has no newer tmux here\n",
+		"  t  tmux         3.2a     ⚠ works; 3.4+: the agent bar takes clicks\n                           apt has no newer tmux here\n",
 		"  c  Claude Code  2.1.319  update: claude update\n",
 		"  x  Codex CLI    –        ✗ not installed · install: npm i -g @openai/codex\n",
 		"  q  Odd          –        update: odd update\n",

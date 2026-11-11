@@ -1004,7 +1004,7 @@ keyboard; the HTML menu's labels are long and have a needless icon; the sidebar'
 yellow dots mean nothing to the user; the spinner should turn only while an agent really works
 (it turned while the user moved through a list in the Copilot CLI).
 
-- [ ] **T60.1 Menus in a popup before tmux 3.5** · M
+- [x] **T60.1 Menus in a popup before tmux 3.5** · M
   - AC: D54, §9.3 "Menus on tmux before 3.5": every menu goes through `ShowMenu`; before 3.5 a
     popup the size of the menu at its place, with the title, items, keys and separators; hover
     selects, a click, Enter or a key chooses, Esc/q/✕ close; the command runs after the popup

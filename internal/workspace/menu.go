@@ -63,7 +63,7 @@ func (m *Menu) Cmd(client, pane string) tmux.Cmd {
 // the menu closes, so that client is spawned and not waited for.
 func (w *WS) Show(ctx context.Context, m *Menu, client, pane string) error {
 	c := m.Cmd(client, pane)
-	return w.T.Spawn(append(w.T.Menu(ctx), c[1:]...))
+	return w.T.ShowMenu(ctx, append(w.T.Menu(ctx), c[1:]...))
 }
 
 // ui returns the tmux command that runs imux silently with args.

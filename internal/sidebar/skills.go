@@ -258,5 +258,5 @@ func (s *sidebar) skillMenu(ctx context.Context, client string, a Action, x, y i
 	} else {
 		c = append(c, "-T", tmux.EscapeFormat(title), "-x", "C", "-y", "C", "--")
 	}
-	_ = s.t.Spawn(append(c, items...))
+	_ = s.t.ShowMenu(ctx, append(c, items...))
 }

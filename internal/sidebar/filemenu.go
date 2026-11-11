@@ -168,7 +168,7 @@ func (s *sidebar) fileMenu(ctx context.Context, client string, a Action, x, y in
 	}
 	px, py := MenuAt(x, y)
 	c = append(append(c, "-T", tmux.EscapeFormat(title), "-x", px, "-y", py, "--"), items...)
-	_ = s.t.Spawn(c)
+	_ = s.t.ShowMenu(ctx, c)
 }
 
 // HTMLMenuItems is the menu a click on an HTML file opens (D51), as
@@ -209,7 +209,7 @@ func (s *sidebar) htmlMenu(ctx context.Context, client string, a Action, x, y in
 	}
 	px, py := MenuAt(x, y)
 	c = append(append(c, "-T", tmux.EscapeFormat(filepath.Base(abs)), "-x", px, "-y", py, "--"), HTMLMenuItems(s.o.Self, client, s.model.Target)...)
-	_ = s.t.Spawn(c)
+	_ = s.t.ShowMenu(ctx, c)
 }
 
 // MenuAt is display-menu's -x and -y for a menu whose top left corner is

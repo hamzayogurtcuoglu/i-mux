@@ -464,6 +464,20 @@ func (h *H) readFile(p string) string {
 	return string(b)
 }
 
+// menuShows are the recorded tmux calls that showed a menu: display-menu
+// (tmux 3.5+), or the display-popup of i-mux's popup menu before (D54),
+// whose title and items are in its file, not in the arguments.
+func (h *H) menuShows() []tmux.Recorded {
+	var out []tmux.Recorded
+	for _, r := range h.records() {
+		a := " " + strings.Join(r.Args, " ") + " "
+		if strings.Contains(a, " display-menu ") || strings.Contains(a, " display-popup ") && strings.Contains(a, " __menu-popup ") {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
 // uiRecords counts tmux invocations made by processes other than the
 // watcher (whose ticks also go through the recorder).
 func (h *H) uiRecords() int {

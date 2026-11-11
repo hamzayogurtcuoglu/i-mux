@@ -208,9 +208,16 @@ type Spawner interface {
 	Spawn(bin string, args []string) error
 }
 
+// EnvSpawner is a Spawner that can add environment variables (SpawnEnv).
+type EnvSpawner interface {
+	SpawnEnv(bin string, args, env []string) error
+}
+
 type execSpawner struct{}
 
-func (execSpawner) Spawn(bin string, args []string) error {
+func (s execSpawner) Spawn(bin string, args []string) error { return s.SpawnEnv(bin, args, nil) }
+
+func (execSpawner) SpawnEnv(bin string, args, env []string) error {
 	cmd := exec.Command(bin, args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil // /dev/null: hold no caller pipes
 	// A client started from inside a pane (TMUX set) does not show
@@ -220,6 +227,7 @@ func (execSpawner) Spawn(bin string, args []string) error {
 			cmd.Env = append(cmd.Env, kv)
 		}
 	}
+	cmd.Env = append(cmd.Env, env...)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -229,7 +237,12 @@ func (execSpawner) Spawn(bin string, args []string) error {
 // Spawn runs cmds in a tmux client that is not waited for. display-menu
 // blocks its client until the menu closes, so menus are opened this way and
 // imux exits at once.
-func (c *Client) Spawn(cmds ...Cmd) error {
+func (c *Client) Spawn(cmds ...Cmd) error { return c.SpawnEnv(nil, cmds...) }
+
+// SpawnEnv is Spawn with env ("K=V") added to the tmux client's environment
+// (TMUX_PANE: the pane its commands start from). A Spawner that cannot add
+// it gets the commands alone.
+func (c *Client) SpawnEnv(env []string, cmds ...Cmd) error {
 	args := c.Argv(cmds...)
 	c.record(args)
 	sp := c.Spawner
@@ -240,7 +253,13 @@ func (c *Client) Spawn(cmds ...Cmd) error {
 			sp = execSpawner{}
 		}
 	}
-	if err := sp.Spawn(c.Bin, args); err != nil {
+	var err error
+	if es, ok := sp.(EnvSpawner); ok && len(env) > 0 {
+		err = es.SpawnEnv(c.Bin, args, env)
+	} else {
+		err = sp.Spawn(c.Bin, args)
+	}
+	if err != nil {
 		if notFound(err) {
 			return &Error{Args: args, Kind: ErrNotFound, Err: err}
 		}
@@ -553,8 +572,39 @@ func (c *Client) Menu(ctx context.Context) Cmd {
 	return Cmd{"display-menu"}
 }
 
-// MenuTakesMouse reports whether Menu's menus answer the mouse (and ignore
-// a button's release).
+// msgClient caches whether this process's tmux takes display-message -c.
+var msgClient struct {
+	sync.Once
+	ok bool
+}
+
+// MessageTakesClient reports whether display-message -c names a client
+// (tmux 3.3+). In tmux 3.2 -c is a flag: "-c /dev/pts/1 text" is a usage
+// error, and tmux picks the client.
+func (c *Client) MessageTakesClient(ctx context.Context) bool {
+	msgClient.Do(func() {
+		v, err := c.BinVersion(ctx)
+		msgClient.ok = err != nil || v.AtLeast(3, 3)
+	})
+	return msgClient.ok
+}
+
+// MenuPopup shows a display-menu command (as Menu and its arguments make
+// it) in a popup that takes the mouse, for tmux whose menus do not (D54).
+// imux sets it; nil leaves menus to tmux.
+var MenuPopup func(ctx context.Context, c *Client, cmd Cmd) error
+
+// ShowMenu shows a display-menu command built on Menu, without waiting for
+// it: tmux's own menu where it takes the mouse (3.5+), else MenuPopup's.
+func (c *Client) ShowMenu(ctx context.Context, cmd Cmd) error {
+	if len(c.Menu(ctx)) == 1 && MenuPopup != nil {
+		return MenuPopup(ctx, c, cmd)
+	}
+	return c.Spawn(cmd)
+}
+
+// MenuTakesMouse reports whether ShowMenu's menus answer the mouse and open
+// on the press (a button's release does not close them).
 func (c *Client) MenuTakesMouse(ctx context.Context) bool {
-	return len(c.Menu(ctx)) > 1
+	return len(c.Menu(ctx)) > 1 || MenuPopup != nil
 }

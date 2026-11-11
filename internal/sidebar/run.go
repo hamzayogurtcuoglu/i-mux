@@ -863,7 +863,7 @@ func (s *sidebar) menu(ctx context.Context, client, title string, items ...strin
 		c = append(c, "-c", client)
 	}
 	c = append(append(c, "-T", tmux.EscapeFormat(title), "-x", "C", "-y", "C", "--"), items...)
-	_ = s.t.Spawn(c)
+	_ = s.t.ShowMenu(ctx, c)
 }
 
 // confirmDiscard asks before throwing changes away (they cannot be had back).
