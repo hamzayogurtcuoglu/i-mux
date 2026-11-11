@@ -997,6 +997,26 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M55: Live preview in the browser (added 2026-11-11)
+
+User request: the terminal browser of M52 draws pages badly ("beyond terrible"); something else.
+Replaces M52.
+
+- [ ] **T55.1 The live server** · M
+  - AC: D47, §9.3 "Live preview in the browser": `imux __web-serve` per folder on 127.0.0.1, a
+    port from the folder's path, its record in `~/.imux/web`; Host checked, no dot paths, nothing
+    outside the folder, folder lists, no caching; `live.js` injected; pages reload when a served
+    file changes; idle exit; `imux web [open|stop]`; unit tests (serving, injection, Host, dot
+    paths, links out, listing, reload on change, open with and without the token, the port).
+- [ ] **T55.2 Opening the browser** · M
+  - AC: WSL: an app window of the default browser when Chromium-based, else Edge; a tab with
+    `explorer.exe`; VS Code's helper; macOS; Linux; no browser: the URL in the message and the
+    clipboard; an open page shows the next one and is raised; Settings cycles window / tab /
+    editor; the terminal browser removed, its folder deleted; unit tests (the argv per system,
+    the settings row); e2e (a fake browser): a click on index.html opens its URL, the page
+    reloads when the file changes, a click on another page shows it in the open page without
+    a new browser.
+
 ## M54: The Agents icon counts the working agents (added 2026-11-11)
 
 User request: the number of working agents on the rail's Agents icon too.
@@ -1022,7 +1042,7 @@ have a scroll bar too.
 ## M52: Web pages in a pane (added 2026-11-10)
 
 User request: see web pages (an HTML file, for example) in i-mux; on by default but downloaded only
-when wanted, installed and turned on or off from Settings.
+when wanted, installed and turned on or off from Settings. Replaced by M55 (v0.45).
 
 - [x] **T52.1 The browser and `imux web`** · M
   - AC: D44, §9.3 "Web preview": `imux web [install|remove|open]`; Carbonyl 0.0.3 downloaded, its
