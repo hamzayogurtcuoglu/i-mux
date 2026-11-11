@@ -141,3 +141,37 @@ func TestTurkish(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+// TestPlatformVariants: a "key@os" message replaces key on that system
+// only, needs the key itself, and takes the same fmt verbs.
+func TestPlatformVariants(t *testing.T) {
+	verbs := regexp.MustCompile(`%[-+# 0]*[0-9]*(?:\.[0-9]+)?[a-zA-Z]`)
+	for _, k := range Keys() {
+		base, _, ok := strings.Cut(k, "@")
+		if !ok {
+			continue
+		}
+		if !Has(base) {
+			t.Errorf("%s has no %s", k, base)
+			continue
+		}
+		if a, b := verbs.FindAllString(en[k], -1), verbs.FindAllString(en[base], -1); strings.Join(a, " ") != strings.Join(b, " ") {
+			t.Errorf("%s: verbs %v, %s has %v", k, a, base, b)
+		}
+	}
+	old := OS
+	defer func() { OS = old; SetLocale("en") }()
+	SetLocale("en")
+	OS = "linux"
+	if got := T("doctor.tmux_ok", "3.6", "/usr/bin/tmux"); got != "tmux 3.6 (/usr/bin/tmux)" {
+		t.Errorf("linux: %q", got)
+	}
+	OS = "windows"
+	if got := T("doctor.tmux_ok", "3.4.0", `C:\psmux.exe`); got != `psmux 3.4.0 (C:\psmux.exe)` {
+		t.Errorf("windows: %q", got)
+	}
+	SetLocale("tr")
+	if got := T("tmux.missing"); !strings.Contains(got, "psmux kurulu değil") {
+		t.Errorf("windows tr: %q", got)
+	}
+}

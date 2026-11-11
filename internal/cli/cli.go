@@ -15,6 +15,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/popmenu"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/update"
 )
 
 // Exit codes.
@@ -69,6 +70,7 @@ func Main(args []string) int {
 	if self, err := workspace.Self(); err == nil {
 		tmux.MenuPopup = popmenu.Show(self)
 	}
+	update.RemoveOld() // Windows: the imux.exe an update renamed aside
 	return Run(&Env{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}, args[1:])
 }
 

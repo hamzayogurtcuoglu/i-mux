@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -63,12 +64,21 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	// A tmux that lacks features says so on the row (tmux -V's reply); 3.4
 	// has them all (menus take the mouse on every tmux, D54).
-	for v, want := range map[string]string{
+	olds := map[string]string{
 		"tmux 3.2a": "⚠ Versions and updates… (tmux 3.2a is old)",
 		"tmux 3.3a": "⚠ Versions and updates… (tmux 3.3a is old)",
 		"tmux 3.4":  "Versions and updates…",
 		"tmux 3.5a": "Versions and updates…",
-	} {
+	}
+	if runtime.GOOS == "windows" {
+		// psmux draws its menus itself: it is old only below tmux.MinVersion.
+		olds = map[string]string{
+			"tmux 3.5a": "Versions and updates…",
+			"tmux 3.2a": "Versions and updates…",
+			"tmux 3.4":  "Versions and updates…",
+		}
+	}
+	for v, want := range olds {
 		f.replies[""] = v
 		for _, it := range w.SettingsMenu("%1", "c1").Items {
 			if it.Key == "c" && it.Name != want {

@@ -136,7 +136,7 @@ os=$(uname -s)
 case "$os" in
 Darwin) os=darwin ;;
 Linux) os=linux ;;
-MINGW* | MSYS* | CYGWIN*) die "Windows is supported through WSL: open a WSL terminal and run this again" ;;
+MINGW* | MSYS* | CYGWIN*) die "on Windows run install.ps1 in PowerShell (native, on psmux): irm https://raw.githubusercontent.com/${REPO}/main/install.ps1 | iex; or open a WSL terminal and run this again" ;;
 *) die "unsupported OS: $os (imux runs on macOS and Linux; on Windows use WSL)" ;;
 esac
 arch=$(uname -m)

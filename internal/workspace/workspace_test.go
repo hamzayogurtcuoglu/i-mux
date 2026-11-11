@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -59,8 +60,8 @@ func testWS(t *testing.T) (*WS, *fakeTmux, *testutil.Homes) {
 	// covers it.
 	w.Cfg.Limits.ClaudeStatusline = false
 	w.SetBins(map[session.AgentID]agent.Resolved{
-		"claude":      {Agent: "claude", Installed: true, Path: "/opt/bin/claude", PathEnv: "/opt/bin:/usr/bin"},
-		"antigravity": {Agent: "antigravity", Installed: true, Path: "/opt/bin/agy", PathEnv: "/opt/bin:/usr/bin"},
+		"claude":      {Agent: "claude", Installed: true, Path: optClaude, PathEnv: "/opt/bin:/usr/bin"},
+		"antigravity": {Agent: "antigravity", Installed: true, Path: optAgy, PathEnv: "/opt/bin:/usr/bin"},
 		"codex":       {Agent: "codex"},
 	})
 	return w, f, h
@@ -124,7 +125,7 @@ func TestSpecNewResumeAndMissing(t *testing.T) {
 	if len(s.Args) != 2 || s.Args[0] != "--session-id" || s.Args[1] != te.SessionID || te.SessionID == "" {
 		t.Fatalf("claude new: %q %+v", s.Args, te)
 	}
-	if s.Bin != "/opt/bin/claude" || s.Env["PATH"] != "/opt/bin:/usr/bin" || s.Dir != h.Project {
+	if s.Bin != optClaude || s.Env["PATH"] != "/opt/bin:/usr/bin" || s.Dir != h.Project {
 		t.Fatalf("spec %+v", s)
 	}
 	if te.Start != testutil.FrozenTime.UnixMilli() || te.Resumed {
@@ -136,7 +137,7 @@ func TestSpecNewResumeAndMissing(t *testing.T) {
 	}
 	// With a handoff file the agent may read its directory (deliver = file).
 	s, te, _ = w.Spec(Launch{Agent: "antigravity", CWD: h.Project, Prompt: "hand\noff", Handoff: "/h/handoffs/x.md"})
-	if !reflect.DeepEqual(s.Args, []string{"--add-dir=/h/handoffs", "-i", "hand\noff"}) || te.SessionID != "" || te.Handoff != "/h/handoffs/x.md" {
+	if !reflect.DeepEqual(s.Args, []string{"--add-dir=" + filepath.FromSlash("/h/handoffs"), "-i", "hand\noff"}) || te.SessionID != "" || te.Handoff != "/h/handoffs/x.md" {
 		t.Fatalf("antigravity: %q %+v", s.Args, te)
 	}
 	w.Cfg.Handoff.Deliver = "inline"
@@ -233,7 +234,8 @@ func TestStartBatchesOptions(t *testing.T) {
 		}
 	}
 	fi, err := os.Stat(spec)
-	if err != nil || fi.Mode().Perm() != 0o600 || filepath.Dir(spec) != filepath.Join(h.Imux, "launch") {
+	// (Windows keeps no Unix permission bits: the profile is private.)
+	if err != nil || runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 || filepath.Dir(spec) != filepath.Join(h.Imux, "launch") {
 		t.Fatalf("spec %s: %v %v", spec, fi, err)
 	}
 	// An existing session is found, not recreated.
@@ -296,7 +298,12 @@ func TestClaudeStatuslineSettings(t *testing.T) {
 		t.Fatalf("claude argv %q %v", s.Args, err)
 	}
 	b, err := os.ReadFile(strings.TrimPrefix(s.Args[0], "--settings="))
-	if err != nil || string(b) != `{"statusLine":{"command":"/opt/imux/bin/imux __statusline claude","padding":0,"type":"command"}}` {
+	want := `{"statusLine":{"command":"/opt/imux/bin/imux __statusline claude","padding":0,"type":"command"}}`
+	if runtime.GOOS == "windows" {
+		// Claude Code runs it with Git Bash there: bash's double quotes.
+		want = `{"statusLine":{"command":"\"/opt/imux/bin/imux\" __statusline claude","padding":0,"type":"command"}}`
+	}
+	if err != nil || string(b) != want {
 		t.Fatalf("settings %s %v", b, err)
 	}
 	if s, _, _ := w.Spec(Launch{Agent: "antigravity", CWD: h.Project}); len(s.Args) != 0 {

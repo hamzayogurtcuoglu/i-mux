@@ -71,7 +71,7 @@ func TestDiscoverExcludesClaimedAndHonorsIDs(t *testing.T) {
 	// A pre-assigned id wins over time-based discovery.
 	id := "eeeeeeee-0000-4000-8000-000000000005"
 	cp := filepath.Join(h.Claude, "projects", claude.EncodeCWD(h.Project), id+".jsonl")
-	testutil.WriteFile(t, cp, []byte(`{"type":"user","sessionId":"`+id+`","cwd":"`+h.Project+`","timestamp":"2026-11-05T14:00:00Z","message":{"role":"user","content":"x"}}`+"\n"))
+	testutil.WriteFile(t, cp, []byte(`{"type":"user","sessionId":"`+id+`","cwd":"`+jsonPath(h.Project)+`","timestamp":"2026-11-05T14:00:00Z","message":{"role":"user","content":"x"}}`+"\n"))
 	testutil.Touch(t, cp, t0.Add(-24*time.Hour)) // even when older than the run
 	pc := &Pane{ID: "%4", Agent: "claude", CWD: h.Project, Trail: Trail{{Agent: "claude", Start: t0.UnixMilli(), SessionID: id}}}
 	if r, err := w.Discover(ctx, f, pc, []*Pane{pc}); err != nil || r.Path != cp || r.ID != id {

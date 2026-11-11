@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -71,7 +72,12 @@ func runUpdate(e *Env, args []string) error {
 		return nil
 	}
 	fmt.Fprintln(e.Stdout, i18n.T("update.updating", cur, latest)+"\n")
-	argv := update.InstallCmd(latest, dir)
+	argv, cleanup, err := update.Installer(context.Background(), latest, dir)
+	if err != nil {
+		fmt.Fprintln(e.Stdout, i18n.T("update.failed", err.Error()))
+		return err
+	}
+	defer cleanup()
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, e.Stdout, e.Stderr
 	if err := cmd.Run(); err != nil {
@@ -79,6 +85,9 @@ func runUpdate(e *Env, args []string) error {
 		return err
 	}
 	fmt.Fprintln(e.Stdout, "\n"+i18n.T("update.done", latest))
+	if runtime.GOOS == "windows" {
+		fmt.Fprintln(e.Stdout, i18n.T("update.windows_running"))
+	}
 	sidebar.RefreshAll(context.Background(), tmux.New(paths.TmuxConf()))
 	return nil
 }

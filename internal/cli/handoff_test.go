@@ -17,7 +17,7 @@ import (
 func writeClaude(t *testing.T, h *testutil.Homes, id, text string, mtime time.Time) string {
 	t.Helper()
 	p := filepath.Join(h.Claude, "projects", claude.EncodeCWD(h.Project), id+".jsonl")
-	lines := `{"type":"user","sessionId":"` + id + `","cwd":"` + h.Project + `","timestamp":"2026-11-05T10:00:00Z","uuid":"a","message":{"role":"user","content":"` + text + `"}}
+	lines := `{"type":"user","sessionId":"` + id + `","cwd":"` + jsonPath(h.Project) + `","timestamp":"2026-11-05T10:00:00Z","uuid":"a","message":{"role":"user","content":"` + text + `"}}
 {"type":"assistant","sessionId":"` + id + `","timestamp":"2026-11-05T10:00:01Z","uuid":"b","message":{"id":"m1","role":"assistant","model":"claude-opus-4-1","content":[{"type":"text","text":"On it."}]}}
 `
 	testutil.WriteFile(t, p, []byte(lines))
@@ -29,7 +29,7 @@ func writeCodex(t *testing.T, h *testutil.Homes, text string, mtime time.Time) s
 	t.Helper()
 	id := "cccccccc-1111-4222-8333-444444444444"
 	p := filepath.Join(h.Codex, "sessions", "2026", "11", "05", "rollout-2026-11-05T09-00-00-"+id+".jsonl")
-	lines := `{"timestamp":"2026-11-05T09:00:00Z","type":"session_meta","payload":{"id":"` + id + `","cwd":"` + h.Project + `"}}
+	lines := `{"timestamp":"2026-11-05T09:00:00Z","type":"session_meta","payload":{"id":"` + id + `","cwd":"` + jsonPath(h.Project) + `"}}
 {"timestamp":"2026-11-05T09:00:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"` + text + `"}]}}
 `
 	testutil.WriteFile(t, p, []byte(lines))
@@ -71,10 +71,8 @@ func TestHandoffExecsTarget(t *testing.T) {
 	h := testutil.Isolate(t)
 	inProject(t, h)
 	writeClaude(t, h, "11111111-0000-4000-8000-000000000001", "fix the bug", testutil.FrozenTime)
-	fake := filepath.Join(h.Home, "fakebin", "agy")
-	testutil.WriteFile(t, fake, []byte("#!/bin/sh\nexit 0\n"))
-	_ = os.Chmod(fake, 0o755)
-	t.Setenv("PATH", filepath.Dir(fake)+":/usr/bin:/bin")
+	fake := testutil.Script(t, filepath.Join(h.Home, "fakebin", "agy"), "exit 0", "exit", "0")
+	t.Setenv("PATH", filepath.Dir(fake)+string(os.PathListSeparator)+"/usr/bin:/bin")
 	var got *launch.Spec
 	launchExec = func(s *launch.Spec) error { got = s; return nil }
 	defer func() { launchExec = launch.Exec }()
@@ -96,7 +94,7 @@ func TestHandoffExecsTarget(t *testing.T) {
 		t.Fatalf("handoff files %v", ents)
 	}
 	fi, _ := ents[0].Info()
-	if fi.Mode().Perm() != 0o600 {
+	if unixModes && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", fi.Mode())
 	}
 	if !strings.Contains(errOut, "switching sends excerpts") {

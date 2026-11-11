@@ -2,6 +2,7 @@ package versions
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -12,12 +13,19 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 )
 
+// TestMain makes the messages macOS's and Linux's, whatever runs the tests
+// (the Windows rows set their own).
+func TestMain(m *testing.M) {
+	i18n.OS = "linux"
+	os.Exit(m.Run())
+}
+
 // fakeEnv is a system with the given binaries (name → path), command
 // outputs (argv joined by spaces → stdout) and installed agents (id →
 // version).
 func fakeEnv(bins map[string]string, outputs map[string]string, agents map[session.AgentID]string) Env {
 	return Env{
-		Cfg: config.Default(), Self: "/home/test/.local/bin/imux", Current: "v0.33.0",
+		Cfg: config.Default(), Self: "/home/test/.local/bin/imux", Current: "v0.33.0", OS: "linux",
 		LookPath: func(name string) (string, error) {
 			if p, ok := bins[name]; ok {
 				return p, nil
@@ -164,7 +172,7 @@ func TestAgentAndImuxRows(t *testing.T) {
 	if r := row(t, rows, "Claude Code"); r.Show != "claude update" || r.Version != "2.1.319" || r.Key != "c" {
 		t.Errorf("claude %+v", r)
 	}
-	if r := row(t, rows, "Antigravity CLI"); r.Status != Missing || r.Fix != nil || !strings.Contains(r.Note, "antigravity.google/cli/install.sh") {
+	if r := row(t, rows, "Antigravity CLI"); r.Status != Missing || r.Fix != nil || !strings.Contains(r.Note, agent.MustGet(session.Antigravity).InstallHint) {
 		t.Errorf("missing agent %+v", r)
 	}
 	// Codex from npm.
