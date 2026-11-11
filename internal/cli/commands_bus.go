@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"text/tabwriter"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/bus"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 func init() {
@@ -54,7 +54,7 @@ func runPanes(e *Env, args []string) error {
 	}
 	tw := tabwriter.NewWriter(e.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, i18n.T("panes.header"))
-	self := os.Getenv("TMUX_PANE")
+	self := tmux.EnvPane()
 	for _, p := range ps {
 		id := p.Pane
 		if id == self {

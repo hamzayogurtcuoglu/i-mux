@@ -3,6 +3,7 @@ package paths
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -19,6 +20,11 @@ func TestHomeOverride(t *testing.T) {
 	}
 }
 
+// hasModes reports whether the OS keeps Unix permission bits. Windows does
+// not (Go reports 0777/0666 there, and the user's profile ACL keeps imux's
+// files private), so only the files' existence is checked on it.
+var hasModes = runtime.GOOS != "windows"
+
 func TestModes(t *testing.T) {
 	SetUmask()
 	dir := t.TempDir()
@@ -31,7 +37,7 @@ func TestModes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if fi.Mode().Perm() != DirMode {
+		if fi.Mode().Perm() != DirMode && hasModes {
 			t.Errorf("%s mode %v, want %v", d, fi.Mode().Perm(), DirMode)
 		}
 	}
@@ -42,7 +48,7 @@ func TestModes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode().Perm() != FileMode {
+	if fi.Mode().Perm() != FileMode && hasModes {
 		t.Errorf("file mode %v, want %v", fi.Mode().Perm(), FileMode)
 	}
 	// A plain create under the umask is private too.
@@ -51,7 +57,7 @@ func TestModes(t *testing.T) {
 		t.Fatal(err)
 	}
 	fi, _ = os.Stat(p)
-	if fi.Mode().Perm() != 0o600 {
+	if fi.Mode().Perm() != 0o600 && hasModes {
 		t.Errorf("umask not applied: %v", fi.Mode().Perm())
 	}
 }
@@ -68,17 +74,18 @@ func TestEnsureTightensPermissiveDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	fi, _ := os.Stat(dir)
-	if fi.Mode().Perm() != DirMode {
+	if !fi.IsDir() || fi.Mode().Perm() != DirMode && hasModes {
 		t.Fatalf("mode %v", fi.Mode().Perm())
 	}
 }
 
 func TestShorten(t *testing.T) {
-	t.Setenv("HOME", "/home/test")
-	if got := Shorten("/home/test/proj"); got != "~/proj" {
+	home := filepath.FromSlash("/home/test")
+	t.Setenv("HOME", home)
+	if got := Shorten(filepath.Join(home, "proj")); got != "~"+string(filepath.Separator)+"proj" {
 		t.Fatalf("got %q", got)
 	}
-	if got := Shorten("/home/testing"); got != "/home/testing" {
+	if got := Shorten(home + "ing"); got != home+"ing" {
 		t.Fatalf("got %q", got)
 	}
 }

@@ -6,8 +6,9 @@ package selfexec
 import (
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Stamp identifies the executable file a process started from.
@@ -40,7 +41,7 @@ func (s Stamp) Changed() bool {
 		return false
 	}
 	fi, err := os.Stat(s.Path)
-	if err != nil || !fi.Mode().IsRegular() || fi.Size() == 0 || fi.Mode().Perm()&0o111 == 0 {
+	if err != nil || !fi.Mode().IsRegular() || fi.Size() == 0 || !sysx.Executable(fi) {
 		return false
 	}
 	if time.Since(fi.ModTime()) < time.Second {
@@ -52,5 +53,5 @@ func (s Stamp) Changed() bool {
 // Exec replaces the process with the executable at the path, with args
 // (os.Args) and the same environment. It returns only on failure.
 func (s Stamp) Exec(args []string) error {
-	return syscall.Exec(s.Path, args, os.Environ())
+	return sysx.Exec(s.Path, args, os.Environ())
 }

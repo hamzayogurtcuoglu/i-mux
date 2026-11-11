@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -57,7 +56,7 @@ func init() {
 
 // runSidebar is the sidebar process in its pane (§9.3 "Sidebar").
 func runSidebar(e *Env, args []string) error {
-	pane := os.Getenv("TMUX_PANE")
+	pane := tmux.EnvPane()
 	if pane == "" {
 		return &UsageError{Msg: i18n.T("cli.no_pane")}
 	}
@@ -78,7 +77,7 @@ func runSidebar(e *Env, args []string) error {
 // runEmpty is the "No agents" pane of a project whose last agent closed
 // (§9.3 "A project without agents").
 func runEmpty(e *Env, args []string) error {
-	pane := os.Getenv("TMUX_PANE")
+	pane := tmux.EnvPane()
 	if pane == "" {
 		return &UsageError{Msg: i18n.T("cli.no_pane")}
 	}
@@ -386,7 +385,7 @@ func runClose(e *Env, args []string) error {
 	if s == "" {
 		pane := *paneF
 		if pane == "" {
-			pane = os.Getenv("TMUX_PANE")
+			pane = tmux.EnvPane()
 		}
 		if pane != "" {
 			out, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", pane, "#{session_name}"})
@@ -487,7 +486,7 @@ func runStatusline(e *Env, args []string) error {
 	if cmd := usage.UserStatusLine(paths.UserHome(), dir); cmd != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), StatuslineTimeout)
 		defer cancel()
-		c := exec.CommandContext(ctx, "sh", "-c", cmd)
+		c := userStatusline(ctx, cmd)
 		c.Stdin, c.Stdout, c.Stderr = bytes.NewReader(in), e.Stdout, io.Discard
 		if dir != "" {
 			c.Dir = dir

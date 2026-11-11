@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -402,10 +403,10 @@ func TestExplorer(t *testing.T) {
 			t.Errorf("untracked mark %q", p)
 		}
 	}
-	if a := find("auth"); a != (Action{Kind: ActToggleDir, Path: "src/auth"}) {
+	if a := find("auth"); a != (Action{Kind: ActToggleDir, Path: filepath.FromSlash("src/auth")}) {
 		t.Errorf("folder %+v", a)
 	}
-	if a := find("main.ts"); a != (Action{Kind: ActOpenFile, Path: "src/main.ts"}) {
+	if a := find("main.ts"); a != (Action{Kind: ActOpenFile, Path: filepath.FromSlash("src/main.ts")}) {
 		t.Errorf("file %+v", a)
 	}
 	if a := find("🔍"); a.Kind != ActView && a.Kind != ActSearch {
@@ -645,6 +646,9 @@ func TestSwitchMarksTheClient(t *testing.T) {
 // realTmux starts a private tmux server for the test.
 func realTmux(t *testing.T) *tmux.Client {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("real tmux tests: Windows runs psmux, covered by the tmux package's psmux tests")
+	}
 	if _, err := exec.LookPath("tmux"); err != nil {
 		t.Skip("tmux not installed")
 	}
@@ -1268,7 +1272,7 @@ func TestSkillsViewAndMenu(t *testing.T) {
 		for x := railW; x < 41; x++ {
 			switch a := l.ActionAt(x); a.Kind {
 			case ActOpenFile:
-				if a.Path == ".agents/skills/release-notes/SKILL.md" {
+				if a.Path == filepath.FromSlash(".agents/skills/release-notes/SKILL.md") {
 					sawOpen = true
 				}
 			case ActSkillMenu:

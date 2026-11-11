@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -199,7 +200,8 @@ func TestShow(t *testing.T) {
 	if err := json.Unmarshal(b, &m); err != nil || m.Pane != "%3" || len(m.Items) != 6 {
 		t.Fatalf("written menu %s: %v", b, err)
 	}
-	if fi, _ := os.Stat(files[0]); fi.Mode().Perm() != 0o600 || !ValidID(id) {
+	// Windows has no Unix permission bits; the file is in the user's profile.
+	if fi, _ := os.Stat(files[0]); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 || !ValidID(id) {
 		t.Fatalf("file %s", fi.Mode())
 	}
 	w, h := Size(&m)
@@ -207,9 +209,9 @@ func TestShow(t *testing.T) {
 	want := []string{
 		"-L", "s", "-u",
 		"display-message", "-d", "1", "-c", "/dev/pts/3", "", ";",
-		"display-popup", "-c", "/dev/pts/3", "-t", "%3", "-E", "-w", itoa(w), "-h", itoa(h), "-x", "C", "-y", "C", "/opt/imux __menu-popup " + id, ";",
+		"display-popup", "-c", "/dev/pts/3", "-t", "%3", "-E", "-w", itoa(w), "-h", itoa(h), "-x", "C", "-y", "C", tmux.ShJoin("/opt/imux", "__menu-popup", id), ";",
 		"source-file", "-q", out, ";",
-		"run-shell", "-b", "rm -f " + out,
+		"run-shell", "-b", tmux.EscapeFormat("rm -f " + tmux.ShQuote(out)),
 	}
 	if !reflect.DeepEqual(sp.args, want) || !reflect.DeepEqual(sp.env, []string{"TMUX_PANE=%3"}) {
 		t.Fatalf("spawned %q env %q\nwant %q", sp.args, sp.env, want)

@@ -14,12 +14,16 @@ GO        ?= go
 
 export CGO_ENABLED = 0
 
-.PHONY: all build install test race e2e lint fmt bench fuzz-short check-fixtures size clean generate
+.PHONY: all build build-windows install test race e2e lint fmt bench fuzz-short check-fixtures size clean generate
 
 all: lint test build
 
 build: ## Build bin/imux
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/imux
+
+# On Windows without make: scripts/build-windows.ps1 does the same.
+build-windows: ## Build bin/imux.exe for Windows (GOARCH=arm64 for ARM)
+	GOOS=windows $(GO) build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY).exe ./cmd/imux
 
 # A new file, then mv: overwriting a running imux in place makes macOS kill
 # every imux process (Code Signature Invalid), the sidebars included.

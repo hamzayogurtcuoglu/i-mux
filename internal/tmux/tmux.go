@@ -125,7 +125,7 @@ func Socket() string {
 func New(conf string) *Client {
 	bin := os.Getenv("IMUX_TMUX_BIN")
 	if bin == "" {
-		bin = "tmux"
+		bin = DefaultBin()
 	}
 	return &Client{
 		Bin:    bin,
@@ -175,6 +175,9 @@ func EscapeArg(a string) string {
 
 // Run executes cmds in one tmux invocation and returns stdout.
 func (c *Client) Run(ctx context.Context, cmds ...Cmd) (string, error) {
+	if c.psmuxMode() {
+		return c.runPsmux(ctx, cmds)
+	}
 	args := c.Argv(cmds...)
 	c.record(args)
 	to := c.Timeout
@@ -243,6 +246,9 @@ func (c *Client) Spawn(cmds ...Cmd) error { return c.SpawnEnv(nil, cmds...) }
 // (TMUX_PANE: the pane its commands start from). A Spawner that cannot add
 // it gets the commands alone.
 func (c *Client) SpawnEnv(env []string, cmds ...Cmd) error {
+	if c.psmuxMode() && c.Spawner == nil {
+		return c.spawnPsmux(env, cmds)
+	}
 	args := c.Argv(cmds...)
 	c.record(args)
 	sp := c.Spawner
@@ -408,6 +414,7 @@ type Version struct {
 	Major, Minor int
 	Suffix       string // "a" in 3.2a
 	Raw          string
+	Built        string // psmux: the build's commit date ("2026-10-13"), "" when not printed
 }
 
 // AtLeast reports whether v ≥ major.minor.
@@ -425,8 +432,27 @@ func (v Version) String() string {
 // ParseVersion parses `tmux -V` output: "tmux 3.2a", "tmux next-3.5",
 // "tmux 3.8". Development builds ("tmux master", "tmux openbsd-7.6") count as
 // newer than any release. It reports false if nothing was recognized.
+// psmux (Windows) prints the tmux it matches, then its own version:
+// "tmux 3.4.0\npsmux 3.4.0 (20aa1d7 2026-10-13)". The tmux line gates
+// features; psmux's own number ("3.4.0") is what String shows.
 func ParseVersion(s string) (Version, bool) {
 	s = strings.TrimSpace(s)
+	for _, l := range strings.Split(s, "\n") {
+		if f := strings.Fields(l); len(f) >= 2 && f[0] == "psmux" {
+			first, _, _ := strings.Cut(s, "\n")
+			if first = strings.TrimSpace(first); !strings.HasPrefix(first, "tmux ") {
+				first = "tmux " + f[1] // only psmux's own line
+			}
+			v, ok := ParseVersion(first)
+			if ok {
+				v.Raw = f[1]
+				if len(f) >= 4 {
+					v.Built = strings.Trim(f[3], "()")
+				}
+			}
+			return v, ok
+		}
+	}
 	raw := strings.TrimPrefix(s, "tmux ")
 	v := Version{Raw: raw}
 	if raw == "" {
@@ -495,6 +521,11 @@ func Quote(s string) string {
 	if s != "" && isSafe(s) {
 		return s
 	}
+	if !quoteJoinsSingle && strings.Contains(s, "'") {
+		// psmux does not join '...'\''...': a word with a single quote
+		// in it is double quoted instead.
+		return `"` + strings.NewReplacer(`\`, `\`, `"`, `\"`).Replace(s) + `"`
+	}
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
@@ -502,25 +533,12 @@ func Quote(s string) string {
 // for commands nested inside commands (if-shell, hooks). Backslash, double
 // quote and $ (environment expansion) are escaped.
 func QuoteDouble(s string) string {
+	if !quoteJoinsSingle {
+		// psmux expands no environment variables and keeps a \$ as it is.
+		return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
+	}
 	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, `$`, `\$`)
 	return `"` + r.Replace(s) + `"`
-}
-
-// ShQuote quotes s for sh (run-shell passes its command to /bin/sh -c).
-func ShQuote(s string) string {
-	if s != "" && isSafe(s) {
-		return s
-	}
-	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
-}
-
-// ShJoin quotes and joins argv for sh.
-func ShJoin(argv ...string) string {
-	q := make([]string, len(argv))
-	for i, a := range argv {
-		q[i] = ShQuote(a)
-	}
-	return strings.Join(q, " ")
 }
 
 func isSafe(s string) bool {
@@ -563,6 +581,12 @@ var MenuMinVersion = [2]int{3, 5}
 // click outside closes it).
 func (c *Client) Menu(ctx context.Context) Cmd {
 	menuMouse.Do(func() {
+		if c.psmuxMode() {
+			// psmux's menus take the mouse whatever opened them; the
+			// adapter drops the flags it does not know.
+			menuMouse.ok = true
+			return
+		}
 		v, err := c.BinVersion(ctx)
 		menuMouse.ok = err == nil && v.AtLeast(MenuMinVersion[0], MenuMinVersion[1])
 	})

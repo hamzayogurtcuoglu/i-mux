@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -88,8 +89,13 @@ func TestFreeNameAndPaste(t *testing.T) {
 	}
 	// A folder tree, with a link, copies whole; it cannot go into itself.
 	write(t, filepath.Join(d, "src/sub/f.txt"), "f")
+	// Windows makes links only with Developer Mode on (or as administrator).
+	linked := true
 	if err := os.Symlink("sub/f.txt", filepath.Join(d, "src/link")); err != nil {
-		t.Fatal(err)
+		if runtime.GOOS != "windows" {
+			t.Fatal(err)
+		}
+		linked = false
 	}
 	if err := os.MkdirAll(filepath.Join(d, "dst"), 0o755); err != nil {
 		t.Fatal(err)
@@ -101,7 +107,7 @@ func TestFreeNameAndPaste(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(p, "sub/f.txt")); string(b) != "f" {
 		t.Fatal("tree content")
 	}
-	if l, _ := os.Readlink(filepath.Join(p, "link")); l != "sub/f.txt" {
+	if l, _ := os.Readlink(filepath.Join(p, "link")); linked && filepath.ToSlash(l) != "sub/f.txt" {
 		t.Fatal("link", l)
 	}
 	if _, err := Paste(filepath.Join(d, "src"), filepath.Join(d, "src/sub"), false); !errors.Is(err, ErrIntoItself) {
@@ -165,9 +171,26 @@ func TestTrash(t *testing.T) {
 		t.Fatal("not in Trash/files")
 	}
 	info, _ := os.ReadFile(filepath.Join(data, "Trash/info/my file.txt.trashinfo"))
-	if !strings.Contains(string(info), "Path="+strings.ReplaceAll(filepath.Join(d, "my file.txt"), " ", "%20")+"\n") ||
+	// The old place is a Unix path in a URL (on Windows its backslashes are
+	// escaped too; this Trash is Linux's only).
+	if (runtime.GOOS != "windows" && !strings.Contains(string(info), "Path="+strings.ReplaceAll(filepath.Join(d, "my file.txt"), " ", "%20")+"\n")) ||
 		!strings.Contains(string(info), "DeletionDate=2026-11-08T20:01:02") {
 		t.Fatalf("trashinfo:\n%s", info)
+	}
+
+	// Windows: the Recycle Bin, never gio or the freedesktop Trash.
+	var recycled []string
+	s = &System{
+		GOOS:     "windows",
+		Getenv:   func(string) string { return "" },
+		LookPath: func(n string) (string, error) { return n, nil },
+		Run: func(_ context.Context, _, name string, _ ...string) error {
+			return errors.New("ran " + name)
+		},
+		Recycle: func(p string) error { recycled = append(recycled, p); return nil },
+	}
+	if err := s.Trash(context.Background(), `C:\p\a b.txt`); err != nil || len(recycled) != 1 || recycled[0] != `C:\p\a b.txt` {
+		t.Fatalf("recycle bin: %q %v", recycled, err)
 	}
 }
 
@@ -279,10 +302,15 @@ func TestOpenPage(t *testing.T) {
 		}
 	}
 	wsl := map[string]string{"WSL_DISTRO_NAME": "U"}
-	chrome := "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
-	edge := "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-	brave := "/mnt/c/Users/u/AppData/Local/BraveSoftware/Brave-Browser/Application/brave.exe"
+	// Joined with this system's separator, as OpenPage joins them.
+	chrome := filepath.FromSlash("/mnt/c/Program Files/Google/Chrome/Application/chrome.exe")
+	edge := filepath.FromSlash("/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe")
+	brave := filepath.FromSlash("/mnt/c/Users/u/AppData/Local/BraveSoftware/Brave-Browser/Application/brave.exe")
+	macApp := filepath.FromSlash("/Applications/Google Chrome.app")
 	const u = "http://localhost:43123/a b.html"
+	winEnv := map[string]string{"ProgramFiles": "C:/Program Files", "LOCALAPPDATA": "C:/Users/u/AppData/Local"}
+	winChrome := filepath.Join("C:/Program Files", filepath.FromSlash("Google/Chrome/Application/chrome.exe"))
+	winEdge := filepath.Join("C:/Program Files", filepath.FromSlash("Microsoft/Edge/Application/msedge.exe"))
 	for _, c := range []struct {
 		what   string
 		s      *System
@@ -295,7 +323,10 @@ func TestOpenPage(t *testing.T) {
 		{"wsl firefox: edge", sys("linux", wsl, "FirefoxURL-308046B0AF4A39CB", []string{edge}, nil), true, "Edge", edge + " --app=" + u},
 		{"wsl tab", sys("linux", wsl, "ChromeHTML", []string{chrome}, nil), false, "Chrome", "explorer.exe " + u},
 		{"wsl no chromium: tab", sys("linux", wsl, "", nil, nil), true, "", "explorer.exe " + u},
-		{"mac chrome", sys("darwin", map[string]string{"HOME": "/Users/u"}, "", []string{"/Applications/Google Chrome.app/Contents/Info.plist"}, nil), true, "Chrome", "open -na /Applications/Google Chrome.app --args --app=" + u},
+		{"windows chrome window", sys("windows", winEnv, "ChromeHTML", []string{winChrome, winEdge}, nil), true, "Chrome", winChrome + " --app=" + u},
+		{"windows firefox: edge", sys("windows", winEnv, "FirefoxURL-308046B0AF4A39CB", []string{winEdge}, nil), true, "Edge", winEdge + " --app=" + u},
+		{"windows tab", sys("windows", winEnv, "ChromeHTML", []string{winChrome}, nil), false, "Chrome", "rundll32.exe url.dll,FileProtocolHandler " + u},
+		{"mac chrome", sys("darwin", map[string]string{"HOME": "/Users/u"}, "", []string{filepath.Join(macApp, "Contents", "Info.plist")}, nil), true, "Chrome", "open -na " + macApp + " --args --app=" + u},
 		{"mac tab", sys("darwin", nil, "", nil, nil), true, "", "open " + u},
 		{"linux chromium", sys("linux", map[string]string{"DISPLAY": ":0"}, "", nil, []string{"chromium", "xdg-open"}), true, "Chromium", "chromium --app=" + u},
 		{"linux tab", sys("linux", map[string]string{"DISPLAY": ":0"}, "", nil, []string{"chromium", "xdg-open"}), false, "", "xdg-open " + u},
@@ -327,5 +358,43 @@ func TestOsaError(t *testing.T) {
 	}
 	if m := osaError("", errors.New("exit status 1")); m != "exit status 1" {
 		t.Fatalf("%q", m)
+	}
+}
+
+func TestWindowsCopyAndReveal(t *testing.T) {
+	var ran []string
+	s := &System{
+		GOOS:     "windows",
+		Getenv:   func(string) string { return "" },
+		LookPath: func(n string) (string, error) { return n, nil },
+		Run: func(_ context.Context, stdin, name string, args ...string) error {
+			ran = append(ran, name+" "+strings.Join(args, " ")+" <"+stdin)
+			return nil
+		},
+		ReadFile: func(string) ([]byte, error) { return nil, errors.New("no") },
+	}
+	ctx := context.Background()
+	// Set-Clipboard gets the text as UTF-8 in base64 (clip.exe would read
+	// the console's code page).
+	if err := s.CopyText(ctx, "ç"); err != nil || len(ran) != 1 ||
+		!strings.HasPrefix(ran[0], "powershell.exe -NoProfile -NonInteractive -Command Set-Clipboard") ||
+		!strings.Contains(ran[0], "FromBase64String('w6c=')") {
+		t.Fatalf("copy %q %v", ran, err)
+	}
+	// IMUX_COPY_COMMAND is a PowerShell command here.
+	ran = nil
+	s.Getenv = func(k string) string { return map[string]string{"IMUX_COPY_COMMAND": "clip.exe"}[k] }
+	if err := s.CopyText(ctx, "x"); err != nil || len(ran) != 1 || ran[0] != "powershell.exe -NoProfile -NonInteractive -Command clip.exe <x" {
+		t.Fatalf("copy command %q %v", ran, err)
+	}
+	if k := s.Reveal(); k != "file.reveal_explorer" {
+		t.Fatalf("reveal key %q", k)
+	}
+	if runtime.GOOS != "windows" {
+		return // a Windows path is absolute only there
+	}
+	ran = nil
+	if err := s.RevealFile(ctx, `C:\p\a b.txt`); err != nil || len(ran) != 1 || ran[0] != `explorer.exe /select,C:\p\a b.txt <` {
+		t.Fatalf("reveal %q %v", ran, err)
 	}
 }

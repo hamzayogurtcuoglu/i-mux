@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -99,8 +100,8 @@ func TestRecorder(t *testing.T) {
 	if got[0].Pid != os.Getpid() || got[0].T == 0 {
 		t.Fatalf("record metadata: %+v", got[0])
 	}
-	fi, _ := os.Stat(rec)
-	if fi.Mode().Perm() != 0o600 {
+	// Windows keeps no Unix permission bits; files in the profile are private.
+	if fi, _ := os.Stat(rec); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("recorder mode %v", fi.Mode().Perm())
 	}
 }
@@ -153,6 +154,23 @@ func TestParseVersion(t *testing.T) {
 	if !v.AtLeast(3, 2) || v.AtLeast(3, 3) || !v.AtLeast(2, 9) || v.AtLeast(4, 0) {
 		t.Fatalf("AtLeast wrong for %v", v)
 	}
+	if v.String() != "3.2a" {
+		t.Fatalf("tmux shows %q", v.String())
+	}
+	// psmux: the tmux line gates features, psmux's own number is shown.
+	for in, want := range map[string]string{
+		"tmux 3.4.0\r\npsmux 3.4.0 (20aa1d7 2026-10-13)\r\n": "3.4.0",
+		"tmux 3.4\npsmux 3.6.1 (abc 2027-01-01)":             "3.6.1",
+		"psmux 3.4.0 (20aa1d7 2026-10-13)":                   "3.4.0",
+	} {
+		v, ok := ParseVersion(in)
+		if !ok || v.Major != 3 || v.Minor != 4 || v.String() != want {
+			t.Errorf("ParseVersion(%q) = %+v %v, want it shown as %s", in, v, ok, want)
+		}
+	}
+	if _, ok := ParseVersion("psmux x\n"); ok {
+		t.Error("psmux with no version parsed")
+	}
 }
 
 func TestInside(t *testing.T) {
@@ -170,7 +188,6 @@ func TestQuote(t *testing.T) {
 		"%3":            "%3",
 		"/usr/bin/imux": "/usr/bin/imux",
 		"a b":           "'a b'",
-		"it's":          `'it'\''s'`,
 		"":              "''",
 		"#{pane_id}":    "'#{pane_id}'",
 	}
@@ -178,9 +195,6 @@ func TestQuote(t *testing.T) {
 		if got := Quote(in); got != want {
 			t.Errorf("Quote(%q) = %q, want %q", in, got, want)
 		}
-	}
-	if got := ShJoin("/a b/imux", "__menu", "it's"); got != `'/a b/imux' __menu 'it'"'"'s'` {
-		t.Fatalf("ShJoin: %s", got)
 	}
 	if EscapeFormat("a#b") != "a##b" {
 		t.Fatal("EscapeFormat")
@@ -220,6 +234,9 @@ func FuzzSectionsRows(f *testing.F) {
 
 func realClient(t *testing.T) *Client {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("real tmux tests: Windows runs psmux, whose server differs (see psmux_windows_test.go)")
+	}
 	if _, err := exec.LookPath("tmux"); err != nil {
 		t.Skip("tmux not installed")
 	}

@@ -114,7 +114,7 @@ func TestBrowse(t *testing.T) {
 	if got := Complete("~/code/ac", home, c); got != "~/code/acme-api/" {
 		t.Errorf("Complete %q", got)
 	}
-	if got := Complete(home+"/code/ac", home, c); got != home+"/code/acme-api/" {
+	if got := Complete(home+"/code/ac", home, c); got != filepath.ToSlash(home)+"/code/acme-api/" {
 		t.Errorf("Complete abs %q", got)
 	}
 	if !IsPath("~") || !IsPath("/tmp") || !IsPath("~/x") || IsPath("acme") || IsPath("~acme") {

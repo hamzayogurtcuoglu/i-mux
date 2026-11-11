@@ -24,11 +24,13 @@ onto the `imux` that is running: macOS kills every process of a program whose fi
 place (`SIGKILL (Code Signature Invalid)`), so the sidebars and the watcher die at once.
 `make install-local` writes a new file and moves it over the old one, as `imux update` does.
 
-On Windows, work inside WSL. End-to-end tests copy the binary to the Linux file system, because
-programs under `/mnt/c` start slowly.
+On Windows, you can work inside WSL (end-to-end tests copy the binary to the Linux file system,
+because programs under `/mnt/c` start slowly) or natively with Go and psmux (see
+[docs/WINDOWS.md](docs/WINDOWS.md)).
 
-The dependency rule is strict: the standard library plus `github.com/BurntSushi/toml`. Do not add
-modules (test helpers included; the e2e pty helper uses raw ioctls for this reason).
+The dependency rule is strict: the standard library plus `github.com/BurntSushi/toml` (and
+`golang.org/x/sys` on Windows for console, event and file-lock calls). Do not add other modules
+(test helpers included; the e2e pty helper uses raw ioctls for this reason).
 
 Every user-facing string goes through `internal/i18n` (a test fails on a missing key). The handoff
 document is model-facing and always English.

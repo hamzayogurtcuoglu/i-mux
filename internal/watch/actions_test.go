@@ -136,7 +136,7 @@ func TestAskMode(t *testing.T) {
 		"Antigravity (with context)\x00a\x00run-shell -b '/opt/imux switch antigravity --pane %3 --reason limit --client /dev/pts/2",
 		"Dismiss\x00d\x00",
 	} {
-		if !strings.Contains(got, want) {
+		if want = plat(want); !strings.Contains(got, want) {
 			t.Errorf("menu lacks %q:\n%q", want, m)
 		}
 	}

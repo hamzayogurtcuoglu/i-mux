@@ -8,6 +8,7 @@ package i18n
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -75,13 +76,17 @@ func Locale() string {
 
 // T returns the message for key in the current locale, formatted with args
 // (fmt verbs). Missing keys return the key itself so that the UI never breaks.
+//
+// A key with a platform variant ("doctor.tmux_missing@windows") gives that
+// variant on that platform: the same message with the platform's own
+// commands, and the same fmt verbs.
 func T(key string, args ...any) string {
 	mu.RLock()
 	loc := current
 	mu.RUnlock()
-	f, ok := catalogs[loc][key]
+	f, ok := lookup(loc, key+"@"+OS)
 	if !ok {
-		f, ok = en[key]
+		f, ok = lookup(loc, key)
 	}
 	if !ok {
 		return key
@@ -90,6 +95,18 @@ func T(key string, args ...any) string {
 		return f
 	}
 	return fmt.Sprintf(f, args...)
+}
+
+// OS selects the platform variants of keys (runtime.GOOS); tests replace it.
+var OS = runtime.GOOS
+
+// lookup finds key in locale loc, else in English.
+func lookup(loc, key string) (string, bool) {
+	if f, ok := catalogs[loc][key]; ok {
+		return f, true
+	}
+	f, ok := en[key]
+	return f, ok
 }
 
 // Has reports whether key exists in the English catalog.

@@ -14,6 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/versions"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
@@ -28,7 +29,7 @@ func init() {
 	})
 }
 
-// runVersions lists i-mux, tmux and the agent CLIs with their versions and
+// runVersions lists i-mux, tmux (psmux on Windows) and the agent CLIs with their versions and
 // update commands (Settings → Versions and updates). In the popup a letter
 // runs that row's command right there, and the list is read again.
 func runVersions(e *Env, args []string) error {
@@ -106,6 +107,7 @@ func versionsEnv(ctx context.Context, cfg *config.Config, self string) versions.
 	return versions.Env{
 		Cfg: cfg, Self: self, Current: cur, Latest: st.Latest, Root: os.Geteuid() == 0,
 		LookPath: exec.LookPath,
+		Mux:      tmux.New("").Bin,
 		Output:   commandOutput,
 		Resolve:  func(id session.AgentID) agent.Resolved { return agent.Resolve(cfg, id, st) },
 		Probe:    func(r agent.Resolved) string { return agent.ProbeVersion(r.Path, r.PathEnv) },

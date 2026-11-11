@@ -4,6 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -56,5 +59,98 @@ func TestInstallCmd(t *testing.T) {
 	}
 	if !Homebrew("/opt/homebrew/Cellar/imux/0.26.1/bin") || Homebrew("/Users/me/.local/bin") {
 		t.Fatal("homebrew")
+	}
+}
+
+// TestInstaller: on Windows the release's install.ps1 is downloaded and
+// run as a file by PowerShell, the folder passed as one argument.
+func TestInstaller(t *testing.T) {
+	c := WindowsInstallCmd(`C:\Temp\imux-install-1.ps1`, "0.40.0", `C:\Users\o'me\AppData\Local\Programs\imux`)
+	want := []string{
+		"powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", `C:\Temp\imux-install-1.ps1`,
+		"-Version", "v0.40.0", "-InstallDir", `C:\Users\o'me\AppData\Local\Programs\imux`, "-NoModifyPath", "-NoFont", "-NoPsmux",
+	}
+	if strings.Join(c, "|") != strings.Join(want, "|") {
+		t.Fatalf("%q", c)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v0.40.0/install.ps1":
+			_, _ = w.Write([]byte("# the installer"))
+		case "/v0.40.0/install.sh":
+			_, _ = w.Write([]byte("#!/bin/sh"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	old := DownloadBase
+	defer func() { DownloadBase = old }()
+	DownloadBase = srv.URL
+	argv, cleanup, err := Installer(context.Background(), "0.40.0", t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	if runtime.GOOS != "windows" {
+		if argv[0] != "sh" || argv[4] != srv.URL+"/v0.40.0/install.sh" {
+			t.Fatalf("%q", argv)
+		}
+		return
+	}
+	b, err := os.ReadFile(argv[6])
+	if argv[0] != "powershell.exe" || err != nil || string(b) != "# the installer" {
+		t.Fatalf("%q %v %q", argv, err, b)
+	}
+	cleanup()
+	if _, err := os.Stat(argv[6]); err == nil {
+		t.Fatal("the script is left behind")
+	}
+	if _, _, err := Installer(context.Background(), "0.41.0", t.TempDir()); err == nil || !strings.Contains(err.Error(), "404") {
+		t.Fatalf("no such release: %v", err)
+	}
+}
+
+// TestRemoveOld: the copies an update renamed aside go; imux.exe and other
+// files stay.
+func TestRemoveOld(t *testing.T) {
+	dir := t.TempDir()
+	for _, f := range []string{"imux.exe", "imux.exe.old", "imux.exe.old.1a2b", "imux.exe.older", "psmux.exe.old"} {
+		if err := os.WriteFile(filepath.Join(dir, f), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := removeOld(filepath.Join(dir, "imux.exe")); n != 2 {
+		t.Fatalf("removed %d", n)
+	}
+	left, _ := os.ReadDir(dir)
+	var names []string
+	for _, e := range left {
+		names = append(names, e.Name())
+	}
+	if strings.Join(names, ",") != "imux.exe,imux.exe.older,psmux.exe.old" {
+		t.Fatalf("left %v", names)
+	}
+}
+
+// TestInstallPS1 guards install.ps1, which imux update runs on Windows: it
+// is ASCII (Windows PowerShell reads a file without a BOM in the ANSI code
+// page) and has no backtick (Windows' malware scan blocks such a script
+// when a program, as imux update, starts it), and it takes the options
+// WindowsInstallCmd passes.
+func TestInstallPS1(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "install.ps1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, c := range b {
+		if c > 127 || c == '`' {
+			t.Fatalf("install.ps1 byte %d is %q", i, c)
+		}
+	}
+	for _, opt := range WindowsInstallCmd("x.ps1", "1.2.3", "dir")[7:] {
+		if strings.HasPrefix(opt, "-") && !strings.Contains(string(b), "$"+opt[1:]) {
+			t.Errorf("install.ps1 has no %s parameter", opt)
+		}
 	}
 }

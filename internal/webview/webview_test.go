@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -24,21 +25,21 @@ func TestTarget(t *testing.T) {
 		}
 	}
 	for in, want := range map[string][2]string{
-		"":                          {"", ""},
-		"  https://go.dev/doc  ":    {"", "https://go.dev/doc"},
-		"localhost:3000":            {"", "http://localhost:3000"},
-		"3000":                      {"", "http://localhost:3000"},
-		":8080/x":                   {"", "http://localhost:8080/x"},
-		"3000/api?q=1":              {"", "http://localhost:3000/api?q=1"},
-		"127.0.0.1:8000/a":          {"", "http://127.0.0.1:8000/a"},
-		"[::1]:3000":                {"", "http://[::1]:3000"},
-		"app.localhost:5173":        {"", "http://app.localhost:5173"},
-		"go.dev/doc":                {"", "https://go.dev/doc"},
-		"about:blank":               {"", "about:blank"},
-		"index.html":                {dir + "/index.html", ""},
-		"a b.html":                  {dir + "/a b.html", ""},
-		"file://" + dir + "/a.html": {dir + "/a.html", ""},
-		"missing.html":              {"", "https://missing.html"},
+		"":                       {"", ""},
+		"  https://go.dev/doc  ": {"", "https://go.dev/doc"},
+		"localhost:3000":         {"", "http://localhost:3000"},
+		"3000":                   {"", "http://localhost:3000"},
+		":8080/x":                {"", "http://localhost:8080/x"},
+		"3000/api?q=1":           {"", "http://localhost:3000/api?q=1"},
+		"127.0.0.1:8000/a":       {"", "http://127.0.0.1:8000/a"},
+		"[::1]:3000":             {"", "http://[::1]:3000"},
+		"app.localhost:5173":     {"", "http://app.localhost:5173"},
+		"go.dev/doc":             {"", "https://go.dev/doc"},
+		"about:blank":            {"", "about:blank"},
+		"index.html":             {filepath.Join(dir, "index.html"), ""},
+		"a b.html":               {filepath.Join(dir, "a b.html"), ""},
+		fileURL(dir) + "/a.html": {filepath.Join(dir, "a.html"), ""},
+		"missing.html":           {"", "https://missing.html"},
 	} {
 		if f, u := Target(in, dir); f != want[0] || u != want[1] {
 			t.Errorf("Target(%q) = %q %q, want %q", in, f, u, want)
@@ -103,6 +104,9 @@ func site(t *testing.T) string {
 	outside := filepath.Join(t.TempDir(), "secret.txt")
 	testutil.WriteFile(t, outside, []byte("outside"))
 	if err := os.Symlink(outside, filepath.Join(root, "out.txt")); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skip("symbolic links need Developer Mode on Windows:", err)
+		}
 		t.Fatal(err)
 	}
 	real, err := filepath.EvalSymlinks(root)
@@ -306,4 +310,13 @@ func TestLiveJS(t *testing.T) {
 	if strings.Contains(liveJS, `addEventListener("open"`) {
 		t.Error(`live.js listens to "open", which EventSource fires when it connects`)
 	}
+}
+
+// fileURL is dir as a file:// URL (file:///C:/... on Windows).
+func fileURL(dir string) string {
+	p := filepath.ToSlash(dir)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return "file://" + p
 }

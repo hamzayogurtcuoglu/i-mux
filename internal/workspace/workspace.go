@@ -475,7 +475,7 @@ var EnsureWatcher = func(w *WS) {}
 // status line that runs imux (D25). It is rewritten when imux moved.
 func (w *WS) claudeSettings() (string, error) {
 	p := paths.ClaudeSettings()
-	cmd := tmux.ShQuote(w.Self) + " __statusline claude"
+	cmd := statuslineCmd(w.Self)
 	b, err := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": cmd, "padding": 0}})
 	if err != nil {
 		return "", err

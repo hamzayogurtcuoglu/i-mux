@@ -24,10 +24,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // IsHTML reports a web page file: a click on it in the explorer opens its
@@ -45,6 +45,17 @@ func Previewable(name string) bool {
 	return IsHTML(name) || strings.EqualFold(filepath.Ext(name), ".svg")
 }
 
+var winDrive = regexp.MustCompile(`^/[A-Za-z]:/`)
+
+// fileURLPath is the file a file:// URL's path names: on Windows
+// /C:/x/a.html is C:\x\a.html.
+func fileURLPath(p string) string {
+	if filepath.Separator == '\\' && winDrive.MatchString(p) {
+		p = p[1:]
+	}
+	return filepath.FromSlash(p)
+}
+
 var portOnly = regexp.MustCompile(`^:?[0-9]{1,5}([/?#].*)?$`)
 
 // Target turns what the user gave into a file or a URL: an existing path
@@ -58,7 +69,7 @@ func Target(s, dir string) (file, u string) {
 	}
 	if strings.HasPrefix(s, "file://") {
 		if pu, err := url.Parse(s); err == nil {
-			return pu.Path, ""
+			return fileURLPath(pu.Path), ""
 		}
 	}
 	if strings.Contains(s, "://") {
@@ -257,10 +268,12 @@ func Ensure(ctx context.Context, self, root string) (*Info, error) {
 		return nil, err
 	}
 	defer logf.Close()
-	cmd := exec.Command(self, "__web-serve", root)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, logf
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if err := cmd.Start(); err != nil {
+	cmd, err := sysx.StartDetachedCmd(func() *exec.Cmd {
+		c := exec.Command(self, "__web-serve", root)
+		c.Stdin, c.Stdout, c.Stderr = nil, nil, logf
+		return c
+	})
+	if err != nil {
 		return nil, err
 	}
 	pid := cmd.Process.Pid
@@ -302,7 +315,7 @@ func All(ctx context.Context) []*Info {
 // Stop ends the server and removes its record.
 func (i *Info) Stop() {
 	if i.PID > 0 {
-		_ = syscall.Kill(i.PID, syscall.SIGTERM)
+		_ = sysx.Signal(i.PID, sysx.SIGTERM)
 	}
 	_ = os.Remove(recordFile(i.Root))
 }

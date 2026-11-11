@@ -1,12 +1,14 @@
 // Package versions lists what i-mux runs on, with the versions installed
-// and the command that updates each: i-mux, tmux and the agent CLIs
-// (Settings → Versions and updates, `imux versions`). It asks nothing of
-// the network: each CLI's own updater knows whether a newer one is out.
+// and the command that updates each: i-mux, tmux (psmux on Windows) and the
+// agent CLIs (Settings → Versions and updates, `imux versions`). It asks
+// nothing of the network: each CLI's own updater knows whether a newer one
+// is out.
 package versions
 
 import (
 	"context"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -53,11 +55,28 @@ type Env struct {
 	Output  func(ctx context.Context, argv ...string) string
 	Resolve func(id session.AgentID) agent.Resolved
 	Probe   func(r agent.Resolved) string // the agent's version ("" unknown)
+	// OS is the system the rows are for ("" = this one): on Windows the
+	// multiplexer is psmux, installed and updated with winget.
+	OS string
+	// Mux is the multiplexer binary i-mux runs (Windows: psmux's path, or
+	// "psmux" to look up on PATH).
+	Mux string
 }
+
+func (e Env) windows() bool { return e.OS == "windows" || e.OS == "" && runtime.GOOS == "windows" }
 
 // TmuxWants is the tmux that gives every feature: the agent bar takes
 // clicks. Menus take the mouse on every tmux (D54).
 var TmuxWants = tmux.ClickMinVersion
+
+// Outdated reports whether Settings should flag the multiplexer v as old.
+// psmux draws its menus itself: there it is old only below what i-mux needs.
+func Outdated(v tmux.Version) bool {
+	if runtime.GOOS == "windows" {
+		return !v.AtLeast(tmux.MinVersion[0], tmux.MinVersion[1])
+	}
+	return !v.AtLeast(TmuxWants[0], TmuxWants[1])
+}
 
 // Collect reads every row: i-mux, tmux, then the agents in config order.
 func Collect(ctx context.Context, e Env) []Row {
@@ -88,6 +107,9 @@ func imuxRow(e Env) Row {
 }
 
 func tmuxRow(ctx context.Context, e Env) Row {
+	if e.windows() {
+		return psmuxRow(ctx, e)
+	}
 	r := Row{Key: "t", Name: "tmux", Tmux: true}
 	path, err := e.LookPath("tmux")
 	if err != nil {

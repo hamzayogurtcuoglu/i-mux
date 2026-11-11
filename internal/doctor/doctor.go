@@ -1,7 +1,9 @@
 // Package doctor checks imux's environment: tmux, terminfo, the agent CLIs
 // (path, version, PATH for nvm installs, flags), ~/.imux permissions, the
-// binary's permissions and the watcher. It never starts an agent with a
-// prompt: agents are only asked for --version and --help.
+// binary's permissions and the watcher. On Windows the multiplexer is psmux,
+// there is no terminfo, and Unix permission bits mean nothing: ~/.imux is
+// checked to be in the user's own folder instead. It never starts an agent
+// with a prompt: agents are only asked for --version and --help.
 package doctor
 
 import (
@@ -14,6 +16,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -91,6 +94,9 @@ var MinVersions = map[session.AgentID]string{
 	session.Codex:  "0.38.0",
 }
 
+// goos is the system the checks are for; tests replace it.
+var goos = runtime.GOOS
+
 // OpenCodeMin is the first OpenCode imux works with at all (§7.7): OpenCode
 // 1 has no session_v2 table, no `session export`, and its --session only
 // continues an existing session, so a new tab exits at once to a shell.
@@ -101,7 +107,11 @@ func Run(ctx context.Context, o Options) *Report {
 	r := &Report{}
 	checkTmux(ctx, r, o)
 	checkHome(r)
-	checkSelf(r, o.Self)
+	if goos == "windows" {
+		checkWindowsTerminal(r)
+	} else {
+		checkSelf(r, o.Self)
+	}
 	if !o.CI {
 		checkAgents(ctx, r, o)
 	}
@@ -158,6 +168,12 @@ func checkTmux(ctx context.Context, r *Report, o Options) {
 	if !v.AtLeast(tmux.ClickMinVersion[0], tmux.ClickMinVersion[1]) {
 		r.add(Info, "doctor.tmux_no_click", v.String(), fmt.Sprintf("%d.%d", tmux.ClickMinVersion[0], tmux.ClickMinVersion[1]))
 	}
+	if goos == "windows" {
+		if tmux.LegacyPsmux(v) {
+			r.add(Warn, "doctor.psmux_legacy")
+		}
+		return // psmux draws in the Windows console: no terminfo
+	}
 	if tmux.TerminfoExists("tmux-256color") {
 		r.add(OK, "doctor.terminfo_ok")
 	} else {
@@ -174,6 +190,16 @@ func checkHome(r *Report) {
 		return
 	case err != nil:
 		r.add(Fail, "doctor.home_error", paths.Shorten(home), err)
+		return
+	case goos == "windows":
+		// Go's mode bits are made up on Windows; the user folder's ACL is
+		// what keeps others out.
+		if inside(home, paths.UserHome()) {
+			r.add(OK, "doctor.home_ok", paths.Shorten(home))
+		} else {
+			r.add(Info, "doctor.home_shared", paths.Shorten(home))
+		}
+		writable(r, home)
 		return
 	case fi.Mode().Perm()&0o077 != 0:
 		r.add(Warn, "doctor.home_perm", paths.Shorten(home), fmt.Sprintf("%#o", fi.Mode().Perm()))
@@ -204,6 +230,11 @@ func checkHome(r *Report) {
 		}
 		r.add(Warn, "doctor.files_perm", strings.Join(loose, ", "))
 	}
+	writable(r, home)
+}
+
+// writable fails when home cannot get new files.
+func writable(r *Report, home string) {
 	tmp, err := os.CreateTemp(home, ".doctor-*")
 	if err != nil {
 		r.add(Fail, "doctor.home_unwritable", paths.Shorten(home), err)
@@ -211,6 +242,28 @@ func checkHome(r *Report) {
 	}
 	tmp.Close()
 	os.Remove(tmp.Name())
+}
+
+// inside reports whether p is dir or in it (Windows: case-insensitive).
+func inside(p, dir string) bool {
+	if dir == "" {
+		return false
+	}
+	rel, err := filepath.Rel(strings.ToLower(filepath.Clean(dir)), strings.ToLower(filepath.Clean(p)))
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// checkWindowsTerminal recommends Windows Terminal: the old console host
+// (conhost) draws the sidebar's colors and icons poorly. Windows Terminal
+// sets WT_SESSION; VS Code's terminal sets TERM_PROGRAM.
+func checkWindowsTerminal(r *Report) {
+	switch {
+	case os.Getenv("WT_SESSION") != "":
+		r.add(OK, "doctor.wt_ok")
+	case os.Getenv("TERM_PROGRAM") != "":
+	default:
+		r.add(Info, "doctor.wt_missing")
+	}
 }
 
 // checkSelf warns when the binary or its directory is writable by others:

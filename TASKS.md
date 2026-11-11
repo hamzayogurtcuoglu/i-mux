@@ -1313,6 +1313,14 @@ agent, starting with i-mux's skill-writing prompt; a separate popup is fine.
     "new skill"; "this pane" pastes it there; the template is created and edited in the same
     popup; tmux's command-prompt is no longer used for skills; e2e with the fake agents; README.
 
+## M62: Native Windows port on psmux (added 2026-11-11)
+
+- [x] **T62.1 Platform abstractions and psmux adapter** · L
+  - AC: `internal/sysx`, `internal/winx`, `internal/pwshshim` and the `internal/tmux` psmux
+    adapter (`%pane~session` routing across per-session psmux servers, PowerShell command lines,
+    menus and popups); `install.ps1`, `scripts/build-psmux.ps1`, `scripts/build-windows.ps1`,
+    [docs/WINDOWS.md](docs/WINDOWS.md); unit tests pass on Linux, macOS and Windows (`ci.yml`).
+
 ---
 
 ## Testing strategy

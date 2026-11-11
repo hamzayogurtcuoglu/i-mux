@@ -5,12 +5,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func repo(t *testing.T) (string, func(args ...string)) {
@@ -115,7 +117,7 @@ func TestCommand(t *testing.T) {
 		promptLast bool
 	}{
 		{session.Claude, "haiku", []string{"claude", "-p", "--no-session-persistence", "--tools", "", "--model", "haiku"}, true, false, false, true},
-		{session.Codex, "", []string{"codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", "--output-last-message", "/tmp/x/message.txt", "-"}, false, true, true, false},
+		{session.Codex, "", []string{"codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", "--output-last-message", filepath.Join(dir, "message.txt"), "-"}, false, true, true, false},
 		{session.Copilot, "", []string{"copilot", "-p"}, false, false, false, false},
 		{session.Antigravity, "m1", []string{"agy", "-p"}, false, false, false, false},
 		{session.OpenCode, "groq/llama", []string{"opencode", "run", "--archived", "--title", "imux commit message", "-m", "groq/llama"}, false, false, false, true},
@@ -206,8 +208,13 @@ func TestPick(t *testing.T) {
 
 func TestExecute(t *testing.T) {
 	dir := t.TempDir()
+	// script writes the shell script body as name; on Windows the fake
+	// program name (see TestMain) instead.
 	script := func(name, body string) string {
 		p := filepath.Join(dir, name)
+		if runtime.GOOS == "windows" {
+			return testutil.WriteFake(t, p, name, "")
+		}
 		write(t, p, "#!/bin/sh\n"+body)
 		if err := os.Chmod(p, 0o755); err != nil {
 			t.Fatal(err)

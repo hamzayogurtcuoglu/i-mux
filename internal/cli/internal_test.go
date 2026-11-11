@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -84,6 +85,9 @@ func TestSetSetting(t *testing.T) {
 }
 
 func TestImageText(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows quotes paths instead: TestImageTextWindows")
+	}
 	if got := ImageText("claude", []string{"/a/b.png", "/my shots/c.png"}); got != `/a/b.png /my\ shots/c.png ` {
 		t.Fatalf("claude %q", got)
 	}

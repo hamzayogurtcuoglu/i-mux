@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -85,7 +86,7 @@ func TestSendConfirmAndDeliver(t *testing.T) {
 	if err != nil || string(b2) != "[from claude %1] run the tests" {
 		t.Fatalf("parked: %q %v", b2, err)
 	}
-	if fi, _ := os.Stat(res.Pending); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(res.Pending); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // Windows has no Unix modes
 		t.Fatal("parked file not private")
 	}
 	if err := b.Deliver(ctx, res.Pending, "%2", true, false); err != nil {

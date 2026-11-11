@@ -19,6 +19,17 @@ func write(t *testing.T, p, s string) {
 	}
 }
 
+// canSymlink reports whether this process may create symlinks in dir
+// (Windows allows it only in Developer Mode or elevated).
+func canSymlink(dir string) bool {
+	link := filepath.Join(dir, ".symlink-probe")
+	if err := os.Symlink(".", link); err != nil {
+		return false
+	}
+	_ = os.Remove(link)
+	return true
+}
+
 func skill(name, desc string) string {
 	return "---\nname: " + name + "\ndescription: " + desc + "\n---\n\n# Body\n"
 }
@@ -39,6 +50,9 @@ func find(t *testing.T, list []Skill, folder string) Skill {
 // that read that folder; problems are found.
 func TestListAndSync(t *testing.T) {
 	root := t.TempDir()
+	if !canSymlink(root) {
+		t.Skip("Sync links skills with symlinks, which need Developer Mode or elevation on Windows")
+	}
 	write(t, filepath.Join(root, ".git", "HEAD"), "ref: refs/heads/main\n")
 	write(t, filepath.Join(root, Home, "release-notes", File), skill("release-notes", "Writes release notes. Use when tagging a release."))
 	write(t, filepath.Join(root, Home, "broken", File), "# no front matter\n")
@@ -110,7 +124,7 @@ func TestCreate(t *testing.T) {
 	if !strings.HasPrefix(string(b), "---\nname: deploy-staging\ndescription: Deploys to staging. Use before a release.\n---\n\n# Deploy staging\n") {
 		t.Fatalf("template:\n%s", b)
 	}
-	if s := find(t, List(root), "deploy-staging"); s.Problem != ProbNone || !s.Shared {
+	if s := find(t, List(root), "deploy-staging"); s.Problem != ProbNone || !s.Shared && canSymlink(t.TempDir()) {
 		t.Errorf("%+v", s)
 	}
 	if _, err := Create(root, "deploy-staging", ""); err != ErrExists {
@@ -144,7 +158,7 @@ func TestNames(t *testing.T) {
 
 func TestPrompts(t *testing.T) {
 	p := WritePrompt("/repo", "  write\r\nrelease notes\n", "Turkish")
-	for _, want := range []string{"/repo/.agents/skills/<name>/SKILL.md", "description", "1024", "What the skill should do:\nwrite\nrelease notes"} {
+	for _, want := range []string{filepath.Join("/repo", Home) + "/<name>/SKILL.md", "description", "1024", "What the skill should do:\nwrite\nrelease notes"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("WritePrompt lacks %q:\n%s", want, p)
 		}

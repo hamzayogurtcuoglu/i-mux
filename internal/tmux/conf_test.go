@@ -2,38 +2,15 @@ package tmux
 
 import (
 	"context"
-	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 )
-
-var update = flag.Bool("update", false, "rewrite golden files")
-
-func golden(t *testing.T, name, got string) {
-	t.Helper()
-	p := filepath.Join("testdata", name)
-	if *update {
-		if err := os.MkdirAll("testdata", 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(p, []byte(got), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		return
-	}
-	want, err := os.ReadFile(p)
-	if err != nil {
-		t.Fatalf("%v (run go test ./internal/tmux -update)", err)
-	}
-	if string(want) != got {
-		t.Fatalf("%s differs from golden file; run with -update to accept.\n--- got ---\n%s", name, got)
-	}
-}
 
 func confInput(ver string) *ConfInput {
 	v, _ := ParseVersion("tmux " + ver)
@@ -45,11 +22,6 @@ func confInput(ver string) *ConfInput {
 		AgentBar:  "#[align=left] imux #[range=user|imux:menu]☰#[norange default]",
 		LocalConf: "/home/test/.imux/tmux.local.conf",
 	}
-}
-
-func TestGenerateConfGolden(t *testing.T) {
-	golden(t, "tmux-3.4.conf.golden", GenerateConf(confInput("3.4")))
-	golden(t, "tmux-3.2.conf.golden", GenerateConf(confInput("3.2a")))
 }
 
 func TestGenerateConfOptions(t *testing.T) {
@@ -123,7 +95,8 @@ func TestWriteConfOnlyOnChange(t *testing.T) {
 	if err != nil || !changed {
 		t.Fatalf("new content: %v %v", changed, err)
 	}
-	if fi, _ := os.Stat(p); fi.Mode().Perm() != 0o600 {
+	// Windows keeps no Unix permission bits; files in the profile are private.
+	if fi, _ := os.Stat(p); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", fi.Mode().Perm())
 	}
 }

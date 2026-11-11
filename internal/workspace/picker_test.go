@@ -20,14 +20,14 @@ import (
 func writeClaudeSession(t *testing.T, h *testutil.Homes, id, text string, mtime time.Time) {
 	t.Helper()
 	p := filepath.Join(h.Claude, "projects", claude.EncodeCWD(h.Project), id+".jsonl")
-	testutil.WriteFile(t, p, []byte(`{"type":"user","sessionId":"`+id+`","cwd":"`+h.Project+`","timestamp":"2026-11-05T10:00:00Z","uuid":"a","message":{"role":"user","content":"`+text+`"}}`+"\n"))
+	testutil.WriteFile(t, p, []byte(`{"type":"user","sessionId":"`+id+`","cwd":"`+jsonPath(h.Project)+`","timestamp":"2026-11-05T10:00:00Z","uuid":"a","message":{"role":"user","content":"`+text+`"}}`+"\n"))
 	testutil.Touch(t, p, mtime)
 }
 
 func writeCodexSession(t *testing.T, h *testutil.Homes, id, text string, mtime time.Time) {
 	t.Helper()
 	p := filepath.Join(h.Codex, "sessions", "2026", "11", "05", "rollout-2026-11-05T09-00-00-"+id+".jsonl")
-	testutil.WriteFile(t, p, []byte(`{"timestamp":"2026-11-05T09:00:00Z","type":"session_meta","payload":{"id":"`+id+`","cwd":"`+h.Project+`"}}`+"\n"+
+	testutil.WriteFile(t, p, []byte(`{"timestamp":"2026-11-05T09:00:00Z","type":"session_meta","payload":{"id":"`+id+`","cwd":"`+jsonPath(h.Project)+`"}}`+"\n"+
 		`{"timestamp":"2026-11-05T09:00:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"`+text+`"}]}}`+"\n"))
 	testutil.Touch(t, p, mtime)
 }
@@ -46,7 +46,7 @@ func TestPickerMenuPagesInstalledAgents(t *testing.T) {
 	p := &Pane{ID: "%1", Agent: "claude", CWD: h.Project}
 	ctx := context.Background()
 	m := w.PickerMenu(ctx, f, p, "/dev/pts/1", 0)
-	if m == nil || !strings.HasPrefix(m.Title, "Sessions · ~/proj (1/2)") {
+	if m == nil || !strings.HasPrefix(m.Title, "Sessions · "+filepath.FromSlash("~/proj")+" (1/2)") {
 		t.Fatalf("title %+v", m)
 	}
 	if len(m.Items) != PickerRows+4 || m.Items[PickerRows+1].Name != "More…" || m.Items[PickerRows+1].Key != "m" ||
@@ -202,7 +202,7 @@ func TestPinMenu(t *testing.T) {
 	w.State().Pin("claude:11111111-0000-4000-8000-000000000002")
 	p := &Pane{ID: "%1", Agent: "claude", CWD: h.Project}
 	m := w.PinMenu(context.Background(), f, p, "c1", 0)
-	if m == nil || m.Title != "Pin to the top · ~/proj" {
+	if m == nil || m.Title != filepath.FromSlash("Pin to the top · ~/proj") {
 		t.Fatalf("menu %+v", m)
 	}
 	var rows []string

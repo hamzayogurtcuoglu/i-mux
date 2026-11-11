@@ -52,8 +52,8 @@ func multiHop(t *testing.T, h *testutil.Homes) (Trail, [3]time.Time) {
 func TestDeltaOverMultiHopTrail(t *testing.T) {
 	w, _, h := testWS(t)
 	w.SetBins(map[session.AgentID]agent.Resolved{
-		"claude": {Agent: "claude", Installed: true, Path: "/opt/bin/claude"},
-		"codex":  {Agent: "codex", Installed: true, Path: "/opt/bin/codex"},
+		"claude": {Agent: "claude", Installed: true, Path: optClaude},
+		"codex":  {Agent: "codex", Installed: true, Path: optCodex},
 	})
 	f := sources.New(config.Default())
 	tr, _ := multiHop(t, h)

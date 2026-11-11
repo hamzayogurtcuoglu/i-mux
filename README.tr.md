@@ -19,7 +19,8 @@ soketinde; sizin tmux ayarlarınıza dokunmaz). Her şey makinenizde kalır.
 
 ## Kurulum
 
-macOS, Linux ya da WSL ile Windows'ta (bir WSL terminali açın) tek satır:
+macOS, Linux ya da WSL ile Windows'ta (bir WSL terminali açın; WSL'siz Windows için
+[Windows](#windows)) tek satır:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
@@ -49,6 +50,61 @@ imux doctor
 
 Kaldırmak için `~/.local/bin/imux` ve `~/.imux` silin, kabuk profilinize eklenen satırı da
 (`# Added by the imux installer` ile işaretli) kaldırın.
+
+## Windows
+
+> **Öneri:** Bugün Windows'ta en kararlı günlük kullanım için i-mux'u **WSL 2** içinde yukarıdaki tek
+> satırlık `install.sh` komutuyla çalıştırmanızı öneririz (ek kurulum gerektirmeden tam `tmux`
+> desteği). Aşağıdaki WSL'siz yerli Windows desteği [psmux](https://github.com/marlocarlo/psmux)
+> üzerinde çalışır ve winget'te `3.4.0` sonrası yeni bir sürüm yayınlanana kadar `psmux`'un `main`
+> dalından derlenmesini (`scripts\build-psmux.ps1`) gerektirir.
+
+i-mux Windows'ta WSL olmadan, doğrudan da çalışır: tmux'un komutlarını konuşan yerli bir Windows
+çoklayıcısı olan [psmux](https://github.com/marlocarlo/psmux) üzerinde. PowerShell'de:
+
+```powershell
+irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 | iex
+```
+
+Betik psmux eksikse winget ile kurar (`winget install --id marlocarlo.psmux`), işlemcinize uygun
+(amd64 ya da arm64) sürüm zip'ini indirir, sağlama toplamını doğrular, `imux.exe`'yi
+`%LOCALAPPDATA%\Programs\imux` klasörüne koyar, bu klasörü kullanıcı PATH'inize ekler ve Nerd
+Font'u önerir. Ardından yeni bir terminal açın. Dosya olarak çalıştırıldığında seçenek alır
+(`.\install.ps1 -Yes`, `-Version v0.1.0`, `-InstallDir KLASÖR`, `-NoModifyPath`, `-NoFont`);
+`iex`'e aktarırken önce `IMUX_YES=1`, `IMUX_VERSION` gibi değişkenleri ayarlayın. Go kurulu bir
+kaynak kopyasında `.\install.ps1 -FromSource .` derleyip kurar; `scripts\build-windows.ps1` (ya da
+`make build-windows`) yalnızca `bin\imux.exe`'yi derler.
+
+**psmux sürümü:** Güncel psmux sürümü 3.4.0, bir pane'e Ctrl+C ya da fare tıklaması gittikten sonra
+i-mux'un tuş bağlamalarını ve tıklamalarını çalıştırmıyor, durum çubuğu da tıklanamıyor. İkisi de
+psmux'un ana dalında düzeltildi ama henüz sürüm çıkmadı. O zamana kadar `scripts\build-psmux.ps1`
+ile derleyin (`winget install --id Rustlang.Rustup -e` ve
+`winget install --id MartinStorsjo.LLVM-MinGW.UCRT -e` gerekir, yönetici yetkisi gerekmez):
+`bin\psmux.exe` üretir; `install.ps1 -FromSource .` onu `imux.exe`'nin yanına kurar ve i-mux önce
+oraya bakar. 3.4.0 kullanıldığı sürece `imux doctor` uyarır.
+
+[Windows Terminal](https://aka.ms/terminal) kullanın (`winget install Microsoft.WindowsTerminal`):
+eski konsol kenar panelin renklerini ve simgelerini kötü çizer. `imux font install` fontu sizin
+için kurar (`%LOCALAPPDATA%\Microsoft\Windows\Fonts` içine) ve Windows Terminal'in ve VS Code'un
+fontunu ayarlar. macOS ve Linux'tan farklar:
+
+- **Bölmelerdeki kabuk PowerShell'dir** (kuruluysa pwsh, değilse Windows PowerShell); i-mux'un
+  tuşlarının ve menülerinin çalıştırdığı komutlar da öyle.
+- **Dosyalar:** "Göster" Gezgin'i açar, silmek Geri Dönüşüm Kutusu'na taşır.
+- **Ctrl+V:** Windows Terminal onu kendi yapıştırması için tutar; resimleri **Alt+V** ile (ya da
+  kenar paneldeki 📎 ile) yapıştırın.
+- **Agent CLI'lar** Windows komutlarıyla kurulur: Claude Code
+  `irm https://claude.ai/install.ps1 | iex` (ya da npm), Antigravity CLI
+  `irm https://antigravity.google/cli/install.ps1 | iex`, Copilot, Codex ve OpenCode npm ile
+  (`npm i -g @github/copilot`, `@openai/codex`, `opencode-ai`). `imux doctor` hepsini gösterir.
+- **Güncellemeler:** `imux update` sürümün `install.ps1`'ini çalıştırır. Windows çalışan bir
+  `.exe`'nin üzerine yazamaz; eskisi `imux.exe.old` olarak durur ve sonraki bir açılışta silinir.
+  Sürümler ve güncellemeler psmux'u `winget upgrade --id marlocarlo.psmux` ile listeler; bunu
+  i-mux kapalıyken çalıştırın (önce `psmux -L imux kill-server`).
+
+Kaldırmak için `%LOCALAPPDATA%\Programs\imux` ve `%USERPROFILE%\.imux` klasörlerini silin, klasörü
+kullanıcı PATH'inizden çıkarın ve `winget uninstall marlocarlo.psmux` çalıştırın. Uyarlamanın
+nasıl çalıştığı: [docs/WINDOWS.md](docs/WINDOWS.md) (İngilizce).
 
 ## Kullanım
 
@@ -82,8 +138,8 @@ Copilot eklentili Neovim'inde açılır (Tab
 GitHub Copilot'a bir kez giriş yaptırır.
 
 **Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca nasıl açılacağını sorar: **Tarayıcıda
-aç** (kendi penceresinde, sekme ya da adres çubuğu olmadan; Chrome'un ya da Edge'in, WSL'de
-Windows'unki), **Yeni sekmede aç**, **Düzenle** ya da **Görüntüle**. Sayfayı i-mux `localhost` üzerinden sunar;
+aç** (kendi penceresinde, sekme ya da adres çubuğu olmadan; Chrome'un ya da Edge'in; Windows'ta ve
+WSL'de Windows'unki), **Yeni sekmede aç**, **Düzenle** ya da **Görüntüle**. Sayfayı i-mux `localhost` üzerinden sunar;
 bir ajan onu ya da kullandığı bir dosyayı yeniden yazınca sayfa kendini yeniler. Başka bir sayfaya
 tıklayınca o pencerede açılır. Agent'lar yanındaki **+** → **🌐 Web sayfası…** herhangi bir adresi
 açar (`localhost:5173`, ya da sadece `5173`). Kurulacak bir şey yok.
@@ -206,7 +262,7 @@ on_limit = "ask"   # ask (varsayılan) | auto: `order` içindeki sıradaki agent
 ## Belgeler (İngilizce)
 
 [Yapılandırma](docs/CONFIG.md) · [Devir belgesi](docs/HANDOFF.md) · [Limitler](docs/LIMITS.md) ·
-[Agent veri yolu](docs/AGENT-BUS.md) · [Sorun giderme](docs/TROUBLESHOOTING.md) ·
+[Agent veri yolu](docs/AGENT-BUS.md) · [Windows](docs/WINDOWS.md) · [Sorun giderme](docs/TROUBLESHOOTING.md) ·
 [Mimari](ARCHITECTURE.md) · [Katkı](CONTRIBUTING.md) · [English](README.md)
 
 ## Lisans
