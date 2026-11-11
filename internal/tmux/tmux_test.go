@@ -234,6 +234,9 @@ func FuzzSectionsRows(f *testing.F) {
 
 func realClient(t *testing.T) *Client {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("real tmux tests: Windows runs psmux, whose server differs (see psmux_windows_test.go)")
+	}
 	if _, err := exec.LookPath("tmux"); err != nil {
 		t.Skip("tmux not installed")
 	}

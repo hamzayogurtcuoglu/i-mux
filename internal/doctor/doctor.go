@@ -169,6 +169,9 @@ func checkTmux(ctx context.Context, r *Report, o Options) {
 		r.add(Info, "doctor.tmux_no_click", v.String(), fmt.Sprintf("%d.%d", tmux.ClickMinVersion[0], tmux.ClickMinVersion[1]))
 	}
 	if goos == "windows" {
+		if tmux.LegacyPsmux(v) {
+			r.add(Warn, "doctor.psmux_legacy")
+		}
 		return // psmux draws in the Windows console: no terminfo
 	}
 	if tmux.TerminfoExists("tmux-256color") {

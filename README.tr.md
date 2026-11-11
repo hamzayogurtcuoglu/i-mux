@@ -69,6 +69,14 @@ Font'u önerir. Ardından yeni bir terminal açın. Dosya olarak çalıştırıl
 kaynak kopyasında `.\install.ps1 -FromSource .` derleyip kurar; `scripts\build-windows.ps1` (ya da
 `make build-windows`) yalnızca `bin\imux.exe`'yi derler.
 
+**psmux sürümü:** Güncel psmux sürümü 3.4.0, bir pane'e Ctrl+C ya da fare tıklaması gittikten sonra
+i-mux'un tuş bağlamalarını ve tıklamalarını çalıştırmıyor, durum çubuğu da tıklanamıyor. İkisi de
+psmux'un ana dalında düzeltildi ama henüz sürüm çıkmadı. O zamana kadar `scripts\build-psmux.ps1`
+ile derleyin (`winget install --id Rustlang.Rustup -e` ve
+`winget install --id MartinStorsjo.LLVM-MinGW.UCRT -e` gerekir, yönetici yetkisi gerekmez):
+`bin\psmux.exe` üretir; `install.ps1 -FromSource .` onu `imux.exe`'nin yanına kurar ve i-mux önce
+oraya bakar. 3.4.0 kullanıldığı sürece `imux doctor` uyarır.
+
 [Windows Terminal](https://aka.ms/terminal) kullanın (`winget install Microsoft.WindowsTerminal`):
 eski konsol kenar panelin renklerini ve simgelerini kötü çizer. `imux font install` fontu sizin
 için kurar (`%LOCALAPPDATA%\Microsoft\Windows\Fonts` içine) ve Windows Terminal'in ve VS Code'un

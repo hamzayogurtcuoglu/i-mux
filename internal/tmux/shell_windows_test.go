@@ -122,3 +122,22 @@ func TestLoginShellPowerShell(t *testing.T) {
 		}
 	}
 }
+
+func TestNativeTabs(t *testing.T) {
+	cases := map[string]bool{
+		"tmux 3.4.0\r\npsmux 3.4.0 (20aa1d7 2026-10-13)": true,  // the 3.4.0 release
+		"tmux 3.4.0\r\npsmux 3.4.0 (32aa803 2026-11-10)": false, // a later build of main
+		"tmux 3.4.0":                             true, // no build date
+		"tmux 3.3":                               true,
+		"tmux 3.5\npsmux 3.5.0 (abc 2026-12-01)": false,
+	}
+	for in, want := range cases {
+		v, ok := ParseVersion(in)
+		if !ok {
+			t.Fatalf("ParseVersion(%q) failed", in)
+		}
+		if got := nativeTabs(v); got != want {
+			t.Errorf("nativeTabs(%q) = %v, want %v (built %q)", in, got, want, v.Built)
+		}
+	}
+}

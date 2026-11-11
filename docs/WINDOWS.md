@@ -136,6 +136,15 @@ WSL. The archive is unpacked with Windows' own `tar.exe` (bsdtar, which reads xz
 
 ## Limits
 
+- psmux 3.4.0 (the current release) cannot start run-shell commands after it sent a Ctrl+C or a
+  mouse click into a pane (it detaches from its console and keeps the stale handles), so every key
+  binding and status bar click of i-mux fails from then on; its status-format has no click ranges
+  either. psmux's main branch fixes both. `scripts\build-psmux.ps1` builds the tested commit into
+  `bin\psmux.exe`; `tmux.DefaultBin` prefers the psmux next to `imux.exe`. With 3.4.0, i-mux works
+  around what it can: the tab bar is psmux's own window list (`nativeTabs`), split-window -b is
+  emulated with swap-pane and resize-pane sizes are given as shares (`legacyPsmux`), and the
+  watcher stands in for the pane-died hook.
+
 - psmux is young and its tmux coverage is still growing; features gated on a tmux version follow
   the tmux level psmux reports.
 - On consoles other than Windows Terminal (the old console host) colors and icons are drawn

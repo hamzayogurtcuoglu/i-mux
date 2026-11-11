@@ -40,6 +40,9 @@ func ShEnv(name, value string) string { return name + "=" + ShQuote(value) + " "
 // platformConf is extra tmux.conf lines this system needs (none on Unix).
 func platformConf() []string { return nil }
 
+// LegacyPsmux is false: Unix runs tmux.
+func LegacyPsmux(Version) bool { return false }
+
 // nativeTabs reports whether the tab bar is the multiplexer's own window
 // list: never with tmux.
 func nativeTabs(Version) bool { return false }

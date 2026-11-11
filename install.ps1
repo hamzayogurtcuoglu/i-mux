@@ -59,7 +59,9 @@ function Install-Imux {
     $tmp = Join-Path ([IO.Path]::GetTempPath()) ('imux-install-' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tmp | Out-Null
     try {
+        $srcRoot = ''
         if ($FromSource) {
+            $srcRoot = $FromSource
             $new = Build-FromSource $FromSource $tmp
         } else {
             $new = Get-Release $arch $tmp
@@ -68,6 +70,7 @@ function Install-Imux {
                 # script builds instead.
                 if ($PSScriptRoot -and (Test-Checkout $PSScriptRoot)) {
                     Say "No release of $Repo yet: building the checkout in $PSScriptRoot."
+                    $srcRoot = $PSScriptRoot
                     $new = Build-FromSource $PSScriptRoot $tmp
                 } else {
                     Fail "no release of $Repo to download yet. Clone it and run: .\install.ps1 -FromSource <checkout> (needs Go: winget install --id GoLang.Go)"
@@ -75,12 +78,13 @@ function Install-Imux {
             }
         }
         $exe = Install-Binary $new $dir
+        $bundled = Install-BundledPsmux $srcRoot $dir
     } finally {
         Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     $onPath = Add-ToPath $dir (-not $NoModifyPath.IsPresent)
-    if (-not $NoPsmux.IsPresent) { Install-Psmux $assumeYes }
+    if (-not $NoPsmux.IsPresent -and -not $bundled) { Install-Psmux $assumeYes }
 
     # The sidebar's icons need a Nerd Font where the terminal draws text.
     if ($offerFont) {
@@ -107,6 +111,27 @@ function Install-Imux {
 }
 
 function Say([string]$msg) { Write-Host $msg }
+
+# Install-BundledPsmux: a checkout may carry a psmux build in bin\psmux.exe
+# (scriptsuild-psmux.ps1). imux prefers the psmux next to imux.exe, so it is
+# copied there; psmux 3.4.0 from winget stops running imux's key bindings
+# after a Ctrl+C or a click in a pane. Returns whether one was installed.
+function Install-BundledPsmux([string]$srcRoot, [string]$dir) {
+    if (-not $srcRoot) { return $false }
+    $src = Join-Path $srcRoot 'bin\psmux.exe'
+    if (-not (Test-Path -LiteralPath $src)) { return $false }
+    $target = Join-Path $dir 'psmux.exe'
+    if (Test-Path -LiteralPath $target) {
+        # A running psmux.exe cannot be overwritten, only renamed.
+        $old = $target + '.old'
+        Remove-Item -LiteralPath $old -Force -ErrorAction SilentlyContinue
+        Rename-Item -LiteralPath $target -NewName 'psmux.exe.old' -ErrorAction SilentlyContinue
+    }
+    Copy-Item -LiteralPath $src -Destination $target -Force
+    $v = (& $target -V 2>$null | Select-Object -Last 1)
+    Say "psmux installed next to imux: $v"
+    return $true
+}
 
 function Fail([string]$msg) {
     Write-Host "imux install: $msg" -ForegroundColor Red

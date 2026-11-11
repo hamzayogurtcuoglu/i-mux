@@ -247,7 +247,9 @@ func (c *Client) runPsmux(ctx context.Context, cmds []Cmd) (string, error) {
 			}
 			var before *splitBefore
 			if g.creates {
-				cmds[0], before = takeBefore(cmds[0])
+				if c.legacyPsmux() {
+					cmds[0], before = takeBefore(cmds[0])
+				}
 				cmds = askNewPane(cmds)
 			}
 			cmds = c.targetedResizes(ctx, g.route, cmds)

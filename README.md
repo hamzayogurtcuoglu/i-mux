@@ -74,6 +74,14 @@ new terminal afterwards. Run as a file it takes options (`.\install.ps1 -Yes`, `
 and the like first. From a checkout with Go installed, `.\install.ps1 -FromSource .` builds and
 installs it, and `scripts\build-windows.ps1` (or `make build-windows`) only builds `bin\imux.exe`.
 
+**psmux version:** psmux 3.4.0, the current release, stops running i-mux's key bindings and clicks
+once a Ctrl+C or a mouse click was sent into a pane, and its status bar cannot be clicked. Both are
+fixed on psmux's main branch, which has no release yet. Until one comes out, build it with
+`scripts\build-psmux.ps1` (needs `winget install --id Rustlang.Rustup -e` and
+`winget install --id MartinStorsjo.LLVM-MinGW.UCRT -e`, no administrator rights): it writes
+`bin\psmux.exe`, which `install.ps1 -FromSource .` installs next to `imux.exe`, where i-mux looks
+first. `imux doctor` warns while 3.4.0 is in use.
+
 Use [Windows Terminal](https://aka.ms/terminal) (`winget install Microsoft.WindowsTerminal`): the
 old console draws the sidebar's colors and icons poorly. `imux font install` installs the font for
 you (in `%LOCALAPPDATA%\Microsoft\Windows\Fonts`) and sets Windows Terminal's and VS Code's font.

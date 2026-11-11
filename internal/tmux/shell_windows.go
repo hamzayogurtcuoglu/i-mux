@@ -120,12 +120,25 @@ func platformConfLate() []string {
 	}
 }
 
+// psmux340Built is the commit date of psmux 3.4.0. Its status-format has no
+// click ranges (#[range=...]); builds after it (still called 3.4.0 until the
+// next release) do.
+const psmux340Built = "2026-10-13"
+
 // nativeTabs reports whether the tab bar is psmux's own window list: psmux
-// 3.4.0 has no click ranges (#[range=...]) in status-format, so imux's tab
-// bar and agent bar could not be clicked; its window list can.
+// 3.4.0 and older have no click ranges, so imux's tab bar and agent bar could
+// not be clicked; its window list can.
 func nativeTabs(v Version) bool {
-	return v.Major < 3 || (v.Major == 3 && v.Minor <= 4)
+	if v.Major != 3 || v.Minor != 4 {
+		return v.Major < 3 || v.Major == 3 && v.Minor < 4
+	}
+	return v.Built == "" || v.Built <= psmux340Built
 }
+
+// LegacyPsmux reports whether v is psmux 3.4.0 or older, which stops running
+// run-shell commands (all of imux's key bindings and clicks) after a Ctrl+C
+// or a click was sent into a pane.
+func LegacyPsmux(v Version) bool { return nativeTabs(v) }
 
 // LoginShell is the argv that starts sh in a pane: PowerShell without its
 // banner; other shells as they are.

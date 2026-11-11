@@ -10,6 +10,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var labelOpts = map[string]bool{"@imux_label": true, "@imux_name": true, "@imux_flag": true}
@@ -143,7 +144,10 @@ func (c *Client) targetedResizes(ctx context.Context, route string, cmds []Cmd) 
 		}
 		active, _ := c.execRoute(ctx, route, []Cmd{{"list-panes", "-t", f[0], "-F", "#{?pane_active,#{pane_id},}"}})
 		prev := strings.TrimSpace(active)
-		out = append(out, Cmd{"select-pane", "-t", t}, percentResize(cmd, f[1], f[2]))
+		if c.legacyPsmux() {
+			cmd = percentResize(cmd, f[1], f[2])
+		}
+		out = append(out, Cmd{"select-pane", "-t", t}, cmd)
 		if prev != "" && prev != t {
 			out = append(out, Cmd{"select-pane", "-t", prev})
 		}
@@ -177,3 +181,26 @@ func percentResize(cmd Cmd, w, h string) Cmd {
 }
 
 // askNewPane makes the creating command print the new pane's id first.
+
+var legacy struct {
+	sync.Mutex
+	bins map[string]bool
+}
+
+// legacyPsmux reports whether c's psmux is 3.4.0 or older, which has no
+// split-window -b and takes resize-pane -x/-y as a share of the window; later
+// builds take cells and split before the target, as tmux does.
+func (c *Client) legacyPsmux() bool {
+	legacy.Lock()
+	defer legacy.Unlock()
+	if v, ok := legacy.bins[c.Bin]; ok {
+		return v
+	}
+	v, err := c.BinVersion(context.Background())
+	old := err != nil || nativeTabs(v)
+	if legacy.bins == nil {
+		legacy.bins = map[string]bool{}
+	}
+	legacy.bins[c.Bin] = old
+	return old
+}

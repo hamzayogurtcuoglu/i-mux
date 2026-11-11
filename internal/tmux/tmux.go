@@ -414,6 +414,7 @@ type Version struct {
 	Major, Minor int
 	Suffix       string // "a" in 3.2a
 	Raw          string
+	Built        string // psmux: the build's commit date ("2026-10-13"), "" when not printed
 }
 
 // AtLeast reports whether v ≥ major.minor.
@@ -445,6 +446,9 @@ func ParseVersion(s string) (Version, bool) {
 			v, ok := ParseVersion(first)
 			if ok {
 				v.Raw = f[1]
+				if len(f) >= 4 {
+					v.Built = strings.Trim(f[3], "()")
+				}
 			}
 			return v, ok
 		}

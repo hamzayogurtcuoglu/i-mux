@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -641,6 +642,9 @@ func TestSwitchMarksTheClient(t *testing.T) {
 // realTmux starts a private tmux server for the test.
 func realTmux(t *testing.T) *tmux.Client {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("real tmux tests: Windows runs psmux, covered by the tmux package's psmux tests")
+	}
 	if _, err := exec.LookPath("tmux"); err != nil {
 		t.Skip("tmux not installed")
 	}

@@ -676,6 +676,7 @@ var tr = map[string]string{
 	"doctor.tmux_error@windows":      "psmux: %v",
 	"doctor.tmux_old@windows":        "psmux %s çok eski; i-mux tmux %s ya da daha yenisine denk gelen bir psmux gerektirir (winget upgrade --id marlocarlo.psmux)",
 	"doctor.tmux_ok@windows":         "psmux %s (%s)",
+	"doctor.psmux_legacy":            "psmux 3.4.0, bir pane'de Ctrl+C ya da tıklamadan sonra i-mux'un tuşlarını ve tıklamalarını çalıştırmıyor: scripts\\build-psmux.ps1 ile daha yenisini derleyip install.ps1'i yeniden çalıştırın",
 	"doctor.tmux_no_click@windows":   "psmux %s: agent çubuğu tıklanamaz (tmux %s gerekir); menü tuşlarını kullanın",
 	"doctor.home_ok@windows":         "%s kullanıcı klasöründe (yalnız senin hesabın okuyabilir)",
 	"doctor.home_shared":             "%s kullanıcı klasörünün dışında: bu bilgisayardaki diğer hesaplar okuyabilir (IMUX_HOME'u kullanıcı klasöründe tut)",

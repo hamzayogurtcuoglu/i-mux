@@ -675,6 +675,7 @@ var en = map[string]string{
 	"doctor.tmux_error@windows":      "psmux: %v",
 	"doctor.tmux_old@windows":        "psmux %s is too old; i-mux needs one that matches tmux %s or newer (winget upgrade --id marlocarlo.psmux)",
 	"doctor.tmux_ok@windows":         "psmux %s (%s)",
+	"doctor.psmux_legacy":            "psmux 3.4.0 stops running i-mux's keys and clicks after a Ctrl+C or a click in a pane: build a newer one with scripts\\build-psmux.ps1, then run install.ps1 again",
 	"doctor.tmux_no_click@windows":   "psmux %s: the agent bar is not clickable (needs tmux %s); use the menu keys",
 	"doctor.home_ok@windows":         "%s is in your user folder (only your account can read it)",
 	"doctor.home_shared":             "%s is outside your user folder: other accounts on this PC may read it (keep IMUX_HOME under your user folder)",
