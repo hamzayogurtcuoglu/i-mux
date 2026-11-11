@@ -48,7 +48,7 @@ func LegacyPsmux(Version) bool { return false }
 func nativeTabs(Version) bool { return false }
 
 // platformConfLate is extra lines after imux's own (none on Unix).
-func platformConfLate() []string { return nil }
+func platformConfLate(*ConfInput) []string { return nil }
 
 // LoginShell is the argv that starts sh as a login shell in a pane.
 func LoginShell(sh string) []string { return []string{sh, "-l"} }

@@ -113,11 +113,22 @@ func platformConf() []string {
 // platformConfLate replaces settings psmux does not have: its pane borders
 // show #{pane_title} only, so imux writes its label as the pane's title
 // (and programs may not change it).
-func platformConfLate() []string {
-	return []string{
+func platformConfLate(in *ConfInput) []string {
+	ls := []string{
 		"set -g  pane-border-format ' #{pane_title} '",
 		"set -g  allow-set-title off",
 	}
+	if in.Cfg.Tmux.Mouse {
+		// psmux's own right-click pastes unless the ACTIVE pane runs a
+		// full-screen program, so a right-click on a sidebar (its agent and
+		// file menus) pasted the clipboard into it. imux decides instead:
+		// a sidebar or a program that asked for the mouse gets the click,
+		// any other pane the clipboard's text, as in Windows Terminal.
+		app := "#{?#{||:#{==:#{@imux_role},sidebar},#{mouse_any_flag}},1,0}"
+		ls = append(ls, "bind -n MouseDown3Pane run-shell -t = -b "+
+			Quote(UICommand(in.Self, "__mouse3", "--pane", "#{pane_id}", "--x", "#{mouse_x}", "--y", "#{mouse_y}", "--app", app)))
+	}
+	return ls
 }
 
 // psmux340Built is the commit date of psmux 3.4.0. Its status-format has no

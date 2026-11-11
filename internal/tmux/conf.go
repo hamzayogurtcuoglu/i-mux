@@ -337,7 +337,7 @@ func GenerateConf(in *ConfInput) string {
 		}
 	}
 	w("")
-	for _, l := range platformConfLate() {
+	for _, l := range platformConfLate(in) {
 		w("%s", l)
 	}
 	w("source-file -q %s", Quote(in.LocalConf))

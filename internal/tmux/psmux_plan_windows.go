@@ -7,6 +7,7 @@ package tmux
 // of its own for (new panes acted on by the commands after them).
 
 import (
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -380,6 +381,7 @@ func psmuxMenu(cmd Cmd) Cmd {
 		if i+2 < len(cmd) {
 			c = cmd[i+2]
 		}
+		c = menuItemCommand(c)
 		disabled := strings.HasPrefix(name, "-")
 		name = strings.ReplaceAll(strings.TrimPrefix(name, "-"), "##", "#")
 		if disabled {
@@ -422,3 +424,23 @@ func psmuxPopup(cmd Cmd) Cmd {
 
 // spawnPsmux is Spawn for psmux: the last group is started and not waited
 // for (a display-menu client blocks until the menu closes).
+
+// menuItemCommand makes a menu item's tmux commands that name imux ids
+// (%3~session) run through imux (imux __tmux), which routes them: psmux runs
+// a menu item itself and knows neither the ids nor the other sessions'
+// servers. Shell commands (run-shell, popups) pass ids to imux already.
+func menuItemCommand(c string) string {
+	if !strings.Contains(c, IDSep) {
+		return c
+	}
+	first, _, _ := strings.Cut(strings.TrimSpace(c), " ")
+	switch first {
+	case "run-shell", "run", "display-popup", "popup":
+		return c
+	}
+	self, err := os.Executable()
+	if err != nil {
+		return c
+	}
+	return "run-shell -b " + Quote(UICommand(self, "__tmux", ShQuote(c)))
+}
