@@ -581,6 +581,12 @@ var MenuMinVersion = [2]int{3, 5}
 // click outside closes it).
 func (c *Client) Menu(ctx context.Context) Cmd {
 	menuMouse.Do(func() {
+		if c.psmuxMode() {
+			// psmux's menus take the mouse whatever opened them; the
+			// adapter drops the flags it does not know.
+			menuMouse.ok = true
+			return
+		}
 		v, err := c.BinVersion(ctx)
 		menuMouse.ok = err == nil && v.AtLeast(MenuMinVersion[0], MenuMinVersion[1])
 	})
