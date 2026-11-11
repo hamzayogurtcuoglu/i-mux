@@ -1006,10 +1006,10 @@ bar should start above the terminal, not at the far left, also when the panel op
   - AC: D51: a click on an HTML file opens a menu at the click (window, tab, edit, view); the
     Settings row is gone; unit tests (the menu's items and commands); e2e: the menu's window
     item opens the page live.
-- [ ] **T58.2 The tab bar over the terminal** · S
+- [x] **T58.2 The tab bar over the terminal** · S
   - AC: D52: the bar is padded by the sidebar's width and border (none when zoomed or without a
-    sidebar); unit tests (the format, the config golden files); e2e: the first tab starts at the
-    agent pane's column, and moves when the panel closes to the rail.
+    sidebar); unit tests (the format, the config golden files); e2e: the first tab starts over the
+    agent pane, and moves when the panel closes to the rail.
 
 ## M57: Settings as menus, the editor among them (added 2026-11-11)
 
@@ -1027,7 +1027,7 @@ to choose from, for every row; and an editor choice: micro, nano or Neovim.
 User request: a button that closes i-mux and goes back to the normal terminal (top right); `imux`
 no longer offers the workspace it used to.
 
-- [ ] **T56.1 The Exit button** · M
+- [x] **T56.1 The Exit button** · M
   - AC: D48, §9.3 "Leaving i-mux": ⏻ Exit at the right of the tab bar (a user range from tmux
     3.4, the right range before, the + then outside any range); its menu: back to the terminal
     (detach), quit (confirm, snapshot, live preview servers stopped, server killed); `imux quit

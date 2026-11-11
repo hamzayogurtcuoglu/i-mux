@@ -120,10 +120,14 @@ Fare tekerleği her yerde kaydırır.
 
 `imux`'u çalıştırınca hangi projeyi açacağını sorar: adının birkaç harfini yaz. (Açık bir projenin
 klasöründeysen doğrudan ona gider; başka bir klasörde, açık ya da geri yüklenecek bir şey yoksa o
-klasörü açar.) Bilgisayar yeniden başladıysa en üstte **Son oturumu geri
+klasörü açar.) Bilgisayar yeniden başladıysa ya da i-mux'u kapattıysan en üstte **Son oturumu geri
 yükle** gelir ve açık olan bütün projeleri geri getirir; sonra **bu klasör**, sonra **Son
 kullanılanlar**: bıraktığın gibi açılırlar, aynı sekmeler, adlar ve agent'lar, her agent kendi
 sohbetine döner.
+
+**Çıkmak:** sekme çubuğunun sağındaki **⏻ Çık** → **Terminale dön** seni kabuğuna döndürür, agent'lar
+çalışmaya devam eder (`imux` seni onlara geri götürür); **i-mux'u kapat, tüm agent'ları durdur…** bir
+kez sorup hepsini kapatır (kabuktan `imux quit`).
 
 Soldaki **kenar panel** bir kod editörününki gibi çalışır: en soldaki simgeler (altlarında adları)
 görünümü değiştirir.
@@ -145,7 +149,7 @@ görünümü değiştirir.
 | **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder (kurulu olmayan biri, onu kuran komutu ve **Şimdi kur** düğmesini gösteren küçük bir pencere açar) |
 | bir bölüm başlığı (PROJELER, AGENT'LAR) | bölümü kapatır / açar |
 | **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar, ad verilenler adıyla (konuşmanın **Yeniden adlandır…** öğesi ad verir; devam edince agent adını geri alır) (📌 Sabitle ya da kaldır…, `p`, birini en üstte tutar; **🔍 Metinlerinde ara…**, `/`, bir konuşmayı içinde geçen herhangi bir şeyle bulur) · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |
-| en üstteki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat |
+| en üstteki, terminalin üstündeki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** · **⏻ Çık** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat · terminale dön ya da i-mux'u kapat |
 | projenin son agent'ını kapat | proje açık kalır ve **Agent yok** der: başlatmak için orada bir agent'ın tuşuna bas (ya da tıkla) veya AGENT'LAR yanındaki **+** |
 | `prefix b` | kenar paneli gizle ya da göster |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` `e` | pane menüsü; Claude / Antigravity / Copilot / Codex / OpenCode'da sürdür |

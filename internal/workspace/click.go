@@ -22,6 +22,7 @@ const (
 	ClickInstall              // the agent is not installed: show the hint
 	ClickNewTab               // the tab bar's +: ask which agent a new tab starts with
 	ClickCloseTab             // the × of the current tab: ask, then close it
+	ClickQuit                 // the tab bar's ⏻ Exit: back to the terminal, or quit (D48)
 )
 
 // Classify decides what a click on range rng does for pane p (§9.3, §14.7).
@@ -39,6 +40,8 @@ func (w *WS) Classify(rng string, p *Pane) (ClickAction, session.AgentID) {
 		return ClickNewTab, ""
 	case "close":
 		return ClickCloseTab, ""
+	case "quit":
+		return ClickQuit, ""
 	}
 	id, ok := AgentOfRange(x)
 	if !ok {
@@ -80,6 +83,8 @@ func (w *WS) Click(ctx context.Context, f *sources.Finder, rng string, p *Pane, 
 			return err
 		}
 		return w.Show(ctx, m, client, p.ID)
+	case ClickQuit:
+		return w.Show(ctx, w.QuitMenu(p, client), client, p.ID)
 	case ClickInstall:
 		return w.ShowInstall(id, p.ID, client)
 	case ClickConfirm:

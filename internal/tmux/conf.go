@@ -46,16 +46,27 @@ func (in *ConfInput) oldTabClicks() bool {
 	return in.Cfg.Tmux.Tabs && in.Cfg.Tmux.Mouse && !in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
 }
 
-// TabFormat is the tab bar (status-format[0] with tmux.tabs): the session's
-// windows as tabs " <n> <name> <state> ", the current one highlighted, each
-// a window range (a click selects it), then a "+" (range=user|imux:tab).
-// Nothing on the right: the agents' states and limits are in the sidebar.
-// With old (tmux before 3.4) the × is a status-left range and the + a
-// status-right one.
+// TabPad is the tab bar's start: a blank as wide as the window's sidebar and
+// its border, so that the tabs begin above the agent's pane (D52); nothing
+// when a pane is zoomed or the window has no sidebar. tmux expands a
+// modifier's argument given between "/"s (3.2 too), and redraws the bar
+// when a pane is resized or closed.
+const TabPad = "#{?window_zoomed_flag,,#{P:#{?#{==:#{@imux_role},sidebar},#{p/#{e|+:#{pane_width},1}/:},}}}"
+
+// TabFormat is the tab bar (status-format[0] with tmux.tabs): a blank as
+// wide as the sidebar (TabPad), the session's windows as tabs " <n> <name>
+// <state> ", the current one highlighted, each a window range (a click
+// selects it), then a "+" (range=user|imux:tab), and on the right ⏻ Exit
+// (range=user|imux:quit, D48). With old (tmux before 3.4, no user ranges)
+// the × is a status-left range, the Exit a status-right one, and the +
+// stays outside any range (MouseUp1StatusDefault); the blank is then the
+// current window's range, so a click on it does nothing.
 func TabFormat(old bool) string {
-	closeRange, tabRange := "#[range=user|imux:close]", "#[range=user|imux:tab]"
+	closeRange, tabRange, quitRange := "#[range=user|imux:close]", "#[range=user|imux:tab]", "#[range=user|imux:quit]"
+	pad := TabPad
 	if old {
-		closeRange, tabRange = "#[range=left]", "#[range=right]"
+		closeRange, tabRange, quitRange = "#[range=left]", "", "#[range=right]"
+		pad = "#[range=window|#{window_index}]" + TabPad + "#[norange]"
 	}
 	// The state glyph always takes its column (a space when idle), so the
 	// × and the next tabs do not move when an agent starts or stops.
@@ -64,13 +75,14 @@ func TabFormat(old bool) string {
 	// range one cell longer than drawn, so a range right after another loses
 	// its first cell (the current tab took the click on its ×). The × takes
 	// 3 columns, like the +.
-	return "#[align=left] " +
+	return "#[align=left]" + pad + " " +
 		"#{W:" +
 		"#[range=window|#{window_index}]#[fg=colour245]" + tab + " #[norange default] ," +
 		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange] " +
 		closeRange + "#[bg=colour236 fg=colour245 nobold] × #[norange default] " +
 		"}" +
-		tabRange + "#[fg=colour245] + #[norange default]"
+		tabRange + "#[fg=colour245] + #[norange default]" +
+		"#[align=right]" + quitRange + "#[fg=colour245] " + i18n.T("tabs.exit") + " #[norange default] "
 }
 
 // Silent is appended to every shell command imux's bindings, hooks and menu
@@ -123,7 +135,7 @@ func BoundKeys(in *ConfInput) []string {
 		ks = append(ks, "root MouseDown1Status", "root MouseUp1Status")
 	}
 	if in.oldTabClicks() {
-		ks = append(ks, "root MouseUp1StatusLeft", "root MouseUp1StatusRight")
+		ks = append(ks, "root MouseUp1StatusLeft", "root MouseUp1StatusRight", "root MouseUp1StatusDefault")
 	}
 	if t.Mouse {
 		ks = append(ks, "root MouseDown3Border", "root MouseDown1Pane", "root SecondClick1Pane", "root DoubleClick1Pane", "root TripleClick1Pane")
@@ -250,10 +262,11 @@ func GenerateConf(in *ConfInput) string {
 			QuoteDouble(runShell(in.Self, "__click", "#{mouse_status_range}", pane)))
 	}
 	if in.oldTabClicks() {
-		w("# tmux before 3.4: the tab bar's × and + are its status-left and status-right ranges; clicks go to imux")
-		w("# when the button is released.")
+		w("# tmux before 3.4: the tab bar's × is its status-left range, ⏻ Exit its status-right range and the +")
+		w("# the bar outside any range; clicks go to imux when the button is released.")
 		w("bind -n MouseUp1StatusLeft %s", runShell(in.Self, "__click", "imux:close", pane))
-		w("bind -n MouseUp1StatusRight %s", runShell(in.Self, "__click", "imux:tab", pane))
+		w("bind -n MouseUp1StatusRight %s", runShell(in.Self, "__click", "imux:quit", pane))
+		w("bind -n MouseUp1StatusDefault %s", runShell(in.Self, "__click", "imux:tab", pane))
 	}
 	if cfg.Tmux.Mouse {
 		w("# Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).")

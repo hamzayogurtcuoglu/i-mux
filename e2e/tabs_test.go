@@ -55,7 +55,6 @@ func TestTabs(t *testing.T) {
 
 	// + → "New tab with:" → x: Codex in a new tab, with its sidebar.
 	x := h.tabCol(agentPane, " + ") + 1
-	first := h.tabCol(agentPane, "0 Claude")
 	time.Sleep(500 * time.Millisecond)
 	mark := c.Mark()
 	c.Click(0, x, 1)
@@ -70,8 +69,22 @@ func TestTabs(t *testing.T) {
 	}
 	h.tabCol(agentPane, "1 Codex")
 
-	// A click on the first tab goes back.
+	// A click on the first tab goes back. The bar starts past the sidebar
+	// (D52), so the column is measured on the new tab once its sidebar is in.
+	codexPane := ""
+	for _, l := range strings.Split(h.mustTmux("list-panes", "-t", ":1", "-F", "#{pane_id} #{@imux_agent}"), "\n") {
+		if f := strings.Fields(l); len(f) == 2 && f[1] == "codex" {
+			codexPane = f[0]
+		}
+	}
+	if codexPane == "" {
+		t.Fatal("no codex pane in the new tab")
+	}
+	h.waitFor("the new tab's sidebar settled", 5*time.Second, func() bool {
+		return h.paneOpt(codexPane, "#{pane_left}") == h.paneOpt(agentPane, "#{pane_left}")
+	})
 	time.Sleep(500 * time.Millisecond)
+	first := h.tabCol(codexPane, "0 Claude")
 	c.Click(0, first+1, 1)
 	h.waitFor("client back on the first tab", 5*time.Second, func() bool { return window() == "0" })
 

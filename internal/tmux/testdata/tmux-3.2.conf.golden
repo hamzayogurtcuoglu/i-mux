@@ -30,7 +30,7 @@ set -gq @imux_status ''
 # Tab bar at the top: the session's windows, and + for a new tab.
 set -g  status-position top
 set -g  status-style bg=default,fg=colour245
-set -g  status-format[0] '#[align=left] #{W:#[range=window|#{window_index}]#[fg=colour245] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, } #[norange default] ,#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }#[norange] #[range=left]#[bg=colour236 fg=colour245 nobold] × #[norange default] }#[range=right]#[fg=colour245] + #[norange default]'
+set -g  status-format[0] '#[align=left]#[range=window|#{window_index}]#{?window_zoomed_flag,,#{P:#{?#{==:#{@imux_role},sidebar},#{p/#{e|+:#{pane_width},1}/:},}}}#[norange] #{W:#[range=window|#{window_index}]#[fg=colour245] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, } #[norange default] ,#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }#[norange] #[range=left]#[bg=colour236 fg=colour245 nobold] × #[norange default] }#[fg=colour245] + #[norange default]#[align=right]#[range=right]#[fg=colour245] ⏻ Exit #[norange default] '
 set -g  status 2
 set -g  status-format[1] '#[align=left] imux #[range=user|imux:menu]☰#[norange default]'
 
@@ -50,10 +50,11 @@ bind    - run-shell -b '/opt/imux/bin/imux __menu --split v --pane #{pane_id} --
 # New tab (asks which agent) and the tab's name.
 bind    c run-shell -b '/opt/imux/bin/imux __menu --tab --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    , command-prompt -I '#{@imux_tab}' -p 'Tab name:' 'set-option -w @imux_tab "%%%"'
-# tmux before 3.4: the tab bar's × and + are its status-left and status-right ranges; clicks go to imux
-# when the button is released.
+# tmux before 3.4: the tab bar's × is its status-left range, ⏻ Exit its status-right range and the +
+# the bar outside any range; clicks go to imux when the button is released.
 bind -n MouseUp1StatusLeft run-shell -b '/opt/imux/bin/imux __click imux:close --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
-bind -n MouseUp1StatusRight run-shell -b '/opt/imux/bin/imux __click imux:tab --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind -n MouseUp1StatusRight run-shell -b '/opt/imux/bin/imux __click imux:quit --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind -n MouseUp1StatusDefault run-shell -b '/opt/imux/bin/imux __click imux:tab --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).
 bind -n MouseDown3Border run-shell -t = -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # A sidebar acts on a click at once, so a double or triple click on it must not select it
@@ -65,7 +66,7 @@ bind -n MouseDown1Pane { set -gF @imux_press '#{mouse_pane}'; select-pane -t=; s
 bind -n SecondClick1Pane if -F -t= '#{||:#{!=:#{@imux_role},sidebar},#{==:#{pane_id},#{@imux_press}}}' { send -M } {}
 bind -n DoubleClick1Pane if -F -t= '#{==:#{@imux_role},sidebar}' { send -M } { select-pane -t=; if -F '#{||:#{pane_in_mode},#{mouse_any_flag}}' { send -M } { copy-mode -H; send -X select-word; run -d0.3; send -X copy-pipe-and-cancel } }
 bind -n TripleClick1Pane if -F -t= '#{==:#{@imux_role},sidebar}' { if -F -t= '#{==:#{pane_id},#{@imux_press}}' { send -M } {} } { select-pane -t=; if -F '#{||:#{pane_in_mode},#{mouse_any_flag}}' { send -M } { copy-mode -H; send -X select-line; run -d0.3; send -X copy-pipe-and-cancel } }
-set -g  @imux_keys 'root C-\,root C-p,prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root MouseUp1StatusLeft,root MouseUp1StatusRight,root MouseDown3Border,root MouseDown1Pane,root SecondClick1Pane,root DoubleClick1Pane,root TripleClick1Pane,root C-v,root M-v'
+set -g  @imux_keys 'root C-\,root C-p,prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root MouseUp1StatusLeft,root MouseUp1StatusRight,root MouseUp1StatusDefault,root MouseDown3Border,root MouseDown1Pane,root SecondClick1Pane,root DoubleClick1Pane,root TripleClick1Pane,root C-v,root M-v'
 
 # Pane lifecycle and watcher.
 set-hook -g pane-died "run-shell -b '/opt/imux/bin/imux __pane-died #{pane_id} #{pane_dead_status} >/dev/null 2>&1 || true'"

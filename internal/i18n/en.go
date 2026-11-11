@@ -599,6 +599,19 @@ var en = map[string]string{
 	"fetch.progress":     "%.1f of %.1f MB",
 	"fetch.checking":     "Checking the download…",
 
+	// leaving i-mux (D48)
+	"tabs.exit":          "⏻ Exit",
+	"cmd.quit":           "Close i-mux: stop every agent and project (imux brings them back).",
+	"quit.title":         "Leave i-mux",
+	"quit.detach":        "↩ Back to the terminal · agents keep running",
+	"quit.quit":          "⏻ Quit i-mux and stop every agent…",
+	"quit.confirm_title": "Stop %d agents and close i-mux?",
+	"quit.confirm":       "Quit (imux brings your projects back)",
+	"quit.not_running":   "i-mux is not running.",
+	"quit.ask":           "Stop %d agents and close i-mux? [y/N] ",
+	"quit.no_terminal":   "Run it in a terminal to answer, or with --yes.",
+	"quit.done":          "i-mux is closed. Run imux to bring your projects back.",
+
 	// live preview (D47)
 	"cmd.web":             "Open web pages in your browser: an HTML file of the project, served with live reload, or an address.",
 	"web.status_window":   "HTML files open in a window of their own, live.",

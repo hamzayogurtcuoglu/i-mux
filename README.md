@@ -124,9 +124,13 @@ The mouse wheel scrolls everywhere.
 
 Run `imux` and it asks which project to open: type a few letters of its name. (In an open
 project's folder it goes straight there; in another folder, with nothing open or to restore, it
-opens that folder.) **Restore last session** comes first after a restart and brings back
+opens that folder.) **Restore last session** comes first after a restart or a quit and brings back
 every project that was open; then **this folder**, then **Recent** projects, which reopen as you
 left them: the same tabs, names and agents, each agent back in its own conversation.
+
+**Leaving:** **⏻ Exit** at the right of the tab bar → **Back to the terminal** returns you to your
+shell while the agents keep working (`imux` takes you back to them); **Quit i-mux and stop every
+agent…** closes it all after asking (`imux quit` from a shell).
 
 The **sidebar** on the left works like an editor's: a column of icons (with their names under
 them) switches its view.
@@ -148,7 +152,7 @@ them) switches its view.
 | click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation (one that is not installed opens a small window with the command that installs it, and **Install now**) |
 | a section title (PROJECTS, AGENTS) | fold or unfold it |
 | **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations, named ones by their name (a conversation's **Rename…** names it; continuing it gives the agent its name back) (📌 Pin or unpin…, `p`, keeps one at the top; **🔍 Search their text…**, `/`, finds a conversation by anything said in it) · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
-| the **tab bar** at the top · its **+** (or `prefix c`) · **×** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab |
+| the **tab bar** at the top, over the terminal · its **+** (or `prefix c`) · **×** · **⏻ Exit** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab · back to the terminal, or quit i-mux |
 | close a project's last agent | the project stays open and says **No agents**: press an agent's key (or click it) there, or **+** next to AGENTS, to start one |
 | `prefix b` | hide or show the sidebar |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode |

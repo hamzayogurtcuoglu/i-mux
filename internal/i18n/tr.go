@@ -600,6 +600,19 @@ var tr = map[string]string{
 	"fetch.progress":     "%.1f / %.1f MB",
 	"fetch.checking":     "İndirilen dosya kontrol ediliyor…",
 
+	// leaving i-mux (D48)
+	"tabs.exit":          "⏻ Çık",
+	"cmd.quit":           "i-mux'u kapatır: tüm agent'ları ve projeleri durdurur (imux onları geri getirir).",
+	"quit.title":         "i-mux'tan çık",
+	"quit.detach":        "↩ Terminale dön · agent'lar çalışmaya devam eder",
+	"quit.quit":          "⏻ i-mux'u kapat, tüm agent'ları durdur…",
+	"quit.confirm_title": "%d agent durdurulsun ve i-mux kapansın mı?",
+	"quit.confirm":       "Kapat (imux projelerini geri getirir)",
+	"quit.not_running":   "i-mux çalışmıyor.",
+	"quit.ask":           "%d agent durdurulsun ve i-mux kapansın mı? [e/H] ",
+	"quit.no_terminal":   "Yanıtlamak için bir terminalde çalıştır, ya da --yes ile.",
+	"quit.done":          "i-mux kapandı. Projelerini geri getirmek için imux çalıştır.",
+
 	// live preview (D47)
 	"cmd.web":             "Web sayfalarını tarayıcında açar: projenin bir HTML dosyasını canlı yenilemeyle sunar, ya da bir adresi açar.",
 	"web.status_window":   "HTML dosyaları kendi penceresinde, canlı açılır.",

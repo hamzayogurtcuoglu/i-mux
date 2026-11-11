@@ -8,11 +8,21 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [0.46.0] - 2026-11-11
 
+### Added
+
+- **An Exit button.** **⏻ Exit** at the right of the tab bar opens a small menu: **Back to the
+  terminal** takes you back to your shell while the agents keep working (`imux` brings you back to
+  them), and **Quit i-mux and stop every agent…** asks once, saves the session, stops the live
+  preview servers and closes i-mux (`imux` → **Restore last session** reopens it all). `imux quit`
+  does the same from a shell.
+
 ### Changed
 
 - **`imux` asks which project again.** Outside an open project's folder, while projects are open or
   a last session can be restored, `imux` shows the picker: **Restore last session** first, then
   **this folder**, then your recent projects. In an open project's folder it goes straight there.
+- **The tabs start over the terminal**, past the sidebar, and follow it when the panel opens,
+  closes or is resized (at the left edge with the pane zoomed or no sidebar).
 
 ## [0.45.0] - 2026-11-11
 
