@@ -1016,7 +1016,7 @@ bar should start above the terminal, not at the far left, also when the panel op
 User request: Settings rows should not flip through values; a click or Enter should open a popup
 to choose from, for every row; and an editor choice: micro, nano or Neovim.
 
-- [ ] **T57.1 Menus of values, the Editor row** · M
+- [x] **T57.1 Menus of values, the Editor row** · M
   - AC: D50, §9.3 "Settings": every row with values opens a menu (`●` the current value), the
     choice saves and reopens Settings; Editor: Auto / micro (got when missing) / nano / Neovim /
     Neovim + Copilot, replacing the AI completion row; `imux editor use <editor>`; unit tests

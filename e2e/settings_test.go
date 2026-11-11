@@ -13,9 +13,10 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestSettings (T29.4): 🔧 on the rail opens Settings; rows change the
-// config file and the menu opens again with the new value; the sidebar
-// redraws with the new icons; the commit-agent submenu sets the agent.
+// TestSettings (T29.4, T57.1): 🔧 on the rail opens Settings; a row opens
+// the menu of its values (D50), a choice changes the config file and
+// Settings opens again with the new value; the sidebar redraws with the new
+// icons; the commit-agent menu sets the agent.
 func TestSettings(t *testing.T) {
 	h := newH(t, sidebarConfig)
 	agent, bar := h.startWithSidebar()
@@ -39,6 +40,13 @@ func TestSettings(t *testing.T) {
 
 	mark = c.Mark()
 	c.Write("w")
+	c.waitScreenAfter(h, mark, "continues at once", 5*time.Second)
+	if load().Handoff.OnArrival == "continue" {
+		t.Fatal("the row changed the value without asking")
+	}
+	time.Sleep(300 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("2")
 	c.waitScreenAfter(h, mark, "After a handoff the new agent: continues at once", 5*time.Second)
 	if load().Handoff.OnArrival != "continue" {
 		t.Fatal("on_arrival not written")
@@ -57,6 +65,10 @@ func TestSettings(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 	mark = c.Mark()
 	c.Write("i")
+	c.waitScreenAfter(h, mark, "● Auto", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("2")
 	c.waitScreenAfter(h, mark, "Icons: Nerd Font", 5*time.Second)
 	if load().Tmux.Icons != "nerd" {
 		t.Fatal("icons not written")

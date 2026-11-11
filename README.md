@@ -75,12 +75,13 @@ editor, and gives the agent the room; a click on any view's icon opens it again.
 edge to make it wider or narrower: every tab takes the width, and i-mux remembers it
 (`tmux.sidebar_width`).
 
-**🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: AI completion
-in the editor, icons, who writes commit messages, what a new agent does after a handoff, what happens
-at a limit, and the config file. **Versions and updates** there (or `imux versions`) lists i-mux, tmux
+**🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: your editor,
+notifications, icons, who writes commit messages, what a new agent does after a handoff, what happens
+at a limit, and the config file. Enter or a click on a row opens a menu of its values (● marks the
+current one); pick one or press its number. **Versions and updates** there (or `imux versions`) lists i-mux, tmux
 and every agent CLI with its version and the command that updates it; press its letter to run it
-right there. It says what an older tmux lacks and how to get a newer one on your system. **AI completion in the editor** works like Copilot in VS Code: turn it
-on there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
+right there. It says what an older tmux lacks and how to get a newer one on your system. **AI completion in the editor** works like Copilot in VS Code: choose
+**Editor → Neovim + Copilot** there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
 
@@ -116,9 +117,10 @@ doctor` checks that it can run. Add a key inside OpenCode with `/connect` (pick 
 paste the key from build.nvidia.com or console.groq.com; no account needed), then choose a model
 with `/models`.
 
-Files open in your editor: `editor` in the config, else micro, `$VISUAL`, `$EDITOR`, nano, vim.
-Without an editor of your own, the first file you open offers to get micro for you (5 MB, once;
-also Settings → **Get the micro editor…**, or `imux editor install`): the mouse, Ctrl+S / Ctrl+Q,
+Files open in your editor: Settings → **Editor** picks micro, nano or Neovim (`imux editor use
+<editor>`); on **Auto**, micro, `$VISUAL`, `$EDITOR`, nano, vim. Without an editor of your own, the
+first file you open offers to get micro for you (5 MB, once; also Settings → **Editor** → micro, or
+`imux editor install`): the mouse, Ctrl+S / Ctrl+Q,
 Ctrl+C / Ctrl+V, colors for code and a scroll bar. nano shows where you are at its right edge too.
 The mouse wheel scrolls everywhere.
 
@@ -178,7 +180,7 @@ and `[handoff] on_arrival = "continue"` to let it carry on with an unfinished re
 
 Switching back to an agent that already ran in the pane resumes its own session and tells it only
 what happened in the meantime. Run `imux help` for the command line (`switch`, `split`, `ls`, `versions`,
-`limits`, `sessions`, `handoff --print`, `quit`).
+`limits`, `sessions`, `handoff --print`, `editor`, `quit`).
 
 ## When an agent hits its limit
 

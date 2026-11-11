@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -22,7 +23,7 @@ func init() {
 	register(&command{
 		Name:    "editor",
 		Summary: "cmd.editor",
-		Args:    "[install [--yes]]",
+		Args:    "[install [--yes] | use auto|micro|nano|nvim]",
 		Run:     runEditor,
 	})
 }
@@ -41,8 +42,9 @@ func runEditor(e *Env, args []string) error {
 		return err
 	}
 	install := len(pos) == 1 && pos[0] == "install"
-	if len(pos) > 1 || len(pos) == 1 && !install {
-		return &UsageError{Msg: i18n.T("cli.usage", "editor [install [--yes]]")}
+	use := len(pos) == 2 && pos[0] == "use"
+	if len(pos) > 0 && !install && !use {
+		return &UsageError{Msg: i18n.T("cli.usage", "editor [install [--yes] | use auto|micro|nano|nvim]")}
 	}
 	cfg, err := loadConfig(e)
 	if err != nil {
@@ -56,6 +58,9 @@ func runEditor(e *Env, args []string) error {
 	}
 	if install {
 		return getMicro(e, *yes)
+	}
+	if use {
+		return useEditor(e, pos[1])
 	}
 	argv, _ := editorCmd(cfg, "", 0)
 	if argv == nil {
@@ -165,4 +170,72 @@ func askYes(e *Env, in io.Reader, q string) bool {
 		return true
 	}
 	return false
+}
+
+// useEditor makes files open in name (Settings → Editor, D50): micro is
+// got first when missing; nano or Neovim when missing are installed with
+// apt-get or Homebrew when the user says so, else it says how.
+func useEditor(e *Env, name string) error {
+	switch name {
+	case "micro":
+		if !editor.HasMicro() {
+			if err := getMicro(e, true); err != nil {
+				return err
+			}
+		}
+	case "nano", "nvim":
+		bin, pkg := name, name
+		if name == "nvim" {
+			pkg = "neovim"
+		}
+		if _, err := editor.LookPath(bin); err != nil && !installPackage(e, pkg) {
+			fmt.Fprintln(e.Stdout, i18n.T("editor.missing", pkg))
+			return nil
+		}
+	case "auto":
+	default:
+		return &UsageError{Msg: i18n.T("cli.usage", "editor use auto|micro|nano|nvim")}
+	}
+	if err := setEditor(name); err != nil {
+		return err
+	}
+	if cfg, _, err := config.Load(paths.Config()); err == nil {
+		if argv, _ := editorCmd(cfg, "", 0); argv != nil {
+			fmt.Fprintln(e.Stdout, "\n"+i18n.T("editor.now", filepath.Base(argv[0])))
+		}
+	}
+	return nil
+}
+
+// installPackage offers to install pkg with apt-get (sudo) or Homebrew and
+// reports whether it did.
+func installPackage(e *Env, pkg string) bool {
+	in, _ := e.Stdin.(*os.File)
+	if in == nil || !isTerminal(in) {
+		return false
+	}
+	var argv []string
+	switch {
+	case lookPath("apt-get"):
+		argv = []string{"sudo", "apt-get", "install", "-y", pkg}
+		if os.Geteuid() == 0 {
+			argv = argv[1:]
+		}
+	case lookPath("brew"):
+		argv = []string{"brew", "install", pkg}
+	default:
+		return false
+	}
+	fmt.Fprintln(e.Stdout, i18n.T("editor.install_cmd", pkg, strings.Join(argv, " ")))
+	if !askYes(e, in, i18n.T("editor.install_ask")) {
+		return false
+	}
+	c := exec.Command(argv[0], argv[1:]...)
+	c.Stdin, c.Stdout, c.Stderr = in, e.Stdout, e.Stderr
+	return c.Run() == nil
+}
+
+func lookPath(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
 }

@@ -54,7 +54,6 @@ var settingKeys = map[string]settingKey{
 	"notify":       {"notify", "enabled", []string{"on", "off"}, false},
 	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},
 	"paste_images": {"paste", "images", []string{"on", "off"}, false},
-	"web":          {"web", "open", []string{"window", "tab", "off"}, true},
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane
@@ -91,7 +90,7 @@ func runSettings(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	usage := &UsageError{Msg: i18n.T("cli.usage", "__settings set <key> <value> | menu [commit-agent] | edit")}
+	usage := &UsageError{Msg: i18n.T("cli.usage", "__settings set <key> <value> | menu [<row>] | edit")}
 	if len(pos) == 0 {
 		return usage
 	}
@@ -132,6 +131,9 @@ func runSettings(e *Env, args []string) error {
 
 // setSetting writes one Settings row's value into config.toml.
 func setSetting(name, value string) error {
+	if name == "editor" {
+		return setEditor(value)
+	}
 	k, ok := settingKeys[name]
 	if !ok {
 		return fmt.Errorf("unknown setting %q", name)
@@ -150,14 +152,32 @@ func setSetting(name, value string) error {
 	if err := paths.Ensure(); err != nil {
 		return err
 	}
-	if name == "web" {
-		// Where HTML files open (D47): off is the editor; a window or a
-		// tab turns the preview on.
-		if err := config.Set(paths.Config(), "web", "enabled", config.Bool(value != "off")); err != nil || value == "off" {
-			return err
-		}
-	}
 	return config.Set(paths.Config(), k.section, k.key, v)
+}
+
+// setEditor saves the Editor row's choice (D50): copilot turns AI
+// completion on (its setup ran first); any other sets `editor` ("" for
+// auto) and turns AI completion off.
+func setEditor(value string) error {
+	switch value {
+	case "auto", "micro", "nano", "nvim", "copilot":
+	default:
+		return fmt.Errorf("editor: invalid value %q", value)
+	}
+	if err := paths.Ensure(); err != nil {
+		return err
+	}
+	if value == "copilot" {
+		return config.Set(paths.Config(), "completion", "enabled", config.Bool(true))
+	}
+	ed := value
+	if value == "auto" {
+		ed = ""
+	}
+	if err := config.Set(paths.Config(), "", "editor", config.Str(ed)); err != nil {
+		return err
+	}
+	return config.Set(paths.Config(), "completion", "enabled", config.Bool(false))
 }
 
 // showSettings shows the Settings menu (or a submenu) with a fresh config.
@@ -167,8 +187,8 @@ func showSettings(e *Env, pane, client, which string) error {
 		return err
 	}
 	m := w.SettingsMenu(pane, client)
-	if which == "commit-agent" {
-		m = w.CommitAgentMenu(pane, client)
+	if sub := w.SettingMenu(which, pane, client); sub != nil {
+		m = sub
 	}
 	return w.Show(context.Background(), m, client, pane)
 }

@@ -1394,8 +1394,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   downloads `micro-2.0.15-<os>.tar.gz` (linux64-static, linux-arm64, osx, macos-arm64; 5 MB;
   `IMUX_MICRO_URL` for a mirror) with its progress, checks its SHA-256, unpacks `micro` into
   `~/.imux/tools/micro-2.0.15/`, and opens the file in it. `imux editor` says which editor files
-  open in; `imux editor install` gets micro; Settings → **Get the micro editor…** (when micro is
-  missing) runs it in a popup.
+  open in; `imux editor install` gets micro; Settings → **Editor** → micro (when micro is missing, v0.46)
+  runs it in a popup.
 - **Mouse:** the viewers (i-mux's pager, D42), the folder picker and the search popup scroll with
   the wheel and their scroll bar; search results fold per file (click the file, ← →) and all at
   once (Tab, or the button in the title).
@@ -1461,9 +1461,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 
 ```
  i-mux · Settings                          Icons
- Editor: micro                    e        ● Auto (Nerd Font icons when the terminal has them)
- Notifications: On                n          Nerd Font icons
- Icons: Auto                      i   →      Emoji
+ Editor: micro                    e        ● Auto        1
+ Notifications: On                n          Nerd Font   2
+ Icons: Auto                      i   →      Emoji       3
  Commit messages by: Auto         m
  After a handoff the new agent: … w
  When an agent hits its limit: …  l
@@ -1476,10 +1476,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **A row opens a menu of its values** (v0.46, D50): `●` marks the current one; choosing one
   changes `~/.imux/config.toml` (written from the commented default when missing; only that
   key's line changes, comments stay) and opens Settings again. Rows: Editor, Notifications
-  (On / Off), Notification sound, Paste images with Ctrl+V, Icons (Auto / Nerd Font icons /
-  Emoji), Commit messages by (Auto / the installed agents), After a handoff the new agent (waits
-  for you / continues), When an agent hits its limit (ask me / switch automatically / do
-  nothing). `imux __settings menu <row>` opens one.
+  (On / Off), Notification sound, Paste images with Ctrl+V, Icons (Auto / Nerd Font / Emoji),
+  Commit messages by (Auto / the installed agents), After a handoff the new agent (waits for you
+  / continues at once), When an agent hits its limit (ask me / switch on its own / do nothing).
+  The values have keys 1, 2, 3…; `imux __settings menu <row>` opens one.
 - **Editor:** **Auto** (`editor = ""`: micro, `$VISUAL`, `$EDITOR`, nano; the row says which),
   **micro** (got first when missing: `imux editor use micro` in a popup, D45), **nano**,
   **Neovim** (`editor = "nvim"`; when missing a popup says how to install it and offers `sudo

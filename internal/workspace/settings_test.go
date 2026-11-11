@@ -31,6 +31,8 @@ func noMicro(t *testing.T) {
 	t.Setenv("EDITOR", "")
 }
 
+// TestSettingsMenu (D50): each row shows its value and opens a menu of
+// its values; actions open popups.
 func TestSettingsMenu(t *testing.T) {
 	i18n.SetLocale("en")
 	w, f, _ := testWS(t)
@@ -41,55 +43,23 @@ func TestSettingsMenu(t *testing.T) {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)|c Versions and updates…| |a AI completion in the editor: Off|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|p 🌐 HTML files open: in a window, live|i Icons: Auto|f Install the Nerd Font for the icons…|e Get the micro editor (5 MB)…|m Commit messages by: Auto (the pane's agent)|" +
+	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|m Commit messages by: Auto (the pane's agent)|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
 	}
-	cmd := func(key string) string {
-		for _, it := range m.Items {
-			if it.Key == key {
-				return it.Cmd
-			}
-		}
-		return ""
-	}
-	for key, want := range map[string]string{
-		"a": "__completion setup --pane %1 --client c1",
-		"i": "__settings set icons nerd --pane %1 --client c1",
-		"f": "font install --popup",
-		"e": "editor install --yes --popup",
-		"m": "__settings menu commit-agent --pane %1 --client c1",
-		"w": "__settings set on_arrival continue",
-		"n": "__settings set notify off",
-		"d": "__settings set notify_sound off",
-		"v": "__settings set paste_images off",
-		"l": "__settings set on_limit auto",
-		"o": "__settings edit",
+	for key, which := range map[string]string{
+		"e": "editor", "n": "notify", "d": "notify_sound", "v": "paste_images", "i": "icons",
+		"m": "commit-agent", "w": "on_arrival", "l": "on_limit",
 	} {
-		if !strings.Contains(cmd(key), want) {
-			t.Errorf("%s: %q lacks %q", key, cmd(key), want)
+		if c := cmdOf(m, key); !strings.Contains(c, "__settings menu "+which+" --pane %1 --client c1") {
+			t.Errorf("%s: %q does not open the %s menu", key, c, which)
 		}
 	}
-	if !strings.HasPrefix(cmd("a"), "display-popup -E") || !strings.HasPrefix(cmd("o"), "display-popup -E") || !strings.HasPrefix(cmd("f"), "display-popup -E") {
-		t.Error("setup and editing run in popups")
-	}
-
-	if c := cmd("u"); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, "update --popup") {
-		t.Errorf("update row %q", c)
-	}
-	// With micro there, or an editor chosen, there is nothing to get.
-	t.Setenv("EDITOR", "vim")
-	if c := cmdOf(w.SettingsMenu("%1", "c1"), "e"); c != "" {
-		t.Errorf("micro offered with $EDITOR set: %q", c)
-	}
-	t.Setenv("EDITOR", "")
-	editor.OurMicro = func() string { return "/home/u/.imux/tools/micro-2.0.15/micro" }
-	if c := cmdOf(w.SettingsMenu("%1", "c1"), "e"); c != "" {
-		t.Errorf("micro offered while installed: %q", c)
-	}
-	if c := cmd("c"); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, "versions --popup") {
-		t.Errorf("versions row %q", c)
+	for key, want := range map[string]string{"f": "font install --popup", "o": "__settings edit", "u": "update --popup", "c": "versions --popup"} {
+		if c := cmdOf(m, key); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, want) {
+			t.Errorf("%s: %q", key, c)
+		}
 	}
 	// A tmux that lacks features says so on the row (tmux -V's reply).
 	for v, want := range map[string]string{
@@ -105,7 +75,7 @@ func TestSettingsMenu(t *testing.T) {
 		}
 	}
 	f.replies[""] = ""
-	// Values change the rows; completion on offers turning off and signing in.
+	// Values change the rows; with AI completion on, Copilot's sign-in.
 	w.Cfg.Completion.Enabled = true
 	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival, w.Cfg.Git.CommitAgent = "emoji", "off", "continue", "opencode"
 	m = w.SettingsMenu("%1", "")
@@ -114,19 +84,13 @@ func TestSettingsMenu(t *testing.T) {
 		got += it.Key + " " + it.Name + "|"
 	}
 	for _, want := range []string{
-		"a AI completion in the editor: On (GitHub Copilot)|s Sign in to GitHub Copilot…|",
+		"e Editor: Neovim + Copilot|s Sign in to GitHub Copilot…|",
 		"i Icons: Emoji|", "m Commit messages by: OpenCode|", "w After a handoff the new agent: continues at once|",
 		"l When an agent hits its limit: do nothing|",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("menu lacks %q:\n%s", want, got)
 		}
-	}
-	if c := cmdOf(m, "a"); !strings.Contains(c, "__settings set completion off") {
-		t.Errorf("turning off: %q", c)
-	}
-	if c := cmdOf(m, "i"); !strings.Contains(c, "__settings set icons auto") {
-		t.Errorf("icons cycle back to auto: %q", c)
 	}
 
 	sub := w.CommitAgentMenu("%1", "")
@@ -144,6 +108,97 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	if !strings.Contains(sub.Items[1].Cmd, "__settings set commit_agent claude") {
 		t.Errorf("agent row %+v", sub.Items[1])
+	}
+}
+
+// TestSettingMenus (D50): a row's menu lists its values, ● on the current
+// one; each saves its value.
+func TestSettingMenus(t *testing.T) {
+	i18n.SetLocale("en")
+	w, _, _ := testWS(t)
+	rows := func(m *Menu) string {
+		var r []string
+		for _, it := range m.Items {
+			r = append(r, it.Key+" "+it.Name)
+		}
+		return strings.Join(r, "|")
+	}
+	for _, c := range []struct {
+		which, title, rows, cmd string
+	}{
+		{"notify", "Notifications", "1 ● On|2   Off", "__settings set notify off --pane %1 --client c1"},
+		{"notify_sound", "Notification sound", "1 ● On|2   Off", "__settings set notify_sound off"},
+		{"paste_images", "Paste images with Ctrl+V", "1 ● On|2   Off", "__settings set paste_images off"},
+		{"icons", "Icons", "1 ● Auto|2   Nerd Font|3   Emoji", "__settings set icons emoji"},
+		{"on_arrival", "After a handoff the new agent", "1 ● waits for you|2   continues at once", "__settings set on_arrival continue"},
+		{"on_limit", "When an agent hits its limit", "1 ● ask me|2   switch on its own|3   do nothing", "__settings set on_limit off"},
+	} {
+		m := w.SettingMenu(c.which, "%1", "c1")
+		if m == nil || m.Title != c.title || rows(m) != c.rows {
+			t.Errorf("%s: %+v", c.which, m)
+			continue
+		}
+		if last := m.Items[len(m.Items)-1]; !strings.Contains(last.Cmd, c.cmd) {
+			t.Errorf("%s: last row %q lacks %q", c.which, last.Cmd, c.cmd)
+		}
+	}
+	if w.SettingMenu("nope", "", "") != nil {
+		t.Error("a menu for an unknown row")
+	}
+}
+
+// TestEditorMenu (D50): Auto, micro, nano, Neovim, Neovim + Copilot; a
+// missing editor is got (or explained) in a popup; ● on the current one.
+func TestEditorMenu(t *testing.T) {
+	i18n.SetLocale("en")
+	w, _, _ := testWS(t)
+	noMicro(t)
+	have := map[string]bool{"nano": true}
+	editor.LookPath = func(n string) (string, error) {
+		if have[n] {
+			return "/usr/bin/" + n, nil
+		}
+		return "", errors.New("no")
+	}
+	names := func(m *Menu) string {
+		var r []string
+		for _, it := range m.Items {
+			r = append(r, it.Key+" "+it.Name)
+		}
+		return strings.Join(r, "|")
+	}
+	m := w.EditorMenu("%1", "c1")
+	if m.Title != "Files open in" || names(m) != "a ● Auto · micro, $VISUAL, $EDITOR, nano|m   micro · get it (5 MB)|n   nano|v   Neovim| |c   Neovim + Copilot suggestions (AI completion)" {
+		t.Fatalf("menu %q", names(m))
+	}
+	for key, want := range map[string]string{
+		"a": "__settings set editor auto --pane %1 --client c1",
+		"m": "editor use micro --popup", // missing: got in a popup
+		"n": "__settings set editor nano",
+		"v": "editor use nvim --popup", // missing: explained in a popup
+		"c": "__completion setup --pane %1 --client c1",
+	} {
+		if c := cmdOf(m, key); !strings.Contains(c, want) {
+			t.Errorf("%s: %q lacks %q", key, c, want)
+		}
+	}
+	if w.editorLabel() != "Auto (nano)" {
+		t.Errorf("label %q", w.editorLabel())
+	}
+	have["nvim"] = true
+	editor.OurMicro = func() string { return "/home/u/.imux/tools/micro-2.0.15/micro" }
+	w.Cfg.Editor = "nvim"
+	m = w.EditorMenu("%1", "c1")
+	if !strings.Contains(names(m), "v ● Neovim") || !strings.Contains(cmdOf(m, "m"), "__settings set editor micro") || !strings.Contains(cmdOf(m, "v"), "__settings set editor nvim") {
+		t.Errorf("nvim chosen, micro there: %q", names(m))
+	}
+	w.Cfg.Completion.Enabled = true
+	if c := EditorChoice(w.Cfg); c != "copilot" || !strings.Contains(cmdOf(w.EditorMenu("", ""), "c"), "__settings set editor copilot") {
+		t.Errorf("copilot: %s", c)
+	}
+	w.Cfg.Completion.Enabled, w.Cfg.Editor = false, "hx --flag"
+	if m := w.EditorMenu("", ""); EditorChoice(w.Cfg) != "custom" || !m.Items[0].Disabled || m.Items[0].Name != "● hx --flag" || w.editorLabel() != "hx --flag" {
+		t.Errorf("custom: %+v", m.Items[0])
 	}
 }
 
@@ -170,35 +225,11 @@ func TestWindowsWithoutSidebar(t *testing.T) {
 	}
 }
 
-// Settings → where HTML files open (D47): the row cycles a window, a tab,
-// the editor; "+" → Web page… asks for the page to open, starting with the
-// last one.
-func TestWebSettingsAndPrompt(t *testing.T) {
+// "+" → Web page… asks for the page to open (D47), starting with the last
+// one.
+func TestWebPrompt(t *testing.T) {
 	i18n.SetLocale("en")
 	w, f, _ := testWS(t)
-	row := func() MenuItem {
-		for _, it := range w.SettingsMenu("%1", "c1").Items {
-			if it.Key == "p" {
-				return it
-			}
-		}
-		t.Fatal("no web row")
-		return MenuItem{}
-	}
-	for _, c := range []struct {
-		enabled  bool
-		open     string
-		name, to string
-	}{
-		{true, "window", "🌐 HTML files open: in a window, live", "set web tab"},
-		{true, "tab", "🌐 HTML files open: in a browser tab, live", "set web off"},
-		{false, "tab", "🌐 HTML files open: in the editor", "set web window"},
-	} {
-		w.Cfg.Web.Enabled, w.Cfg.Web.Open = c.enabled, c.open
-		if it := row(); it.Name != c.name || !strings.Contains(it.Cmd, "__settings "+c.to+" --pane %1 --client c1") {
-			t.Errorf("%v %s: %+v", c.enabled, c.open, it)
-		}
-	}
 	f.replies["show-options"] = "http://localhost:5173\n"
 	if c := w.WebPrompt("%1", "c1"); !strings.Contains(c, "set-option -g @imux_web_pane %1 ; set-option -g @imux_web_client c1 ; command-prompt -t c1 -I http://localhost:5173") ||
 		!strings.Contains(c, `set-option -g @imux_web_url "%%%"`) || !strings.Contains(c, "web open --from-option") {

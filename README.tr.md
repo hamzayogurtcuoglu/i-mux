@@ -69,13 +69,15 @@ kapatır ve yeri ajana bırakır; herhangi bir görünümün simgesine tıklamak
 Panelin kenarını sürükleyerek onu genişletir ya da daraltırsın: her sekme bu genişliğe geçer ve
 i-mux onu hatırlar (`tmux.sidebar_width`).
 
-Şeritteki **🔧 Ayar** (ya da `imux settings`, ya da kenar çubuğunda `,`) Ayarlar'ı açar: editörde
-yapay zekâ tamamlama, simgeler, commit mesajlarını kimin yazacağı, geçişten sonra yeni ajanın ne
-yapacağı, limitte ne olacağı ve ayar dosyası. Oradaki **Sürümler ve güncellemeler** (ya da `imux
+Şeritteki **🔧 Ayar** (ya da `imux settings`, ya da kenar çubuğunda `,`) Ayarlar'ı açar:
+düzenleyicin, bildirimler, simgeler, commit mesajlarını kimin yazacağı, geçişten sonra yeni ajanın ne
+yapacağı, limitte ne olacağı ve ayar dosyası. Bir satıra Enter ya da tıklama, değerlerinin menüsünü
+açar (● şu ankini gösterir); birini seç ya da numarasına bas. Oradaki **Sürümler ve güncellemeler** (ya da `imux
 versions`) i-mux'u, tmux'u ve her agent CLI'ını sürümü ve onu güncelleyen komutla listeler; harfine
 basınca komut orada çalışır. Eski bir tmux'ta neyin eksik olduğunu ve sisteminde yenisini nasıl
 alacağını da söyler. **Editörde yapay zekâ tamamlama** VS Code'daki Copilot
-gibi çalışır: oradan açınca düzenlediğin dosyalar GitHub'ın Copilot eklentili Neovim'inde açılır (Tab
+gibi çalışır: oradan **Düzenleyici → Neovim + Copilot**'u seçince düzenlediğin dosyalar GitHub'ın
+Copilot eklentili Neovim'inde açılır (Tab
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
 GitHub Copilot'a bir kez giriş yaptırır.
 
@@ -112,9 +114,10 @@ ardından `opencode upgrade --major` çalıştır. `imux doctor` çalışabildi�
 ya da Groq'u seç, build.nvidia.com ya da console.groq.com'dan aldığın anahtarı yapıştır; hesap
 gerekmez), sonra `/models` ile modeli seç.
 
-Dosyalar editöründe açılır: config'teki `editor`, yoksa micro, `$VISUAL`, `$EDITOR`, nano, vim.
-Kendi editörün yoksa, açtığın ilk dosya micro'yu senin için getirmeyi önerir (bir kez, 5 MB; ayrıca
-Ayarlar → **micro düzenleyicisini getir…** ya da `imux editor install`): fare, Ctrl+S / Ctrl+Q,
+Dosyalar editöründe açılır: Ayarlar → **Düzenleyici** micro, nano ya da Neovim'i seçer (`imux
+editor use <editör>`); **Otomatik**'te micro, `$VISUAL`, `$EDITOR`, nano, vim. Kendi editörün yoksa,
+açtığın ilk dosya micro'yu senin için getirmeyi önerir (bir kez, 5 MB; ayrıca Ayarlar →
+**Düzenleyici** → micro ya da `imux editor install`): fare, Ctrl+S / Ctrl+Q,
 Ctrl+C / Ctrl+V, renkli kod ve kaydırma çubuğu. nano da sağ kenarında nerede olduğunu gösterir.
 Fare tekerleği her yerde kaydırır.
 
@@ -175,7 +178,7 @@ devam etmesini istersen `[handoff] on_arrival = "continue"` yaz.
 
 Bölmede daha önce çalışmış bir agent'a geri dönmek, o agent'ın kendi oturumunu sürdürür ve ona
 yalnızca aradaki gelişmeleri anlatır. Komut satırı için `imux help` (`switch`, `split`, `ls`, `versions`,
-`limits`, `sessions`, `handoff --print`, `quit`).
+`limits`, `sessions`, `handoff --print`, `editor`, `quit`).
 
 Arayüz dili `LANG` / `IMUX_LANG` ya da yapılandırmadaki `locale = "tr"` ile seçilir; agent'lara
 giden devir belgesi her zaman İngilizcedir.

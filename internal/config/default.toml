@@ -132,7 +132,8 @@ browser           = ""
 [completion]
 # Copilot-like suggestions while you edit a file (Tab accepts): files open in
 # Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim).
-# Turn it on in Settings (⚙ on the rail), which sets it up and signs you in.
+# Settings (⚙ on the rail) → Editor → Neovim + Copilot turns it on, sets it up
+# and signs you in.
 enabled           = false
 
 [tmux]

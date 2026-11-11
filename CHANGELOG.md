@@ -15,9 +15,15 @@ All notable changes to i-mux are listed here. The format follows
   them), and **Quit i-mux and stop every agent…** asks once, saves the session, stops the live
   preview servers and closes i-mux (`imux` → **Restore last session** reopens it all). `imux quit`
   does the same from a shell.
+- **Pick your editor.** Settings → **Editor**: Auto, micro (got for you when missing), nano, Neovim
+  (when it is missing, it says how to install it and offers to) or Neovim + Copilot (AI
+  completion). `imux editor use auto|micro|nano|nvim` from a shell.
 
 ### Changed
 
+- **Settings rows open a menu.** Enter or a click on a row lists its values with the current one
+  marked ●; pick one, or press its number. Rows no longer flip through their values. AI completion
+  and getting micro are now in the Editor menu.
 - **`imux` asks which project again.** Outside an open project's folder, while projects are open or
   a last session can be restored, `imux` shows the picker: **Restore last session** first, then
   **this folder**, then your recent projects. In an open project's folder it goes straight there.

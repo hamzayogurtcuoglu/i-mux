@@ -2,9 +2,12 @@ package workspace
 
 import (
 	"context"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -12,12 +15,6 @@ import (
 	upd "github.com/hamzayogurtcuoglu/i-mux/internal/update"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/versions"
-)
-
-// Settings rows cycle through these values (§9.3 "Settings").
-var (
-	iconsCycle   = []string{"auto", "nerd", "emoji"}
-	onLimitCycle = []string{"ask", "auto", "off"}
 )
 
 // labels name the values Settings shows.
@@ -41,16 +38,6 @@ func labels(v string) string {
 	return v
 }
 
-// next is the value after cur in cycle.
-func next(cycle []string, cur string) string {
-	for i, v := range cycle {
-		if v == cur {
-			return cycle[(i+1)%len(cycle)]
-		}
-	}
-	return cycle[0]
-}
-
 // settingsTarget is the --pane / --client tail of settings commands.
 func settingsTarget(pane, client string) []string {
 	var a []string
@@ -68,13 +55,14 @@ func (w *WS) popupCmd(width, height string, args ...string) string {
 	return "display-popup -E -w " + width + " -h " + height + " " + tmux.Quote(tmux.ShJoin(append([]string{w.Self}, args...)...))
 }
 
-// SettingsMenu lists the common settings with their values; a row changes
-// the config file and opens the menu again.
+// SettingsMenu lists the common settings with their values; a row opens a
+// menu of its values (D50), whose choice changes the config file and opens
+// Settings again.
 func (w *WS) SettingsMenu(pane, client string) *Menu {
 	cfg := w.Cfg
 	tgt := settingsTarget(pane, client)
-	set := func(key, value string) string {
-		return w.ui(append([]string{"__settings", "set", key, value}, tgt...)...)
+	menu := func(which string) string {
+		return w.ui(append([]string{"__settings", "menu", which}, tgt...)...)
 	}
 	m := &Menu{Title: i18n.T("settings.title")}
 	cur := version.Version
@@ -88,67 +76,193 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	if v, err := w.TmuxVersion(context.Background()); err == nil && !v.AtLeast(versions.TmuxWants[0], versions.TmuxWants[1]) {
 		vers.Name = i18n.T("settings.versions_old", v.String())
 	}
-	m.Items = append(m.Items, row, vers, Separator())
+	m.Items = append(m.Items, row, vers, Separator(),
+		MenuItem{Name: i18n.T("settings.editor", w.editorLabel()), Key: "e", Cmd: menu("editor")})
 	if cfg.Completion.Enabled {
-		m.Items = append(m.Items,
-			MenuItem{Name: i18n.T("settings.completion", i18n.T("settings.on")), Key: "a", Cmd: set("completion", "off")},
-			MenuItem{Name: i18n.T("settings.signin"), Key: "s", Cmd: w.popupCmd("90%", "90%", "__completion", "signin")})
-	} else {
-		m.Items = append(m.Items, MenuItem{
-			Name: i18n.T("settings.completion", i18n.T("settings.off")), Key: "a",
-			Cmd: w.popupCmd("90%", "80%", append([]string{"__completion", "setup"}, tgt...)...),
-		})
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.signin"), Key: "s", Cmd: w.popupCmd("90%", "90%", "__completion", "signin")})
 	}
-	onOff := func(on bool) (string, string) {
-		if on {
-			return i18n.T("settings.on_plain"), "off"
-		}
-		return i18n.T("settings.off"), "on"
-	}
-	label, flip := onOff(cfg.Notify.Enabled)
-	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify", label), Key: "n", Cmd: set("notify", flip)})
+	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify", onOffLabel(cfg.Notify.Enabled)), Key: "n", Cmd: menu("notify")})
 	if cfg.Notify.Enabled {
-		label, flip = onOff(cfg.Notify.Sound)
-		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify_sound", label), Key: "d", Cmd: set("notify_sound", flip)})
-	}
-	label, flip = onOff(cfg.Paste.Images)
-	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.paste_images", label), Key: "v", Cmd: set("paste_images", flip)})
-	// Where HTML files open (D47): a window, a tab, the editor.
-	web, nextWeb := i18n.T("settings.web_window"), "tab"
-	switch {
-	case !cfg.Web.Enabled:
-		web, nextWeb = i18n.T("settings.web_editor"), "window"
-	case cfg.Web.Open == "tab":
-		web, nextWeb = i18n.T("settings.web_tab"), "off"
-	}
-	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.web", web), Key: "p", Cmd: set("web", nextWeb)})
-	icons := cfg.Tmux.Icons
-	if icons == "" {
-		icons = "auto"
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify_sound", onOffLabel(cfg.Notify.Sound)), Key: "d", Cmd: menu("notify_sound")})
 	}
 	commit := i18n.T("settings.agent_auto")
 	if a := cfg.Git.CommitAgent; a != "" && a != "auto" {
 		commit = session.DisplayName(session.AgentID(a))
 	}
-	arrival, other := "wait", "continue"
-	if cfg.Handoff.OnArrival == "continue" {
-		arrival, other = "continue", "wait"
-	}
 	m.Items = append(m.Items,
-		MenuItem{Name: i18n.T("settings.icons", labels(icons)), Key: "i", Cmd: set("icons", next(iconsCycle, icons))},
+		MenuItem{Name: i18n.T("settings.paste_images", onOffLabel(cfg.Paste.Images)), Key: "v", Cmd: menu("paste_images")},
+		MenuItem{Name: i18n.T("settings.icons", labels(iconsValue(cfg.Tmux.Icons))), Key: "i", Cmd: menu("icons")},
 		MenuItem{Name: i18n.T("settings.font"), Key: "f", Cmd: w.popupCmd("90%", "70%", "font", "install", "--popup")},
-	)
-	if !editor.Chosen(cfg.Editor) && !editor.HasMicro() && editor.CanGetMicro() {
-		// Files open in nano or vi: micro is one click away (D45).
-		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.micro", editor.MicroMB), Key: "e", Cmd: w.popupCmd("80%", "50%", "editor", "install", "--yes", "--popup")})
-	}
-	m.Items = append(m.Items,
-		MenuItem{Name: i18n.T("settings.commit_agent", commit), Key: "m", Cmd: w.ui(append([]string{"__settings", "menu", "commit-agent"}, tgt...)...)},
-		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrival)), Key: "w", Cmd: set("on_arrival", other)},
-		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: set("on_limit", next(onLimitCycle, cfg.OnLimit))},
+		MenuItem{Name: i18n.T("settings.commit_agent", commit), Key: "m", Cmd: menu("commit-agent")},
+		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
+		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
 		Separator(),
 		MenuItem{Name: i18n.T("settings.open"), Key: "o", Cmd: w.popupCmd("90%", "90%", "__settings", "edit")},
 	)
+	return m
+}
+
+func onOffLabel(on bool) string {
+	if on {
+		return i18n.T("settings.on_plain")
+	}
+	return i18n.T("settings.off")
+}
+
+func onOffValue(on bool) string {
+	if on {
+		return "on"
+	}
+	return "off"
+}
+
+func iconsValue(v string) string {
+	if v == "" {
+		return "auto"
+	}
+	return v
+}
+
+func arrivalValue(v string) string {
+	if v == "continue" {
+		return v
+	}
+	return "wait"
+}
+
+// Choice is one value of a setting: what is saved, and how it reads.
+type Choice struct{ Value, Label string }
+
+// ChoiceMenu lists a setting's values with ● on the current one; choosing
+// one saves it (`imux __settings set key value`) and opens Settings again.
+func (w *WS) ChoiceMenu(title, key, cur string, cs []Choice, pane, client string) *Menu {
+	tgt := settingsTarget(pane, client)
+	m := &Menu{Title: title}
+	for i, c := range cs {
+		mark := "  "
+		if c.Value == cur {
+			mark = "● "
+		}
+		m.Items = append(m.Items, MenuItem{
+			Name: mark + c.Label, Key: strconv.Itoa(i + 1),
+			Cmd: w.ui(append([]string{"__settings", "set", key, c.Value}, tgt...)...),
+		})
+	}
+	return m
+}
+
+// SettingMenu is the menu of Settings row which (nil for none).
+func (w *WS) SettingMenu(which, pane, client string) *Menu {
+	cfg := w.Cfg
+	onOff := []Choice{{"on", i18n.T("settings.on_plain")}, {"off", i18n.T("settings.off")}}
+	switch which {
+	case "editor":
+		return w.EditorMenu(pane, client)
+	case "commit-agent":
+		return w.CommitAgentMenu(pane, client)
+	case "notify":
+		return w.ChoiceMenu(i18n.T("settings.notify_title"), "notify", onOffValue(cfg.Notify.Enabled), onOff, pane, client)
+	case "notify_sound":
+		return w.ChoiceMenu(i18n.T("settings.sound_title"), "notify_sound", onOffValue(cfg.Notify.Sound), onOff, pane, client)
+	case "paste_images":
+		return w.ChoiceMenu(i18n.T("settings.paste_title"), "paste_images", onOffValue(cfg.Paste.Images), onOff, pane, client)
+	case "icons":
+		var cs []Choice
+		for _, v := range []string{"auto", "nerd", "emoji"} {
+			cs = append(cs, Choice{v, labels(v)})
+		}
+		return w.ChoiceMenu(i18n.T("settings.icons_title"), "icons", iconsValue(cfg.Tmux.Icons), cs, pane, client)
+	case "on_arrival":
+		cs := []Choice{{"wait", labels("wait")}, {"continue", labels("continue")}}
+		return w.ChoiceMenu(i18n.T("settings.arrival_title"), "on_arrival", arrivalValue(cfg.Handoff.OnArrival), cs, pane, client)
+	case "on_limit":
+		var cs []Choice
+		for _, v := range []string{"ask", "auto", "off"} {
+			cs = append(cs, Choice{v, limitLabel(v)})
+		}
+		return w.ChoiceMenu(i18n.T("settings.limit_title"), "on_limit", cfg.OnLimit, cs, pane, client)
+	}
+	return nil
+}
+
+// EditorChoice is the Editor row's value (D50): copilot (AI completion,
+// D30), auto, micro, nano, nvim, or custom (another editor in the config).
+func EditorChoice(cfg *config.Config) string {
+	if cfg.Completion.Enabled {
+		return "copilot"
+	}
+	f := strings.Fields(cfg.Editor)
+	if len(f) == 0 {
+		return "auto"
+	}
+	switch b := filepath.Base(f[0]); b {
+	case "micro", "nano", "nvim":
+		return b
+	}
+	return "custom"
+}
+
+// editorLabel is the Editor row's value as it reads: "Auto (nano)",
+// "micro", "Neovim + Copilot", or the configured command.
+func (w *WS) editorLabel() string {
+	switch c := EditorChoice(w.Cfg); c {
+	case "auto":
+		name := i18n.T("settings.editor_viewer")
+		if ed := editor.Choose(""); ed != nil {
+			name = filepath.Base(ed[0])
+		}
+		return i18n.T("settings.editor_auto", name)
+	case "nvim":
+		return "Neovim"
+	case "copilot":
+		return i18n.T("settings.editor_copilot")
+	case "custom":
+		return w.Cfg.Editor
+	default:
+		return c
+	}
+}
+
+// EditorMenu chooses the editor files open in (D50): Auto, micro (got
+// first when missing, D45), nano, Neovim, Neovim + Copilot (AI completion,
+// D30). An editor that is missing opens `imux editor use` in a popup, which
+// gets it or says how; a configured command of one's own is shown first.
+func (w *WS) EditorMenu(pane, client string) *Menu {
+	tgt := settingsTarget(pane, client)
+	cur := EditorChoice(w.Cfg)
+	mark := func(v string) string {
+		if v == cur {
+			return "● "
+		}
+		return "  "
+	}
+	set := func(v string) string { return w.ui(append([]string{"__settings", "set", "editor", v}, tgt...)...) }
+	use := func(v string) string { return w.popupCmd("80%", "60%", "editor", "use", v, "--popup") }
+	have := func(bin string) bool { _, err := editor.LookPath(bin); return err == nil }
+	m := &Menu{Title: i18n.T("settings.editor_title")}
+	if cur == "custom" {
+		m.Items = append(m.Items, MenuItem{Name: mark("custom") + w.Cfg.Editor, Disabled: true})
+	}
+	auto := i18n.T("settings.editor_auto_row")
+	m.Items = append(m.Items, MenuItem{Name: mark("auto") + auto, Key: "a", Cmd: set("auto")})
+	micro := MenuItem{Name: mark("micro") + i18n.T("settings.editor_micro"), Key: "m", Cmd: set("micro")}
+	if !editor.HasMicro() {
+		micro.Name, micro.Cmd = mark("micro")+i18n.T("settings.editor_micro_get", editor.MicroMB), use("micro")
+	}
+	nano := MenuItem{Name: mark("nano") + "nano", Key: "n", Cmd: set("nano")}
+	if !have("nano") {
+		nano.Cmd = use("nano")
+	}
+	nvim := MenuItem{Name: mark("nvim") + "Neovim", Key: "v", Cmd: set("nvim")}
+	if !have("nvim") {
+		nvim.Cmd = use("nvim")
+	}
+	copilot := MenuItem{Name: mark("copilot") + i18n.T("settings.editor_copilot_row"), Key: "c", Cmd: set("copilot")}
+	if cur != "copilot" {
+		// Setting it up installs the plugin and signs in (D30).
+		copilot.Cmd = w.popupCmd("90%", "80%", append([]string{"__completion", "setup"}, tgt...)...)
+	}
+	m.Items = append(m.Items, micro, nano, nvim, Separator(), copilot)
 	return m
 }
 
