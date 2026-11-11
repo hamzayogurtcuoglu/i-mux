@@ -105,7 +105,18 @@ old only below the tmux level i-mux needs. The agents update with their own upda
 
 **Install hints.** `internal/agent/hints.go` swaps in the Windows install commands at start-up
 (PowerShell installers for Claude Code and Antigravity CLI, npm for the others); every place that
-prints a hint reads `agent.Info.InstallHint`.
+prints a hint reads `agent.Info.InstallHint`. The install popup runs `InstallCmd` (else the hint)
+with PowerShell (`internal/cli/install_windows.go`); `WindowsInstallCmds` gives the agents whose
+hint is more than one command a single one.
+
+**Pager, editor, web preview.** i-mux's own pager draws every long text, so Windows needs no
+`less`; a popup that pages an imux command runs `imux __page <command>` instead of a pipe,
+which PowerShell would re-encode. The micro editor i-mux offers to get comes as the release's
+`.zip` (`fetch.Unzip`, `micro.exe`). The live preview's server starts detached with
+`sysx.StartDetachedCmd` and stops on the named event `sysx.Signal` sets; pages open in the
+default browser (`rundll32 url.dll,FileProtocolHandler`) or, for a window of its own, in the
+Chromium-based browser found under Program Files or `%LOCALAPPDATA%` (Edge otherwise).
+`file:///C:/...` addresses are files.
 
 **Self-update.** `imux update` downloads the release's `install.ps1` and runs it with
 `powershell -File` (`update.Installer`). Windows cannot overwrite a running `.exe` but can rename

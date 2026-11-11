@@ -421,16 +421,31 @@ func (s *System) winDefault(ctx context.Context) string {
 	return ""
 }
 
-// winExe finds a Chromium browser's program on Windows (a WSL path).
-func (s *System) winExe(c chromium) string {
+// winDirs are where Windows browsers are installed: Program Files, Program
+// Files (x86) and the user's AppData\Local; under WSL as /mnt/c paths.
+func (s *System) winDirs() []string {
 	var dirs []string
+	if s.goos() == "windows" {
+		for _, k := range []string{"ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"} {
+			if d := s.env(k); d != "" {
+				dirs = append(dirs, d)
+			}
+		}
+		return dirs
+	}
 	for _, pf := range []string{"Program Files", "Program Files (x86)"} {
 		dirs = append(dirs, "/mnt/c/"+pf)
 	}
 	for _, h := range s.winHomes() {
 		dirs = append(dirs, filepath.Join(h, "AppData", "Local"))
 	}
-	for _, d := range dirs {
+	return dirs
+}
+
+// winExe finds a Chromium browser's program on Windows (a WSL path under
+// WSL).
+func (s *System) winExe(c chromium) string {
+	for _, d := range s.winDirs() {
 		if p := filepath.Join(d, filepath.FromSlash(c.win)); s.exists(p) {
 			return p
 		}
@@ -448,8 +463,8 @@ func (s *System) winHomes() []string {
 // OpenPage opens u in a browser and says which (its name, "" when the
 // system's default): in a window of its own when window (the app window of
 // Chrome, Edge, Brave, Vivaldi or Chromium: no tabs, no address bar), else
-// a tab of the default browser. Under WSL it is Windows' browser: the
-// default one when it is Chromium-based, else Edge. IMUX_BROWSE_COMMAND
+// a tab of the default browser. On Windows, and under WSL, it is Windows'
+// browser: the default one when it is Chromium-based, else Edge. IMUX_BROWSE_COMMAND
 // (sh, the URL in $1) replaces it (tests).
 func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -458,7 +473,7 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 		return "", s.run(ctx, "", "/bin/sh", "-c", c, "sh", u)
 	}
 	switch {
-	case s.wsl():
+	case s.wsl() || s.goos() == "windows":
 		progID := s.winDefault(ctx)
 		var def *chromium // the default browser, when Chromium-based
 		for i, c := range chromiums {
@@ -475,8 +490,14 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 				return c.name, s.start(exe, "--app="+u)
 			}
 		}
-		// explorer.exe exits 1 even when it worked.
-		_ = s.run(ctx, "", "explorer.exe", u)
+		if s.goos() == "windows" {
+			if err := s.start("rundll32.exe", "url.dll,FileProtocolHandler", u); err != nil {
+				return "", err
+			}
+		} else {
+			// explorer.exe exits 1 even when it worked.
+			_ = s.run(ctx, "", "explorer.exe", u)
+		}
 		if def != nil {
 			return def.name, nil
 		}
@@ -510,10 +531,11 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 }
 
 // Raise brings the window whose title starts with title to the front: on
-// Windows (from WSL), in the background, as well as Windows lets it.
+// Windows (natively or from WSL), in the background, as well as Windows
+// lets it.
 func (s *System) Raise(title string) {
 	title = strings.TrimSpace(title)
-	if title == "" || !s.wsl() {
+	if title == "" || !(s.wsl() || s.goos() == "windows") {
 		return
 	}
 	if r := []rune(title); len(r) > 120 {

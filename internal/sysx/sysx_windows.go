@@ -281,6 +281,16 @@ func KillTree(pid int) error {
 // the job of the pane that started it (when the job allows that), so closing
 // the pane does not end it, and does not wait for it.
 func StartDetached(newCmd func() *exec.Cmd) error {
+	cmd, err := StartDetachedCmd(newCmd)
+	if err != nil {
+		return err
+	}
+	return cmd.Process.Release()
+}
+
+// StartDetachedCmd starts the command newCmd makes as StartDetached does
+// and returns it started, for the caller to wait for or leave.
+func StartDetachedCmd(newCmd func() *exec.Cmd) (*exec.Cmd, error) {
 	flags := []uint32{
 		windows.CREATE_NEW_PROCESS_GROUP | windows.CREATE_NO_WINDOW | windows.CREATE_BREAKAWAY_FROM_JOB,
 		windows.CREATE_NEW_PROCESS_GROUP | windows.CREATE_NO_WINDOW,
@@ -290,10 +300,10 @@ func StartDetached(newCmd func() *exec.Cmd) error {
 		cmd := newCmd()
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: f, HideWindow: true}
 		if err = cmd.Start(); err == nil {
-			return cmd.Process.Release()
+			return cmd, nil
 		}
 	}
-	return err
+	return nil, err
 }
 
 // SetUmask does nothing on Windows: files in the user's profile are private.

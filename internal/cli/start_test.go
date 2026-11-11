@@ -1,6 +1,9 @@
 package cli
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 // TestStartPick (D49): imux started in an open project attaches; elsewhere
 // it asks when projects are open or the last session can be restored, and
@@ -23,7 +26,16 @@ func TestStartPick(t *testing.T) {
 		{"/home/u", nil, 0, "", true},                           // the home folder (D22)
 		{"/home/u/", open, 0, "", true},
 	} {
-		here, ask := startPick(c.cwd, home, c.open, c.restorable)
+		// The paths as this system writes them (backslashes on Windows).
+		open := map[string]bool{}
+		for k, v := range c.open {
+			open[filepath.FromSlash(k)] = v
+		}
+		if c.open == nil {
+			open = nil
+		}
+		here, ask := startPick(filepath.FromSlash(c.cwd), filepath.FromSlash(home), open, c.restorable)
+		c.here = filepath.FromSlash(c.here)
 		if here != c.here || ask != c.ask {
 			t.Errorf("%s (open %v, %d to restore): %q %v, want %q %v", c.cwd, c.open, c.restorable, here, ask, c.here, c.ask)
 		}

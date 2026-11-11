@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -12,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -69,10 +71,12 @@ func TestUntar(t *testing.T) {
 	if err := Untar(good, dir); err != nil {
 		t.Fatal(err)
 	}
-	if fi, err := os.Stat(filepath.Join(dir, "micro-2.0.15", "micro")); err != nil || fi.Mode()&0o100 == 0 {
+	// Windows keeps no executable bit: there only the files count.
+	unix := runtime.GOOS != "windows"
+	if fi, err := os.Stat(filepath.Join(dir, "micro-2.0.15", "micro")); err != nil || unix && fi.Mode()&0o100 == 0 {
 		t.Fatalf("the program: %v %v", fi, err)
 	}
-	if fi, err := os.Stat(filepath.Join(dir, "micro-2.0.15", "LICENSE")); err != nil || fi.Mode()&0o100 != 0 {
+	if fi, err := os.Stat(filepath.Join(dir, "micro-2.0.15", "LICENSE")); err != nil || unix && fi.Mode()&0o100 != 0 {
 		t.Errorf("the license: %v %v", fi, err)
 	}
 	for _, bad := range []Entry{
@@ -111,5 +115,43 @@ func TestDownloadAndCheck(t *testing.T) {
 	}
 	if err := Download(context.Background(), srv.URL+"/gone", file, 0, nil, false); err == nil || !strings.Contains(err.Error(), "404") {
 		t.Errorf("a missing file: %v", err)
+	}
+}
+
+// Unzip unpacks Windows' release (folders and files) and refuses paths that
+// leave the folder; Unpack picks it by the name.
+func TestUnzip(t *testing.T) {
+	zipOf := func(names ...string) string {
+		var b bytes.Buffer
+		zw := zip.NewWriter(&b)
+		for _, n := range names {
+			w, err := zw.Create(n)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.HasSuffix(n, "/") {
+				_, _ = w.Write([]byte("x"))
+			}
+		}
+		if err := zw.Close(); err != nil {
+			t.Fatal(err)
+		}
+		p := filepath.Join(t.TempDir(), "m.zip.part")
+		if err := os.WriteFile(p, b.Bytes(), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	dir := t.TempDir()
+	if err := Unpack(zipOf("micro-2.0.15/", "micro-2.0.15/micro.exe", "micro-2.0.15/LICENSE"), dir); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "micro-2.0.15", "micro.exe")); err != nil || string(b) != "x" {
+		t.Fatalf("micro.exe: %q %v", b, err)
+	}
+	for _, bad := range []string{"../evil", "/etc/evil"} {
+		if err := Unzip(zipOf(bad), t.TempDir()); err == nil {
+			t.Errorf("%s unpacked", bad)
+		}
 	}
 }

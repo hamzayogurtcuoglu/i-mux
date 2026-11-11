@@ -17,7 +17,15 @@ var WindowsInstallHints = map[session.AgentID]string{
 	session.OpenCode:    "npm i -g opencode-ai (then, if it is OpenCode 1: opencode upgrade --major)",
 }
 
-// installHints returns the registry with the install hints for goos.
+// WindowsInstallCmds are the commands the install popup runs on Windows
+// where the hint is more than one (the others run their hint).
+var WindowsInstallCmds = map[session.AgentID]string{
+	session.Claude:   "irm https://claude.ai/install.ps1 | iex",
+	session.OpenCode: "npm i -g opencode-ai",
+}
+
+// installHints returns the registry with the install hints and commands for
+// goos.
 func installHints(reg []Info, goos string) []Info {
 	if goos != "windows" {
 		return reg
@@ -26,6 +34,7 @@ func installHints(reg []Info, goos string) []Info {
 	for i, a := range reg {
 		if h, ok := WindowsInstallHints[a.ID]; ok {
 			a.InstallHint = h
+			a.InstallCmd = WindowsInstallCmds[a.ID]
 		}
 		out[i] = a
 	}

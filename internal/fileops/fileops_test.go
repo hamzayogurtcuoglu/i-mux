@@ -302,10 +302,15 @@ func TestOpenPage(t *testing.T) {
 		}
 	}
 	wsl := map[string]string{"WSL_DISTRO_NAME": "U"}
-	chrome := "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
-	edge := "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-	brave := "/mnt/c/Users/u/AppData/Local/BraveSoftware/Brave-Browser/Application/brave.exe"
+	// Joined with this system's separator, as OpenPage joins them.
+	chrome := filepath.FromSlash("/mnt/c/Program Files/Google/Chrome/Application/chrome.exe")
+	edge := filepath.FromSlash("/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe")
+	brave := filepath.FromSlash("/mnt/c/Users/u/AppData/Local/BraveSoftware/Brave-Browser/Application/brave.exe")
+	macApp := filepath.FromSlash("/Applications/Google Chrome.app")
 	const u = "http://localhost:43123/a b.html"
+	winEnv := map[string]string{"ProgramFiles": "C:/Program Files", "LOCALAPPDATA": "C:/Users/u/AppData/Local"}
+	winChrome := filepath.Join("C:/Program Files", filepath.FromSlash("Google/Chrome/Application/chrome.exe"))
+	winEdge := filepath.Join("C:/Program Files", filepath.FromSlash("Microsoft/Edge/Application/msedge.exe"))
 	for _, c := range []struct {
 		what   string
 		s      *System
@@ -318,7 +323,10 @@ func TestOpenPage(t *testing.T) {
 		{"wsl firefox: edge", sys("linux", wsl, "FirefoxURL-308046B0AF4A39CB", []string{edge}, nil), true, "Edge", edge + " --app=" + u},
 		{"wsl tab", sys("linux", wsl, "ChromeHTML", []string{chrome}, nil), false, "Chrome", "explorer.exe " + u},
 		{"wsl no chromium: tab", sys("linux", wsl, "", nil, nil), true, "", "explorer.exe " + u},
-		{"mac chrome", sys("darwin", map[string]string{"HOME": "/Users/u"}, "", []string{"/Applications/Google Chrome.app/Contents/Info.plist"}, nil), true, "Chrome", "open -na /Applications/Google Chrome.app --args --app=" + u},
+		{"windows chrome window", sys("windows", winEnv, "ChromeHTML", []string{winChrome, winEdge}, nil), true, "Chrome", winChrome + " --app=" + u},
+		{"windows firefox: edge", sys("windows", winEnv, "FirefoxURL-308046B0AF4A39CB", []string{winEdge}, nil), true, "Edge", winEdge + " --app=" + u},
+		{"windows tab", sys("windows", winEnv, "ChromeHTML", []string{winChrome}, nil), false, "Chrome", "rundll32.exe url.dll,FileProtocolHandler " + u},
+		{"mac chrome", sys("darwin", map[string]string{"HOME": "/Users/u"}, "", []string{filepath.Join(macApp, "Contents", "Info.plist")}, nil), true, "Chrome", "open -na " + macApp + " --args --app=" + u},
 		{"mac tab", sys("darwin", nil, "", nil, nil), true, "", "open " + u},
 		{"linux chromium", sys("linux", map[string]string{"DISPLAY": ":0"}, "", nil, []string{"chromium", "xdg-open"}), true, "Chromium", "chromium --app=" + u},
 		{"linux tab", sys("linux", map[string]string{"DISPLAY": ":0"}, "", nil, []string{"chromium", "xdg-open"}), false, "", "xdg-open " + u},

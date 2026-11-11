@@ -14,8 +14,8 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/popmenu"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/update"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
 // Exit codes.

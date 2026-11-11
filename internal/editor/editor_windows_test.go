@@ -52,7 +52,7 @@ func TestCommandWindows(t *testing.T) {
 		{[]string{`C:\Windows\System32\edit.exe`}, 9, `C:\Windows\System32\edit.exe a.go:9`},
 		{[]string{`C:\Windows\System32\edit.exe`}, 0, `C:\Windows\System32\edit.exe a.go`},
 		{[]string{`C:\VS Code\bin\code.cmd`}, 7, `C:\VS Code\bin\code.cmd -g a.go:7`},
-		{[]string{`C:\micro\micro.exe`}, 12, `C:\micro\micro.exe +12 a.go`},
+		{[]string{`C:\micro\micro.exe`}, 12, `C:\micro\micro.exe -scrollbar true +12 a.go`},
 	} {
 		if got := strings.Join(Command(c.ed, "a.go", c.line), " "); got != c.want {
 			t.Errorf("%v: %q, want %q", c.ed, got, c.want)

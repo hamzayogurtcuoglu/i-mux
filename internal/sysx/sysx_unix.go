@@ -85,12 +85,22 @@ func KillGroupOnCancel(cmd *exec.Cmd) {
 // StartDetached starts the command newCmd makes in a session of its own (no
 // controlling terminal) and does not wait for it.
 func StartDetached(newCmd func() *exec.Cmd) error {
-	cmd := newCmd()
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if err := cmd.Start(); err != nil {
+	cmd, err := StartDetachedCmd(newCmd)
+	if err != nil {
 		return err
 	}
 	return cmd.Process.Release()
+}
+
+// StartDetachedCmd starts the command newCmd makes in a session of its own
+// and returns it started, for the caller to wait for or leave.
+func StartDetachedCmd(newCmd func() *exec.Cmd) (*exec.Cmd, error) {
+	cmd := newCmd()
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return cmd, nil
 }
 
 // SetUmask makes every file this process creates private.

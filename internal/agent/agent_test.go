@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -246,7 +247,11 @@ func TestInstallCommand(t *testing.T) {
 	if got := Install(cfg, session.Codex); got != "npm i -g @openai/codex" {
 		t.Errorf("codex: %q", got)
 	}
-	if got := Install(cfg, session.OpenCode); got != "curl -fsSL https://opencode.ai/install | bash" {
+	wantOpenCode := "curl -fsSL https://opencode.ai/install | bash"
+	if runtime.GOOS == "windows" {
+		wantOpenCode = "npm i -g opencode-ai"
+	}
+	if got := Install(cfg, session.OpenCode); got != wantOpenCode {
 		t.Errorf("opencode: %q", got)
 	}
 	cfg.Agents = map[string]*config.Agent{"codex": {Install: "brew install codex"}}

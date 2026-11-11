@@ -14,6 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fetch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // MicroVersion is the micro release i-mux gets (D45); MicroMB its download.
@@ -31,10 +32,20 @@ type MicroAsset struct {
 }
 
 var microAssets = map[string]MicroAsset{
-	"linux/amd64":  {"micro-2.0.15-linux64-static.tar.gz", 5087804, "267d238eac1e26ed053d13d4d48bd421b87f9eb538b604f0b2f74a85598b6cc2"},
-	"linux/arm64":  {"micro-2.0.15-linux-arm64.tar.gz", 4680364, "5ca127857bf5500be3879f1a70b27556e737a49da04a1be5334de9e8e8781ad9"},
-	"darwin/amd64": {"micro-2.0.15-osx.tar.gz", 5195727, "d765b9bdd6478c4f5a3cbd5a93ebe7bab2b9cec30b5350016975cf1045855cee"},
-	"darwin/arm64": {"micro-2.0.15-macos-arm64.tar.gz", 4879518, "2ff285cc49f2ac3f7a6e9110e2dabd3c848b73eed56a8396d627c0af80a34624"},
+	"linux/amd64":   {"micro-2.0.15-linux64-static.tar.gz", 5087804, "267d238eac1e26ed053d13d4d48bd421b87f9eb538b604f0b2f74a85598b6cc2"},
+	"linux/arm64":   {"micro-2.0.15-linux-arm64.tar.gz", 4680364, "5ca127857bf5500be3879f1a70b27556e737a49da04a1be5334de9e8e8781ad9"},
+	"darwin/amd64":  {"micro-2.0.15-osx.tar.gz", 5195727, "d765b9bdd6478c4f5a3cbd5a93ebe7bab2b9cec30b5350016975cf1045855cee"},
+	"darwin/arm64":  {"micro-2.0.15-macos-arm64.tar.gz", 4879518, "2ff285cc49f2ac3f7a6e9110e2dabd3c848b73eed56a8396d627c0af80a34624"},
+	"windows/amd64": {"micro-2.0.15-win64.zip", 5148356, "90635c53c11aa2a0d997f5e3ed43528877740725500207640b29551cef18479b"},
+	"windows/arm64": {"micro-2.0.15-win-arm64.zip", 4676177, "c3d5acd5fc05afd65b7dcad3a18e0c08148e4885b4044be8d19e22a8efbf670b"},
+}
+
+// microExe is the program's file name in the archive and in MicroDir.
+func microExe() string {
+	if runtime.GOOS == "windows" {
+		return "micro.exe"
+	}
+	return "micro"
 }
 
 // MicroFor is the archive for goos and goarch.
@@ -63,8 +74,8 @@ func MicroDir() string { return filepath.Join(paths.Tools(), "micro-"+MicroVersi
 
 // OurMicro is the micro i-mux got, "" when it has none.
 var OurMicro = func() string {
-	p := filepath.Join(MicroDir(), "micro")
-	if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && fi.Mode()&0o111 != 0 {
+	p := filepath.Join(MicroDir(), microExe())
+	if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && sysx.Executable(fi) {
 		return p
 	}
 	return ""
@@ -111,13 +122,13 @@ func InstallMicro(ctx context.Context, out io.Writer, bar bool) error {
 		return err
 	}
 	defer os.RemoveAll(tmp)
-	if err := fetch.Untar(part, tmp); err != nil {
+	if err := fetch.Unpack(part, tmp); err != nil {
 		return err
 	}
 	src := filepath.Join(tmp, "micro-"+MicroVersion)
-	bin := filepath.Join(src, "micro")
+	bin := filepath.Join(src, microExe())
 	if fi, err := os.Stat(bin); err != nil || !fi.Mode().IsRegular() {
-		return fmt.Errorf("%s has no micro-%s/micro", a.Name, MicroVersion)
+		return fmt.Errorf("%s has no micro-%s/%s", a.Name, MicroVersion, microExe())
 	}
 	vctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()

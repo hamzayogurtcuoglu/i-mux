@@ -24,10 +24,11 @@ func cmdOf(m *Menu, key string) string {
 // noMicro makes micro missing and no editor chosen (D45).
 func noMicro(t *testing.T) {
 	t.Helper()
-	look, ours := editor.LookPath, editor.OurMicro
+	look, ours, git := editor.LookPath, editor.OurMicro, editor.GitTool
 	editor.LookPath = func(string) (string, error) { return "", errors.New("no") }
 	editor.OurMicro = func() string { return "" }
-	t.Cleanup(func() { editor.LookPath, editor.OurMicro = look, ours })
+	editor.GitTool = func(string) string { return "" } // Git for Windows' nano
+	t.Cleanup(func() { editor.LookPath, editor.OurMicro, editor.GitTool = look, ours, git })
 	t.Setenv("VISUAL", "")
 	t.Setenv("EDITOR", "")
 }
@@ -243,7 +244,10 @@ func TestWebPrompt(t *testing.T) {
 	i18n.SetLocale("en")
 	w, f, _ := testWS(t)
 	f.replies["show-options"] = "http://localhost:5173\n"
-	if c := w.WebPrompt("%1", "c1"); !strings.Contains(c, "set-option -g @imux_web_pane %1 ; set-option -g @imux_web_client c1 ; command-prompt -t c1 -I http://localhost:5173") ||
+	// Unescaped: under psmux the template is double-quoted (it holds the
+	// single-quoted PowerShell call), so its own quotes are \".
+	unq := func(c string) string { return strings.ReplaceAll(c, `\"`, `"`) }
+	if c := unq(w.WebPrompt("%1", "c1")); !strings.Contains(c, "set-option -g @imux_web_pane %1 ; set-option -g @imux_web_client c1 ; command-prompt -t c1 -I http://localhost:5173") ||
 		!strings.Contains(c, `set-option -g @imux_web_url "%%%"`) || !strings.Contains(c, "web open --from-option") {
 		t.Errorf("open a page: %s", c)
 	}

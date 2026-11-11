@@ -135,7 +135,7 @@ Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, 
 in to GitHub Copilot once.
 
 **Web pages, live:** a click on an HTML file in the explorer asks how to open it: **Open in
-browser** (its own window, no tabs or address bar; Chrome's or Edge's, under WSL Windows' own),
+browser** (its own window, no tabs or address bar; Chrome's or Edge's; on Windows and under WSL, Windows' own),
 **Open in a new tab**, **Edit** or **View**. The page is served by i-mux on `localhost`; when an agent rewrites it, or a
 file it uses, it reloads by itself. A click on another page shows it in that window. **+** next to
 Agents → **🌐 Web page…** opens any address (`localhost:5173`, or just `5173`). Nothing to

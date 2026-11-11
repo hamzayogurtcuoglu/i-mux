@@ -20,6 +20,15 @@ func TestInstallHints(t *testing.T) {
 		if a.Name == "" || a.ID != unix[i].ID || a.Bin != unix[i].Bin {
 			t.Errorf("%s: only the hint may change: %+v", a.ID, a)
 		}
+		// The install popup runs InstallCmd, else the hint: one PowerShell
+		// command, without the hints' "(or: ...)".
+		run := a.InstallCmd
+		if run == "" {
+			run = a.InstallHint
+		}
+		if strings.ContainsAny(run, "()") || strings.Contains(run, "curl") || strings.Contains(run, "| bash") {
+			t.Errorf("%s runs %q on Windows", a.ID, run)
+		}
 	}
 	if h := WindowsInstallHints[session.Antigravity]; h != "irm https://antigravity.google/cli/install.ps1 | iex" {
 		t.Errorf("antigravity %q", h)

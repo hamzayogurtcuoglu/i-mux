@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -284,11 +285,12 @@ const (
 )
 
 // VSCodeBrowser is what ExecAttach keeps of a terminal's environment: its
-// BROWSER when it is VS Code's helper, and VSCODE_IPC_HOOK_CLI; "" for
-// other terminals.
+// BROWSER when it is VS Code's helper (browser.sh; browser.cmd on Windows),
+// and VSCODE_IPC_HOOK_CLI; "" for other terminals.
 func VSCodeBrowser(getenv func(string) string) (helper, ipc string) {
 	b, i := getenv("BROWSER"), getenv("VSCODE_IPC_HOOK_CLI")
-	if i == "" || !strings.HasSuffix(b, "/helpers/browser.sh") {
+	h := filepath.ToSlash(b)
+	if i == "" || !(strings.HasSuffix(h, "/helpers/browser.sh") || strings.HasSuffix(h, "/helpers/browser.cmd")) {
 		return "", ""
 	}
 	return b, i

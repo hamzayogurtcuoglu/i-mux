@@ -209,7 +209,7 @@ func TestHere(t *testing.T) {
 		t.Errorf("this folder listed %d times", n)
 	}
 	text := esc.ReplaceAllString(strings.Join(m.Render(80, 14), "\n"), "")
-	if !strings.Contains(text, "~/code/blog") || !strings.Contains(text, "this folder") {
+	if !strings.Contains(text, filepath.FromSlash("~/code/blog")) || !strings.Contains(text, "this folder") {
 		t.Errorf("render:\n%s", text)
 	}
 	m.Key("down")

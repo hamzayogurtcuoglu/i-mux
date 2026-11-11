@@ -57,7 +57,7 @@ func runInstall(e *Env, args []string) error {
 		return err
 	}
 	fmt.Fprintf(e.Stdout, "\x1b[H\x1b[2J\x1b[1m$ %s\x1b[0m\n\n", cmd)
-	c := exec.Command("sh", "-c", cmd)
+	c := installCommand(cmd)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, e.Stdout, e.Stderr
 	runErr := c.Run()
 	ok := runErr == nil && agent.Resolve(cfg, id, nil).Installed
