@@ -16,6 +16,7 @@ func repo(t *testing.T) string {
 	}
 	dir := t.TempDir()
 	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(dir, ".gitconfig-none"))
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1") // Git for Windows turns core.autocrlf on there
 	t.Setenv("GIT_AUTHOR_NAME", "t")
 	t.Setenv("GIT_AUTHOR_EMAIL", "t@example.com")
 	t.Setenv("GIT_COMMITTER_NAME", "t")

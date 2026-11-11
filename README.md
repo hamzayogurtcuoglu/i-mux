@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://github.com/hamzayogurtcuoglu/i-mux/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/hamzayogurtcuoglu/i-mux/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
-  <img alt="macOS and Linux" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg">
+  <img alt="macOS, Linux and Windows" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg">
 </p>
 
 <p align="center">
@@ -25,7 +25,8 @@ tmux setup is untouched). Everything stays on your machine.
 
 ## Install
 
-One line on macOS, Linux, or Windows through WSL (open a WSL terminal):
+One line on macOS, Linux, or Windows through WSL (open a WSL terminal; for native Windows see
+[Windows](#windows)):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
@@ -55,6 +56,46 @@ imux doctor
 
 To uninstall, delete `~/.local/bin/imux` and `~/.imux`, and remove the line the installer added to
 your shell profile (marked `# Added by the imux installer`).
+
+## Windows
+
+i-mux also runs natively on Windows, without WSL, on [psmux](https://github.com/marlocarlo/psmux):
+a native Windows multiplexer that speaks tmux's commands. In PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 | iex
+```
+
+It installs psmux with winget (`winget install --id marlocarlo.psmux`) if it is missing, downloads
+the release's zip for your CPU (amd64 or arm64), verifies its checksum, puts `imux.exe` in
+`%LOCALAPPDATA%\Programs\imux`, adds that folder to your user PATH and offers the Nerd Font. Open a
+new terminal afterwards. Run as a file it takes options (`.\install.ps1 -Yes`, `-Version v0.1.0`,
+`-InstallDir DIR`, `-NoModifyPath`, `-NoFont`); piped into `iex`, set `IMUX_YES=1`, `IMUX_VERSION`
+and the like first. From a checkout with Go installed, `.\install.ps1 -FromSource .` builds and
+installs it, and `scripts\build-windows.ps1` (or `make build-windows`) only builds `bin\imux.exe`.
+
+Use [Windows Terminal](https://aka.ms/terminal) (`winget install Microsoft.WindowsTerminal`): the
+old console draws the sidebar's colors and icons poorly. `imux font install` installs the font for
+you (in `%LOCALAPPDATA%\Microsoft\Windows\Fonts`) and sets Windows Terminal's and VS Code's font.
+What differs from macOS and Linux:
+
+- **The shell in the panes is PowerShell** (pwsh if it is installed, else Windows PowerShell), and
+  so are the commands i-mux's keys and menus run.
+- **Files:** "Reveal" opens Explorer, and deleting moves to the Recycle Bin.
+- **Ctrl+V:** Windows Terminal keeps it for its own paste; paste images with **Alt+V** (or the
+  sidebar's 📎).
+- **Agent CLIs** install with their Windows commands: Claude Code with
+  `irm https://claude.ai/install.ps1 | iex` (or npm), Antigravity CLI with
+  `irm https://antigravity.google/cli/install.ps1 | iex`, Copilot, Codex and OpenCode with npm
+  (`npm i -g @github/copilot`, `@openai/codex`, `opencode-ai`). `imux doctor` shows them.
+- **Updates:** `imux update` runs the release's `install.ps1`. Windows cannot overwrite a running
+  `.exe`, so the old one is kept as `imux.exe.old` and removed on a later start. Versions and
+  updates lists psmux with `winget upgrade --id marlocarlo.psmux`, to run with i-mux closed
+  (`psmux -L imux kill-server` first).
+
+To uninstall, delete `%LOCALAPPDATA%\Programs\imux` and `%USERPROFILE%\.imux`, remove the folder
+from your user PATH, and `winget uninstall marlocarlo.psmux`. How the port works:
+[docs/WINDOWS.md](docs/WINDOWS.md).
 
 ## Usage
 
@@ -204,7 +245,7 @@ on_limit = "ask"   # ask (default) | auto: switch to the next agent in `order` |
 ## Documentation
 
 [Configuration](docs/CONFIG.md) · [Handoff format](docs/HANDOFF.md) · [Limits](docs/LIMITS.md) ·
-[Agent bus](docs/AGENT-BUS.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) ·
+[Agent bus](docs/AGENT-BUS.md) · [Windows](docs/WINDOWS.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) ·
 [Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) · [Türkçe](README.tr.md)
 
 ## License

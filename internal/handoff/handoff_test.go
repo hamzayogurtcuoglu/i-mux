@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -19,8 +20,21 @@ var update = flag.Bool("update", false, "rewrite golden files")
 
 var (
 	t0  = time.Date(2026, 11, 5, 14, 0, 0, 0, time.UTC)
-	cwd = "/home/test/proj"
+	cwd = fixtureCwd()
 )
+
+// winCwd is the fixtures' session directory on Windows, where /home/test/proj
+// is not absolute (tool paths inside it would not be shown relative). It is
+// as long as /home/test/proj, so rune budgets cut a document at the same
+// place, and golden maps it back: one set of golden files serves both.
+const winCwd = `C:\hm\test\proj`
+
+func fixtureCwd() string {
+	if runtime.GOOS == "windows" {
+		return winCwd
+	}
+	return "/home/test/proj"
+}
 
 func opts() Options {
 	return Options{
@@ -55,9 +69,9 @@ func shortSession() *session.Session {
 		Entries: []session.Entry{
 			user(0, "fix the login redirect bug"),
 			asst(1, "Looking at the auth handler.",
-				tc("Read", map[string]any{"file_path": cwd + "/src/auth.ts"}),
+				tc("Read", map[string]any{"file_path": filepath.Join(cwd, "src/auth.ts")}),
 				tc("Bash", map[string]any{"command": "npm test"})),
-			asst(2, "", tc("Edit", map[string]any{"file_path": cwd + "/src/auth.ts"})),
+			asst(2, "", tc("Edit", map[string]any{"file_path": filepath.Join(cwd, "src/auth.ts")})),
 			asst(3, "The redirect now keeps the `next` parameter. Tests pass."),
 			user(4, "great, also add a test for it. Token: ghp_"+strings.Repeat("Ab1", 12)),
 		},
@@ -73,7 +87,7 @@ func longSession(n int) *session.Session {
 		s.Entries = append(s.Entries,
 			asst(i, fmt.Sprintf("Step %d: %s", i, strings.Repeat("working on it 🎉 ", 30)),
 				tc("Bash", map[string]any{"command": fmt.Sprintf("go test ./pkg%d/...", i)}),
-				tc("Edit", map[string]any{"file_path": fmt.Sprintf("%s/pkg%d/limiter.go", cwd, i)})),
+				tc("Edit", map[string]any{"file_path": filepath.Join(cwd, fmt.Sprintf("pkg%d/limiter.go", i))})),
 			user(i, fmt.Sprintf("ok, continue with step %d", i+1)))
 	}
 	return s
@@ -87,6 +101,10 @@ func golden(t *testing.T, name, got string) {
 			t.Fatal(err)
 		}
 		return
+	}
+	if runtime.GOOS == "windows" {
+		// The golden files have no backslash: every one is from a Windows path.
+		got = strings.ReplaceAll(strings.ReplaceAll(got, winCwd, "/home/test/proj"), `\`, "/")
 	}
 	want, err := os.ReadFile(p)
 	if err != nil {
@@ -177,7 +195,7 @@ func TestGoldenChained(t *testing.T) {
 
 func TestGoldenDelta(t *testing.T) {
 	g := &session.Session{Ref: session.Ref{Agent: session.Antigravity, ID: "g", CWD: cwd}, Entries: []session.Entry{
-		user(30, "rename the helper"), asst(31, "Renamed to parseNext.", tc("replace", map[string]any{"file_path": cwd + "/src/auth.ts"})),
+		user(30, "rename the helper"), asst(31, "Renamed to parseNext.", tc("replace", map[string]any{"file_path": filepath.Join(cwd, "src/auth.ts")})),
 	}}
 	x := &session.Session{Ref: session.Ref{Agent: session.Codex, ID: "x", CWD: cwd}, Entries: []session.Entry{
 		user(40, "run the tests"), asst(41, "All green.", tc("shell", map[string]any{"command": []any{"bash", "-lc", "npm test"}})),

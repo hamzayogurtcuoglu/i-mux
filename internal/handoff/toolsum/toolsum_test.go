@@ -1,14 +1,33 @@
 package toolsum
 
 import (
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 )
 
-const cwd = "/home/test/proj"
+// cwd is the fixtures' session directory: absolute on this OS.
+var cwd = abs("/home/test/proj")
+
+// abs makes a Unix absolute fixture path absolute on this OS: on Windows it
+// gets a drive and backslashes (C:\home\test\proj), elsewhere it is p.
+func abs(p string) string {
+	if runtime.GOOS == "windows" {
+		return "C:" + filepath.FromSlash(p)
+	}
+	return p
+}
+
+// in is the path rel (slash-separated) inside cwd.
+func in(rel string) string { return filepath.Join(cwd, rel) }
+
+// osRel is the relative path rel (slash-separated) as display shows it on
+// this OS.
+func osRel(rel string) string { return filepath.FromSlash(rel) }
 
 type A = map[string]any
 
@@ -22,11 +41,11 @@ func TestRules(t *testing.T) {
 	}{
 		// Claude
 		{"claude", "Bash", A{"command": "npm test\n--watch", "description": "run tests"}, false, "$ npm test …"},
-		{"claude", "Read", A{"file_path": cwd + "/src/auth.ts"}, false, "read src/auth.ts"},
-		{"claude", "Edit", A{"file_path": cwd + "/src/auth.ts", "old_string": "a", "new_string": "b"}, false, "edited src/auth.ts"},
+		{"claude", "Read", A{"file_path": in("src/auth.ts")}, false, "read " + osRel("src/auth.ts")},
+		{"claude", "Edit", A{"file_path": in("src/auth.ts"), "old_string": "a", "new_string": "b"}, false, "edited " + osRel("src/auth.ts")},
 		{"claude", "MultiEdit", A{"file_path": "/etc/hosts", "edits": []any{}}, false, "edited /etc/hosts"},
-		{"claude", "Write", A{"file_path": cwd + "/README.md", "content": "x"}, false, "wrote README.md"},
-		{"claude", "Grep", A{"pattern": "TODO", "path": cwd + "/src"}, false, `searched "TODO" in src`},
+		{"claude", "Write", A{"file_path": in("README.md"), "content": "x"}, false, "wrote README.md"},
+		{"claude", "Grep", A{"pattern": "TODO", "path": in("src")}, false, `searched "TODO" in src`},
 		{"claude", "Glob", A{"pattern": "**/*.go"}, false, `searched "**/*.go"`},
 		{"claude", "WebFetch", A{"url": "https://example.com/docs", "prompt": "summarize"}, false, "fetched https://example.com/docs"},
 		{"claude", "WebSearch", A{"query": "tmux status-format range"}, false, `web search "tmux status-format range"`},
@@ -35,22 +54,22 @@ func TestRules(t *testing.T) {
 		{"claude", "Task", A{"description": "explore repo", "prompt": "long..."}, false, "Task(explore repo)"},
 		{"claude", "Bash", A{"command": "false"}, true, "$ false (failed)"},
 		// Gemini
-		{"gemini", "read_file", A{"absolute_path": cwd + "/go.mod"}, false, "read go.mod"},
-		{"gemini", "write_file", A{"file_path": cwd + "/main.go", "content": "x"}, false, "wrote main.go"},
-		{"gemini", "replace", A{"file_path": cwd + "/main.go", "old_string": "a"}, false, "edited main.go"},
+		{"gemini", "read_file", A{"absolute_path": in("go.mod")}, false, "read go.mod"},
+		{"gemini", "write_file", A{"file_path": in("main.go"), "content": "x"}, false, "wrote main.go"},
+		{"gemini", "replace", A{"file_path": in("main.go"), "old_string": "a"}, false, "edited main.go"},
 		{"gemini", "run_shell_command", A{"command": "go test ./..."}, false, "$ go test ./..."},
 		{"gemini", "glob", A{"pattern": "*.md"}, false, `searched "*.md"`},
 		{"gemini", "search_file_content", A{"pattern": "func main"}, false, `searched "func main"`},
-		{"gemini", "list_directory", A{"path": cwd + "/internal"}, false, "listed internal"},
+		{"gemini", "list_directory", A{"path": in("internal")}, false, "listed internal"},
 		{"gemini", "web_fetch", A{"prompt": "read https://example.com"}, false, "web_fetch(read https://example.com)"},
 		{"gemini", "google_web_search", A{"query": "go 1.27 release"}, false, `web search "go 1.27 release"`},
 		{"gemini", "write_todos", A{"todos": []any{}}, false, ""},
 		// Copilot
-		{"copilot", "view", A{"path": cwd + "/src/router.ts"}, false, "read src/router.ts"},
+		{"copilot", "view", A{"path": in("src/router.ts")}, false, "read " + osRel("src/router.ts")},
 		{"copilot", "rg", A{"pattern": "health"}, false, `searched "health"`},
 		{"copilot", "bash", A{"command": "npm run build", "description": "build"}, false, "$ npm run build"},
-		{"copilot", "create", A{"path": cwd + "/src/health.ts", "file_text": "x"}, false, "wrote src/health.ts"},
-		{"copilot", "edit", A{"path": cwd + "/src/router.ts"}, false, "edited src/router.ts"},
+		{"copilot", "create", A{"path": in("src/health.ts"), "file_text": "x"}, false, "wrote " + osRel("src/health.ts")},
+		{"copilot", "edit", A{"path": in("src/router.ts")}, false, "edited " + osRel("src/router.ts")},
 		// Codex
 		{"codex", "shell", A{"command": []any{"bash", "-lc", "rg limiter"}}, false, "$ rg limiter"},
 		{"codex", "shell", A{"command": []any{"ls", "-la"}}, false, "$ ls -la"},
@@ -83,17 +102,17 @@ func TestLineCap(t *testing.T) {
 func TestActivity(t *testing.T) {
 	entries := []session.Entry{
 		{Tools: []session.ToolCall{
-			{Name: "Read", Args: A{"file_path": cwd + "/a.go"}},
-			{Name: "Read", Args: A{"file_path": cwd + "/a.go"}},
-			{Name: "Read", Args: A{"file_path": cwd + "/b.go"}},
-			{Name: "Edit", Args: A{"file_path": cwd + "/a.go"}},
-			{Name: "Edit", Args: A{"file_path": cwd + "/b.go"}},
-			{Name: "Write", Args: A{"file_path": cwd + "/c.go"}},
+			{Name: "Read", Args: A{"file_path": in("a.go")}},
+			{Name: "Read", Args: A{"file_path": in("a.go")}},
+			{Name: "Read", Args: A{"file_path": in("b.go")}},
+			{Name: "Edit", Args: A{"file_path": in("a.go")}},
+			{Name: "Edit", Args: A{"file_path": in("b.go")}},
+			{Name: "Write", Args: A{"file_path": in("c.go")}},
 		}},
 		{Tools: []session.ToolCall{
-			{Name: "Edit", Args: A{"file_path": cwd + "/a.go"}},               // moves a.go to the end
-			{Name: "Edit", Args: A{"file_path": cwd + "/c.go"}},               // created: stays in Created
-			{Name: "Edit", Args: A{"file_path": cwd + "/x.go"}, Failed: true}, // failed: ignored
+			{Name: "Edit", Args: A{"file_path": in("a.go")}},               // moves a.go to the end
+			{Name: "Edit", Args: A{"file_path": in("c.go")}},               // created: stays in Created
+			{Name: "Edit", Args: A{"file_path": in("x.go")}, Failed: true}, // failed: ignored
 		}},
 	}
 	fa := Activity(entries, cwd)
@@ -129,7 +148,7 @@ func FuzzSummarize(f *testing.F) {
 // TestHandoffFileReads: reading imux's own handoff file is how the agent got
 // its context; it is neither a conversation line nor a file read.
 func TestHandoffFileReads(t *testing.T) {
-	hf := "/home/test/.imux/handoffs/20261108-093139-claude-to-opencode.md"
+	hf := abs("/home/test/.imux/handoffs/20261108-093139-claude-to-opencode.md")
 	for _, tc := range []session.ToolCall{
 		{Name: "read", Args: A{"file_path": hf}},
 		{Name: "Read", Args: A{"file_path": hf}},
@@ -141,12 +160,12 @@ func TestHandoffFileReads(t *testing.T) {
 		}
 	}
 	// A file merely named like one, or not in a handoffs folder, is work.
-	for _, p := range []string{"/home/test/proj/handoffs/notes.md", "/home/test/proj/20261108-093139-claude-to-opencode.md"} {
+	for _, p := range []string{in("handoffs/notes.md"), in("20261108-093139-claude-to-opencode.md")} {
 		if s := Summarize(session.ToolCall{Name: "read", Args: A{"file_path": p}}, cwd); s.Skip || s.Line == "" {
 			t.Errorf("%s skipped: %+v", p, s)
 		}
 	}
-	fa := Activity([]session.Entry{{Tools: []session.ToolCall{{Name: "read", Args: A{"file_path": hf}}, {Name: "read", Args: A{"file_path": cwd + "/a.go"}}}}}, cwd)
+	fa := Activity([]session.Entry{{Tools: []session.ToolCall{{Name: "read", Args: A{"file_path": hf}}, {Name: "read", Args: A{"file_path": in("a.go")}}}}}, cwd)
 	if fa.ReadCount != 1 || len(fa.Read) != 1 || fa.Read[0] != "a.go" {
 		t.Errorf("activity %+v", fa)
 	}

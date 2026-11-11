@@ -398,10 +398,10 @@ func TestExplorer(t *testing.T) {
 			t.Errorf("untracked mark %q", p)
 		}
 	}
-	if a := find("auth"); a != (Action{Kind: ActToggleDir, Path: "src/auth"}) {
+	if a := find("auth"); a != (Action{Kind: ActToggleDir, Path: filepath.FromSlash("src/auth")}) {
 		t.Errorf("folder %+v", a)
 	}
-	if a := find("main.ts"); a != (Action{Kind: ActOpenFile, Path: "src/main.ts"}) {
+	if a := find("main.ts"); a != (Action{Kind: ActOpenFile, Path: filepath.FromSlash("src/main.ts")}) {
 		t.Errorf("file %+v", a)
 	}
 	if a := find("🔍"); a.Kind != ActView && a.Kind != ActSearch {
@@ -1264,7 +1264,7 @@ func TestSkillsViewAndMenu(t *testing.T) {
 		for x := railW; x < 41; x++ {
 			switch a := l.ActionAt(x); a.Kind {
 			case ActOpenFile:
-				if a.Path == ".agents/skills/release-notes/SKILL.md" {
+				if a.Path == filepath.FromSlash(".agents/skills/release-notes/SKILL.md") {
 					sawOpen = true
 				}
 			case ActSkillMenu:

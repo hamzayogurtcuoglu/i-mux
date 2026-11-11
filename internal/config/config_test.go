@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -171,7 +172,7 @@ func TestWriteTemplateRefusesOverwrite(t *testing.T) {
 		t.Fatal("force did not overwrite")
 	}
 	fi, _ := os.Stat(p)
-	if fi.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // Windows has no Unix modes
 		t.Fatalf("mode %v", fi.Mode().Perm())
 	}
 }

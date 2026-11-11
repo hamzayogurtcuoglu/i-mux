@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -83,8 +84,9 @@ func TestEnvResolve(t *testing.T) {
 	t.Setenv("CODEX_HOME", "/x/codex")
 	t.Setenv("COPILOT_HOME", "")
 	e := Env{}
-	if e.Resolve(Claude) != "/home/test/.claude" || e.Resolve(Codex) != "/x/codex" ||
-		e.Resolve(Antigravity) != "/home/test/.gemini/antigravity-cli" || e.Resolve(Copilot) != "/home/test/.copilot" {
+	in := func(rel string) string { return filepath.Join("/home/test", rel) } // backslashes on Windows
+	if e.Resolve(Claude) != in(".claude") || e.Resolve(Codex) != "/x/codex" ||
+		e.Resolve(Antigravity) != in(".gemini/antigravity-cli") || e.Resolve(Copilot) != in(".copilot") {
 		t.Fatal("resolve wrong")
 	}
 	if (Env{ClaudeHome: "/c"}).Resolve(Claude) != "/c" {

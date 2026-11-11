@@ -38,7 +38,7 @@ func TestLogRotation(t *testing.T) {
 	if cur.Size() > LogMax || old.Size() > LogMax || cur.Size() == 0 {
 		t.Fatalf("sizes: current %d, rotated %d", cur.Size(), old.Size())
 	}
-	if cur.Mode().Perm() != 0o600 {
+	if unixModes && cur.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", cur.Mode().Perm())
 	}
 	// A full log is rotated when it is opened, too.
@@ -72,7 +72,7 @@ func TestStatusFollowsTheLock(t *testing.T) {
 	}
 	defer f.Close()
 	_ = f.Truncate(0)
-	_, _ = f.WriteAt([]byte("4242\n"), 0)
+	_, _ = f.WriteAt([]byte("4242\n"), pidOffset) // where the watcher writes it
 	if running, pid := Status(); !running || pid != 4242 {
 		t.Fatalf("held lock: %v %d", running, pid)
 	}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -16,7 +17,24 @@ import (
 
 const helperEnv = "IMUX_LAUNCH_TEST_SPEC"
 
+// argvEnv makes this test binary the fake agent of TestExecByteExactArgv on
+// Windows: it writes its arguments, NUL-terminated, to the file argvEnv
+// names, and pane|agent|cwd to that file's .env.
+const argvEnv = "IMUX_LAUNCH_TEST_ARGV"
+
 func TestMain(m *testing.M) {
+	if p := os.Getenv(argvEnv); p != "" {
+		var b []byte
+		for _, a := range os.Args[1:] {
+			b = append(append(b, a...), 0)
+		}
+		wd, _ := os.Getwd()
+		if os.WriteFile(p, b, 0o600) != nil ||
+			os.WriteFile(p+".env", []byte(os.Getenv("IMUX_PANE")+"|"+os.Getenv("IMUX_AGENT")+"|"+wd), 0o600) != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 	if p := os.Getenv(helperEnv); p != "" {
 		s, err := Read(p, true)
 		if err == nil {
@@ -28,19 +46,32 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// echo is an absolute binary path on this OS (/bin/echo; C:\bin\echo on
+// Windows, where a path without a drive is not absolute).
+var echo = osAbs("/bin/echo")
+
+// osAbs makes the Unix path p absolute on this OS: unchanged on Unix, on
+// drive C: on Windows.
+func osAbs(p string) string {
+	if runtime.GOOS == "windows" {
+		return "C:" + filepath.FromSlash(p)
+	}
+	return p
+}
+
 func TestValidate(t *testing.T) {
-	ok := &Spec{Bin: "/bin/echo", Args: []string{"a"}, MaxArgBytes: 10}
+	ok := &Spec{Bin: echo, Args: []string{"a"}, MaxArgBytes: 10}
 	if err := ok.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	big := &Spec{Bin: "/bin/echo", Args: []string{strings.Repeat("x", 11)}, MaxArgBytes: 10}
+	big := &Spec{Bin: echo, Args: []string{strings.Repeat("x", 11)}, MaxArgBytes: 10}
 	if err := big.Validate(); !errors.Is(err, ErrTooLarge) {
 		t.Fatalf("want ErrTooLarge, got %v", err)
 	}
 	if err := (&Spec{Bin: "echo"}).Validate(); err == nil {
 		t.Fatal("relative bin accepted")
 	}
-	if err := (&Spec{Bin: "/bin/echo", Args: []string{"a\x00b"}}).Validate(); err == nil {
+	if err := (&Spec{Bin: echo, Args: []string{"a\x00b"}}).Validate(); err == nil {
 		t.Fatal("NUL accepted")
 	}
 }
@@ -61,24 +92,24 @@ func TestEnviron(t *testing.T) {
 
 func TestWriteReadSweep(t *testing.T) {
 	testutil.Isolate(t)
-	p, err := Write(&Spec{Agent: "claude", Bin: "/bin/echo", Args: []string{"x"}})
+	p, err := Write(&Spec{Agent: "claude", Bin: echo, Args: []string{"x"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	fi, err := os.Stat(p)
-	if err != nil || fi.Mode().Perm() != 0o600 {
+	if err != nil || runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // Windows has no Unix modes
 		t.Fatalf("%v %v", err, fi.Mode())
 	}
 	s, err := Read(p, true)
-	if err != nil || s.Bin != "/bin/echo" {
+	if err != nil || s.Bin != echo {
 		t.Fatalf("%v %+v", err, s)
 	}
 	if _, err := os.Stat(p); !os.IsNotExist(err) {
 		t.Fatal("spec not deleted after read")
 	}
-	old, _ := Write(&Spec{Bin: "/bin/true"})
+	old, _ := Write(&Spec{Bin: osAbs("/bin/true")})
 	testutil.Touch(t, old, time.Now().Add(-2*time.Hour))
-	fresh, _ := Write(&Spec{Bin: "/bin/true"})
+	fresh, _ := Write(&Spec{Bin: osAbs("/bin/true")})
 	Sweep(time.Hour)
 	if _, err := os.Stat(old); !os.IsNotExist(err) {
 		t.Fatal("old spec not swept")
@@ -97,9 +128,17 @@ func TestExecByteExactArgv(t *testing.T) {
 	h := testutil.Isolate(t)
 	fake := filepath.Join(h.Home, "bin", "fake-agent")
 	out := filepath.Join(h.Home, "argv.bin")
-	testutil.WriteFile(t, fake, []byte("#!/bin/sh\nfor a in \"$@\"; do printf '%s\\0' \"$a\"; done > \""+out+"\"\nprintf '%s|%s|%s' \"$IMUX_PANE\" \"$IMUX_AGENT\" \"$(pwd)\" > \""+out+".env\"\n"))
-	if err := os.Chmod(fake, 0o755); err != nil {
-		t.Fatal(err)
+	agentEnv := map[string]string{"PATH": "/usr/bin:/bin"}
+	if runtime.GOOS == "windows" {
+		// No shell scripts: the fake agent is this test binary (see
+		// argvEnv), so argv crosses Windows' command-line quoting.
+		fake = os.Args[0]
+		agentEnv[argvEnv] = out
+	} else {
+		testutil.WriteFile(t, fake, []byte("#!/bin/sh\nfor a in \"$@\"; do printf '%s\\0' \"$a\"; done > \""+out+"\"\nprintf '%s|%s|%s' \"$IMUX_PANE\" \"$IMUX_AGENT\" \"$(pwd)\" > \""+out+".env\"\n"))
+		if err := os.Chmod(fake, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	args := []string{
 		"--session-id", "u-1",
@@ -107,7 +146,7 @@ func TestExecByteExactArgv(t *testing.T) {
 		"",
 		"-i",
 	}
-	sp, err := Write(&Spec{Agent: "claude", Bin: fake, Args: args, Dir: h.Project, Pane: "%7", Env: map[string]string{"PATH": "/usr/bin:/bin"}})
+	sp, err := Write(&Spec{Agent: "claude", Bin: fake, Args: args, Dir: h.Project, Pane: "%7", Env: agentEnv})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +177,7 @@ func TestExecRejectsTooLarge(t *testing.T) {
 	orig := execFunc
 	execFunc = func(string, []string, []string) error { called = true; return nil }
 	defer func() { execFunc = orig }()
-	err := Exec(&Spec{Bin: "/bin/echo", Args: []string{strings.Repeat("x", 200)}, MaxArgBytes: 100})
+	err := Exec(&Spec{Bin: echo, Args: []string{strings.Repeat("x", 200)}, MaxArgBytes: 100})
 	if !errors.Is(err, ErrTooLarge) || called {
 		t.Fatalf("err=%v called=%v", err, called)
 	}

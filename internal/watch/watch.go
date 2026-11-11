@@ -47,7 +47,7 @@ func lockPid() (*os.File, bool, error) {
 
 func readPid(f *os.File) int {
 	b := make([]byte, 32)
-	n, _ := f.ReadAt(b, 0)
+	n, _ := f.ReadAt(b, pidOffset)
 	pid, _ := strconv.Atoi(strings.TrimSpace(string(b[:n])))
 	return pid
 }
@@ -228,7 +228,7 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 	if err := f.Truncate(0); err != nil {
 		return err
 	}
-	if _, err := f.WriteAt([]byte(strconv.Itoa(os.Getpid())+"\n"), 0); err != nil {
+	if _, err := f.WriteAt([]byte(strconv.Itoa(os.Getpid())+"\n"), pidOffset); err != nil {
 		return err
 	}
 	runtime.GOMAXPROCS(1)

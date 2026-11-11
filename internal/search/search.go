@@ -65,7 +65,7 @@ func Files(ctx context.Context, dir string) []string {
 			return nil
 		}
 		if rel, err := filepath.Rel(dir, p); err == nil {
-			files = append(files, rel)
+			files = append(files, filepath.ToSlash(rel)) // as git ls-files names them
 		}
 		return nil
 	})
