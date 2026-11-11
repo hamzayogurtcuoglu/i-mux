@@ -124,6 +124,8 @@ done by tmux on a dedicated socket. i-mux only:
 | D45 | **Files open in micro, which i-mux gets when asked, and the editor shows where you are in the file** (added 2026-11-11, v0.45, at the user's request): when no editor is chosen (`editor`, `$VISUAL`, `$EDITOR`) and micro is not installed, the first file opened asks once: **Get micro** (micro 2.0.15, a 5 MB download, its SHA-256 pinned, into `~/.imux/tools`) or **Use nano**; Settings → **Get the micro editor…** asks again. micro runs with its scroll bar (`-scrollbar true`), nano 5.0+ with its position indicator and the mouse (`--indicator --mouse`). | The user opened a file, got nano, and read in the README that micro has to be installed by hand. i-mux recommends micro, so it brings it, as it brings the Nerd Font: micro works like the editors people know (mouse, Ctrl+S, Ctrl+Q, Ctrl+C / Ctrl+V), and its release is one static program (no package manager, no sudo). It is a program from the network, so it is asked for once (Enter takes it). |
 | D46 | **The rail's Agents icon shows how many agents are working** (added 2026-11-11, v0.45, at the user's request): a number on a blue background right of the icon, as an editor's activity bar shows a badge: the agents working now in every project (the AGENTS header's count, D38), `9+` above nine, nothing when none works. | The count is wanted where it is always in sight: the AGENTS header is hidden when the panel shows another view or is closed, the rail is not. |
 | D47 | **Web pages open in the browser, served by i-mux with live reload, not in a browser drawn in the terminal** (added 2026-11-11, v0.45, at the user's request; replaces D44): a click on an HTML file serves its project on `http://localhost:<port>` (a small server in i-mux, one per project, for this machine only) and opens the page in a window of its own (the app window of Chrome or Edge: no tabs, no address bar; under WSL, Windows' browser) or in a tab of the default browser (Settings). The page reloads itself when a file it uses changes; another click shows the new page in that window. Nothing is downloaded. | Carbonyl drew pages with half-block cells: blurry text, blocky charts, its own bar on top (the user: "beyond terrible"). A terminal cannot draw a page as a browser does, and the browser is there anyway; a window of its own next to the terminal is the preview pane. Over HTTP a page also loads what `file://` blocks (a report's JSON next to it), and live reload shows what an agent rewrites as it happens. From VS Code (also over a tunnel) the page opens on the machine VS Code runs on. |
+| D48 | **A button leaves i-mux: back to the terminal, or quit with every agent** (added 2026-11-11, v0.46, at the user's request): the tab bar ends on the right with **⏻ Exit**; its menu has **Back to the terminal** (this client detaches: the agents keep running, `imux` brings them back) and **Quit i-mux…** (after a confirm: the open projects are recorded, every agent stops, the tmux server ends; the next `imux` offers them back). `imux quit` does the same from a shell. | The user did not know how to leave i-mux for the shell. tmux's ways (`prefix d`, closing the terminal) are invisible and keep the agents running without saying so; a button with both choices says what each one does. |
+| D49 | **`imux` asks which project to open, unless it starts in one that is open** (added 2026-11-11, v0.46, at the user's request; extends D22): outside tmux and without arguments, `imux` in the folder of an open project attaches to it; anywhere else, when projects are open or the last session can be restored, it shows the project picker with **↺ Restore last session** first (when there is one), then **this folder**, then the open and recent projects. With nothing open and nothing to restore it opens its folder as before (the home folder: the picker). | The user's workspace stopped coming back: the picker that offers it showed only in the home folder, so `imux` started elsewhere made a new project without a word, and the last session was offered only from home. |
 
 ## 4. Components
 
@@ -1171,6 +1173,25 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   than drawn, so a range right after another lost its first cell (the × of the current tab took
   the click as a window click; measured in Ubuntu 24.04's tmux 3.4).
 
+#### Leaving i-mux (v0.46, D48)
+
+```
+  0 backend fix ●  ×   1 tests   +                                   ⏻ Exit
+```
+
+- **The button:** **⏻ Exit** at the right end of the tab bar (`range=user|imux:quit`; before tmux
+  3.4 the status line's right range, so the tab bar's **+** moves to the part of the bar outside
+  any range: a click on the bar's empty space also opens "New tab with:"; tmux 3.2 makes that a
+  key of its own, `MouseUp1StatusDefault`).
+- **Its menu:** **↩ Back to the terminal · agents keep running** (`b`: `detach-client`; the
+  terminal shows tmux's "[detached …]" and the shell; `imux` attaches again) and **⏻ Quit
+  i-mux…** (`q`) → "Stop N agents and close i-mux?" → `imux __quit`: the snapshot is written
+  (every open project with its tabs and conversations, §9.3 "Recent and restore"), the live
+  preview servers stop, the tmux server is killed (the terminals show "[server exited]"). The
+  next `imux` offers **↺ Restore last session** (D49).
+- **`imux quit`** asks in the terminal (`--yes` does not) and does the same.
+
+
 #### Open and close projects (v0.9)
 
 ```
@@ -1194,6 +1215,13 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Browsing:** a query starting with `/` or `~` lists the subfolders of its directory part whose
   name starts with the rest; Tab completes the selection (adding `/`); Enter opens the selection,
   or the typed folder when nothing matches.
+- **Starting** (v0.46, D49): `imux` without arguments, outside tmux: in the folder of an open
+  project it attaches to it. Elsewhere, when the server has projects open or the snapshot has
+  projects of an earlier server (the last session), the picker opens in the terminal: **↺
+  Restore last session · N projects** (when there is one), then **this folder** (the current one,
+  not the home folder), then RECENT and ON THIS MAC; Enter on the first row is the usual answer,
+  Esc does nothing. With nothing open and nothing to restore, `imux` opens its folder (the home
+  folder: the picker, D22).
 - **Close a project:** `imux close [--session S]`; the sidebar's project menu (click the current
   project, right-click any) → "Close project…" → confirm ("stops its N agents; their
   conversations stay in History"). A client showing it is switched to the most recent other

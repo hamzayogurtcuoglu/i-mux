@@ -997,6 +997,23 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M56: Leaving i-mux, and coming back (added 2026-11-11)
+
+User request: a button that closes i-mux and goes back to the normal terminal (top right); `imux`
+no longer offers the workspace it used to.
+
+- [ ] **T56.1 The Exit button** · M
+  - AC: D48, §9.3 "Leaving i-mux": ⏻ Exit at the right of the tab bar (a user range from tmux
+    3.4, the right range before, the + then outside any range); its menu: back to the terminal
+    (detach), quit (confirm, snapshot, live preview servers stopped, server killed); `imux quit
+    [--yes]`; unit tests (the tab bar on old and new tmux, the bindings, the menus); e2e: Exit →
+    Back to the terminal detaches the client and the agents keep running.
+- [ ] **T56.2 The picker at start** · S
+  - AC: D49: `imux` in an open project's folder attaches; elsewhere with projects open or a last
+    session to restore, the picker with Restore first and this folder next; unit tests (when it
+    asks, the rows); e2e: `imux` in a new folder while a project is open asks, and Enter opens
+    the folder.
+
 ## M55: Live preview in the browser (added 2026-11-11)
 
 User request: the terminal browser of M52 draws pages badly ("beyond terrible"); something else.
