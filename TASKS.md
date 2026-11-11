@@ -997,6 +997,16 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M61: No Image button (added 2026-11-11)
+
+User request: the Image button next to History is needless, since an image is pasted with Ctrl+V
+anyway.
+
+- [ ] **T61.1 No Image button** · XS
+  - AC: D57: the row under "Continue this chat in" shows History alone; the button's action, icon
+    and label go; Ctrl+V and Alt+V still paste images (their e2e tests stay); a unit test (no 📎
+    in the toolbar); the button's e2e test goes.
+
 ## M60: Menus that take the mouse, a simpler sidebar (added 2026-11-11)
 
 User request: a click on a menu closes it without choosing, so it has to be used with the

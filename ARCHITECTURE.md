@@ -133,6 +133,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D54 | **Menus take the mouse on every tmux: before 3.5 i-mux draws them in a popup** (added 2026-11-11, v0.47, at the user's request): on tmux 3.2 to 3.4 every menu i-mux opens (display-menu) is shown by `imux __menu-popup` in a popup the size of the menu, where the menu would be: its title, its items with their keys, separators. The item under the pointer lights up; a click or Enter chooses one, and so does its key; Esc, q and ✕ close it. The chosen command runs once the popup has closed, as display-menu runs it: its formats expanded for the menu's pane and client. tmux 3.5+ keeps its own menus (`-M -O`). | On tmux before 3.5 a menu that a mouse binding did not open takes no mouse: a click closed it without choosing anything, and the user had to use the keyboard. Every i-mux menu is opened by a program (the sidebar, a click handler), never by tmux's mouse bindings. A popup's program gets the mouse on every tmux. |
 | D55 | **"Working" is what the agent says: Claude Code, Codex, Copilot and Antigravity work while they show their busy line** (added 2026-11-11, v0.47, at the user's request; refines D38): a screen change of these agents counts as work only while the screen's last 16 non-blank lines show what the agent shows while it works, and only then: `esc to interrupt` (Claude Code's and Codex's progress line, Antigravity's "Press esc to interrupt generation"), `ctrl+c interrupt` (Copilot's footer). Other agents (OpenCode) keep D38's rule. | The spinner turned while the user moved through a list in the Copilot CLI (its screen changed above the input line too), not only after a prompt. Each of these CLIs shows how to interrupt it exactly while it works. |
 | D56 | **No dots for uncommitted changes or for "Done"** (added 2026-11-11, v0.47, at the user's request): a project row shows its name and branch; the yellow dot (uncommitted changes) and the green dot (an agent finished while the user looked elsewhere) are gone from the sidebar and the tab bar, and a finished agent is idle (its notification still says it finished). Working, Needs you, limited and exited stay. | The user did not know what the dots meant. The rail's Git icon counts the changed files, and Source Control lists them. |
+| D57 | **No Image button in the sidebar** (added 2026-11-11, v0.48, at the user's request): the row under "Continue this chat in" holds History alone; the 📎 Image button, which pasted the clipboard's image into the target agent, is gone. Ctrl+V and Alt+V in an agent's pane paste images as before (§9.3 "Pasting images"). | The user found it needless: copying and pasting an image already gives it to the agent, and Alt+V does where the terminal keeps Ctrl+V for itself. |
 
 ## 4. Components
 
@@ -1148,8 +1149,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Continue this chat in:** the other agents as buttons (two per row): click switches the target
   pane with the conversation. Not installed: dim (a click opens the install popup, D41, "Not
   installed"); limited: red.
-- **Toolbar:** Rename, "± N files" (a menu of the changed files; each opens its diff), History,
-  Limits, Help.
+- **Toolbar:** History alone since v0.48 (D57: the 📎 Image button is gone; Ctrl+V and Alt+V paste
+  images). Rename moved to the agent's row (v0.26), the changed files to Source Control, Limits
+  and Help to the rail.
 - Default width 32. When rows do not fit: blank lines go, then the other projects' agent groups
   shrink to one row each, then rows are cut above the bottom blocks.
 
@@ -1551,8 +1553,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   Copilot `--attachment`, a path dragged into the window: Claude Code, Codex, Copilot, OpenCode;
   `@path` in Antigravity).
 - **Keys:** `Ctrl+V` and `Alt+V` in an agent pane (Windows Terminal keeps Ctrl+V for itself;
-  Alt+V gets through) and 📎 in the sidebar's toolbar run `imux __paste-image --pane P`. In any
-  other pane, or when the clipboard holds no image, the key goes to the pane as before.
+  Alt+V gets through) run `imux __paste-image --pane P` (so did 📎 in the sidebar's toolbar until
+  v0.48, D57). In any other pane, or when the clipboard holds no image, the key goes to the pane
+  as before.
 - **Reading the clipboard**, by platform:
   - macOS: `osascript` writes `the clipboard as «class PNGf»` to the file; a Finder copy of image
     files (`«class furl»`) gives their paths;
