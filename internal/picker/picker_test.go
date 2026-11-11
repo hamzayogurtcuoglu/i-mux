@@ -182,6 +182,36 @@ func TestSections(t *testing.T) {
 	}
 }
 
+// The folder imux started in is offered after Restore, as "this folder",
+// and not listed twice (D49).
+func TestHere(t *testing.T) {
+	i18n.SetLocale("en")
+	m, home := model(t)
+	m.Restore = &folders.Cand{Kind: folders.KindRestore, Label: "Restore last session", Detail: "2 projects"}
+	m.Here = filepath.Join(home, "code/blog") // also a recent folder
+	l := m.List()
+	if len(l) < 2 || l[0].Kind != folders.KindRestore || l[1].Path != m.Here || l[1].Kind != kindThis {
+		t.Fatalf("list %+v", l)
+	}
+	n := 0
+	for _, c := range l {
+		if c.Path == m.Here {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("this folder listed %d times", n)
+	}
+	text := esc.ReplaceAllString(strings.Join(m.Render(80, 14), "\n"), "")
+	if !strings.Contains(text, "~/code/blog") || !strings.Contains(text, "this folder") {
+		t.Errorf("render:\n%s", text)
+	}
+	m.Key("down")
+	if got, done := m.Key("enter"); !done || got.Path != m.Here {
+		t.Errorf("enter on this folder: %+v %v", got, done)
+	}
+}
+
 // A long list has a scroll bar in the last column.
 func TestScrollBar(t *testing.T) {
 	home := t.TempDir()

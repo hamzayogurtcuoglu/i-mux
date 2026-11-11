@@ -31,6 +31,7 @@ type Model struct {
 	Home     string
 	Cands    []folders.Cand // open, recent and git folders
 	Restore  *folders.Cand  // "Restore last session", when there is one
+	Here     string         // the folder imux started in, offered after Restore ("" = none)
 	Query    string
 	Sel      int
 	Top      int  // first list row shown
@@ -62,8 +63,14 @@ func (m *Model) List() []folders.Cand {
 	if m.Restore != nil {
 		out = append(out, *m.Restore)
 	}
+	if m.Here != "" {
+		out = append(out, folders.Cand{Path: m.Here, Kind: kindThis})
+	}
 	var recent, git []folders.Cand
 	for _, c := range m.Cands {
+		if c.Path == m.Here && m.Here != "" {
+			continue
+		}
 		if c.Kind == folders.KindGit {
 			git = append(git, c)
 		} else {
@@ -261,6 +268,7 @@ type Options struct {
 	Cands   []folders.Cand
 	More    <-chan []folders.Cand
 	Restore *folders.Cand
+	Here    string // the folder imux started in: a row after Restore (D49)
 }
 
 // Run shows the picker until a row is chosen (ok false = cancelled).
@@ -273,7 +281,7 @@ func Run(o Options) (folders.Cand, bool, error) {
 	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h")
 	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 
-	m := &Model{Home: o.Home, Cands: o.Cands, Restore: o.Restore, Scanning: o.More != nil, Shorten: func(p string) string {
+	m := &Model{Home: o.Home, Cands: o.Cands, Restore: o.Restore, Here: o.Here, Scanning: o.More != nil, Shorten: func(p string) string {
 		if p == o.Home {
 			return "~"
 		}

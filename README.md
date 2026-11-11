@@ -122,10 +122,11 @@ also Settings → **Get the micro editor…**, or `imux editor install`): the mo
 Ctrl+C / Ctrl+V, colors for code and a scroll bar. nano shows where you are at its right edge too.
 The mouse wheel scrolls everywhere.
 
-Run `imux` in your home folder and it asks which project to open: type a few letters of its name.
-**Recent** projects come first and reopen as you left them: the same tabs, names and agents, each
-agent back in its own conversation. After a restart, **Restore last session** brings back every
-project that was open.
+Run `imux` and it asks which project to open: type a few letters of its name. (In an open
+project's folder it goes straight there; in another folder, with nothing open or to restore, it
+opens that folder.) **Restore last session** comes first after a restart and brings back
+every project that was open; then **this folder**, then **Recent** projects, which reopen as you
+left them: the same tabs, names and agents, each agent back in its own conversation.
 
 The **sidebar** on the left works like an editor's: a column of icons (with their names under
 them) switches its view.
@@ -173,7 +174,7 @@ and `[handoff] on_arrival = "continue"` to let it carry on with an unfinished re
 
 Switching back to an agent that already ran in the pane resumes its own session and tells it only
 what happened in the meantime. Run `imux help` for the command line (`switch`, `split`, `ls`, `versions`,
-`limits`, `sessions`, `handoff --print`).
+`limits`, `sessions`, `handoff --print`, `quit`).
 
 ## When an agent hits its limit
 

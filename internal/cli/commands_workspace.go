@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
@@ -15,6 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -61,6 +63,38 @@ func handoffForPane(e *Env, cfg *config.Config, pane string, to session.AgentID,
 		fmt.Fprintf(e.Stderr, "imux: %s\n", i18n.T("cli.warning", wn))
 	}
 	return res.Doc.Text, nil
+}
+
+// startPick says whether `imux`, started in cwd, asks which project to
+// open (D49), and the folder it offers as "this folder" ("" for the home
+// folder): not in an open project; yes when projects are open, when the
+// last session can be restored (restorable projects), and in the home
+// folder.
+func startPick(cwd, home string, open map[string]bool, restorable int) (here string, ask bool) {
+	cwd, home = filepath.Clean(cwd), filepath.Clean(home)
+	if open[cwd] {
+		return "", false
+	}
+	if cwd != home && len(open) == 0 && restorable == 0 {
+		return "", false
+	}
+	if cwd != home {
+		here = cwd
+	}
+	return here, true
+}
+
+// openProjects are the folders of the projects open now.
+func openProjects(ctx context.Context, w *workspace.WS) map[string]bool {
+	open := map[string]bool{}
+	if out, err := w.T.Run(ctx, tmux.Cmd{"list-sessions", "-F", "#{session_path}"}); err == nil {
+		for _, l := range strings.Split(strings.TrimSpace(out), "\n") {
+			if l = strings.TrimSpace(l); l != "" {
+				open[filepath.Clean(l)] = true
+			}
+		}
+	}
+	return open
 }
 
 // attachExec replaces the process with `tmux attach`; tests replace it.
@@ -122,18 +156,23 @@ func defaultAction(e *Env, args []string) error {
 	if err := w.EnsureConf(ctx); err != nil {
 		return err
 	}
-	// In the home folder (a terminal's default) ask which project to open
-	// instead of making the home folder one (D22).
-	if len(pos) == 0 && !*detach && os.Getenv("TMUX") == "" && isTerminal(os.Stdin) &&
-		filepath.Clean(cwd) == filepath.Clean(paths.UserHome()) {
-		c, ok, err := pickFolder(ctx, w)
-		if err != nil || !ok {
-			return err
+	// Unless imux starts in an open project, ask which one to open when
+	// there is a workspace to go back to, and in the home folder (a
+	// terminal's default, D22): Restore last session, this folder, the
+	// open and recent projects (D49).
+	if len(pos) == 0 && !*detach && os.Getenv("TMUX") == "" && isTerminal(os.Stdin) {
+		open := openProjects(ctx, w)
+		restorable := len(workspace.LoadSnapshots().Interrupted(w.ServerID(ctx), open))
+		if here, ask := startPick(cwd, paths.UserHome(), open, restorable); ask {
+			c, ok, err := pickFolder(ctx, w, here)
+			if err != nil || !ok {
+				return err
+			}
+			if c.Kind == folders.KindRestore {
+				return openChoice(ctx, w, c, "")
+			}
+			cwd = c.Path
 		}
-		if c.Kind == folders.KindRestore {
-			return openChoice(ctx, w, c, "")
-		}
-		cwd = c.Path
 	}
 	if pane := os.Getenv("TMUX_PANE"); pane != "" && w.T.Inside(os.Getenv("TMUX")) {
 		p, err := w.NewWindow(ctx, pane, id, cwd)

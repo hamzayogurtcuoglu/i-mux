@@ -352,7 +352,7 @@ func runOpen(e *Env, args []string) error {
 	}
 	if dir == "" && !*fromOpt && isTerminal(os.Stdin) {
 		// No folder given: pick one.
-		c, ok, err := pickFolder(ctx, w)
+		c, ok, err := pickFolder(ctx, w, "")
 		if err != nil || !ok {
 			return err
 		}
@@ -521,7 +521,7 @@ func runOpenPicker(e *Env, args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	c, ok, err := pickFolder(ctx, w)
+	c, ok, err := pickFolder(ctx, w, "")
 	if err != nil || !ok {
 		return err
 	}
@@ -531,7 +531,7 @@ func runOpenPicker(e *Env, args []string) error {
 // pickFolder runs the folder picker on this terminal: the restore row,
 // open and recent projects (with their saved tabs), then git folders; the
 // git scan runs while the list is shown (§9.3).
-func pickFolder(ctx context.Context, w *workspace.WS) (folders.Cand, bool, error) {
+func pickFolder(ctx context.Context, w *workspace.WS, here string) (folders.Cand, bool, error) {
 	home := paths.UserHome()
 	t := now()
 	openSet := map[string]bool{}
@@ -594,7 +594,7 @@ func pickFolder(ctx context.Context, w *workspace.WS) (folders.Cand, bool, error
 		}()
 	}
 	return picker.Run(picker.Options{
-		In: os.Stdin, Out: os.Stdout, Home: home, Restore: restore,
+		In: os.Stdin, Out: os.Stdout, Home: home, Restore: restore, Here: here,
 		Cands: folders.MergeCands(openC, recentC, asGit(cached)), More: more,
 	})
 }

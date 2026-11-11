@@ -1033,7 +1033,7 @@ no longer offers the workspace it used to.
     (detach), quit (confirm, snapshot, live preview servers stopped, server killed); `imux quit
     [--yes]`; unit tests (the tab bar on old and new tmux, the bindings, the menus); e2e: Exit →
     Back to the terminal detaches the client and the agents keep running.
-- [ ] **T56.2 The picker at start** · S
+- [x] **T56.2 The picker at start** · S
   - AC: D49: `imux` in an open project's folder attaches; elsewhere with projects open or a last
     session to restore, the picker with Restore first and this folder next; unit tests (when it
     asks, the rows); e2e: `imux` in a new folder while a project is open asks, and Enter opens

@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-11-11
+
+### Changed
+
+- **`imux` asks which project again.** Outside an open project's folder, while projects are open or
+  a last session can be restored, `imux` shows the picker: **Restore last session** first, then
+  **this folder**, then your recent projects. In an open project's folder it goes straight there.
+
 ## [0.45.0] - 2026-11-11
 
 ### Added

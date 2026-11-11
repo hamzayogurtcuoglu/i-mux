@@ -118,10 +118,12 @@ Ayarlar → **micro düzenleyicisini getir…** ya da `imux editor install`): fa
 Ctrl+C / Ctrl+V, renkli kod ve kaydırma çubuğu. nano da sağ kenarında nerede olduğunu gösterir.
 Fare tekerleği her yerde kaydırır.
 
-`imux`'u ana klasöründe çalıştırırsan hangi projeyi açacağını sorar: adının birkaç harfini yaz.
-**Son kullanılanlar** en üstte gelir ve bıraktığın gibi açılır: aynı sekmeler, adlar ve agent'lar,
-her agent kendi sohbetine döner. Bilgisayar yeniden başladıysa **Son oturumu geri yükle** açık olan
-bütün projeleri geri getirir.
+`imux`'u çalıştırınca hangi projeyi açacağını sorar: adının birkaç harfini yaz. (Açık bir projenin
+klasöründeysen doğrudan ona gider; başka bir klasörde, açık ya da geri yüklenecek bir şey yoksa o
+klasörü açar.) Bilgisayar yeniden başladıysa en üstte **Son oturumu geri
+yükle** gelir ve açık olan bütün projeleri geri getirir; sonra **bu klasör**, sonra **Son
+kullanılanlar**: bıraktığın gibi açılırlar, aynı sekmeler, adlar ve agent'lar, her agent kendi
+sohbetine döner.
 
 Soldaki **kenar panel** bir kod editörününki gibi çalışır: en soldaki simgeler (altlarında adları)
 görünümü değiştirir.
@@ -169,7 +171,7 @@ devam etmesini istersen `[handoff] on_arrival = "continue"` yaz.
 
 Bölmede daha önce çalışmış bir agent'a geri dönmek, o agent'ın kendi oturumunu sürdürür ve ona
 yalnızca aradaki gelişmeleri anlatır. Komut satırı için `imux help` (`switch`, `split`, `ls`, `versions`,
-`limits`, `sessions`, `handoff --print`).
+`limits`, `sessions`, `handoff --print`, `quit`).
 
 Arayüz dili `LANG` / `IMUX_LANG` ya da yapılandırmadaki `locale = "tr"` ile seçilir; agent'lara
 giden devir belgesi her zaman İngilizcedir.
