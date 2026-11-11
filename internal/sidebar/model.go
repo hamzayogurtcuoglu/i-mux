@@ -70,8 +70,6 @@ func TabState(panes []PaneRow) string {
 		return "#[fg=colour214]!"
 	case st.Limited != "":
 		return "#[fg=colour203]◆"
-	case st.State == StateDone:
-		return "#[fg=colour71]●"
 	}
 	return "#[fg=colour75]●"
 }

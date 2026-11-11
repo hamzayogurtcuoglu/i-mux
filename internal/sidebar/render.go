@@ -186,8 +186,6 @@ const (
 	title     = "\x1b[1m\x1b[38;5;252m"
 	selBg     = "\x1b[48;5;236m"
 	spinFg    = "\x1b[38;5;75m"
-	doneFg    = "\x1b[38;5;71m"
-	dirtyFg   = "\x1b[38;5;179m"
 	needPill  = "\x1b[48;5;58m\x1b[38;5;214m"
 	limitPill = "\x1b[48;5;52m\x1b[38;5;210m"
 	white     = "\x1b[38;5;255m"
@@ -266,11 +264,10 @@ func badge(p PaneRow, tick int, compact bool) (string, int) {
 		return pill(needPill, i18n.T("sidebar.needs_you"))
 	case p.State == StateWorking:
 		return spinFg + spinner[tick%len(spinner)] + reset, 1
-	case p.State == StateDone:
-		return doneFg + "●" + reset, 1
 	case p.State == StateExited:
 		return red + "✕" + reset, 1
-	case p.State == StateIdle:
+	case p.State == StateIdle, p.State == StateDone:
+		// A finished agent is idle: no "Done" dot (D56).
 		return faint + "○" + reset, 1
 	}
 	return "", 0
@@ -283,12 +280,10 @@ func urgency(p PaneRow) int {
 		return 5
 	case p.Limited != "":
 		return 4
-	case p.State == StateDone:
-		return 3
 	case p.State == StateWorking:
 		return 2
 	}
-	return 0
+	return 0 // idle, and done (D56)
 }
 
 // rollup is the most urgent pane of a project (ok false when all are idle).
@@ -393,7 +388,8 @@ func workingCount(m Model) int {
 	return n
 }
 
-// projectRow: avatar, name, branch, dirty dot and the roll-up state.
+// projectRow: avatar, name, branch and the roll-up state (no dot for
+// uncommitted changes, D56).
 func projectRow(pr ProjectRow, w, tick int) Line {
 	var right []string
 	rw := 0
@@ -413,9 +409,6 @@ func projectRow(pr ProjectRow, w, tick int) Line {
 		right, rw = nil, 0
 		if branch != "" {
 			add(muted+branch+reset, runes(branch))
-		}
-		if pr.Dirty {
-			add(dirtyFg+"●"+reset, 1)
 		}
 		if ok {
 			add(badge(st, tick, compact))

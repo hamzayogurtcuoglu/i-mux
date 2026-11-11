@@ -21,6 +21,9 @@ All notable changes to i-mux are listed here. The format follows
 - **A short HTML menu.** A click on an HTML file offers **Open in browser**, **Open in a new tab**,
   **Edit** and **View**, without the 🌐 and the "live" on each line (pages still reload by
   themselves).
+- **No dots in the sidebar.** The yellow dot (uncommitted changes) and the green dot (an agent
+  finished while you were elsewhere) are gone; a finished agent shows as idle, and its notification
+  still says it finished. The Git icon on the rail counts the changed files.
 - **tmux 3.4 is no longer "old"** in Versions and updates: with menus clickable everywhere, it has
   every feature.
 

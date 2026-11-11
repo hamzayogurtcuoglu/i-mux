@@ -184,6 +184,24 @@ func TestAgentsBadge(t *testing.T) {
 	}
 }
 
+// TestTabState: the tab bar's glyph is the most urgent pane's; a finished
+// agent is idle there too (D56: no green "done").
+func TestTabState(t *testing.T) {
+	for _, c := range []struct {
+		panes []PaneRow
+		want  string
+	}{
+		{[]PaneRow{{State: StateIdle}, {State: StateDone}}, ""},
+		{[]PaneRow{{State: StateDone}, {State: StateWorking}}, "#[fg=colour75]●"},
+		{[]PaneRow{{State: StateWorking}, {State: StateBlocked}}, "#[fg=colour214]!"},
+		{[]PaneRow{{State: StateIdle, Limited: "15:00"}}, "#[fg=colour203]◆"},
+	} {
+		if got := TabState(c.panes); got != c.want {
+			t.Errorf("%+v: %q", c.panes, got)
+		}
+	}
+}
+
 func TestRender(t *testing.T) {
 	i18n.SetLocale("en")
 	for _, w := range []int{29, 41, 51} {
@@ -203,15 +221,19 @@ func TestRender(t *testing.T) {
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
-		"▾ PROJECTS", " A  acme-api", "main ●", " B  blog", "master ●",
+		"▾ PROJECTS", " A  acme-api  main  Needs you", " B  blog", "master",
 		"▾ AGENTS", "acme-api", "✻  backend fix", "<1m ⠋", "◎  og tags", "4m  15:00", "▲  Antigravity", "2h  Needs you", "›  Terminal",
-		"blog", "▲  blog pass", "9m ●", "✻  Claude", "3d ○",
+		"blog", "▲  blog pass", "9m ○", "✻  Claude", "3d ○",
 		"Continue this chat in", "▲ Antigravity", "◉ Copilot", "◎ Codex",
 		"📜 History", "▌  🤖", "Agents", "📁", "Files", "🔍", "Search", "🔀", "Git 3", "📊", "Limits", "❓", "Help",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("sidebar lacks %q:\n%s", want, text)
 		}
+	}
+	// No dot for uncommitted changes (blog has some) or a finished agent (D56).
+	if strings.Contains(text, "●") {
+		t.Errorf("a dot in the sidebar:\n%s", text)
 	}
 	// The current agent is not a place to continue in.
 	cont := text[strings.Index(text, "Continue this chat in"):]
