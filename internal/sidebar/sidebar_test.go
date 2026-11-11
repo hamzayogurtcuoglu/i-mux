@@ -583,6 +583,39 @@ func TestClickAtOnce(t *testing.T) {
 	}
 }
 
+// cmdRunner records the tmux calls it is given.
+type cmdRunner struct{ calls []string }
+
+func (r *cmdRunner) Run(_ context.Context, _ string, args []string) ([]byte, []byte, error) {
+	r.calls = append(r.calls, strings.Join(args, " "))
+	return nil, nil, nil
+}
+
+// TestSwitchMarksTheClient (D53): a click that shows the client another
+// project or tab marks the client (@imux_moved, cleared by tmux 0.5 s
+// later) in the same tmux call, before the switch; a pane of this window
+// does not.
+func TestSwitchMarksTheClient(t *testing.T) {
+	ctx := context.Background()
+	mark := "set-option -g @imux_moved /dev/pts/3 ; run-shell -b -C -d 0.5 set-option -gu @imux_moved ; switch-client -c /dev/pts/3 -t "
+	for _, c := range []struct {
+		a    Action
+		want string // "" for no mark
+	}{
+		{Action{Kind: ActProject, Session: "beta-1"}, mark + "=beta-1"},
+		{Action{Kind: ActFocus, Pane: "%9"}, mark + "%9 ; select-window -t %9 ; select-pane -t %9"},
+		{Action{Kind: ActFocus, Pane: "%1"}, ""},
+	} {
+		r := &cmdRunner{}
+		s := &sidebar{t: &tmux.Client{Bin: "tmux", Runner: r}, sel: NoItem, model: Model{Panes: []PaneRow{{ID: "%1"}}}, win: Window{Client: "/dev/pts/3"}}
+		s.do(ctx, c.a)
+		got := strings.Join(r.calls, "\n")
+		if c.want == "" && strings.Contains(got, "@imux_moved") || c.want != "" && !strings.Contains(got, c.want) {
+			t.Errorf("%+v ran %q", c.a, got)
+		}
+	}
+}
+
 // realTmux starts a private tmux server for the test.
 func realTmux(t *testing.T) *tmux.Client {
 	t.Helper()

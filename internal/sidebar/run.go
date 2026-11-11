@@ -604,7 +604,8 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		return
 	case ActProject:
 		if client != "" {
-			_, _ = s.t.Run(ctx, tmux.Cmd{"switch-client", "-c", client, "-t", "=" + a.Session})
+			// The rest of a double click stays in that project (D53).
+			_, _ = s.t.Run(ctx, append(tmux.MovedCmds(client), tmux.Cmd{"switch-client", "-c", client, "-t", "=" + a.Session})...)
 		}
 		return
 	case ActOpen:
@@ -803,7 +804,8 @@ func (s *sidebar) focus(ctx context.Context, id, client string) {
 	}
 	cmds := []tmux.Cmd{{"select-window", "-t", id}, {"select-pane", "-t", id}}
 	if client != "" {
-		cmds = append([]tmux.Cmd{{"switch-client", "-c", client, "-t", id}}, cmds...)
+		// Another tab or project: the rest of a double click stays there (D53).
+		cmds = append(append(tmux.MovedCmds(client), tmux.Cmd{"switch-client", "-c", client, "-t", id}), cmds...)
 	}
 	_, _ = s.t.Run(ctx, cmds...)
 }

@@ -53,6 +53,26 @@ func (in *ConfInput) oldTabClicks() bool {
 // when a pane is resized or closed.
 const TabPad = "#{?window_zoomed_flag,,#{P:#{?#{==:#{@imux_role},sidebar},#{p/#{e|+:#{pane_width},1}/:},}}}"
 
+// OptMoved names the client a sidebar click just showed another project or
+// tab (D53): while it is set, MouseDown1Pane drops that client's presses on
+// a sidebar. tmux 3.7 and later report a double click's second press as a
+// new press once the pane under it changed, so the press that switched
+// would act again in the new sidebar.
+const OptMoved = "@imux_moved"
+
+// MovedFor is how long OptMoved stays (run-shell -d): a double click's
+// second press, and a triple click's third.
+const MovedFor = "0.5"
+
+// MovedCmds mark client as moved by a click (OptMoved) and have tmux clear
+// the mark after MovedFor; they run with the commands that switch it.
+func MovedCmds(client string) []Cmd {
+	return []Cmd{
+		{"set-option", "-g", OptMoved, client},
+		{"run-shell", "-b", "-C", "-d", MovedFor, "set-option -gu " + OptMoved},
+	}
+}
+
 // TabFormat is the tab bar (status-format[0] with tmux.tabs): a blank as
 // wide as the sidebar (TabPad), the session's windows as tabs " <n> <name>
 // <state> ", the current one highlighted, each a window range (a click
@@ -275,11 +295,14 @@ func GenerateConf(in *ConfInput) string {
 		w("# (tmux's own bindings do, 300 ms after a double click: the focus went back to the sidebar),")
 		w("# and the second and third press reach a sidebar only if the first did: a click that showed")
 		w("# another tab or project must not act again in that one's sidebar. Other panes keep tmux's")
-		w("# defaults (tmux's MouseDown1Pane, which also notes the pane, @imux_press).")
+		w("# defaults (tmux's MouseDown1Pane, which also notes the pane, @imux_press). tmux 3.7+ reports")
+		w("# a second press in another pane as a new one: while a click that showed this client another")
+		w("# tab or project is fresh (%s, D53), its presses on a sidebar are dropped.", OptMoved)
 		const sidebar = "#{==:#{@imux_role},sidebar}"
 		const mouse = "#{||:#{pane_in_mode},#{mouse_any_flag}}"
 		const same = "#{==:#{pane_id},#{@imux_press}}"
-		w("bind -n MouseDown1Pane { set -gF @imux_press '#{mouse_pane}'; select-pane -t=; send -M }")
+		const moved = "#{&&:" + sidebar + ",#{==:#{" + OptMoved + "},#{client_name}}}"
+		w("bind -n MouseDown1Pane if -F -t= %s {} { set -gF @imux_press '#{mouse_pane}'; select-pane -t=; send -M }", Quote(moved))
 		w("bind -n SecondClick1Pane if -F -t= %s { send -M } {}", Quote("#{||:#{!=:#{@imux_role},sidebar},"+same+"}"))
 		for _, c := range []struct{ key, sel, own string }{
 			{"DoubleClick1Pane", "select-word", "send -M"},

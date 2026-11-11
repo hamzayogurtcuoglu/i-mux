@@ -1004,7 +1004,7 @@ other tests (macOS more often); the release smoke test fails on Arch Linux. Run 
 3.4 and 3.8 (macOS's Homebrew tmux): three tests failed every time on 3.8 and two now and then on
 all three.
 
-- [ ] **T59.1 A double click's second press on tmux 3.7+** · S
+- [x] **T59.1 A double click's second press on tmux 3.7+** · S
   - AC: D53, §9.3 "A double click's second press": a sidebar click that shows the client another
     project or tab sets `@imux_moved` to that client, tmux clears it 0.5 s later, and
     `MouseDown1Pane` drops that client's presses on a sidebar while it is set; unit tests (the

@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.46.1] - 2026-11-11
+
+### Fixed
+
+- **A double click on another project or tab stays there** with tmux 3.7 and later (Homebrew's
+  tmux on macOS is 3.8): its second press reached the new project's sidebar and switched straight
+  back.
+
 ## [0.46.0] - 2026-11-11
 
 ### Added

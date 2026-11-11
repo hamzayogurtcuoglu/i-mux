@@ -187,7 +187,7 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 	if !strings.Contains(keys, "__menu") {
 		t.Fatalf("root menu key not bound:\n%s", keys)
 	}
-	for key, want := range map[string]string{"DoubleClick1Pane": "@imux_role", "MouseDown1Pane": "@imux_press", "SecondClick1Pane": "@imux_press"} {
+	for key, want := range map[string]string{"DoubleClick1Pane": "@imux_role", "MouseDown1Pane": OptMoved, "SecondClick1Pane": "@imux_press"} {
 		bound := ""
 		for _, l := range strings.Split(keys, "\n") {
 			if strings.Contains(l, " "+key+" ") {
