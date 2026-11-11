@@ -126,6 +126,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D47 | **Web pages open in the browser, served by i-mux with live reload, not in a browser drawn in the terminal** (added 2026-11-11, v0.45, at the user's request; replaces D44): a click on an HTML file serves its project on `http://localhost:<port>` (a small server in i-mux, one per project, for this machine only) and opens the page in a window of its own (the app window of Chrome or Edge: no tabs, no address bar; under WSL, Windows' browser) or in a tab of the default browser (Settings). The page reloads itself when a file it uses changes; another click shows the new page in that window. Nothing is downloaded. | Carbonyl drew pages with half-block cells: blurry text, blocky charts, its own bar on top (the user: "beyond terrible"). A terminal cannot draw a page as a browser does, and the browser is there anyway; a window of its own next to the terminal is the preview pane. Over HTTP a page also loads what `file://` blocks (a report's JSON next to it), and live reload shows what an agent rewrites as it happens. From VS Code (also over a tunnel) the page opens on the machine VS Code runs on. |
 | D48 | **A button leaves i-mux: back to the terminal, or quit with every agent** (added 2026-11-11, v0.46, at the user's request): the tab bar ends on the right with **⏻ Exit**; its menu has **Back to the terminal** (this client detaches: the agents keep running, `imux` brings them back) and **Quit i-mux…** (after a confirm: the open projects are recorded, every agent stops, the tmux server ends; the next `imux` offers them back). `imux quit` does the same from a shell. | The user did not know how to leave i-mux for the shell. tmux's ways (`prefix d`, closing the terminal) are invisible and keep the agents running without saying so; a button with both choices says what each one does. |
 | D49 | **`imux` asks which project to open, unless it starts in one that is open** (added 2026-11-11, v0.46, at the user's request; extends D22): outside tmux and without arguments, `imux` in the folder of an open project attaches to it; anywhere else, when projects are open or the last session can be restored, it shows the project picker with **↺ Restore last session** first (when there is one), then **this folder**, then the open and recent projects. With nothing open and nothing to restore it opens its folder as before (the home folder: the picker). | The user's workspace stopped coming back: the picker that offers it showed only in the home folder, so `imux` started elsewhere made a new project without a word, and the last session was offered only from home. |
+| D50 | **A setting opens a menu of its values; the editor is one of them** (added 2026-11-11, v0.46, at the user's request): a click on a Settings row (or Enter on it, or its letter) opens a small menu of its values with `●` on the current one; choosing one saves it and opens Settings again. Nothing cycles any more. **Editor** lists Auto (micro, `$VISUAL`, `$EDITOR`, nano), micro (got when missing, D45), nano, Neovim, and Neovim + Copilot, which is AI completion (D30) and replaces its row. | Cycling hid the other values and made the user step through them; a list shows them all, as the commit agent's menu already did. The user wants to pick the editor among the ones i-mux knows, not only to turn AI completion on. |
 
 ## 4. Components
 
@@ -1447,25 +1448,35 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - i-mux never deletes conversations; a pinned one the agent deleted itself (Claude Code's
   `cleanupPeriodDays`) is simply not shown.
 
-#### Settings (v0.25)
+#### Settings (v0.25; menus v0.46, D50)
 
 ```
- i-mux · Settings
- AI completion in the editor: Off            a
- Icons: Auto                                 i
- Commit messages by: Auto (the pane's agent) m
- After a handoff the new agent: waits        w
- When an agent hits its limit: ask           l
+ i-mux · Settings                          Icons
+ Editor: micro                    e        ● Auto (Nerd Font icons when the terminal has them)
+ Notifications: On                n          Nerd Font icons
+ Icons: Auto                      i   →      Emoji
+ Commit messages by: Auto         m
+ After a handoff the new agent: … w
+ When an agent hits its limit: …  l
  ──────────────
- Open the config file…                       o
+ Open the config file…            o
 ```
 
 - **⚙ Settings** on the rail (bottom, above Help; codicon settings-gear U+EB51, emoji 🔧) and
   `imux settings` open the menu; each row shows the current value.
-- Choosing a row changes `~/.imux/config.toml` (written from the commented default when missing;
-  only that key's line changes, comments stay) and opens the menu again. Enums cycle (icons:
-  auto → nerd → emoji; limits: ask → auto → off); "Commit messages by" opens a submenu of `auto`
-  and the installed agents.
+- **A row opens a menu of its values** (v0.46, D50): `●` marks the current one; choosing one
+  changes `~/.imux/config.toml` (written from the commented default when missing; only that
+  key's line changes, comments stay) and opens Settings again. Rows: Editor, Notifications
+  (On / Off), Notification sound, Paste images with Ctrl+V, Icons (Auto / Nerd Font icons /
+  Emoji), Commit messages by (Auto / the installed agents), After a handoff the new agent (waits
+  for you / continues), When an agent hits its limit (ask me / switch automatically / do
+  nothing). `imux __settings menu <row>` opens one.
+- **Editor:** **Auto** (`editor = ""`: micro, `$VISUAL`, `$EDITOR`, nano; the row says which),
+  **micro** (got first when missing: `imux editor use micro` in a popup, D45), **nano**,
+  **Neovim** (`editor = "nvim"`; when missing a popup says how to install it and offers `sudo
+  apt-get install neovim` or `brew install neovim`), **Neovim + Copilot** (AI completion, D30:
+  `imux __completion setup` in a popup; then **Sign in to GitHub Copilot…** is a row). Choosing
+  any other turns AI completion off.
 - It applies at once: commands read the config each time; sidebars and the watcher reload it
   when its modification time changes.
 

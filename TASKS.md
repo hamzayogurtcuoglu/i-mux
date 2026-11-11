@@ -997,6 +997,17 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M57: Settings as menus, the editor among them (added 2026-11-11)
+
+User request: Settings rows should not flip through values; a click or Enter should open a popup
+to choose from, for every row; and an editor choice: micro, nano or Neovim.
+
+- [ ] **T57.1 Menus of values, the Editor row** · M
+  - AC: D50, §9.3 "Settings": every row with values opens a menu (`●` the current value), the
+    choice saves and reopens Settings; Editor: Auto / micro (got when missing) / nano / Neovim /
+    Neovim + Copilot, replacing the AI completion row; `imux editor use <editor>`; unit tests
+    (the rows and their menus, the editor's choices, the saved keys).
+
 ## M56: Leaving i-mux, and coming back (added 2026-11-11)
 
 User request: a button that closes i-mux and goes back to the normal terminal (top right); `imux`
