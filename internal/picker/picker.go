@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
@@ -271,6 +272,10 @@ type Options struct {
 	Here    string // the folder imux started in: a row after Restore (D49)
 }
 
+// inputPoll is how long Run waits for a key before it checks whether it
+// is done.
+const inputPoll = 50 * time.Millisecond
+
 // Run shows the picker until a row is chosen (ok false = cancelled).
 func Run(o Options) (folders.Cand, bool, error) {
 	restore, err := sidebar.RawMode(int(o.In.Fd()))
@@ -306,19 +311,31 @@ func Run(o Options) (folders.Cand, bool, error) {
 	winch := make(chan os.Signal, 1)
 	sysx.Notify(winch, sysx.SIGWINCH)
 	defer sysx.Stop(winch)
-	input := make(chan []byte, 8)
+	// The reader stops, and Run waits for it, before Run returns: a read
+	// left waiting would take the keys meant for what imux starts next (on
+	// Windows tmux attach runs as imux's child, on the same console).
+	input, stop, done := make(chan []byte, 8), make(chan struct{}), make(chan struct{})
+	defer func() { close(stop); <-done }()
 	go func() {
-		buf := make([]byte, 1024)
+		defer close(done)
+		defer close(input)
+		fd := int(o.In.Fd())
 		for {
-			n, err := o.In.Read(buf)
-			if n > 0 {
-				b := make([]byte, n)
-				copy(b, buf[:n])
-				input <- b
-			}
-			if err != nil {
-				close(input)
+			select {
+			case <-stop:
 				return
+			default:
+			}
+			b, err := sidebar.ReadInput(fd, inputPoll)
+			if err != nil {
+				return
+			}
+			if len(b) > 0 {
+				select {
+				case input <- b:
+				case <-stop:
+					return
+				}
 			}
 		}
 	}()
