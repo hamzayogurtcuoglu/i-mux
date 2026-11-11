@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -88,8 +89,13 @@ func TestFreeNameAndPaste(t *testing.T) {
 	}
 	// A folder tree, with a link, copies whole; it cannot go into itself.
 	write(t, filepath.Join(d, "src/sub/f.txt"), "f")
+	// Windows makes links only with Developer Mode on (or as administrator).
+	linked := true
 	if err := os.Symlink("sub/f.txt", filepath.Join(d, "src/link")); err != nil {
-		t.Fatal(err)
+		if runtime.GOOS != "windows" {
+			t.Fatal(err)
+		}
+		linked = false
 	}
 	if err := os.MkdirAll(filepath.Join(d, "dst"), 0o755); err != nil {
 		t.Fatal(err)
@@ -101,7 +107,7 @@ func TestFreeNameAndPaste(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(p, "sub/f.txt")); string(b) != "f" {
 		t.Fatal("tree content")
 	}
-	if l, _ := os.Readlink(filepath.Join(p, "link")); l != "sub/f.txt" {
+	if l, _ := os.Readlink(filepath.Join(p, "link")); linked && filepath.ToSlash(l) != "sub/f.txt" {
 		t.Fatal("link", l)
 	}
 	if _, err := Paste(filepath.Join(d, "src"), filepath.Join(d, "src/sub"), false); !errors.Is(err, ErrIntoItself) {
@@ -165,9 +171,26 @@ func TestTrash(t *testing.T) {
 		t.Fatal("not in Trash/files")
 	}
 	info, _ := os.ReadFile(filepath.Join(data, "Trash/info/my file.txt.trashinfo"))
-	if !strings.Contains(string(info), "Path="+strings.ReplaceAll(filepath.Join(d, "my file.txt"), " ", "%20")+"\n") ||
+	// The old place is a Unix path in a URL (on Windows its backslashes are
+	// escaped too; this Trash is Linux's only).
+	if (runtime.GOOS != "windows" && !strings.Contains(string(info), "Path="+strings.ReplaceAll(filepath.Join(d, "my file.txt"), " ", "%20")+"\n")) ||
 		!strings.Contains(string(info), "DeletionDate=2026-11-08T20:01:02") {
 		t.Fatalf("trashinfo:\n%s", info)
+	}
+
+	// Windows: the Recycle Bin, never gio or the freedesktop Trash.
+	var recycled []string
+	s = &System{
+		GOOS:     "windows",
+		Getenv:   func(string) string { return "" },
+		LookPath: func(n string) (string, error) { return n, nil },
+		Run: func(_ context.Context, _, name string, _ ...string) error {
+			return errors.New("ran " + name)
+		},
+		Recycle: func(p string) error { recycled = append(recycled, p); return nil },
+	}
+	if err := s.Trash(context.Background(), `C:\p\a b.txt`); err != nil || len(recycled) != 1 || recycled[0] != `C:\p\a b.txt` {
+		t.Fatalf("recycle bin: %q %v", recycled, err)
 	}
 }
 
@@ -327,5 +350,43 @@ func TestOsaError(t *testing.T) {
 	}
 	if m := osaError("", errors.New("exit status 1")); m != "exit status 1" {
 		t.Fatalf("%q", m)
+	}
+}
+
+func TestWindowsCopyAndReveal(t *testing.T) {
+	var ran []string
+	s := &System{
+		GOOS:     "windows",
+		Getenv:   func(string) string { return "" },
+		LookPath: func(n string) (string, error) { return n, nil },
+		Run: func(_ context.Context, stdin, name string, args ...string) error {
+			ran = append(ran, name+" "+strings.Join(args, " ")+" <"+stdin)
+			return nil
+		},
+		ReadFile: func(string) ([]byte, error) { return nil, errors.New("no") },
+	}
+	ctx := context.Background()
+	// Set-Clipboard gets the text as UTF-8 in base64 (clip.exe would read
+	// the console's code page).
+	if err := s.CopyText(ctx, "ç"); err != nil || len(ran) != 1 ||
+		!strings.HasPrefix(ran[0], "powershell.exe -NoProfile -NonInteractive -Command Set-Clipboard") ||
+		!strings.Contains(ran[0], "FromBase64String('w6c=')") {
+		t.Fatalf("copy %q %v", ran, err)
+	}
+	// IMUX_COPY_COMMAND is a PowerShell command here.
+	ran = nil
+	s.Getenv = func(k string) string { return map[string]string{"IMUX_COPY_COMMAND": "clip.exe"}[k] }
+	if err := s.CopyText(ctx, "x"); err != nil || len(ran) != 1 || ran[0] != "powershell.exe -NoProfile -NonInteractive -Command clip.exe <x" {
+		t.Fatalf("copy command %q %v", ran, err)
+	}
+	if k := s.Reveal(); k != "file.reveal_explorer" {
+		t.Fatalf("reveal key %q", k)
+	}
+	if runtime.GOOS != "windows" {
+		return // a Windows path is absolute only there
+	}
+	ran = nil
+	if err := s.RevealFile(ctx, `C:\p\a b.txt`); err != nil || len(ran) != 1 || ran[0] != `explorer.exe /select,C:\p\a b.txt <` {
+		t.Fatalf("reveal %q %v", ran, err)
 	}
 }

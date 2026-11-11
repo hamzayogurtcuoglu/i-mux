@@ -1,6 +1,6 @@
 // Package clipimage takes the image on the system clipboard (or copied
 // image files) as files an agent CLI can read (ARCHITECTURE "Pasting
-// images"): macOS, Linux on Wayland or X11, and WSL (the Windows
+// images"): macOS, Linux on Wayland or X11, Windows, and WSL (the Windows
 // clipboard).
 package clipimage
 
@@ -17,6 +17,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/winx"
 )
 
 // ErrNoImage means the clipboard holds no image (and no image files).
@@ -78,7 +80,7 @@ func (r *Reader) output(ctx context.Context, name string, args ...string) ([]byt
 	}
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	return exec.CommandContext(ctx, name, args...).Output()
+	return winx.Hidden(exec.CommandContext(ctx, name, args...)).Output()
 }
 
 func (r *Reader) now() time.Time {
@@ -110,6 +112,11 @@ func (r *Reader) Source() (string, string) {
 	switch {
 	case r.goos() == "darwin":
 		return "osascript", ""
+	case r.goos() == "windows":
+		if _, ok := r.powershell(); ok {
+			return "powershell.exe (Windows clipboard)", ""
+		}
+		return "", "powershell.exe is missing"
 	case r.WSL():
 		if _, ok := r.powershell(); ok {
 			return "powershell.exe (Windows clipboard)", ""
@@ -133,7 +140,10 @@ func (r *Reader) powershell() (string, bool) {
 	if p, ok := r.has("powershell.exe"); ok {
 		return p, true
 	}
-	const p = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+	p := "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+	if r.goos() == "windows" {
+		p = winx.WindowsPowerShell()
+	}
 	if _, err := os.Stat(p); err == nil {
 		return p, true
 	}
@@ -147,6 +157,10 @@ func (r *Reader) Read(ctx context.Context) ([]string, error) {
 	switch {
 	case r.goos() == "darwin":
 		return r.mac(ctx)
+	case r.goos() == "windows":
+		if ps, ok := r.powershell(); ok {
+			return r.windows(ctx, ps)
+		}
 	case r.WSL():
 		if ps, ok := r.powershell(); ok {
 			return r.windows(ctx, ps)
@@ -338,8 +352,18 @@ $m=New-Object System.IO.MemoryStream
 $i.Save($m,[System.Drawing.Imaging.ImageFormat]::Png)
 'PNG:' + [Convert]::ToBase64String($m.ToArray())`
 
+// nativeScript is winScript for Windows itself: the copied files' paths go
+// as UTF-8 in base64 (FILE64:), whatever the console's code page.
+var nativeScript = strings.Replace(winScript, "'FILE:' + $x",
+	"'FILE64:' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($x))", 1)
+
 func (r *Reader) windows(ctx context.Context, ps string) ([]string, error) {
-	out, err := r.output(ctx, ps, "-NoProfile", "-NonInteractive", "-STA", "-Command", winScript)
+	native := r.goos() == "windows"
+	script := winScript
+	if native {
+		script = nativeScript
+	}
+	out, err := r.output(ctx, ps, "-NoProfile", "-NonInteractive", "-STA", "-Command", script)
 	if err != nil {
 		return nil, fmt.Errorf("powershell.exe: %w", err)
 	}
@@ -353,7 +377,12 @@ func (r *Reader) windows(ctx context.Context, ps string) ([]string, error) {
 				return nil, err
 			}
 			return r.save(b, ".png")
-		case strings.HasPrefix(l, "FILE:"):
+		case native && strings.HasPrefix(l, "FILE64:"):
+			b, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(l, "FILE64:"))
+			if err == nil && IsImage(string(b)) {
+				files = append(files, string(b))
+			}
+		case !native && strings.HasPrefix(l, "FILE:"):
 			win := strings.TrimPrefix(l, "FILE:")
 			if !IsImage(win) {
 				continue

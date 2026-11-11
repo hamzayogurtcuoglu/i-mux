@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -487,7 +486,7 @@ func runStatusline(e *Env, args []string) error {
 	if cmd := usage.UserStatusLine(paths.UserHome(), dir); cmd != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), StatuslineTimeout)
 		defer cancel()
-		c := exec.CommandContext(ctx, "sh", "-c", cmd)
+		c := userStatusline(ctx, cmd)
 		c.Stdin, c.Stdout, c.Stderr = bytes.NewReader(in), e.Stdout, io.Discard
 		if dir != "" {
 			c.Dir = dir

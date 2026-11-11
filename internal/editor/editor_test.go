@@ -6,6 +6,31 @@ import (
 	"testing"
 )
 
+// fakeTools makes LookPath find the programs in have (in /bin) and Git for
+// Windows the ones in git; i-mux has no micro of its own.
+func fakeTools(t *testing.T) (have, git map[string]bool) {
+	t.Helper()
+	have, git = map[string]bool{}, map[string]bool{}
+	LookPath = func(n string) (string, error) {
+		if have[n] {
+			return "/bin/" + n, nil
+		}
+		return "", errors.New("no")
+	}
+	GitTool = func(n string) string {
+		if git[n] {
+			return `C:\Git\usr\bin\` + n + ".exe"
+		}
+		return ""
+	}
+	oldOurs := OurMicro
+	OurMicro = func() string { return "" }
+	t.Cleanup(func() { LookPath, GitTool, OurMicro = defaultLookPath, defaultGitTool, oldOurs })
+	t.Setenv("VISUAL", "")
+	t.Setenv("EDITOR", "")
+	return have, git
+}
+
 func TestChooseAndCommand(t *testing.T) {
 	have := map[string]bool{}
 	LookPath = func(n string) (string, error) {
@@ -14,12 +39,13 @@ func TestChooseAndCommand(t *testing.T) {
 		}
 		return "", errors.New("no")
 	}
+	GitTool = func(string) string { return "" }
 	ours := ""
 	oldOurs, oldNano := OurMicro, NanoVersion
 	OurMicro = func() string { return ours }
 	nano := map[string]int{"/bin/nano": 6, "/old/nano": 2}
 	NanoVersion = func(p string) int { return nano[p] }
-	t.Cleanup(func() { LookPath, OurMicro, NanoVersion = defaultLookPath, oldOurs, oldNano })
+	t.Cleanup(func() { LookPath, GitTool, OurMicro, NanoVersion = defaultLookPath, defaultGitTool, oldOurs, oldNano })
 	t.Setenv("VISUAL", "")
 	t.Setenv("EDITOR", "")
 	if Chosen("") {

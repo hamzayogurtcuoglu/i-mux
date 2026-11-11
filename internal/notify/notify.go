@@ -1,7 +1,8 @@
 // Package notify shows a desktop notification on every platform i-mux runs
 // on (ARCHITECTURE "Notifications"): a configured command, macOS's
-// notification center, the Linux desktop's (notify-send, else D-Bus), or
-// the terminal's own (OSC 9 / OSC 777) when there is no desktop.
+// notification center, a Windows toast, the Linux desktop's (notify-send,
+// else D-Bus), or the terminal's own (OSC 9 / OSC 777) when there is no
+// desktop.
 package notify
 
 import (
@@ -12,6 +13,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/winx"
 )
 
 // Message is one notification.
@@ -63,7 +66,7 @@ func (n *Notifier) run(ctx context.Context, name string, args ...string) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	return exec.CommandContext(ctx, name, args...).Run()
+	return winx.Hidden(exec.CommandContext(ctx, name, args...)).Run()
 }
 
 // ErrNone means no way to notify worked; the caller falls back to the
@@ -71,7 +74,7 @@ func (n *Notifier) run(ctx context.Context, name string, args ...string) error {
 var ErrNone = errors.New("no notification service")
 
 // System shows m through the configured command or the desktop. It returns
-// the way it used ("command", "osascript", "notify-send", "gdbus").
+// the way it used ("command", "osascript", "toast", "notify-send", "gdbus").
 func (n *Notifier) System(ctx context.Context, m Message) (string, error) {
 	if len(n.Command) > 0 {
 		args := append(append([]string{}, n.Command[1:]...), m.Title, m.Body)
@@ -87,6 +90,11 @@ func (n *Notifier) System(ctx context.Context, m Message) (string, error) {
 			script += ` sound name "Glass"`
 		}
 		return "osascript", n.run(ctx, "osascript", "-e", script)
+	case "windows":
+		if !n.lookPath("powershell.exe") {
+			return "", ErrNone
+		}
+		return "toast", n.run(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", toastScript(m))
 	default:
 		if n.lookPath("notify-send") {
 			args := []string{"-a", "i-mux"}

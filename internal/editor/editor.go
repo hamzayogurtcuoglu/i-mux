@@ -1,16 +1,19 @@
 // Package editor picks the editor a file opens in and builds its command
 // (ARCHITECTURE D27, D45): the configured one, else micro (the PATH's, or
 // the one i-mux got), $VISUAL, $EDITOR, nano, vim (with the mouse on), vi.
+// On Windows Neovim and Microsoft Edit join them, and Git for Windows' nano
+// and vim count as installed.
 package editor
 
 import (
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/winx"
 )
 
 // LookPath is exec.LookPath; tests replace it.
@@ -18,21 +21,38 @@ var LookPath = defaultLookPath
 
 var defaultLookPath = exec.LookPath
 
+// GitTool finds a program of Git for Windows ("" elsewhere); tests replace
+// it.
+var GitTool = defaultGitTool
+
+var defaultGitTool = winx.GitTool
+
+// find is the path of program name: on the PATH, else (Windows) in Git.
+func find(name string) (string, bool) {
+	if p, err := LookPath(name); err == nil {
+		return p, true
+	}
+	if p := GitTool(name); p != "" {
+		return p, true
+	}
+	return "", false
+}
+
 // Choose returns the editor command (program and its own arguments): the
 // configured one, then micro (the PATH's, then i-mux's), $VISUAL, $EDITOR,
-// nano, vim, vi.
+// nano, vim, vi (on Windows: nvim, edit, nano, vim).
 func Choose(configured string) []string {
 	try := func(cmd string) []string {
 		f := strings.Fields(cmd)
 		if len(f) == 0 {
 			return nil
 		}
-		if p, err := LookPath(f[0]); err == nil {
+		if p, ok := find(f[0]); ok {
 			return append([]string{p}, f[1:]...)
 		}
 		return nil
 	}
-	for i, c := range []string{configured, "micro", os.Getenv("VISUAL"), os.Getenv("EDITOR"), "nano", "vim", "vi"} {
+	for i, c := range candidates(configured) {
 		if e := try(c); e != nil {
 			return e
 		}
@@ -56,8 +76,11 @@ func Command(editor []string, path string, line int) []string {
 	if len(editor) == 0 {
 		return nil
 	}
-	name := filepath.Base(editor[0])
+	name := progName(editor[0])
 	argv := append([]string{}, editor...)
+	if a, ok := platformCommand(name, argv, path, line); ok {
+		return a
+	}
 	switch name {
 	case "code", "code-insiders", "cursor":
 		target := path
@@ -89,15 +112,13 @@ func Command(editor []string, path string, line int) []string {
 }
 
 // VSCode returns the VS Code command line tool when VS Code is installed
-// ("" otherwise): `code` on the PATH, else the one inside the macOS app.
+// ("" otherwise): `code` on the PATH, else the one inside the macOS app (on
+// Windows: in VS Code's install folder).
 func VSCode() string {
 	if p, err := LookPath("code"); err == nil {
 		return p
 	}
-	for _, p := range []string{
-		"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
-		filepath.Join(os.Getenv("HOME"), "Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"),
-	} {
+	for _, p := range vscodePaths() {
 		if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
 			return p
 		}
