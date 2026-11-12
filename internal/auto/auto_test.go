@@ -6,7 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -155,12 +157,12 @@ func TestCommand(t *testing.T) {
 		readOnly bool
 		want     []string
 	}{
-		{session.Claude, claudeAgent, "haiku", false, []string{"claude", "-p", "--session-id", "U", "--agent", "sim-tag", "--model", "haiku", "--dangerously-skip-permissions", "P"}},
-		{session.Claude, copilotAgent, "", true, []string{"claude", "-p", "--session-id", "U", "--permission-mode", "dontAsk", "P"}},
-		{session.Copilot, copilotAgent, "auto", false, []string{"copilot", "-p", "P", "--agent", "docs", "--model", "auto", "--yolo", "-s", "--no-color"}},
-		{session.Copilot, skill, "", true, []string{"copilot", "-p", "P", "-s", "--no-color"}},
-		{session.Antigravity, claudeAgent, "gemini-x", false, []string{"agy", "-p", "P", "--model", "gemini-x", "--dangerously-skip-permissions"}},
-		{session.Antigravity, skill, "", true, []string{"agy", "-p", "P", "--mode", "plan"}},
+		{session.Claude, claudeAgent, "haiku", false, []string{"claude", "-p", "--output-format", "stream-json", "--verbose", "--session-id", "U", "--agent", "sim-tag", "--model", "haiku", "--dangerously-skip-permissions", "P"}},
+		{session.Claude, copilotAgent, "", true, []string{"claude", "-p", "--output-format", "stream-json", "--verbose", "--session-id", "U", "--permission-mode", "dontAsk", "P"}},
+		{session.Copilot, copilotAgent, "auto", false, []string{"copilot", "-p", "P", "--agent", "docs", "--model", "auto", "--allow-all", "--output-format", "json", "--no-color"}},
+		{session.Copilot, skill, "", true, []string{"copilot", "-p", "P", "--output-format", "json", "--no-color"}},
+		{session.Antigravity, claudeAgent, "gemini-x", false, []string{"agy", "-p", "P", "--output-format", "stream-json", "--model", "gemini-x", "--dangerously-skip-permissions"}},
+		{session.Antigravity, skill, "", true, []string{"agy", "-p", "P", "--output-format", "stream-json", "--mode", "plan"}},
 		{session.Codex, skill, "o9", false, []string{"codex", "exec", "--skip-git-repo-check", "--color", "never", "--output-last-message", "OUT", "-m", "o9", "--dangerously-bypass-approvals-and-sandbox", "P"}},
 		{session.OpenCode, Def{Kind: KindAgent, Name: "rev", Owner: session.OpenCode}, "a/b", false, []string{"opencode", "run", "--agent", "rev", "-m", "a/b", "P"}},
 	} {
@@ -207,6 +209,7 @@ func TestSummarize(t *testing.T) {
 		"## **v2.3 is out**: pipeline started\nmore": "v2.3 is out: pipeline started",
 		"\x1b[1m- `go test` failed\x1b[0m":           "go test failed",
 		"1. Done.":                                   "Done.",
+		"abc\trefs/tags/v2.3\r\x07\u009b":            "abc refs/tags/v2.3",
 	} {
 		if s, q := Summarize(in); s != want || q {
 			t.Errorf("Summarize(%q) = %q %v", in, s, q)
@@ -321,8 +324,8 @@ func TestExecute(t *testing.T) {
 	if o.Err != nil || o.Exit != 0 || o.TimedOut || strings.TrimSpace(o.Stdout) != "report "+dir || strings.TrimSpace(o.Stderr) != "warn" || pgid == 0 {
 		t.Fatalf("%+v pgid %d", o, pgid)
 	}
-	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "$ "+sh+" -c ") || !strings.Contains(string(b), "report") || !strings.Contains(string(b), "# exit 0") {
-		t.Errorf("log:\n%s", b)
+	if b, _ := os.ReadFile(log); string(b) != "report "+dir+"\nwarn\n" && string(b) != "warn\nreport "+dir+"\n" {
+		t.Errorf("log:\n%q", b)
 	}
 	if o := Execute(context.Background(), []string{sh, "-c", "echo boom >&2; exit 3"}, nil, dir, log, 5*time.Second, nil); o.Exit != 3 || o.TimedOut {
 		t.Errorf("exit 3: %+v", o)
@@ -426,23 +429,43 @@ func TestModelsCache(t *testing.T) {
 	}
 }
 
-func TestNewAgent(t *testing.T) {
-	h := testutil.Isolate(t)
-	p, err := Create(h.Project, "tag-watch")
-	if err != nil || p != filepath.Join(h.Project, ".claude/agents/tag-watch.md") {
-		t.Fatalf("%q %v", p, err)
+// TestLogLines: two streams writing parts of lines at once never break
+// each other's lines in the log; a last line without a newline is ended.
+func TestLogLines(t *testing.T) {
+	var buf strings.Builder
+	var mu sync.Mutex
+	out, errw := &lines{mu: &mu, w: &buf}, &lines{mu: &mu, w: &buf}
+	var wg sync.WaitGroup
+	for _, w := range []*lines{out, errw} {
+		wg.Add(1)
+		go func(w *lines, tag string) {
+			defer wg.Done()
+			for i := range 200 {
+				_, _ = w.Write([]byte(`{"n":` + strconv.Itoa(i)))
+				_, _ = w.Write([]byte(`,"s":"` + tag + `"}` + "\n"))
+			}
+		}(w, map[*lines]string{out: "out", errw: "err"}[w])
 	}
-	if fm, body, ok := FrontMatter(p); !ok || fm["name"] != "tag-watch" || !strings.Contains(body, NothingNew) {
-		t.Errorf("template %v %q", fm, body)
+	wg.Wait()
+	_, _ = out.Write([]byte("tail"))
+	out.flush()
+	got := strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n")
+	if len(got) != 401 || got[400] != "tail" {
+		t.Fatalf("%d lines, last %q", len(got), got[len(got)-1])
 	}
-	if _, err := Create(h.Project, "tag-watch"); err != ErrExists || !Exists(h.Project, "tag-watch") {
-		t.Errorf("again: %v", err)
+	for _, l := range got[:400] {
+		if !strings.HasPrefix(l, `{"n":`) || !strings.HasSuffix(l, `"}`) || strings.Count(l, "{") != 1 {
+			t.Fatalf("a broken line %q", l)
+		}
 	}
-	pr := WritePrompt(h.Project, session.Copilot, "watch the tags", "Turkish")
-	if !strings.Contains(pr, filepath.Join(h.Project, ".github/agents")+"/<name>.agent.md") || !strings.HasSuffix(pr, "watch the tags") || !strings.Contains(pr, NothingNew) {
-		t.Errorf("write prompt:\n%s", pr)
+	tl := &tail{max: 10}
+	for range 5 {
+		_, _ = tl.Write([]byte("0123456789abc"))
 	}
-	if pr := WritePrompt(h.Project, session.Antigravity, "", "Turkish"); !strings.Contains(pr, ".agents/agents/<name>.md") || !strings.HasSuffix(pr, "before you write anything.") || !strings.Contains(pr, "in Turkish") {
-		t.Errorf("ask first:\n%s", pr)
+	if tl.String() != "3456789abc" {
+		t.Errorf("tail %q", tl.String())
+	}
+	if Shown([]string{"claude", "-p", "line\nline"}) != "claude -p <prompt>" {
+		t.Error("Shown")
 	}
 }

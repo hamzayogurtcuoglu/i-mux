@@ -12,8 +12,9 @@ import (
 )
 
 // fakeClaude puts a `claude` on PATH that records its arguments, folder
-// and environment in dir and answers with dir/reply (and dir/stderr, exit
-// code dir/exit). No tmux runs: the client's binary is missing.
+// and environment in dir and writes dir/out to stdout and dir/stderr to
+// stderr, then exits with dir/exit. No tmux runs: the client's binary is
+// missing.
 func fakeClaude(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -22,7 +23,7 @@ func fakeClaude(t *testing.T) string {
 		"printf '%s\\n' \"$@\" > " + dir + "/argv\n" +
 		"pwd > " + dir + "/pwd\n" +
 		"echo \"${NO_COLOR:-unset} ${TMUX:-unset}\" > " + dir + "/env\n" +
-		"cat " + dir + "/reply 2>/dev/null\n" +
+		"cat " + dir + "/out 2>/dev/null\n" +
 		"cat " + dir + "/stderr >&2 2>/dev/null\n" +
 		"exit $(cat " + dir + "/exit 2>/dev/null || echo 0)\n"
 	testutil.WriteFile(t, filepath.Join(bin, "claude"), []byte(script))
@@ -44,10 +45,27 @@ func readFile(t *testing.T, p string) string {
 	return string(b)
 }
 
-// TestAutoExec (T66.2): a run starts the definition's CLI headless in its
-// project, records the report (the next run gets it), a quiet run and a
-// failure; one that is already going on is not started twice; a definition
-// that went is skipped.
+// claudeReply is Claude Code's stream-json of a run that called a tool
+// and answered report.
+func claudeReply(report string) string {
+	return `{"type":"system","subtype":"init","session_id":"s-claude","model":"claude-sonnet-5-5"}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"git ls-remote --tags origin"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","content":"abc refs/tags/v2.3","is_error":false}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":` + quoteJSON(report) + `}]}}
+{"type":"result","subtype":"success","is_error":false,"result":` + quoteJSON(report) + `,"session_id":"s-claude"}
+`
+}
+
+func quoteJSON(s string) string {
+	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`).Replace(s) + `"`
+}
+
+// TestAutoExec (T66.2, T66.6): a run starts the definition's CLI headless
+// in its project with its streaming output; the answer, the conversation
+// and the command line are read from it and kept (the next run gets the
+// answer); a quiet run, a failure the stream reports and one only stderr
+// tells; one already going on or not due is not started; a definition
+// that went is skipped. The output view prints the run's steps.
 func TestAutoExec(t *testing.T) {
 	h := testutil.Isolate(t)
 	fake := fakeClaude(t)
@@ -60,24 +78,32 @@ func TestAutoExec(t *testing.T) {
 	}
 	exec := func() {
 		t.Helper()
+		time.Sleep(1100 * time.Millisecond) // one log a second
 		if _, errOut, code := runCLI(t, "__auto", "exec", def.ID, "--manual"); code != 0 {
 			t.Fatalf("exec: %d %s", code, errOut)
 		}
 	}
+	set := func(out, stderr, exit string) {
+		testutil.WriteFile(t, filepath.Join(fake, "out"), []byte(out))
+		testutil.WriteFile(t, filepath.Join(fake, "stderr"), []byte(stderr))
+		testutil.WriteFile(t, filepath.Join(fake, "exit"), []byte(exit))
+	}
 
-	testutil.WriteFile(t, filepath.Join(fake, "reply"), []byte("## v2.3 is out\nThe pipeline started.\n"))
+	set(claudeReply("## v2.3 is out\nThe pipeline started."), "", "0")
 	exec()
 	r := auto.Last(def.ID)
 	if r == nil || r.Status != auto.StatusOK || r.Summary != "v2.3 is out" || !strings.Contains(r.Report, "The pipeline started.") ||
-		r.CLI != "claude" || r.Model != "haiku" || !r.Manual || len(r.Session) != 36 || r.End.Before(r.Start) {
+		r.CLI != "claude" || r.Model != "haiku" || !r.Manual || r.Session != "s-claude" || r.End.Before(r.Start) {
 		t.Fatalf("run %+v", r)
 	}
 	argv := strings.Split(readFile(t, filepath.Join(fake, "argv")), "\n")
-	want := []string{"-p", "--session-id", r.Session, "--agent", "sim-tag", "--model", "haiku", "--dangerously-skip-permissions"}
-	if len(argv) < len(want)+1 || strings.Join(argv[:len(want)], " ") != strings.Join(want, " ") {
+	if strings.Join(argv[:5], " ") != "-p --output-format stream-json --verbose --session-id" || strings.Join(argv[6:11], " ") != "--agent sim-tag --model haiku --dangerously-skip-permissions" {
 		t.Fatalf("argv %q", argv)
 	}
-	prompt := strings.Join(argv[len(want):], "\n")
+	if want := " -p --output-format stream-json --verbose --session-id " + argv[5] + " --agent sim-tag --model haiku --dangerously-skip-permissions <prompt>"; !strings.HasSuffix(r.Command, want) {
+		t.Errorf("command %q", r.Command)
+	}
+	prompt := strings.Join(argv[11:], "\n")
 	if strings.Contains(prompt, "Compare the tags.") || !strings.Contains(prompt, "started by hand") || !strings.Contains(prompt, "This is the first run.") {
 		t.Errorf("prompt:\n%s", prompt)
 	}
@@ -87,12 +113,16 @@ func TestAutoExec(t *testing.T) {
 	if got := strings.TrimSpace(readFile(t, filepath.Join(fake, "env"))); got != "1 unset" {
 		t.Errorf("NO_COLOR and TMUX: %q", got)
 	}
-	if log := readFile(t, auto.LogPath(def.ID, r.Log)); !strings.Contains(log, " -p --session-id ") || !strings.Contains(log, "<prompt>") || !strings.Contains(log, "v2.3 is out") {
+	if log := readFile(t, auto.LogPath(def.ID, r.Log)); log != claudeReply("## v2.3 is out\nThe pipeline started.") {
 		t.Errorf("log:\n%s", log)
 	}
+	// The output view, printed: the header, the tool and the answer.
+	if out, errOut, code := runCLI(t, "__auto", "show", def.ID); code != 0 || !strings.Contains(out, "✓ sim-tag · Claude · haiku") ||
+		!strings.Contains(out, "● Bash git ls-remote --tags origin") || !strings.Contains(out, "⎿ abc refs/tags/v2.3") || !strings.Contains(out, " v2.3 is out") {
+		t.Errorf("show %d %s:\n%s", code, errOut, out)
+	}
 
-	testutil.WriteFile(t, filepath.Join(fake, "reply"), []byte(auto.NothingNew+"\n"))
-	time.Sleep(time.Second) // a log a second
+	set(claudeReply(auto.NothingNew), "", "0")
 	exec()
 	if r := auto.Last(def.ID); r.Status != auto.StatusQuiet || r.Report != "" {
 		t.Errorf("quiet run %+v", r)
@@ -101,13 +131,15 @@ func TestAutoExec(t *testing.T) {
 		t.Errorf("the last report is not passed on:\n%s", p)
 	}
 
-	testutil.WriteFile(t, filepath.Join(fake, "reply"), nil)
-	testutil.WriteFile(t, filepath.Join(fake, "stderr"), []byte("\nError: bad model\n"))
-	testutil.WriteFile(t, filepath.Join(fake, "exit"), []byte("3\n"))
-	time.Sleep(time.Second)
+	set(`{"type":"result","subtype":"success","is_error":true,"result":"Claude AI usage limit reached"}`+"\n", "", "1")
 	exec()
-	if r := auto.Last(def.ID); r.Status != auto.StatusFailed || r.Exit != 3 || r.Summary != "Error: bad model" {
+	if r := auto.Last(def.ID); r.Status != auto.StatusFailed || r.Exit != 1 || r.Summary != "Claude AI usage limit reached" {
 		t.Errorf("failed run %+v", r)
+	}
+	set("", "error: unknown option '--output-format'\n", "2")
+	exec()
+	if r := auto.Last(def.ID); r.Status != auto.StatusFailed || r.Summary != "error: unknown option '--output-format'" {
+		t.Errorf("stderr failure %+v", r)
 	}
 
 	// Already running: no second run.
@@ -119,15 +151,14 @@ func TestAutoExec(t *testing.T) {
 	if err := ex.Finish(auto.Run{Start: time.Now(), Status: auto.StatusStopped}); err != nil {
 		t.Fatal(err)
 	}
-	if n := len(auto.Runs(def.ID)); n != 4 {
+	if n := len(auto.Runs(def.ID)); n != 5 {
 		t.Errorf("%d runs", n)
 	}
-
-	// On schedule: not when it is not due (it ran a moment ago, by hand).
+	// On schedule: not when it is not due (it ran a moment ago).
 	if _, err := auto.Change(def.ID, nil, "", time.Now(), func(s *auto.Schedule) { s.When = "5m" }); err != nil {
 		t.Fatal(err)
 	}
-	if _, errOut, code := runCLI(t, "__auto", "exec", def.ID); code != 0 || len(auto.Runs(def.ID)) != 4 {
+	if _, errOut, code := runCLI(t, "__auto", "exec", def.ID); code != 0 || len(auto.Runs(def.ID)) != 5 {
 		t.Fatalf("a run not due: %d %s, %d runs", code, errOut, len(auto.Runs(def.ID)))
 	}
 
@@ -140,16 +171,6 @@ func TestAutoExec(t *testing.T) {
 	}
 	if _, _, code := runCLI(t, "__auto", "exec", "not-an-id"); code == 0 {
 		t.Error("a bad id ran")
-	}
-}
-
-func TestWrapLine(t *testing.T) {
-	got := wrapLine(" The pipeline started for v2.3 and every check passed", 20)
-	if strings.Join(got, "|") != " The pipeline| started for v2.3| and every check| passed" {
-		t.Errorf("%q", got)
-	}
-	if got := wrapLine(" "+strings.Repeat("x", 25), 10); len(got) != 3 || got[0] != " xxxxxxxxx" {
-		t.Errorf("a long word %q", got)
 	}
 	if !validLog("20261112-090015.log") || validLog("../x.log") || validLog("20261112-090015.log/..") {
 		t.Error("validLog")

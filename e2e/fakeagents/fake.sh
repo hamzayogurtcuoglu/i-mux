@@ -13,6 +13,7 @@
 #   $IMUX_FAKE_LOG/A.nosession   if present, no session file is written
 #   $IMUX_FAKE_LOG/A.headless-reply   print mode's reply (see below)
 #   $IMUX_FAKE_LOG/A.headless-plain   if present, print mode replies with it as it is
+#   $IMUX_FAKE_LOG/A.headless-pause   seconds a streamed print mode waits before its reply
 #   FAKE_SCRIPT           evaluated after the control file
 set -u
 agent="${FAKE_AGENT:?FAKE_AGENT not set}"
@@ -62,10 +63,31 @@ if [ "$agent" = opencode ] && [ "${1:-}" = session ] && [ "${2:-}" = export ]; t
 	exit 0
 fi
 
+# Option values from argv.
+opt() { # opt NAME ARGS... → value after NAME
+	want="$1"
+	shift
+	while [ $# -gt 0 ]; do
+		if [ "$1" = "$want" ] && [ $# -gt 1 ]; then
+			printf '%s' "$2"
+			return 0
+		fi
+		shift
+	done
+	return 1
+}
+
+# jstr turns stdin into the inside of a JSON string.
+jstr() {
+	awk 'BEGIN { ORS = "" } { gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); gsub(/\t/, "\\t"); if (NR > 1) printf "\\n"; print }'
+}
+
 # Print mode (commit message suggestions, D29): claude -p, codex exec,
 # copilot -p, agy -p, opencode run. Each logs A-headless-n.argv (and
 # .stdin for claude and codex) and replies "feat: fake A commit message n"
-# ($IMUX_FAKE_LOG/A.headless-reply replaces it) the way that agent does.
+# ($IMUX_FAKE_LOG/A.headless-reply replaces it) the way that agent does;
+# claude --output-format stream-json (the Scheduler's runs, D61) streams
+# Claude Code's events: a Bash step, its result, then the reply.
 headless=""
 case "$agent:${1:-}" in
 claude:-p | copilot:-p | antigravity:-p | codex:exec | opencode:run) headless=1 ;;
@@ -90,6 +112,15 @@ if [ -n "$headless" ]; then
 		done
 		echo "codex: thinking" >&2
 		printf '%s\n' "$msg" >"$out"
+	elif [ "$agent" = claude ] && [ "$(opt --output-format "$@")" = stream-json ]; then
+		sid=$(opt --session-id "$@") || sid=fake-session
+		text=$(printf '%s' "$msg" | jstr)
+		printf '{"type":"system","subtype":"init","session_id":"%s","model":"fake-model"}\n' "$sid"
+		printf '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t%s","name":"Bash","input":{"command":"echo fake step %s"}}]},"session_id":"%s"}\n' "$n" "$n" "$sid"
+		printf '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t%s","content":"fake step %s","is_error":false}]},"session_id":"%s"}\n' "$n" "$n" "$sid"
+		[ -f "$log/$agent.headless-pause" ] && sleep "$(cat "$log/$agent.headless-pause")"
+		printf '{"type":"assistant","message":{"content":[{"type":"text","text":"%s"}]},"session_id":"%s"}\n' "$text" "$sid"
+		printf '{"type":"result","subtype":"success","is_error":false,"result":"%s","session_id":"%s","duration_ms":5}\n' "$text" "$sid"
 	elif [ -f "$log/$agent.headless-plain" ]; then
 		printf '%s\n' "$msg"
 	else
@@ -124,20 +155,6 @@ uuid() {
 		od -An -N16 -tx1 /dev/urandom | tr -d ' \n' |
 			sed 's/^\(........\)\(....\)\(....\)\(....\)\(............\).*/\1-\2-\3-\4-\5/'
 	fi
-}
-
-# Option values from argv.
-opt() { # opt NAME ARGS... → value after NAME
-	want="$1"
-	shift
-	while [ $# -gt 0 ]; do
-		if [ "$1" = "$want" ] && [ $# -gt 1 ]; then
-			printf '%s' "$2"
-			return 0
-		fi
-		shift
-	done
-	return 1
 }
 
 pane="${TMUX_PANE:-none}"

@@ -22,8 +22,8 @@ func autoModel() Model {
 	sched := func(when, cli, model string) *auto.Schedule {
 		return &auto.Schedule{When: when, CLI: cli, Model: model, Access: auto.AccessFull, Created: now.Add(-time.Hour)}
 	}
-	paused := sched("", "copilot", "")
-	paused.Paused, paused.Access = true, auto.AccessRead
+	byHand := sched("", "copilot", "")
+	byHand.Access = auto.AccessRead
 	m.Auto = []AutoItem{
 		{
 			Def: auto.Def{ID: "aaaaaaaaaaaa", Kind: auto.KindAgent, Name: "sim-tag", Owner: session.Claude}, Sched: sched("5m", "claude", "haiku"),
@@ -38,7 +38,7 @@ func autoModel() Model {
 			Last: &auto.Run{Start: now.Add(-time.Hour), Status: auto.StatusFailed, Exit: 2, Summary: "go test failed"}, Next: now.Add(time.Hour),
 		},
 		{
-			Def: auto.Def{ID: "dddddddddddd", Kind: auto.KindAgent, Name: "by-hand"}, Sched: paused,
+			Def: auto.Def{ID: "dddddddddddd", Kind: auto.KindAgent, Name: "by-hand"}, Sched: byHand,
 			Last: &auto.Run{Start: now.Add(-time.Minute), Status: auto.StatusQuiet},
 		},
 		{Def: auto.Def{ID: "eeeeeeeeeeee", Kind: auto.KindAgent, Name: "old"}, Sched: sched("5m", "claude", ""), Gone: true},
@@ -50,9 +50,11 @@ func autoModel() Model {
 	return m
 }
 
-// TestAutoView (T66.3): SCHEDULED with each one's time, CLI, model and last
-// run (or its spinner) and the next run, then AGENTS and SKILLS with 🚀 and
-// ⏰; every row the panel's width; the buttons' actions.
+// TestAutoView (T66.3, T66.6): SCHEDULED holds the ones with a time, with
+// their time, CLI, model and next run and their last run (or spinner);
+// AGENTS and SKILLS show a run by hand's result, else the description;
+// 🚀 opens the Run panel, 🛑 stops, ⋯ is the menu, a click shows the
+// output (the panel before a first run); every row the panel's width.
 func TestAutoView(t *testing.T) {
 	i18n.SetLocale("en")
 	m := autoModel()
@@ -75,17 +77,18 @@ func TestAutoView(t *testing.T) {
 	text := screenText(sc)
 	clock := func(d time.Duration) string { return textfmt.Clock(m.Now, m.Now.Add(d)) }
 	for _, want := range []string{
-		"SCHEDULER · acme-api", "▾ SCHEDULED  5", "✻  sim-tag", "every 5 min · Claude · haiku", "✓ " + clock(-5*time.Minute) + " v2.3 is out: pipeline started",
-		"→ " + clock(5*time.Minute), "docs-check", "daily 09:00 · Copilot", "running · 2m", "✗ " + clock(-time.Hour) + " go test failed",
-		"by hand · Copilot · read only · paused", "· " + clock(-time.Minute) + " nothing new", "its definition is gone",
-		"▾ AGENTS  2", "release-helper  personal", "Prepares a release", "🤖 any-cli", "▾ SKILLS  1", "🧩 release-notes",
+		"SCHEDULER · acme-api", "▾ SCHEDULED  4", "✻  sim-tag", "every 5 min · Claude · haiku", "→ " + clock(5*time.Minute),
+		"✓ " + clock(-5*time.Minute) + " v2.3 is out: pipeline started", "docs-check", "daily 09:00 · Copilot", "running · 2m",
+		"✗ " + clock(-time.Hour) + " go test failed", "its definition is gone",
+		"▾ AGENTS  3", "by-hand", "· " + clock(-time.Minute) + " nothing new", "release-helper  personal", "Prepares a release",
+		"🤖 any-cli", "▾ SKILLS  1", "🧩 release-notes",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("view lacks %q:\n%s", want, text)
 		}
 	}
-	if strings.Contains(text, "run now") {
-		t.Error("the hint with schedules there")
+	if strings.Contains(text, "⏰") && !strings.Contains(text, "Schedule") || strings.Contains(text, "run now") {
+		t.Errorf("a ⏰ button or the hint with schedules there:\n%s", text)
 	}
 	want := map[string]bool{}
 	for _, l := range sc.Lines {
@@ -96,39 +99,37 @@ func TestAutoView(t *testing.T) {
 				want[a.Section+" "+a.Path] = true
 			case ActAutoMenu:
 				want["menu "+a.Path] = true
-			case ActAutoNew:
-				want["new"] = true
 			}
 		}
 	}
 	for _, k := range []string{
 		"run aaaaaaaaaaaa", "log aaaaaaaaaaaa", "menu aaaaaaaaaaaa", "stop bbbbbbbbbbbb", "log bbbbbbbbbbbb",
-		"menu eeeeeeeeeeee", "run ffffffffffff", "menu when ffffffffffff", "open ffffffffffff", "run 111111111111", "new",
+		"menu eeeeeeeeeeee", "log dddddddddddd", "menu dddddddddddd", "run ffffffffffff", "run 111111111111",
 	} {
 		if !want[k] {
 			t.Errorf("no %q action; have %v", k, want)
 		}
 	}
-	if want["run eeeeeeeeeeee"] || want["run bbbbbbbbbbbb"] {
-		t.Error("🚀 on a running or gone item")
+	if want["run eeeeeeeeeeee"] || want["run bbbbbbbbbbbb"] || want["menu ffffffffffff"] {
+		t.Errorf("🚀 on a running or gone item, or ⋯ on one never run: %v", want)
 	}
 	if !m.autoRunning() || !m.Animated() {
 		t.Error("a run going on does not turn the spinner")
 	}
 
-	// Folded sections; nothing scheduled: the hint; nothing at all.
+	// Folded sections; nothing with a time: the hint; nothing at all.
 	m.Fold = map[string]bool{SecAutoScheduled: true}
-	if text := screenText(Render(m, 60, 40, NoItem)); strings.Contains(text, "sim-tag") || !strings.Contains(text, "▸ SCHEDULED  5") {
+	if text := screenText(Render(m, 60, 40, NoItem)); strings.Contains(text, "sim-tag") || !strings.Contains(text, "▸ SCHEDULED  4") {
 		t.Errorf("folded:\n%s", text)
 	}
 	m.Fold = nil
 	m.Auto = m.Auto[5:]
-	if text := screenText(Render(m, 43, 40, NoItem)); !strings.Contains(text, "⏰ schedule · 🚀 run now") || m.autoRunning() {
+	if text := screenText(Render(m, 43, 40, NoItem)); !strings.Contains(text, "🚀 run now or on a schedule") || m.autoRunning() {
 		t.Errorf("no schedules:\n%s", text)
 	}
 	m.Auto = nil
 	text = screenText(Render(m, 43, 30, NoItem))
-	for _, want := range []string{"No agents or skills yet", ".claude/agents/<name>.md", "Click ✨ to write one"} {
+	for _, want := range []string{"No agents or skills yet", ".claude/agents/<name>.md", ".agents/skills/<name>/SKILL.md"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("empty view lacks %q:\n%s", want, text)
 		}

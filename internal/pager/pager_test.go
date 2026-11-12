@@ -2,8 +2,10 @@ package pager
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
@@ -115,5 +117,57 @@ func TestPagerEdit(t *testing.T) {
 	p.Editable = true
 	if !p.Key("v") || !p.Edit || p.Top != 7 {
 		t.Fatalf("v: closed=%v edit=%v top=%d", p.Edit, p.Edit, p.Top)
+	}
+}
+
+// TestPagerLive (T66.6): a growing text is asked for again while more is
+// to come; at its end the pager follows it, scrolled up it stays; a
+// resize asks again; Keys and Hint.
+func TestPagerLive(t *testing.T) {
+	n, more := 5, true
+	asked := 0
+	p := &Pager{Live: func(w int) ([]string, []string, bool) {
+		asked++
+		lines := make([]string, n)
+		for i := range lines {
+			lines[i] = "line " + strconv.Itoa(i)
+		}
+		return []string{"head " + strconv.Itoa(w)}, lines, more
+	}}
+	now := time.Unix(100, 0)
+	if !p.due(80, now) {
+		t.Fatal("not asked at the start")
+	}
+	p.refresh(80, now)
+	p.Render(80, 10) // 8 rows of text
+	if p.due(80, now.Add(100*time.Millisecond)) || !p.due(80, now.Add(DefaultLiveEvery)) || !p.due(60, now) {
+		t.Error("when to ask again")
+	}
+	n = 20
+	p.refresh(80, now)
+	if got := p.Render(80, 10); p.Top != 12 || !strings.Contains(got[len(got)-2], "line 19") || !strings.HasPrefix(got[0], "head 80") {
+		t.Errorf("not following: top %d %q", p.Top, got)
+	}
+	p.Key("up")
+	p.Key("up")
+	n = 25
+	p.refresh(80, now)
+	if p.Render(80, 10); p.Top != 10 {
+		t.Errorf("scrolled up, moved to %d", p.Top)
+	}
+	more = false
+	p.refresh(80, now)
+	if p.due(80, now.Add(time.Hour)) || asked != 4 {
+		t.Errorf("asked again after the end (%d)", asked)
+	}
+	stopped := false
+	p.Keys = map[string]func() string{"s": func() string { stopped = true; return "stopping" }}
+	p.Hint = "s stop"
+	if p.Key("s") || !stopped || !strings.Contains(p.Render(80, 10)[9], "stopping") {
+		t.Error("an extra key")
+	}
+	p.Key("j")
+	if !strings.Contains(p.Render(80, 10)[9], "s stop") {
+		t.Error("the hint")
 	}
 }

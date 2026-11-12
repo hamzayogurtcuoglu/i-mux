@@ -42,20 +42,16 @@ func (h *H) headless(agent string, n int) []string {
 	return argv
 }
 
-// TestScheduler (T66.4): the ⏰ view lists the project's agents and
-// skills. 🚀 asks the CLI (the agent's own first) and the model the first
-// time, runs the agent headless with --agent and shows its report; ⏰ →
-// Every 5 minutes → Claude → Default schedules a skill, which starts at
-// once; the watcher starts a schedule that is due; ⋯ shows a run's output
-// and removes the schedule. ✨ New agent… makes a blank agent file or has
-// this pane's agent write one.
+// TestScheduler (T66.4, T66.6): the ⏰ view lists the project's agents
+// and skills. 🚀 opens the Run panel with everything chosen (the agent's
+// own CLI, the default model, now): Enter runs it headless with --agent and
+// Claude's event stream, and its output opens and follows it, tool steps
+// and answer. ⋯ → Schedule… takes a time typed in Turkish units; a skill
+// scheduled every 5 minutes from the panel starts at once; the watcher
+// starts a schedule that is due. A run going on is followed again from its
+// row and stopped with s; ⋯ shows the last output and removes a schedule.
 func TestScheduler(t *testing.T) {
-	ed := filepath.Join(t.TempDir(), "fake-editor")
-	testutil.WriteFile(t, ed, []byte("#!/bin/sh\necho \"EDIT $*\"\nread x\n"))
-	if err := os.Chmod(ed, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	h := newH(t, "editor = \""+ed+"\"\n"+sidebarConfig)
+	h := newH(t, sidebarConfig)
 	t.Setenv("IMUX_AUTO_CHECK", "300ms")
 	p := h.Homes.Project
 	agentFile := filepath.Join(p, ".claude", "agents", "sim-tag.md")
@@ -63,8 +59,11 @@ func TestScheduler(t *testing.T) {
 	testutil.WriteFile(t, agentFile, []byte("---\nname: sim-tag\ndescription: Watches the simulator's tags\n---\nCompare the newest tag.\n"))
 	testutil.WriteFile(t, skillFile, []byte("---\nname: notes\ndescription: Writes release notes\n---\n# Notes\n"))
 	reply := func(s string) { testutil.WriteFile(t, filepath.Join(h.Log, "claude.headless-reply"), []byte(s)) }
-	testutil.WriteFile(t, filepath.Join(h.Log, "claude.headless-plain"), nil)
+	pause := filepath.Join(h.Log, "claude.headless-pause")
 	schedules := func() string { b, _ := os.ReadFile(auto.Path()); return string(b) }
+	runs := func(id string) string {
+		return h.readFile(filepath.Join(h.Homes.Imux, "auto", id, "runs.json"))
+	}
 
 	_, bar := h.startWithSidebar()
 	h.run("claude", 1)
@@ -73,73 +72,71 @@ func TestScheduler(t *testing.T) {
 	h.openView(c, bar, "⏰", "schedule")
 	h.rowOf(bar, "Watches the simulator's tags")
 	h.rowOf(bar, "Writes release notes")
-	h.rowOf(bar, "⏰ schedule · 🚀 run now")
+	h.rowOf(bar, "🚀 run now or on a schedule")
+	if l := h.lineOf(bar, "SCHEDULER"); strings.Contains(l, "✨") {
+		t.Errorf("a button to write agents: %q", l)
+	}
+	// press clicks glyph on the line with text and waits for want.
+	press := func(text, glyph, want string) {
+		t.Helper()
+		time.Sleep(500 * time.Millisecond)
+		x, y := h.buttonOf(bar, text, glyph)
+		mark := c.Mark()
+		c.Click(0, x+sidebar.DisplayWidth(glyph)-1, y)
+		c.waitScreenAfter(h, mark, want, 5*time.Second)
+		time.Sleep(300 * time.Millisecond)
+	}
+	// keys types into a popup and waits for want.
+	keys := func(k, want string) {
+		t.Helper()
+		mark := c.Mark()
+		c.Write(k)
+		c.waitScreenAfter(h, mark, want, 10*time.Second)
+		time.Sleep(300 * time.Millisecond)
+	}
 
-	// 🚀 the first time: which CLI (Claude, the agent's own), which model
-	// (the default); then it runs as Claude's own agent.
+	// 🚀: the Run panel says what Enter does; Enter runs it as Claude's
+	// own agent, and the output opens: the tool step, then the answer.
 	reply("v2.3 is out: pipeline started\nThe simulator's pipeline runs.")
-	time.Sleep(500 * time.Millisecond)
-	x, y := h.buttonOf(bar, "sim-tag", "🚀")
-	mark := c.Mark()
-	c.Click(0, x+1, y)
-	c.waitScreenAfter(h, mark, "Run sim-tag with", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
-	c.Write("c")
-	c.waitScreenAfter(h, mark, "Model for sim-tag · Claude", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	c.Write("\r")
+	press("sim-tag", "🚀", "Runs now with Claude, full access")
+	keys("\r", "The simulator's pipeline runs.")
+	c.waitScreen(h, "sim-tag · Claude · fake-model", 5*time.Second)
+	c.waitScreen(h, "● Bash echo fake step 1", 5*time.Second)
+	c.waitScreen(h, "⎿ fake step 1", 5*time.Second)
 	argv := h.headless("claude", 1)
-	if len(argv) < 6 || argv[0] != "-p" || argv[1] != "--session-id" || argv[3] != "--agent" || argv[4] != "sim-tag" ||
-		argv[5] != "--dangerously-skip-permissions" || strings.Contains(strings.Join(argv, " "), "--model") {
+	if len(argv) < 10 || strings.Join(argv[:5], " ") != "-p --output-format stream-json --verbose --session-id" ||
+		argv[6] != "--agent" || argv[7] != "sim-tag" || argv[8] != "--dangerously-skip-permissions" ||
+		strings.Contains(strings.Join(argv, " "), "--model") {
 		t.Fatalf("argv %q", argv)
 	}
 	if prompt := argv[len(argv)-1]; !strings.Contains(prompt, "started by hand") || !strings.Contains(prompt, "This is the first run.") ||
 		strings.Contains(prompt, "Compare the newest tag.") {
 		t.Errorf("prompt:\n%s", prompt)
 	}
+	c.Write("q")
 	h.rowOf(bar, "v2.3 is out")
-	h.rowOf(bar, "by hand · Claude")
 	if s := schedules(); !strings.Contains(s, `name = "sim-tag"`) || !strings.Contains(s, `cli = "claude"`) || !strings.Contains(s, `when = ""`) {
 		t.Errorf("schedules.toml:\n%s", s)
 	}
 
-	// ⋯ → Change time… → Custom… → a time typed in Turkish units.
-	time.Sleep(500 * time.Millisecond)
-	x, y = h.buttonOf(bar, "sim-tag", "⋯")
-	mark = c.Mark()
-	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "Change time", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
-	c.Write("t")
-	c.waitScreenAfter(h, mark, "When should sim-tag run?", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
-	c.Write("c")
-	c.waitScreenAfter(h, mark, "When (10m", 5*time.Second)
-	c.Write("2 saat\r")
+	// ⋯ → Schedule…: the panel at its time; one typed in Turkish units.
+	press("sim-tag", "⋯", "Schedule")
+	keys("t", "Runs now with Claude")
+	keys("2 saat", "Runs every 2 h with Claude")
+	c.Write("\r")
 	h.waitFor("every 2h", 5*time.Second, func() bool { return strings.Contains(schedules(), `when = "2h"`) })
 	h.rowOf(bar, "every 2 h · Claude")
 
-	// ⏰ on the skill: Every 5 minutes → Claude → Default. It is scheduled
-	// and starts at once, with the skill's path in its prompt.
+	// 🚀 on the skill, its time every 5 minutes: scheduled, it starts at
+	// once with the skill's path in its prompt, and its output opens.
 	reply("Release notes are written")
-	time.Sleep(500 * time.Millisecond)
-	x, y = h.buttonOf(bar, "notes", "⏰")
-	mark = c.Mark()
-	c.Click(0, x+1, y)
-	c.waitScreenAfter(h, mark, "When should notes run?", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
-	c.Write("5")
-	c.waitScreenAfter(h, mark, "Run notes with", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
+	press("notes", "🚀", "Runs now with")
 	c.Write("c")
-	c.waitScreenAfter(h, mark, "Model for notes · Claude", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	c.Write("\r")
+	c.Write("\t\t")
+	keys("\x1b[C", "Runs every 5 min with Claude")
+	keys("\r", "notes · Claude · fake-model")
+	c.waitScreen(h, "Release notes are written", 5*time.Second)
+	c.Write("q")
 	argv = h.headless("claude", 2)
 	if prompt := argv[len(argv)-1]; !strings.HasPrefix(prompt, `Use the Agent Skill "notes" at `+skillFile) || !strings.Contains(prompt, "on a schedule (every 5m)") {
 		t.Errorf("skill prompt:\n%s", prompt)
@@ -168,17 +165,34 @@ func TestScheduler(t *testing.T) {
 		t.Error("a schedule started twice")
 	}
 
-	// ⋯ → Last output: the run's log in a popup.
+	// A run that takes long: its output follows it; closed, it goes on
+	// (🛑 on its row); its row opens the output again, where s stops it.
+	testutil.WriteFile(t, pause, []byte("30"))
+	press("sim-tag", "🚀", "Runs now with Claude")
+	keys("\r", "● Bash echo fake step 4")
+	c.waitScreen(h, "s stop", 5*time.Second)
+	c.Write("q")
+	h.waitFor("🛑 on sim-tag", 5*time.Second, func() bool { return strings.Contains(h.lineOf(bar, "sim-tag"), "🛑") })
+	h.rowOf(bar, "running ·")
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.buttonOf(bar, "notes", "⋯")
-	mark = c.Mark()
-	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "Remove schedule", 5*time.Second)
+	x, y := h.rowOf(bar, "sim-tag")
+	mark := c.Mark()
+	c.Click(0, x+1, y)
+	c.waitScreenAfter(h, mark, "● Bash echo fake step 4", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
-	c.Write("o")
-	c.waitScreenAfter(h, mark, "fake-claude -p", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
+	keys("s", "■ sim-tag")
+	c.Write("q")
+	simID := auto.ID(p, agentFile)
+	h.waitFor("the run stopped", 5*time.Second, func() bool { return strings.Contains(runs(simID), `"status": "stopped"`) })
+	h.waitFor("🚀 back on sim-tag", 5*time.Second, func() bool { return strings.Contains(h.lineOf(bar, "sim-tag"), "🚀") })
+	if err := os.Remove(pause); err != nil {
+		t.Fatal(err)
+	}
+
+	// ⋯ → Output: the last run's output in a popup.
+	press("notes", "⋯", "Remove schedule")
+	keys("o", "notes · Claude · fake-model")
+	c.waitScreen(h, "Nothing new since", 5*time.Second)
 	c.Write("q")
 
 	// A right-click → Remove schedule… → Remove: back among the skills.
@@ -188,10 +202,7 @@ func TestScheduler(t *testing.T) {
 	c.Click(2, x, y)
 	c.waitScreenAfter(h, mark, "Remove schedule", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
-	c.Write("x")
-	c.waitScreenAfter(h, mark, "Remove the schedule of notes?", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
+	keys("x", "Remove the schedule of notes?")
 	c.Write("y")
 	h.waitFor("the schedule removed", 5*time.Second, func() bool { return !strings.Contains(schedules(), `name = "notes"`) })
 	h.rowOf(bar, "Writes release notes")
@@ -199,43 +210,4 @@ func TestScheduler(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(h.Homes.Imux, "auto", id)); !os.IsNotExist(err) {
 		t.Errorf("its runs stayed: %v", err)
 	}
-
-	// ✨ New agent…: a blank agent file, named in the dialog and opened in
-	// the editor; this pane's agent gets i-mux's agent-writing guide.
-	newAgent := func() {
-		t.Helper()
-		time.Sleep(500 * time.Millisecond)
-		x, y := h.buttonOf(bar, "SCHEDULER", "✨")
-		mark := c.Mark()
-		c.Click(0, x+1, y)
-		c.waitScreenAfter(h, mark, "Who should write it?", 5*time.Second)
-		time.Sleep(200 * time.Millisecond)
-	}
-	newAgent()
-	mark = c.Mark()
-	c.Write("t")
-	c.waitScreenAfter(h, mark, "Agent name", 5*time.Second)
-	mark = c.Mark()
-	c.Write("Tag Watch")
-	c.waitScreenAfter(h, mark, ".claude/agents/tag-watch.md", 5*time.Second)
-	mark = c.Mark()
-	c.Write("\r")
-	c.waitScreenAfter(h, mark, "EDIT .claude/agents/tag-watch.md", 5*time.Second)
-	c.Write("\r")
-	h.rowOf(bar, "tag-watch")
-	if b := h.readFile(filepath.Join(p, ".claude", "agents", "tag-watch.md")); !strings.HasPrefix(b, "---\nname: tag-watch\n") {
-		t.Errorf("template:\n%s", b)
-	}
-
-	newAgent()
-	mark = c.Mark()
-	c.Write("h")
-	c.waitScreenAfter(h, mark, "What should the agent do?", 5*time.Second)
-	time.Sleep(200 * time.Millisecond)
-	c.Write("watch the tags\r")
-	h.waitFor("agent-writing guide sent to claude", 5*time.Second, func() bool {
-		s := h.stdinOf("claude", 1)
-		return strings.Contains(s, "Create an agent for this project") && strings.Contains(s, ".claude/agents/<name>.md") &&
-			strings.Contains(s, "watch the tags")
-	})
 }
