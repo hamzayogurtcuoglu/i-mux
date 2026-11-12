@@ -304,9 +304,6 @@ func (s *sidebar) waits(ctx context.Context, a Action) bool {
 		return true // the command prompt
 	case ActSCM:
 		return a.Section == "ask" || !s.t.MenuTakesMouse(ctx)
-	case ActAuto:
-		// ⏰'s menu; 🚀 asks the CLI the first time.
-		return (a.Section == "run" || strings.HasPrefix(a.Section, "menu")) && !s.t.MenuTakesMouse(ctx)
 	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm, ActSuggest:
 		return !s.t.MenuTakesMouse(ctx)
 	case ActOpenFile:
@@ -446,8 +443,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		case ActToggleDir:
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
 			s.selected = a.Path
-		case ActNone, ActSearch, ActRefresh, ActSkillNew, ActAutoNew:
-			// The explorer's, skills' or Scheduler's empty space and title.
+		case ActNone, ActSearch, ActRefresh, ActSkillNew:
+			// The explorer's or skills' empty space and title.
 			if s.model.Closed || ev.X <= railW {
 				return
 			}
@@ -456,8 +453,6 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 				menu = Action{Kind: ActFileMenu, Section: MenuRoot}
 			case ViewSkills:
 				menu = Action{Kind: ActSkillMenu}
-			case ViewAuto:
-				menu = Action{Kind: ActAutoMenu}
 			default:
 				return
 			}
@@ -511,7 +506,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		case ActSkillMenu:
 			s.selected = a.Path
 			s.menuX, s.menuY = ev.X, ev.Y
-		case ActAuto, ActAutoMenu, ActAutoNew:
+		case ActAuto, ActAutoMenu:
 			s.menuX, s.menuY = ev.X, ev.Y // its menus open at the click
 		case ActSCM:
 			s.menuX, s.menuY = ev.X, ev.Y // ⋯ and ▾ drop down from the button
@@ -726,8 +721,8 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActSkillMenu:
 		s.skillMenu(ctx, client, a, s.menuX, s.menuY)
 		return
-	case ActAuto, ActAutoMenu, ActAutoNew:
-		s.autoDo(ctx, client, a)
+	case ActAuto, ActAutoMenu:
+		s.autoDo(client, a)
 		return
 	case ActGit:
 		switch a.Section {

@@ -50,9 +50,8 @@ const (
 	ActSCM                    // Source Control: `imux __scm Section Path` (a menu, a Quick Pick, a prompt; D58)
 	ActSCMDir                 // fold or unfold a folder of Source Control's tree ("side:path" in Path)
 	ActSCMMenuAt              // Source Control's menu of file Path (side Section, Status) or commit Path (Section "commit") at the pointer
-	ActAuto                   // the Scheduler: `imux __auto Section Path` (run, stop, log, open, "menu when"; D61)
-	ActAutoMenu               // the Scheduler's menu of definition Path ("": the view's) at the pointer
-	ActAutoNew                // the New agent dialog: an agent writes an agent for the Scheduler, or a blank one
+	ActAuto                   // the Scheduler: `imux __auto Section Path` (run, log, stop; D61)
+	ActAutoMenu               // the Scheduler's menu of definition Path at the pointer
 )
 
 // Action is a row's action.

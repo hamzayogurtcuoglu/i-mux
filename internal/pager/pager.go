@@ -36,6 +36,20 @@ type Pager struct {
 	// Edit set, for the caller to open the editor at the first line shown.
 	Editable bool
 	Edit     bool
+	// Live, when set, gives the header and the text anew for w columns
+	// (a run's output while it grows): at the start, at a resize, and every
+	// LiveEvery while it says more is to come. A pager at its end stays at
+	// the end; one scrolled up stays where it is.
+	Live      func(w int) (header, lines []string, more bool)
+	LiveEvery time.Duration
+	// Keys are more keys; each returns a note for the bottom row.
+	Keys map[string]func() string
+	// Hint replaces the bottom row's hint ("" keeps the pager's).
+	Hint string
+
+	liveW    int       // the width Live last drew for (0: not yet)
+	liveMore bool      // Live said more is to come
+	liveAt   time.Time // when Live was last asked
 
 	plain    []string // Lines without colors, for search
 	query    string   // the last search
@@ -44,6 +58,42 @@ type Pager struct {
 	note     string   // a message on the bottom row
 	view, w  int      // the text's rows and the columns of the last Render
 	dragging bool     // the bar's thumb is being dragged
+}
+
+// DefaultLiveEvery is how often Live is asked while more is to come.
+const DefaultLiveEvery = 250 * time.Millisecond
+
+// due reports whether Live is to be asked for w columns at now.
+func (p *Pager) due(w int, now time.Time) bool {
+	if p.Live == nil {
+		return false
+	}
+	every := p.LiveEvery
+	if every <= 0 {
+		every = DefaultLiveEvery
+	}
+	return p.liveW != w || p.liveMore && now.Sub(p.liveAt) >= every
+}
+
+// refresh asks Live for the text at w columns. A pager at the end of its
+// text (or not drawn yet) follows it there.
+func (p *Pager) refresh(w int, now time.Time) {
+	follow := p.liveW == 0 || p.Top >= max(len(p.Lines)-p.view, 0)
+	p.Header, p.Lines, p.liveMore = p.Live(w)
+	p.liveW, p.liveAt = w, now
+	p.plain = nil
+	if p.query != "" {
+		p.matches = p.matches[:0]
+		for i := range p.Lines {
+			if strings.Contains(p.plainLine(i), p.query) {
+				p.matches = append(p.matches, i)
+			}
+		}
+	}
+	if follow {
+		p.Top = len(p.Lines) // the last page, once clamped
+	}
+	p.clamp()
 }
 
 // body is how many rows the text gets on an h-row screen.
@@ -166,7 +216,11 @@ func (p *Pager) footer(w int) string {
 		last := min(p.Top+p.view, n)
 		where = i18n.T("pager.where", p.Top+1, last, n, last*100/n) + " · "
 	}
-	return " " + faint + sidebar.Fit(where+i18n.T("pager.hint"), w-2) + reset
+	hint := p.Hint
+	if hint == "" {
+		hint = i18n.T("pager.hint")
+	}
+	return " " + faint + sidebar.Fit(where+hint, w-2) + reset
 }
 
 // Key applies a key; it reports whether the pager closes.
@@ -190,6 +244,10 @@ func (p *Pager) Key(k string) bool {
 		return false
 	}
 	p.note = ""
+	if f := p.Keys[k]; f != nil {
+		p.note = f()
+		return false
+	}
 	page := max(p.view-1, 1)
 	switch k {
 	case "q", "esc", "ctrl-c":
@@ -309,13 +367,20 @@ func Run(p *Pager, in, out *os.File) error {
 	winch := make(chan os.Signal, 1)
 	signal.Notify(winch, syscall.SIGWINCH)
 	defer signal.Stop(winch)
+	last := ""
 	draw := func() {
 		w, h := sidebar.Size(int(out.Fd()))
+		if now := time.Now(); p.due(w, now) {
+			p.refresh(w, now)
+		}
 		var sc sidebar.Screen
 		for _, l := range p.Render(w, h) {
 			sc.Lines = append(sc.Lines, sidebar.Line{Text: l})
 		}
-		_, _ = io.WriteString(out, sidebar.Frame(sc, w, h))
+		if f := sidebar.Frame(sc, w, h); f != last {
+			last = f
+			_, _ = io.WriteString(out, f)
+		}
 	}
 	var pending []byte
 	draw()
@@ -324,10 +389,11 @@ func Run(p *Pager, in, out *os.File) error {
 		if err != nil {
 			return nil // the popup went away
 		}
-		redraw := false
+		redraw := p.Live != nil // its text may have grown
 		select {
 		case <-winch:
 			redraw = true
+			last = ""
 		default:
 		}
 		if b == nil {

@@ -35,8 +35,9 @@ type Run struct {
 	Log     string    `json:"log,omitempty"`     // its log's file name in Dir
 	CLI     string    `json:"cli,omitempty"`
 	Model   string    `json:"model,omitempty"`
-	Session string    `json:"session,omitempty"` // the CLI's session id when i-mux chose it (Claude)
+	Session string    `json:"session,omitempty"` // the CLI's conversation, to continue it
 	Manual  bool      `json:"manual,omitempty"`  // started by hand
+	Command string    `json:"command,omitempty"` // the command line, the prompt as <prompt>
 }
 
 // Duration is how long the run took.
@@ -129,11 +130,13 @@ func addRun(id string, r Run) error {
 
 // Current is the run going on.
 type Current struct {
-	Start time.Time `json:"start"`
-	PGID  int       `json:"pgid,omitempty"`
-	Log   string    `json:"log,omitempty"`
-	CLI   string    `json:"cli,omitempty"`
-	Model string    `json:"model,omitempty"`
+	Start   time.Time `json:"start"`
+	PGID    int       `json:"pgid,omitempty"`
+	Log     string    `json:"log,omitempty"`
+	CLI     string    `json:"cli,omitempty"`
+	Model   string    `json:"model,omitempty"`
+	Command string    `json:"command,omitempty"`
+	Manual  bool      `json:"manual,omitempty"`
 }
 
 func currentFile(id string) string { return filepath.Join(Dir(id), "current.json") }

@@ -57,29 +57,6 @@ var agentPlaces = []agentPlace{
 	{".copilot/agents", session.Copilot, true},
 }
 
-// AgentDir is where an agent of cli is written in a project (§9.3 "New
-// agent"); the file is <name>.md, or <name>.agent.md for Copilot.
-func AgentDir(cli session.AgentID) string {
-	switch cli {
-	case session.Claude:
-		return ".claude/agents"
-	case session.Copilot:
-		return ".github/agents"
-	case session.OpenCode:
-		return ".opencode/agent"
-	}
-	return ".agents/agents"
-}
-
-// AgentFile is the file an agent named name of cli is written to.
-func AgentFile(root string, cli session.AgentID, name string) string {
-	ext := ".md"
-	if cli == session.Copilot {
-		ext = ".agent.md"
-	}
-	return filepath.Join(root, AgentDir(cli), name+ext)
-}
-
 // ID is a definition's id in the project at root: a hash of both, which a
 // menu command can carry (D58).
 func ID(root, file string) string {

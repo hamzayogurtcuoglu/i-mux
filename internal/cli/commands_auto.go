@@ -4,24 +4,29 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/autodialog"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/autoui"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/autoview"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/notify"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/pager"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/popmenu"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/quickpick"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
@@ -29,28 +34,26 @@ import (
 func init() {
 	register(&command{
 		Name:   "__auto",
-		Args:   "menu|pick|ask|confirm <name> <id> | when|cli|model|run|stop|pause|resume|access|remove|log|show|open|continue|exec <id> [value] [--cwd D] [--client C] [--pane P] [--sidebar S]",
+		Args:   "menu item|pick history|confirm remove <id> | run|dialog|log|show|stop|pause|resume|remove|open|continue|exec <id> [--cwd D] [--client C] [--pane P] [--sidebar S]",
 		Hidden: true,
 		Run:    runAuto,
 	})
 }
 
-// autoCmd is one `imux __auto` call: the Scheduler's menus, Quick Picks,
-// prompt and popups, or a run (§9.3 "Scheduler", D61).
+// autoCmd is one `imux __auto` call: the Scheduler's Run panel, its output
+// view, menus and Quick Picks, or a run (§9.3 "Scheduler", D61).
 type autoCmd struct {
-	e       *Env
-	w       *workspace.WS
-	cfg     *config.Config
-	ctx     context.Context
-	c       autoui.Ctx
-	flow    string
-	when    string // the time chosen so far (--when)
-	cli     string // the agent CLI chosen so far (--cli)
-	initial string // what was typed in the model Quick Pick
-	log     string // a run's log (--log)
-	fromOpt bool
-	manual  bool
-	now     time.Time
+	e      *Env
+	w      *workspace.WS
+	cfg    *config.Config
+	ctx    context.Context
+	c      autoui.Ctx
+	log    string    // --log: a run's log
+	after  time.Time // --after: the run that started then or later
+	popup  string    // --popup: the Run panel's popup (what runs once it closed)
+	atWhen bool      // --at-when: the Run panel opens at the time
+	manual bool
+	now    time.Time
 }
 
 func autoUsage() error {
@@ -65,39 +68,31 @@ func runAuto(e *Env, args []string) error {
 	sidebarF := fs.String("sidebar", "", "the sidebar's pane")
 	x := fs.Int("x", 0, "the menu's column in the sidebar")
 	y := fs.Int("y", 0, "the menu's row in the sidebar")
-	flow := fs.String("flow", autoui.FlowNew, "what the menus ask: new, run, time or cli")
-	when := fs.String("when", "", "the time chosen so far")
-	cliF := fs.String("cli", "", "the agent CLI chosen so far")
-	initial := fs.String("initial", "", "what was typed in the Quick Pick")
-	logF := fs.String("log", "", "a run's log (its file name)")
-	fromOpt := fs.Bool("from-option", false, "the answer is in @imux_auto_text")
+	logF := fs.String("log", "", "log, show: a run's log (its file name)")
+	afterF := fs.Int64("after", 0, "log, show: the run that started at this time (unix ms) or later")
+	popupF := fs.String("popup", "", "dialog: the popup's id")
+	atWhen := fs.Bool("at-when", false, "run, dialog: the panel opens at the time")
 	manual := fs.Bool("manual", false, "exec: started by hand")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
 	}
-	if len(pos) == 0 || !autoui.ValidFlow(*flow) || *logF != "" && !validLog(*logF) {
+	if len(pos) == 0 || *logF != "" && !validLog(*logF) || *popupF != "" && !popmenu.ValidID(*popupF) {
 		return autoUsage()
 	}
 	verb, rest := pos[0], pos[1:]
 	name := ""
 	switch verb {
-	case "menu", "pick", "ask", "confirm":
+	case "menu", "pick", "confirm":
 		if len(rest) == 0 {
 			return autoUsage()
 		}
 		name, rest = rest[0], rest[1:]
 	}
-	id, arg := "", ""
-	if verb != "menu" || name != "root" {
-		if len(rest) == 0 || !auto.ValidID(rest[0]) {
-			return autoUsage()
-		}
-		id = rest[0]
-		if len(rest) > 1 {
-			arg = rest[1]
-		}
+	if len(rest) != 1 || !auto.ValidID(rest[0]) {
+		return autoUsage()
 	}
+	id := rest[0]
 	w, cfg, err := newWorkspace(e, false)
 	if err != nil {
 		return err
@@ -106,16 +101,13 @@ func runAuto(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	a := &autoCmd{
-		e: e, w: w, cfg: cfg, ctx: context.Background(), flow: *flow, when: strings.ReplaceAll(*when, ",", " "),
-		cli: *cliF, initial: *initial, log: *logF, fromOpt: *fromOpt, manual: *manual, now: time.Now(),
+	a := &autoCmd{e: e, w: w, cfg: cfg, ctx: context.Background(), log: *logF, popup: *popupF, atWhen: *atWhen, manual: *manual, now: time.Now()}
+	if *afterF > 0 {
+		a.after = time.UnixMilli(*afterF)
 	}
 	a.c = autoui.Ctx{Self: self, Client: *client, Pane: *pane, Sidebar: *sidebarF, X: *x, Y: *y}
-	switch verb {
-	case "exec":
+	if verb == "exec" {
 		return a.exec(id)
-	case "show":
-		return a.showLog(id)
 	}
 	// The UI's commands: the project is --cwd, else the one the last
 	// command was given.
@@ -125,7 +117,7 @@ func runAuto(e *Env, args []string) error {
 	} else {
 		a.c.Dir = a.opt(autoui.OptCwd)
 	}
-	err = a.do(verb, name, id, arg)
+	err = a.do(verb, name, id)
 	if err != nil {
 		a.say(i18n.T("file.failed", err.Error()))
 	}
@@ -204,6 +196,9 @@ func (t target) name() string {
 	return t.id
 }
 
+// scheduled reports a target with a time (not only by hand).
+func (t target) scheduled() bool { return t.has && !t.sched.Parsed().Manual() }
+
 // change changes t's schedule, made from its definition when it has none.
 func (a *autoCmd) change(t target, fn func(*auto.Schedule)) (auto.Schedule, error) {
 	var d *auto.Def
@@ -227,32 +222,32 @@ func cliLabel(cli session.AgentID, model string) string {
 	return s
 }
 
-func (a *autoCmd) do(verb, name, id, arg string) error {
+func (a *autoCmd) do(verb, name, id string) error {
 	switch verb {
 	case "menu":
-		return a.menu(name, id)
-	case "pick":
-		return a.pick(name, id)
-	case "ask":
-		if name != "when" {
+		if name != "item" {
 			return autoUsage()
 		}
-		return a.ask(id)
+		return a.showMenu(autoui.ItemMenu(a.c, a.item(a.find(id))))
+	case "pick":
+		if name != "history" {
+			return autoUsage()
+		}
+		return a.showPick(autoui.HistoryPick(a.c, id, a.find(id).name(), auto.Runs(id), a.now))
 	case "confirm":
 		if name != "remove" {
 			return autoUsage()
 		}
-		return a.showMenu(autoui.ConfirmRemove(a.c, id, a.find(id).name()))
-	case "when":
-		return a.setWhen(id, arg)
-	case "cli":
-		return a.setCLI(id, arg)
-	case "model":
-		return a.setModel(id, arg)
+		t := a.find(id)
+		return a.showMenu(autoui.ConfirmRemove(a.c, id, t.name(), t.scheduled()))
 	case "run":
-		return a.run(id)
+		return a.panel(id)
+	case "dialog":
+		return a.dialog(id)
 	case "log":
 		return a.logPopup(id)
+	case "show":
+		return a.show(id)
 	case "open":
 		return a.open(id)
 	case "continue":
@@ -276,24 +271,16 @@ func (a *autoCmd) do(verb, name, id, arg string) error {
 		} else {
 			a.say(i18n.T("auto.resumed", t.name()))
 		}
-	case "access":
-		if arg != auto.AccessFull && arg != auto.AccessRead {
-			return autoUsage()
-		}
-		if _, err := a.change(t, func(s *auto.Schedule) { s.Access = arg }); err != nil {
-			return err
-		}
-		if arg == auto.AccessRead {
-			a.say(i18n.T("auto.access_read_set", t.name()))
-		} else {
-			a.say(i18n.T("auto.access_full_set", t.name()))
-		}
 	case "remove":
 		auto.Stop(id)
 		if err := auto.Remove(id); err != nil {
 			return err
 		}
-		a.say(i18n.T("auto.removed", t.name()))
+		if t.scheduled() {
+			a.say(i18n.T("auto.removed", t.name()))
+		} else {
+			a.say(i18n.T("auto.forgotten", t.name()))
+		}
 	default:
 		return autoUsage()
 	}
@@ -319,7 +306,8 @@ func (a *autoCmd) showMenu(m *workspace.Menu) error {
 	return a.w.Show(a.ctx, m, a.c.Client, a.c.Pane)
 }
 
-func (a *autoCmd) showPick(p *quickpick.Pick) error {
+// clientSize is the client's size (0, 0 when unknown).
+func (a *autoCmd) clientSize() (int, int) {
 	cw, ch := 0, 0
 	if a.c.Client != "" {
 		out, err := a.w.T.Run(a.ctx, tmux.Cmd{"display-message", "-p", "-c", a.c.Client, "#{client_width}\t#{client_height}"})
@@ -327,108 +315,126 @@ func (a *autoCmd) showPick(p *quickpick.Pick) error {
 			_, _ = fmt.Sscanf(strings.TrimSpace(out), "%d\t%d", &cw, &ch)
 		}
 	}
-	return quickpick.Show(a.ctx, a.w.T, a.c.Self, p, cw, ch)
+	return cw, ch
 }
 
-func (a *autoCmd) menu(name, id string) error {
-	if name == "root" {
-		// ✨ New agent… reads the project and the pane from the skill
-		// options, as ✨ New skill… does.
-		_, _ = a.w.T.Run(a.ctx,
-			tmux.Cmd{"set-option", "-g", sidebar.OptSkillRoot, a.c.Dir},
-			tmux.Cmd{"set-option", "-g", sidebar.OptSkillPane, a.c.Pane})
-		return a.showMenu(autoui.RootMenu(a.c))
-	}
-	t := a.find(id)
-	switch name {
-	case "item":
-		return a.showMenu(autoui.ItemMenu(a.c, a.item(t)))
-	case "when":
-		cur := ""
-		if t.has {
-			cur = t.sched.Parsed().String()
-		}
-		return a.showMenu(autoui.WhenMenu(a.c, id, t.name(), a.flow, cur))
-	case "cli":
-		if !t.found {
-			return a.gone(t)
-		}
-		return a.showMenu(autoui.CLIMenu(a.c, id, t.name(), a.flow, a.when, a.clis(t)))
-	case "access":
-		return a.showMenu(autoui.AccessMenu(a.c, id, t.name(), t.has && t.sched.ReadOnly()))
-	}
-	return autoUsage()
+func (a *autoCmd) showPick(p *quickpick.Pick) error {
+	cw, ch := a.clientSize()
+	return quickpick.Show(a.ctx, a.w.T, a.c.Self, p, cw, ch)
 }
 
 // item is what t's menu shows.
 func (a *autoCmd) item(t target) autoui.Item {
 	runs := auto.Runs(t.id)
 	_, running := auto.Running(t.id)
-	x := autoui.Item{ID: t.id, Name: t.name(), Scheduled: t.has, Running: running, Runs: len(runs), Gone: !t.found}
-	if t.has {
-		x.Manual, x.Paused, x.ReadOnly = t.sched.Parsed().Manual(), t.sched.Paused, t.sched.ReadOnly()
-	}
-	x.Session = len(runs) > 0 && runs[0].Session != "" && runs[0].CLI == string(session.Claude)
+	x := autoui.Item{ID: t.id, Name: t.name(), Record: t.has, Scheduled: t.scheduled(), Running: running, Runs: len(runs), Gone: !t.found}
+	x.Paused = t.has && t.sched.Paused
+	x.Continue = len(runs) > 0 && canContinue(runs[0])
 	return x
 }
 
-// clis are the agent CLIs to run t with: t's own first.
-func (a *autoCmd) clis(t target) []autoui.CLI {
-	var cur session.AgentID
-	if t.has && a.flow == autoui.FlowCLI {
-		cur = session.AgentID(t.sched.CLI)
+// canContinue reports a run whose conversation an agent pane can go on
+// with (`imux split --from-session`).
+func canContinue(r auto.Run) bool {
+	switch session.AgentID(r.CLI) {
+	case session.Claude, session.Copilot, session.Antigravity:
+		return r.Session != ""
 	}
-	var out []autoui.CLI
-	for _, ag := range agent.Ordered(a.cfg) {
-		out = append(out, autoui.CLI{
-			ID: ag.ID, Name: ag.Short, Key: ag.Key, Installed: a.w.Installed(ag.ID), Limited: a.w.LimitedUntil(ag.ID),
-			Own: t.def.Owner == ag.ID, Current: ag.ID == cur,
-		})
-	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Own && !out[j].Own })
-	return out
+	return false
 }
 
-func (a *autoCmd) pick(name, id string) error {
+// panel opens the Run panel in a popup sized to it (one that runs shows its
+// output instead). Once the panel closed, what it chose to show next runs
+// (`imux __quickpick --run`).
+func (a *autoCmd) panel(id string) error {
 	t := a.find(id)
-	switch name {
-	case "model":
-		return a.modelPick(t)
-	case "history":
-		return a.showPick(autoui.HistoryPick(a.c, id, t.name(), auto.Runs(id), a.now))
-	}
-	return autoUsage()
-}
-
-// modelPick asks which model a.cli runs t with.
-func (a *autoCmd) modelPick(t target) error {
 	if !t.found {
 		return a.gone(t)
 	}
-	cli, err := parseAgentFlag("cli", a.cli)
-	if err != nil || cli == "" {
-		return autoUsage()
+	if _, running := auto.Running(id); running && !a.atWhen {
+		return a.logPopup(id)
 	}
-	bin := a.w.Bin(cli)
-	if !bin.Installed {
-		a.say(i18n.T("auto.not_installed", session.ShortName(cli)))
-		return nil
+	pid, err := popmenu.NewID()
+	if err != nil {
+		return err
 	}
-	models := auto.Models(a.ctx, cli, binPath(bin, cli), bin.PathEnv, a.now)
-	var used []string
+	cw, ch := a.clientSize()
+	if cw <= 0 || ch <= 0 {
+		cw, ch = 100, 30
+	}
+	w := min(max(cw-6, 40), 92)
+	h := min(autodialog.Height(a.panelOptions(t)), max(ch-2, 12))
+	args := []string{a.c.Self, "__auto", "dialog", id, "--popup", pid}
+	if a.c.Client != "" {
+		args = append(args, "--client", a.c.Client)
+	}
+	if a.c.Pane != "" {
+		args = append(args, "--pane", a.c.Pane)
+	}
+	if a.atWhen {
+		args = append(args, "--at-when")
+	}
+	after := tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat(tmux.ShJoin(a.c.Self, "__quickpick", "--run", pid))}
+	return popmenu.Popup(a.ctx, a.w.T, a.c.Client, a.c.Pane, w, h, "C", "C", tmux.ShJoin(args...), after)
+}
+
+// panelOptions fill the Run panel for t: the installed CLIs (its own
+// first), and what it ran with last.
+func (a *autoCmd) panelOptions(t target) autodialog.Options {
+	var clis []autodialog.CLI
+	for _, ag := range agent.Ordered(a.cfg) {
+		if a.w.Installed(ag.ID) {
+			clis = append(clis, autodialog.CLI{ID: ag.ID, Name: ag.Short, Key: ag.Key, Limited: a.w.LimitedUntil(ag.ID)})
+		}
+	}
+	sort.SliceStable(clis, func(i, j int) bool { return clis[i].ID == t.def.Owner && clis[j].ID != t.def.Owner })
+	o := autodialog.Options{
+		Name: t.name(), Description: t.def.Description, Project: filepath.Base(t.root), Skill: t.def.Kind == auto.KindSkill,
+		CLIs: clis, AgentModel: t.def.Model, Owner: t.def.Owner, AtWhen: a.atWhen,
+		Used: map[session.AgentID][]string{}, LastStart: auto.LastStart(t.id), Now: a.now,
+	}
+	var order []session.AgentID
+	for _, c := range clis {
+		order = append(order, c.ID)
+	}
+	o.CLI = auto.DefaultCLI(t.def, order, a.w.Installed)
+	if t.has {
+		if t.sched.CLI != "" {
+			o.CLI = session.AgentID(t.sched.CLI)
+		}
+		o.Model, o.ReadOnly, o.Created = t.sched.Model, t.sched.ReadOnly(), t.sched.Created
+		if t.scheduled() {
+			o.When = t.sched.Parsed().String()
+		}
+	}
 	if ss, err := auto.Load(); err == nil {
 		for _, s := range ss {
-			if s.CLI == string(cli) && s.Model != "" {
-				used = append(used, s.Model)
+			id := session.AgentID(s.CLI)
+			if s.Model != "" && !containsStr(o.Used[id], s.Model) {
+				o.Used[id] = append(o.Used[id], s.Model)
 			}
 		}
 	}
-	note := i18n.T("auto.model_cli", session.ShortName(cli))
-	if t.def.Model != "" && auto.Native(t.def, cli) {
-		note = i18n.T("auto.model_agent", t.def.Model)
+	return o
+}
+
+func containsStr(l []string, s string) bool {
+	for _, v := range l {
+		if v == s {
+			return true
+		}
 	}
-	c := autoui.CLI{ID: cli, Name: session.ShortName(cli), Installed: true}
-	return a.showPick(autoui.ModelPick(a.c, t.id, t.name(), a.flow, a.when, c, models, used, note))
+	return false
+}
+
+// models lists a CLI's models for the Run panel (cached a day).
+func (a *autoCmd) models(id session.AgentID) []string {
+	bin := a.w.Bin(id)
+	var out []string
+	for _, m := range auto.Models(a.ctx, id, binPath(bin, id), bin.PathEnv, time.Now()) {
+		out = append(out, m.ID)
+	}
+	return out
 }
 
 func binPath(r agent.Resolved, id session.AgentID) string {
@@ -438,173 +444,85 @@ func binPath(r agent.Resolved, id session.AgentID) string {
 	return agent.MustGet(id).Bin
 }
 
-// ask opens the client's command prompt for a time of one's own. The
-// answer reaches imux through OptText ("%%%" escapes it for tmux); the
-// template carries no pane id (it would read "%1" as the answer).
-func (a *autoCmd) ask(id string) error {
-	then := []string{"__auto", "when", id, "--from-option", "--flow", a.flow}
-	if a.c.Client != "" {
-		then = append(then, "--client", a.c.Client)
-	}
-	c := tmux.Cmd{"command-prompt"}
-	if a.c.Client != "" {
-		c = append(c, "-t", a.c.Client)
-	}
-	if a.flow == autoui.FlowTime {
-		// -I is a comma-separated list that tmux expands as a format.
-		if t := a.find(id); t.has && t.sched.When != "" && !strings.ContainsAny(t.sched.When, ",#") {
-			c = append(c, "-I", t.sched.When)
-		}
-	}
-	c = append(c, "-p", i18n.T("auto.when_prompt"), "set-option -g "+autoui.OptText+" \"%%%\" ; "+tmux.RunShell(a.c.Self, then...))
-	_, err := a.w.T.Run(a.ctx, c)
-	return err
-}
-
-// setWhen takes the time chosen (a preset, or the one typed): Change
-// time… sets it; ⏰ goes on to the CLI.
-func (a *autoCmd) setWhen(id, v string) error {
-	if a.fromOpt {
-		v = strings.TrimSpace(a.opt(autoui.OptText))
-		a.setOpt(autoui.OptText, "")
-		if v == "" {
-			return nil
-		}
-	}
-	w, err := auto.ParseWhen(strings.ReplaceAll(v, ",", " "))
-	if err != nil {
-		if errors.Is(err, auto.ErrTooOften) {
-			a.say(i18n.T("auto.too_often"))
-		} else {
-			a.say(i18n.T("auto.bad_when", v))
-		}
-		return nil
-	}
-	t := a.find(id)
-	if a.flow == autoui.FlowTime {
-		s, err := a.change(t, func(s *auto.Schedule) { s.When, s.Paused = w.String(), false })
-		if err != nil {
-			return err
-		}
-		a.say(i18n.T("auto.time_set", t.name(), w.Label()))
-		a.startIfDue(s)
-		a.refresh()
-		return nil
-	}
-	if !t.found {
-		return a.gone(t)
-	}
-	a.when = w.String()
-	return a.showMenu(autoui.CLIMenu(a.c, id, t.name(), a.flow, a.when, a.clis(t)))
-}
-
-// setCLI takes the CLI chosen and asks for the model.
-func (a *autoCmd) setCLI(id, v string) error {
-	cli, err := parseAgentFlag("cli", v)
-	if err != nil || cli == "" {
-		return autoUsage()
-	}
-	if !a.w.Installed(cli) {
-		a.say(i18n.T("auto.not_installed", session.ShortName(cli)))
-		return nil
-	}
-	a.cli = string(cli)
-	return a.modelPick(a.find(id))
-}
-
-// setModel ends a flow with the model chosen ("": the default, or what was
-// typed): the schedule is made or changed; 🚀 runs it.
-func (a *autoCmd) setModel(id, model string) error {
-	if model == "" {
-		model = strings.TrimSpace(a.initial)
-	}
-	if strings.ContainsAny(model, " \t\r\n") {
-		a.say(i18n.T("auto.bad_model", model))
-		return nil
-	}
-	cli, err := parseAgentFlag("cli", a.cli)
-	if err != nil || cli == "" {
-		return autoUsage()
-	}
+// dialog is the Run panel on this terminal (the popup). What it chose is
+// kept; a run it starts (now, or a schedule that is due) opens its output
+// once the popup closed.
+func (a *autoCmd) dialog(id string) error {
 	t := a.find(id)
 	if !t.found {
 		return a.gone(t)
 	}
-	var w auto.When
-	if a.flow == autoui.FlowNew {
-		if w, err = auto.ParseWhen(a.when); err != nil {
-			a.say(i18n.T("auto.bad_when", a.when))
-			return nil
-		}
+	m := autodialog.New(a.panelOptions(t))
+	res, err := autodialog.Run(m, a.models, os.Stdin, os.Stdout)
+	if err != nil || !res.Run {
+		return err
+	}
+	access := auto.AccessFull
+	if res.ReadOnly {
+		access = auto.AccessRead
 	}
 	s, err := a.change(t, func(s *auto.Schedule) {
-		s.CLI, s.Model = string(cli), model
-		if a.flow == autoui.FlowNew {
-			s.When, s.Paused = w.String(), false
+		s.CLI, s.Model, s.Access = string(res.CLI), res.Model, access
+		if res.When != "" {
+			s.When, s.Paused = res.When, false
 		}
 	})
 	if err != nil {
 		return err
 	}
-	switch a.flow {
-	case autoui.FlowRun:
-		err = a.launch(t, s)
-	case autoui.FlowNew:
-		a.say(i18n.T("auto.scheduled", t.name(), s.Parsed().Label(), cliLabel(cli, model)))
-		a.startIfDue(s)
-	default:
-		a.say(i18n.T("auto.cli_set", t.name(), cliLabel(cli, model)))
+	at := time.Now()
+	who := cliLabel(res.CLI, res.Model)
+	started := false
+	if res.When == "" {
+		if err := auto.Launch(a.c.Self, id, true); err != nil {
+			return err
+		}
+		started = true
+		a.say(i18n.T("auto.started", t.name(), who))
+	} else {
+		started = a.startIfDue(s)
+		a.say(i18n.T("auto.scheduled", t.name(), s.Parsed().Label(), who))
 	}
 	a.refresh()
-	return err
-}
-
-// startIfDue starts s when it is due now: an interval schedule at once.
-func (a *autoCmd) startIfDue(s auto.Schedule) {
-	w := s.Parsed()
-	if s.Paused || w.Manual() {
-		return
-	}
-	if due, _ := w.Due(s.Created, auto.LastStart(s.ID), a.now); !due {
-		return
-	}
-	if _, running := auto.Running(s.ID); !running {
-		_ = auto.Launch(a.c.Self, s.ID, false)
-	}
-}
-
-// run is 🚀: run it now with its CLI and model; the first time, ask them.
-func (a *autoCmd) run(id string) error {
-	t := a.find(id)
-	if !t.found {
-		return a.gone(t)
-	}
-	if _, running := auto.Running(id); running {
-		a.say(i18n.T("auto.already", t.name()))
+	if !started || a.popup == "" {
 		return nil
 	}
-	if !t.has || t.sched.CLI == "" {
-		a.flow = autoui.FlowRun
-		return a.showMenu(autoui.CLIMenu(a.c, id, t.name(), autoui.FlowRun, "", a.clis(t)))
+	argv := []string{"__auto", "log", id, "--after", strconv.FormatInt(at.UnixMilli(), 10)}
+	if a.c.Client != "" {
+		argv = append(argv, "--client", a.c.Client)
 	}
-	return a.launch(t, t.sched)
+	if a.c.Pane != "" {
+		argv = append(argv, "--pane", a.c.Pane)
+	}
+	return quickpick.Later(a.popup, argv)
 }
 
-func (a *autoCmd) launch(t target, s auto.Schedule) error {
-	if err := auto.Launch(a.c.Self, t.id, true); err != nil {
-		return err
+// startIfDue starts s when it is due now (an interval schedule at once);
+// it reports whether it did.
+func (a *autoCmd) startIfDue(s auto.Schedule) bool {
+	w := s.Parsed()
+	if s.Paused || w.Manual() {
+		return false
 	}
-	a.say(i18n.T("auto.started", t.name(), cliLabel(session.AgentID(s.CLI), s.Model)))
-	return nil
+	if due, _ := w.Due(s.Created, auto.LastStart(s.ID), a.now); !due {
+		return false
+	}
+	if _, running := auto.Running(s.ID); running {
+		return false
+	}
+	return auto.Launch(a.c.Self, s.ID, false) == nil
 }
 
-// logPopup shows a run's output (the last one, the one going on, or --log)
-// in a popup.
+// logPopup shows a run's output (the one going on, the last one, --log or
+// the one started --after) in a popup.
 func (a *autoCmd) logPopup(id string) error {
 	t := a.find(id)
 	args := []string{a.c.Self, "__auto", "show", id}
 	if a.log != "" {
 		args = append(args, "--log", a.log)
+	}
+	if !a.after.IsZero() {
+		args = append(args, "--after", strconv.FormatInt(a.after.UnixMilli(), 10))
 	}
 	c := tmux.Cmd{"display-popup"}
 	if a.c.Client != "" {
@@ -617,88 +535,155 @@ func (a *autoCmd) logPopup(id string) error {
 	return a.w.T.Spawn(append(c, tmux.ShJoin(args...)))
 }
 
-// showLog is the popup's pager over a run's log, under what the run was.
-func (a *autoCmd) showLog(id string) error {
-	name := id
-	if ss, err := auto.Load(); err == nil {
-		if s, ok := auto.Get(ss, id); ok {
-			name = s.Name
-		}
-	}
-	cur, running := auto.Running(id)
-	runs := auto.Runs(id)
-	var r *auto.Run
-	logName := a.log
-	switch {
-	case logName != "":
-		for i := range runs {
-			if runs[i].Log == logName {
-				r = &runs[i]
-			}
-		}
-	case running && cur.Log != "":
-		logName = cur.Log
-	case len(runs) > 0:
-		r, logName = &runs[0], runs[0].Log
-	}
-	head := "\x1b[1m" + name + "\x1b[0m"
-	switch {
-	case r != nil:
-		parts := []string{r.Status.Mark() + " " + textfmt.Clock(a.now, r.Start), auto.Took(r.Duration())}
-		if r.CLI != "" {
-			parts = append(parts, cliLabel(session.AgentID(r.CLI), r.Model))
-		}
-		head += "  " + strings.Join(parts, " · ")
-	case running:
-		head += "  " + i18n.T("auto.running", auto.Took(a.now.Sub(cur.Start)))
-	}
-	w, _ := sidebar.Size(int(os.Stdout.Fd()))
-	if w <= 0 {
-		w = 100
-	}
-	header := []string{" " + head, "\x1b[38;5;244m" + strings.Repeat("─", max(w, 1)) + "\x1b[0m"}
-	var lines []string
-	if logName != "" {
-		if b, err := os.ReadFile(auto.LogPath(id, logName)); err == nil {
-			for _, l := range strings.Split(auto.Clean(string(b)), "\n") {
-				lines = append(lines, wrapLine(" "+l, w-2)...)
-			}
-		}
-	}
-	if len(lines) == 0 {
-		lines = []string{" " + i18n.T("auto.no_output")}
-	}
-	return page(a.e, header, lines, 0)
+// startWait is how long the output view waits for a run it was opened for
+// to start.
+var startWait = 20 * time.Second
+
+// outputView is the output view of one run: it reads its log as it grows.
+type outputView struct {
+	id, name string
+	log      string    // the run's log ("" until the run is found)
+	after    time.Time // the run started then or later (zero: the last one)
+	opened   time.Time
+	run      *auto.Run // how it ended (nil while it runs)
+	cur      auto.Current
+	out      *auto.Output
+	off      int64
+	tick     int
+	gaveUp   bool
+	p        *pager.Pager
 }
 
-// wrapLine breaks a line of plain text into lines of at most w columns, at
-// spaces where it can.
-func wrapLine(l string, w int) []string {
-	if w < 8 || sidebar.DisplayWidth(l) <= w {
-		return []string{l}
-	}
-	var out []string
-	var cur []rune
-	col, lastSpace := 0, -1
-	for _, r := range l {
-		cw := sidebar.DisplayWidth(string(r))
-		if col+cw > w {
-			if lastSpace > 0 {
-				out = append(out, string(cur[:lastSpace]))
-				cur = append([]rune(" "), cur[lastSpace+1:]...)
-			} else {
-				out = append(out, string(cur))
-				cur = []rune(" ")
+func (a *autoCmd) newRunView(id string) *outputView {
+	t := a.find(id)
+	v := &outputView{id: id, name: t.name(), log: a.log, after: a.after, opened: time.Now(), out: &auto.Output{Dir: t.root}}
+	if v.log != "" {
+		for _, r := range auto.Runs(id) {
+			if r.Log == v.log {
+				r := r
+				v.run = &r
 			}
-			col, lastSpace = sidebar.DisplayWidth(string(cur)), -1
 		}
-		if r == ' ' {
-			lastSpace = len(cur)
+		if c, ok := auto.Running(id); ok && c.Log == v.log {
+			v.cur = c
 		}
-		cur = append(cur, r)
-		col += cw
 	}
-	return append(out, string(cur))
+	return v
+}
+
+// find finds the run to show: the one going on, else the last one; with
+// --after, only one that started then or later.
+func (v *outputView) find() {
+	recent := func(t time.Time) bool { return v.after.IsZero() || !t.Before(v.after.Add(-2*time.Second)) }
+	if c, ok := auto.Running(v.id); ok && c.Log != "" && recent(c.Start) {
+		v.log, v.cur = c.Log, c
+		return
+	}
+	if runs := auto.Runs(v.id); len(runs) > 0 && recent(runs[0].Start) {
+		r := runs[0]
+		v.run, v.log = &r, r.Log
+		return
+	}
+	if !v.after.IsZero() && time.Since(v.opened) > startWait {
+		v.gaveUp = true
+	}
+}
+
+// read reads what the log got since the last read.
+func (v *outputView) read() {
+	if v.log == "" {
+		return
+	}
+	f, err := os.Open(auto.LogPath(v.id, v.log))
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	if _, err := f.Seek(v.off, io.SeekStart); err != nil {
+		return
+	}
+	b, _ := io.ReadAll(io.LimitReader(f, 16<<20))
+	v.off += int64(len(b))
+	v.out.Feed(b)
+}
+
+// live is the pager's Live: the header and the output for w columns, and
+// whether more is to come.
+func (v *outputView) live(w int) ([]string, []string, bool) {
+	v.tick++
+	if v.run == nil && v.log == "" && !v.gaveUp {
+		v.find()
+	}
+	v.read()
+	if v.run == nil && v.log != "" {
+		if c, ok := auto.Running(v.id); ok && (c.Log == v.log || c.Log == "") {
+			if c.Log != "" {
+				v.cur = c
+			}
+		} else {
+			for _, r := range auto.Runs(v.id) {
+				if r.Log == v.log {
+					r := r
+					v.run = &r
+					break
+				}
+			}
+			if v.run != nil {
+				v.read()
+				v.out.Flush()
+			}
+		}
+	}
+	h := autoview.Run{Name: v.name, Tick: v.tick, Result: v.run, GaveUp: v.gaveUp}
+	switch {
+	case v.run != nil:
+		h.CLI, h.Model, h.Command, h.Start = session.AgentID(v.run.CLI), firstNonEmpty(v.run.Model, v.out.Model), v.run.Command, v.run.Start
+	case v.cur.Log != "":
+		h.CLI, h.Model, h.Command, h.Start = session.AgentID(v.cur.CLI), firstNonEmpty(v.cur.Model, v.out.Model), v.cur.Command, v.cur.Start
+	default:
+		h.Starting = true
+	}
+	more := v.run == nil && !v.gaveUp
+	header := autoview.Header(h, time.Now(), w)
+	lines := autoview.Lines(v.out, w)
+	if len(lines) == 0 {
+		msg := i18n.T("auto.no_output")
+		if more {
+			msg = i18n.T("auto.view.waiting")
+		}
+		lines = []string{" \x1b[38;5;243m" + msg + "\x1b[0m"}
+	}
+	if v.p != nil {
+		v.p.Hint = autoview.Hint(more)
+	}
+	return header, lines, more
+}
+
+// stop stops the run shown.
+func (v *outputView) stop() string {
+	if v.run != nil || v.gaveUp {
+		return ""
+	}
+	if auto.Stop(v.id) {
+		return i18n.T("auto.view.stopped")
+	}
+	return ""
+}
+
+// show is the output view on this terminal (a popup): it follows the run
+// as it goes; s stops it. Not on a terminal, the output is printed.
+func (a *autoCmd) show(id string) error {
+	v := a.newRunView(id)
+	if !isTerminal(os.Stdin) || !isTerminal(os.Stdout) {
+		h, ls, _ := v.live(100)
+		for _, l := range append(h, ls...) {
+			fmt.Fprintln(a.e.Stdout, strings.TrimRight(sidebar.Plain(l), " "))
+		}
+		return nil
+	}
+	p := &pager.Pager{Live: v.live, Keys: map[string]func() string{"s": v.stop}}
+	v.p = p
+	return pager.Run(p, os.Stdin, os.Stdout)
 }
 
 // open edits the definition in a popup in the project.
@@ -719,17 +704,18 @@ func (a *autoCmd) open(id string) error {
 }
 
 // cont continues the last run's conversation in a pane beside the one the
-// sidebar follows (Claude, which ran with --session-id).
+// sidebar follows, with the CLI it ran with.
 func (a *autoCmd) cont(id string) error {
 	runs := auto.Runs(id)
-	if len(runs) == 0 || runs[0].Session == "" || runs[0].CLI != string(session.Claude) {
+	if len(runs) == 0 || !canContinue(runs[0]) {
 		a.say(i18n.T("auto.no_session"))
 		return nil
 	}
 	if a.c.Pane == "" {
 		return errors.New("no pane chosen")
 	}
-	args := []string{"split", runs[0].CLI, "-h", "--from-session", runs[0].CLI + ":" + runs[0].Session, "--pane", a.c.Pane}
+	r := runs[0]
+	args := []string{"split", r.CLI, "-h", "--from-session", r.CLI + ":" + r.Session, "--pane", a.c.Pane}
 	if a.c.Client != "" {
 		args = append(args, "--client", a.c.Client)
 	}
@@ -737,9 +723,9 @@ func (a *autoCmd) cont(id string) error {
 }
 
 // exec runs schedule id (`imux __auto exec`, started on its own by the
-// watcher or 🚀): its definition with its CLI and model in its project,
-// headless, holding its run lock; then records the run, redraws the
-// sidebars and notifies.
+// watcher or the Run panel): its definition with its CLI and model in its
+// project, headless, holding its run lock; then records the run (its
+// answer read from the CLI's stream), redraws the sidebars and notifies.
 func (a *autoCmd) exec(id string) error {
 	ss, err := auto.Load()
 	if err != nil {
@@ -756,9 +742,9 @@ func (a *autoCmd) exec(id string) error {
 	if err != nil {
 		return err
 	}
-	// Started on schedule twice at once (the watcher, and ⏰ starting it at
-	// once): the second, which waited for the first's lock, is not due any
-	// more.
+	// Started on schedule twice at once (the watcher, and the Run panel
+	// starting it at once): the second, which waited for the first's lock,
+	// is not due any more.
 	if due, _ := s.Parsed().Due(s.Created, auto.LastStart(id), time.Now()); !a.manual && (!due || s.Paused) {
 		ex.Abort()
 		return nil
@@ -822,13 +808,13 @@ func (a *autoCmd) exec(id string) error {
 	if err != nil {
 		return skip(err.Error())
 	}
-	r.Log, r.Session = auto.LogName(r.Start), inv.Session
-	logPath := auto.LogPath(id, r.Log)
-	o := auto.Execute(a.ctx, inv.Argv, autoEnv(bin.PathEnv), s.Project, logPath, s.RunTimeout(), func(pgid int) {
-		ex.Started(auto.Current{Start: r.Start, PGID: pgid, Log: r.Log, CLI: string(cli), Model: s.Model})
+	r.Log, r.Session, r.Command = auto.LogName(r.Start), inv.Session, auto.Shown(inv.Argv)
+	o := auto.Execute(a.ctx, inv.Argv, autoEnv(bin.PathEnv), s.Project, auto.LogPath(id, r.Log), s.RunTimeout(), func(pgid int) {
+		ex.Started(auto.Current{Start: r.Start, PGID: pgid, Log: r.Log, CLI: string(cli), Model: s.Model, Command: r.Command, Manual: a.manual})
 		a.refresh()
 	})
-	r.Exit = o.Exit
+	out := auto.ParseOutput(o.Stdout, s.Project)
+	r.Exit, r.Session = o.Exit, firstNonEmpty(out.Session, r.Session)
 	switch {
 	case ex.Stopped():
 		r.Status = auto.StatusStopped
@@ -836,17 +822,22 @@ func (a *autoCmd) exec(id string) error {
 		r.Status, r.Summary = auto.StatusTimeout, i18n.T("auto.timed_out_after", auto.Took(s.RunTimeout()))
 	case o.Err != nil:
 		r.Status, r.Summary = auto.StatusFailed, auto.FirstLine(o.Err.Error())
-	case o.Exit != 0:
-		r.Status, r.Summary = auto.StatusFailed, firstNonEmpty(auto.FirstLine(o.Stderr), auto.FirstLine(o.Stdout))
+	case o.Exit != 0 || out.Failed:
+		r.Status = auto.StatusFailed
+		r.Summary = firstNonEmpty(auto.FirstLine(out.Error), lastLine(o.Stderr))
+		if !out.Streamed {
+			r.Summary = firstNonEmpty(r.Summary, auto.FirstLine(o.Stdout))
+		}
+		if r.Summary == "" {
+			r.Summary = i18n.T("auto.failed", o.Exit)
+		}
 	default:
 		report := o.Stdout
-		if inv.OutFile != "" {
+		if out.Streamed {
+			report = out.Report
+		} else if inv.OutFile != "" {
 			if b, err := os.ReadFile(inv.OutFile); err == nil && len(strings.TrimSpace(string(b))) > 0 {
 				report = string(b)
-				if f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY, 0); err == nil {
-					fmt.Fprintf(f, "\n# reply\n%s\n", strings.TrimSpace(report))
-					f.Close()
-				}
 			}
 		}
 		report = auto.Clean(report)
@@ -859,6 +850,18 @@ func (a *autoCmd) exec(id string) error {
 		}
 	}
 	return finish()
+}
+
+// lastLine is the last non-empty line of s (an error's message usually
+// ends the output).
+func lastLine(s string) string {
+	ls := strings.Split(auto.Clean(s), "\n")
+	for i := len(ls) - 1; i >= 0; i-- {
+		if t := strings.TrimSpace(ls[i]); t != "" {
+			return auto.FirstLine(t)
+		}
+	}
+	return ""
 }
 
 // autoEnv is a run's environment: i-mux's, without tmux's (it runs on its

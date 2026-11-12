@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -74,25 +75,87 @@ type Outcome struct {
 	Err      error // it did not start, or it failed without an exit code
 }
 
-// maxOutput is how much of stdout and stderr is kept for the result (the
-// log has it all).
-const maxOutput = 256 << 10
+// maxOutput is how much of stdout and stderr is kept for the result: the
+// end, where the answer and a stream's last event are (the log has it all).
+const maxOutput = 1 << 20
 
-type capped struct {
-	buf bytes.Buffer
+// tail keeps the last max bytes written to it.
+type tail struct {
+	buf []byte
 	max int
 }
 
-func (c *capped) Write(p []byte) (int, error) {
-	if room := c.max - c.buf.Len(); room > 0 {
-		c.buf.Write(p[:min(len(p), room)])
+func (c *tail) Write(p []byte) (int, error) {
+	c.buf = append(c.buf, p...)
+	if len(c.buf) > 2*c.max {
+		c.buf = append(c.buf[:0], c.buf[len(c.buf)-c.max:]...)
 	}
 	return len(p), nil
 }
 
-// Execute runs argv in dir with env and stdin empty, its output into the
-// log at logPath; its process group is killed after timeout or when ctx
-// ends. started gets the process group id once it runs.
+func (c *tail) String() string {
+	if len(c.buf) > c.max {
+		return string(c.buf[len(c.buf)-c.max:])
+	}
+	return string(c.buf)
+}
+
+// lines writes whole lines of one stream to a log that two streams share,
+// so that a line of one never breaks a line of the other.
+type lines struct {
+	mu  *sync.Mutex
+	w   io.Writer
+	buf []byte
+}
+
+func (l *lines) Write(p []byte) (int, error) {
+	l.buf = append(l.buf, p...)
+	i := bytes.LastIndexByte(l.buf, '\n')
+	if i < 0 && len(l.buf) < 1<<20 {
+		return len(p), nil
+	}
+	n := i + 1
+	if i < 0 {
+		n = len(l.buf) // a line too long: as it is
+	}
+	l.mu.Lock()
+	_, err := l.w.Write(l.buf[:n])
+	l.mu.Unlock()
+	l.buf = append(l.buf[:0], l.buf[n:]...)
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+// flush writes a last line that no newline ended.
+func (l *lines) flush() {
+	if len(l.buf) == 0 {
+		return
+	}
+	l.mu.Lock()
+	_, _ = l.w.Write(append(l.buf, '\n'))
+	l.mu.Unlock()
+	l.buf = nil
+}
+
+// Shown is argv as the UI shows it: a long or multi-line argument (the
+// prompt) as <prompt>.
+func Shown(argv []string) string {
+	shown := make([]string, 0, len(argv))
+	for i, a := range argv {
+		if i > 0 && (strings.ContainsAny(a, "\n") || len(a) > 120) {
+			a = "<prompt>"
+		}
+		shown = append(shown, a)
+	}
+	return strings.Join(shown, " ")
+}
+
+// Execute runs argv in dir with env and stdin empty, its output (stdout
+// and stderr, line by line) into the log at logPath; its process group is
+// killed after timeout or when ctx ends. started gets the process group id
+// once it runs.
 func Execute(ctx context.Context, argv, env []string, dir, logPath string, timeout time.Duration, started func(pgid int)) Outcome {
 	if err := paths.EnsureDir(filepath.Dir(logPath)); err != nil {
 		return Outcome{Err: err}
@@ -102,14 +165,6 @@ func Execute(ctx context.Context, argv, env []string, dir, logPath string, timeo
 		return Outcome{Err: err}
 	}
 	defer logf.Close()
-	shown := make([]string, 0, len(argv))
-	for i, a := range argv {
-		if i > 0 && (strings.ContainsAny(a, "\n") || len(a) > 120) {
-			a = "<prompt>"
-		}
-		shown = append(shown, a)
-	}
-	fmt.Fprintf(logf, "# %s\n$ %s\n\n", time.Now().Format("2006-01-02 15:04:05"), strings.Join(shown, " "))
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
@@ -117,17 +172,21 @@ func Execute(ctx context.Context, argv, env []string, dir, logPath string, timeo
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = 2 * time.Second
-	out, errb := &capped{max: maxOutput}, &capped{max: maxOutput}
-	cmd.Stdout, cmd.Stderr = io.MultiWriter(logf, out), io.MultiWriter(logf, errb)
+	var mu sync.Mutex
+	outLog, errLog := &lines{mu: &mu, w: logf}, &lines{mu: &mu, w: logf}
+	out, errb := &tail{max: maxOutput}, &tail{max: maxOutput}
+	cmd.Stdout, cmd.Stderr = io.MultiWriter(outLog, out), io.MultiWriter(errLog, errb)
 	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(logf, "! %v\n", err)
+		fmt.Fprintf(logf, "%v\n", err)
 		return Outcome{Err: err}
 	}
 	if started != nil {
 		started(cmd.Process.Pid)
 	}
 	err = cmd.Wait()
-	o := Outcome{Stdout: out.buf.String(), Stderr: errb.buf.String()}
+	outLog.flush()
+	errLog.flush()
+	o := Outcome{Stdout: out.String(), Stderr: errb.String()}
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		o.TimedOut = true
 	}
@@ -142,11 +201,6 @@ func Execute(ctx context.Context, argv, env []string, dir, logPath string, timeo
 	default:
 		o.Err = err
 	}
-	fmt.Fprintf(logf, "\n# exit %d", o.Exit)
-	if o.TimedOut {
-		fmt.Fprintf(logf, " (timed out after %s)", timeout)
-	}
-	fmt.Fprintln(logf)
 	return o
 }
 
@@ -155,6 +209,20 @@ var ansiRE = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x
 // Clean is a reply without terminal escapes and \r.
 func Clean(s string) string {
 	return strings.TrimSpace(strings.ReplaceAll(ansiRE.ReplaceAllString(s, ""), "\r", ""))
+}
+
+// flat is s with its tabs spaces and no other control characters: safe in
+// the sidebar's one-line columns.
+func flat(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r == '\t':
+			return ' '
+		case r < ' ' || r == 0x7f || r >= 0x80 && r < 0xa0:
+			return -1
+		}
+		return r
+	}, s)
 }
 
 // mdLead is Markdown a summary line starts with.
@@ -180,13 +248,13 @@ func Summarize(report string) (summary string, quiet bool) {
 	}
 	first := mdLead.ReplaceAllString(nonEmpty[0], "")
 	first = strings.NewReplacer("**", "", "__", "", "`", "").Replace(first)
-	return cut(strings.TrimSpace(first), 200), false
+	return cut(strings.TrimSpace(flat(first)), 200), false
 }
 
 // FirstLine is the first non-empty line of s (cut to 200 characters).
 func FirstLine(s string) string {
 	for _, l := range strings.Split(Clean(s), "\n") {
-		if t := strings.TrimSpace(l); t != "" {
+		if t := strings.TrimSpace(flat(l)); t != "" {
 			return cut(t, 200)
 		}
 	}

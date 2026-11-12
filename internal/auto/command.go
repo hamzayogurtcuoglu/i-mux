@@ -75,7 +75,9 @@ type Invocation struct {
 }
 
 // Command builds the headless command line of cli (binary bin) for def:
-// the headless flag first, as the ✨ commit messages (D29) do.
+// the headless flag first, as the ✨ commit messages (D29) do. Claude,
+// Copilot and Antigravity stream their steps as JSON lines, which the
+// run's output view shows as they come (ParseOutput).
 func Command(cli session.AgentID, bin string, d Def, model, prompt string, readOnly bool, outFile, uuid string) (Invocation, error) {
 	native := Native(d, cli)
 	opt := func(flag, v string) []string {
@@ -90,7 +92,7 @@ func Command(cli session.AgentID, bin string, d Def, model, prompt string, readO
 	}
 	switch cli {
 	case session.Claude:
-		a := []string{bin, "-p", "--session-id", uuid}
+		a := []string{bin, "-p", "--output-format", "stream-json", "--verbose", "--session-id", uuid}
 		a = append(a, opt("--agent", agentName)...)
 		a = append(a, opt("--model", model)...)
 		if readOnly {
@@ -104,11 +106,11 @@ func Command(cli session.AgentID, bin string, d Def, model, prompt string, readO
 		a = append(a, opt("--agent", agentName)...)
 		a = append(a, opt("--model", model)...)
 		if !readOnly {
-			a = append(a, "--yolo")
+			a = append(a, "--allow-all")
 		}
-		return Invocation{Argv: append(a, "-s", "--no-color")}, nil
+		return Invocation{Argv: append(a, "--output-format", "json", "--no-color")}, nil
 	case session.Antigravity:
-		a := []string{bin, "-p", prompt}
+		a := []string{bin, "-p", prompt, "--output-format", "stream-json"}
 		a = append(a, opt("--model", model)...)
 		if readOnly {
 			a = append(a, "--mode", "plan")

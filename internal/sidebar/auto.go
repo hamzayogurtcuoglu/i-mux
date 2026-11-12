@@ -1,7 +1,6 @@
 package sidebar
 
 import (
-	"context"
 	"os"
 	"strconv"
 	"strings"
@@ -151,63 +150,38 @@ func autoName(it AutoItem, w int, ic Icons, style string, click Action, btns ...
 	return buttons(w, Cell{Text: "   " + autoIcon(it, ic) + " " + name, Action: click}, btns...)
 }
 
-// scheduledRows draw a scheduled item: its name with 🚀 (🛑 while it runs)
-// and ⋯; its time, CLI and model; its run going on or its last run, and
-// when it runs next. A click shows its last output.
-func (m Model) scheduledRows(it AutoItem, w int, ic Icons) []Line {
-	id, s := it.Def.ID, it.Sched
-	click := Action{Kind: ActAuto, Section: "log", Path: id}
-	if it.Last == nil && !it.Running {
-		click = Action{Kind: ActAutoMenu, Path: id}
-	}
-	more := button(ic.More, muted, Action{Kind: ActAutoMenu, Path: id})
-	btns := []Cell{button(ic.Run, cyan, Action{Kind: ActAuto, Section: "run", Path: id}), more}
-	switch {
-	case it.Running:
-		btns[0] = button(ic.Stop, red, Action{Kind: ActAuto, Section: "stop", Path: id})
-	case it.Gone:
-		btns = btns[1:]
-	}
-	style := bold
-	if it.Gone || s.Paused {
-		style = muted
-	}
-	out := []Line{autoName(it, w, ic, style, click, btns...)}
-
-	parts := []string{s.Parsed().Label()}
-	if s.CLI != "" {
-		p := session.ShortName(session.AgentID(s.CLI))
-		if s.Model != "" {
-			p += " · " + s.Model
-		}
-		parts = append(parts, p)
-	}
-	if s.ReadOnly() {
-		parts = append(parts, i18n.T("auto.read_only"))
-	}
-	if s.Paused {
-		parts = append(parts, i18n.T("auto.paused_row"))
+// autoClick is what a click on an item does: its output once it ran
+// (or while it runs), else the Run panel.
+func autoClick(it AutoItem) Action {
+	if it.Running || it.Last != nil {
+		return Action{Kind: ActAuto, Section: "log", Path: it.Def.ID}
 	}
 	if it.Gone {
-		parts = []string{i18n.T("auto.gone_row")}
+		return Action{Kind: ActAutoMenu, Path: it.Def.ID}
 	}
-	// Its time, CLI and model, and when it runs next on the right.
-	right, rw := "", 0
-	if !it.Next.IsZero() && !it.Running {
-		nx := "→ " + textfmt.Clock(m.Now, it.Next)
-		if !it.Next.After(m.Now) {
-			nx = "→ " + i18n.T("auto.now")
-		}
-		if w-6-DisplayWidth(nx)-1 >= 8 {
-			right, rw = " "+muted+nx+reset, DisplayWidth(nx)+1
-		}
-	}
-	out = append(out, Line{Text: "     " + muted + fit(strings.Join(parts, " · "), max(w-6-rw, 1)) + reset + right + " ", Action: click})
-	if it.Gone && it.Last == nil {
-		return out
-	}
+	return Action{Kind: ActAuto, Section: "run", Path: it.Def.ID}
+}
 
-	// The run going on, or the last one: its news.
+// autoButtons are an item's buttons: 🚀 (the Run panel), 🛑 while it
+// runs, and ⋯ (its menu) once it has a schedule or ran.
+func autoButtons(it AutoItem, ic Icons) []Cell {
+	id := it.Def.ID
+	var btns []Cell
+	switch {
+	case it.Running:
+		btns = append(btns, button(ic.Stop, red, Action{Kind: ActAuto, Section: "stop", Path: id}))
+	case !it.Gone:
+		btns = append(btns, button(ic.Run, cyan, Action{Kind: ActAuto, Section: "run", Path: id}))
+	}
+	if it.Sched != nil {
+		btns = append(btns, button(ic.More, muted, Action{Kind: ActAutoMenu, Path: id}))
+	}
+	return btns
+}
+
+// runLine is an item's run going on, or its last run: its state, when,
+// and its news.
+func (m Model) runLine(it AutoItem, w int, click Action) Line {
 	room := w - 6
 	var body string
 	switch r := it.Last; {
@@ -226,30 +200,75 @@ func (m Model) scheduledRows(it AutoItem, w int, ic Icons) []Line {
 	default:
 		body = muted + fit(i18n.T("auto.never"), max(room, 1)) + reset
 	}
-	return append(out, Line{Text: "     " + body + " ", Action: click})
+	return Line{Text: "     " + body + " ", Action: click}
 }
 
-// defRows draw a definition without a schedule: its name with 🚀 and ⏰,
-// and its description. A click opens it.
+// scheduledRows draw an item with a time: its name and buttons; its time,
+// CLI and model, and when it runs next; its run going on or its last run.
+func (m Model) scheduledRows(it AutoItem, w int, ic Icons) []Line {
+	s := it.Sched
+	click := autoClick(it)
+	style := bold
+	if it.Gone || s.Paused {
+		style = muted
+	}
+	out := []Line{autoName(it, w, ic, style, click, autoButtons(it, ic)...)}
+	parts := []string{s.Parsed().Label()}
+	if s.CLI != "" {
+		p := session.ShortName(session.AgentID(s.CLI))
+		if s.Model != "" {
+			p += " · " + s.Model
+		}
+		parts = append(parts, p)
+	}
+	if s.ReadOnly() {
+		parts = append(parts, i18n.T("auto.read_only"))
+	}
+	if s.Paused {
+		parts = append(parts, i18n.T("auto.paused_row"))
+	}
+	if it.Gone {
+		parts = []string{i18n.T("auto.gone_row")}
+	}
+	right, rw := "", 0
+	if !it.Next.IsZero() && !it.Running {
+		nx := "→ " + textfmt.Clock(m.Now, it.Next)
+		if !it.Next.After(m.Now) {
+			nx = "→ " + i18n.T("auto.now")
+		}
+		if w-6-DisplayWidth(nx)-1 >= 8 {
+			right, rw = " "+muted+nx+reset, DisplayWidth(nx)+1
+		}
+	}
+	out = append(out, Line{Text: "     " + muted + fit(strings.Join(parts, " · "), max(w-6-rw, 1)) + reset + right + " ", Action: click})
+	if it.Gone && it.Last == nil {
+		return out
+	}
+	return append(out, m.runLine(it, w, click))
+}
+
+// defRows draw an agent or a skill without a time: its name and buttons,
+// then its run going on, its last run, or its description.
 func (m Model) defRows(it AutoItem, w int, ic Icons) []Line {
-	id := it.Def.ID
-	open := Action{Kind: ActAuto, Section: "open", Path: id}
-	out := []Line{autoName(it, w, ic, "", open,
-		button(ic.Run, cyan, Action{Kind: ActAuto, Section: "run", Path: id}),
-		button(ic.Schedule, cyan, Action{Kind: ActAuto, Section: "menu when", Path: id}))}
-	if d := it.Def.Description; d != "" {
-		out = append(out, Line{Text: "     " + muted + fit(d, max(w-6, 1)) + reset + " ", Action: open})
+	click := autoClick(it)
+	out := []Line{autoName(it, w, ic, "", click, autoButtons(it, ic)...)}
+	switch {
+	case it.Running || it.Last != nil:
+		out = append(out, m.runLine(it, w, click))
+	case it.Def.Description != "":
+		out = append(out, Line{Text: "     " + muted + fit(it.Def.Description, max(w-6, 1)) + reset + " ", Action: click})
 	}
 	return out
 }
 
-// autoRows are the view's scrolling rows: SCHEDULED, AGENTS and SKILLS.
+// autoRows are the view's scrolling rows: SCHEDULED (the ones with a
+// time), AGENTS and SKILLS.
 func (m Model) autoRows(w int) []Line {
 	ic := m.icons()
 	var sched, agents, sks []AutoItem
 	for _, it := range m.Auto {
 		switch {
-		case it.Sched != nil:
+		case it.Gone || it.Sched != nil && !it.Sched.Parsed().Manual():
 			sched = append(sched, it)
 		case it.Def.Kind == auto.KindSkill:
 			sks = append(sks, it)
@@ -269,11 +288,11 @@ func (m Model) autoRows(w int) []Line {
 		return []Line{
 			{Text: muted + fit("   "+i18n.T("auto.empty"), w) + reset},
 			{Text: faint + fit("   .claude/agents/<name>.md", w) + reset},
-			{Text: cyan + fit("   "+i18n.T("auto.empty_hint"), w) + reset, Action: Action{Kind: ActAutoNew}},
+			{Text: faint + fit("   .agents/skills/<name>/SKILL.md", w) + reset},
 		}
 	}
 	if len(sched) == 0 {
-		rows = append(rows, Line{Text: faint + fit("   "+i18n.T("auto.hint", ic.Schedule, ic.Run), w) + reset})
+		rows = append(rows, Line{Text: faint + fit("   "+i18n.T("auto.hint", ic.Run), w) + reset})
 	}
 	if len(sched) > 0 && section(SecAutoScheduled, i18n.T("auto.sec_scheduled"), len(sched)) {
 		for _, it := range sched {
@@ -293,17 +312,15 @@ func (m Model) autoRows(w int) []Line {
 	return rows
 }
 
-// renderAuto is the Scheduler view: its title with ✨ New agent… and
-// refresh, then its rows.
+// renderAuto is the Scheduler view: its title with refresh, then its rows.
 func renderAuto(m Model, w, h int) []Line {
 	ic := m.icons()
 	refresh := button(ic.Refresh, muted, Action{Kind: ActRefresh})
-	add := button(ic.Suggest, cyan, Action{Kind: ActAutoNew})
 	head := i18n.T("sidebar.scheduler")
 	if m.Project != "" {
 		head += " · " + m.Project
 	}
-	out := []Line{buttons(w, Cell{Text: title + fit(" "+head, w-refresh.W-add.W) + reset}, add, refresh)}
+	out := []Line{buttons(w, Cell{Text: title + fit(" "+head, w-refresh.W) + reset}, refresh)}
 	n := 0
 	if h > 0 {
 		n = h - len(out)
@@ -341,27 +358,22 @@ func (s *sidebar) autoArgs(client string, words []string, id string, extra ...st
 	return append(args, extra...)
 }
 
-// autoDo runs a Scheduler action: `imux __auto`, its menus where the click
-// was; ✨ opens the New agent dialog.
-func (s *sidebar) autoDo(ctx context.Context, client string, a Action) {
-	var at []string
-	if s.menuX > 0 && s.menuY > 0 {
-		at = []string{"--x", strconv.Itoa(s.menuX), "--y", strconv.Itoa(s.menuY)}
-	}
+// autoDo runs a Scheduler action: `imux __auto`: the Run panel, a run's
+// output or stopping it; an item's menu where the click was.
+func (s *sidebar) autoDo(client string, a Action) {
 	switch a.Kind {
-	case ActAutoNew:
-		s.skillStart(ctx, client, "dialog", "--agents")
 	case ActAutoMenu:
-		if a.Path == "" {
-			s.spawn(s.autoArgs(client, []string{"menu", "root"}, "", at...))
-			return
+		var at []string
+		if s.menuX > 0 && s.menuY > 0 {
+			at = []string{"--x", strconv.Itoa(s.menuX), "--y", strconv.Itoa(s.menuY)}
 		}
-		s.spawn(s.autoArgs(client, []string{"menu", "item"}, a.Path, at...))
+		if a.Path != "" {
+			s.spawn(s.autoArgs(client, []string{"menu", "item"}, a.Path, at...))
+		}
 	case ActAuto:
-		words := strings.Fields(a.Section)
-		if len(words) == 0 || words[0] != "menu" && words[0] != "run" {
-			at = nil
+		switch a.Section {
+		case "run", "log", "stop":
+			s.spawn(s.autoArgs(client, []string{a.Section}, a.Path))
 		}
-		s.spawn(s.autoArgs(client, words, a.Path, at...))
 	}
 }

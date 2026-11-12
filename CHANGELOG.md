@@ -10,20 +10,21 @@ All notable changes to i-mux are listed here. The format follows
 
 ### Added
 
-- **Scheduler: your agents and skills on a schedule.** A new ⏰ **Schedule** view on the
-  sidebar's rail lists the project's own agents (Claude Code's `.claude/agents/`, Copilot's
+- **Scheduler: your agents and skills, now or on a schedule.** A new ⏰ **Schedule** view on
+  the sidebar's rail lists the project's own agents (Claude Code's `.claude/agents/`, Copilot's
   `.github/agents/`, OpenCode's, `.agents/agents/` for any CLI, and your personal ones) and its
   skills. There is no form and no prompt to write: the agent or skill already says what to do.
-  ⏰ asks only when (every 5 or 15 minutes, every hour, every day at 09:00, or one line such as
-  `10m`, `2h`, `hourly`, `09:00 18:30`; `5 dk` and `2 saat` work too), which installed CLI runs
-  it (Claude, Antigravity, Copilot, Codex or OpenCode; the agent's own first) and which model
-  (the CLI's list, the ones used before, or a name you type); 🚀 runs one now. i-mux runs it
-  headless in the project while it is open, gives each run the last report so it can tell what
-  is new, and shows each one's time, CLI, model, last report and next run, with a spinner and a
-  badge on ⏰ while one runs. A report notifies you; "nothing new" stays quiet. Its menu shows
-  the last output and the history, continues a Claude run's conversation in a pane, changes the
-  time, the CLI and model or the access (read only), pauses, opens or removes it. ✨ has an agent
-  write a new agent for the Scheduler, or opens a blank one.
+  🚀 opens one Run panel where everything is chosen already: the installed CLI (Claude,
+  Antigravity, Copilot, Codex or OpenCode; the agent's own first), the model (the CLI's list,
+  the ones used before, or a name you type), when (now, every 5 or 15 minutes, every hour, every
+  day at 09:00, or one such as `10m`, `2h`, `09:00 18:30`; `5 dk` and `2 saat` work too) and the
+  access. Enter runs it, and its output opens and follows the run as it goes: each tool the
+  agent calls with its result, then its answer; `s` stops it, Esc leaves it running. i-mux
+  runs it headless in the project while it is open, gives each run the last report so it can
+  tell what is new, and shows each one's time, CLI, model, last report and next run, with a
+  spinner and a badge on ⏰ while one runs; a click shows its output. A report notifies you;
+  "nothing new" stays quiet. Its menu shows the output and the history, continues a run's
+  conversation in a pane, changes the schedule, pauses, opens or removes it.
 
 ## [0.50.0] - 2026-11-12
 
