@@ -33,15 +33,16 @@ Follow the repository's commit history style:
 
 ## Pre-commit checks
 
-Run before creating the code commit:
+Run every check CI runs, here, before creating the code commit and again before tagging (the
+`check-before-push` skill, `.agents/skills/check-before-push/SKILL.md`):
 
 ```sh
-make test
-make lint
-make e2e
+make ci
 ```
 
-If `internal/config` changed, also run `make generate` and include `docs/CONFIG.md`. If `testdata/` changed, run `make check-fixtures`.
+It covers Linux, macOS (a symlinked `TMPDIR`) and Windows (from WSL, on the Windows host), lint,
+generated files (`docs/CONFIG.md`), fixtures and e2e. **Do not commit, tag or push while it
+fails**, and tell the user which checks could not run on this machine.
 
 ## Release steps
 

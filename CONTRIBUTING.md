@@ -9,8 +9,11 @@ and [TASKS.md](TASKS.md) for the plan.
 You need Go (see `go.mod`), tmux ≥ 3.2 and, for the full check, golangci-lint and shellcheck.
 
 ```sh
+make ci            # every check CI runs, here: run it before you push
 make build         # bin/imux
 make test          # unit tests
+make test-macos    # unit tests with TMPDIR behind a symlink, as on macOS
+make test-windows  # unit tests on Windows (from WSL: on the Windows host)
 make race          # unit tests with the race detector
 make e2e           # end-to-end tests against a real tmux on a private socket
 make lint          # golangci-lint (vet, staticcheck, errcheck, gofumpt, misspell)
@@ -18,6 +21,16 @@ make generate      # regenerate docs/CONFIG.md; CI fails when it is stale
 make fuzz-short    # every fuzz target for 60 s
 make check-fixtures
 ```
+
+CI runs the unit tests on Linux, macOS and Windows, so passing `make test` here is not enough:
+run `make ci` before you push. It stops at the first failure: golangci-lint and vet for the
+Linux, Windows and macOS builds, generated files, fixtures, shellcheck, the unit tests with the
+race detector, `make test-macos` (macOS's temp folder is a symlink, `/var` to `/private/var`,
+and git reports the resolved path), `make test-windows`, the size gate and e2e. From WSL,
+`make test-windows` runs the Windows test binaries on the Windows host through interop
+(`scripts/wsl-exec.sh`), with Git for Windows' `sh` and `git` and a throwaway user profile, so
+tests never see your real Windows settings; elsewhere it only vets the Windows build. `PKGS=`
+narrows the test targets (`make test-windows PKGS=./internal/gitops/`).
 
 To try a build as your everyday `imux`, run `make install-local`. Never `cp` (or `go build -o`)
 onto the `imux` that is running: macOS kills every process of a program whose file changes in
