@@ -96,8 +96,7 @@ What differs from macOS and Linux:
 - **The shell in the panes is PowerShell** (pwsh if it is installed, else Windows PowerShell), and
   so are the commands i-mux's keys and menus run.
 - **Files:** "Reveal" opens Explorer, and deleting moves to the Recycle Bin.
-- **Ctrl+V:** Windows Terminal keeps it for its own paste; paste images with **Alt+V** (or the
-  sidebar's 📎).
+- **Ctrl+V:** Windows Terminal keeps it for its own paste; paste images with **Alt+V**.
 - **Agent CLIs** install with their Windows commands: Claude Code with
   `irm https://claude.ai/install.ps1 | iex` (or npm), Antigravity CLI with
   `irm https://antigravity.google/cli/install.ps1 | iex`, Copilot, Codex and OpenCode with npm

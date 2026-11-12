@@ -91,8 +91,8 @@ fontunu ayarlar. macOS ve Linux'tan farklar:
 - **Bölmelerdeki kabuk PowerShell'dir** (kuruluysa pwsh, değilse Windows PowerShell); i-mux'un
   tuşlarının ve menülerinin çalıştırdığı komutlar da öyle.
 - **Dosyalar:** "Göster" Gezgin'i açar, silmek Geri Dönüşüm Kutusu'na taşır.
-- **Ctrl+V:** Windows Terminal onu kendi yapıştırması için tutar; resimleri **Alt+V** ile (ya da
-  kenar paneldeki 📎 ile) yapıştırın.
+- **Ctrl+V:** Windows Terminal onu kendi yapıştırması için tutar; resimleri **Alt+V** ile
+  yapıştırın.
 - **Agent CLI'lar** Windows komutlarıyla kurulur: Claude Code
   `irm https://claude.ai/install.ps1 | iex` (ya da npm), Antigravity CLI
   `irm https://antigravity.google/cli/install.ps1 | iex`, Copilot, Codex ve OpenCode npm ile

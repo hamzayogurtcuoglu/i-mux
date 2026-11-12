@@ -109,7 +109,7 @@ sound             = true
 command           = ""
 
 [paste]
-# Ctrl+V (or Alt+V, or 📎 in the sidebar) in an agent's pane pastes the image
+# Ctrl+V (or Alt+V) in an agent's pane pastes the image
 # on the clipboard (a screenshot) or copied image files: macOS, Linux with
 # wl-clipboard or xclip, and WSL (the Windows clipboard). With no image the key
 # goes to the pane as before.
