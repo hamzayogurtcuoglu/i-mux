@@ -1018,11 +1018,28 @@ which CLI (Claude, Antigravity, whatever is installed) and which model, and sees
     CLI, model, state, first line and next run; AGENTS and SKILLS with 🚀 and ⏰; ✨ New agent…
     (the New skill dialog with its own texts); unit tests (render, actions, widths).
 - [x] **T66.4 End to end** · S
-  - AC: e2e with the fake agents: 🚀 on a project agent → CLI → model → its report shows in the
-    view and `schedules.toml` keeps the choice; ⏰ every 5 minutes; a due schedule runs from the
-    watcher.
+  - AC: e2e with the fake agents: 🚀 on a project agent → the Run panel → Enter: it runs with
+    `--agent` and Claude's event stream, its output opens with the tool step and the answer, its
+    report shows in the view and `schedules.toml` keeps the choice; a time typed in Turkish
+    units; a skill every 5 minutes from the panel starts at once; a due schedule runs from the
+    watcher; a long run is followed again from its row and stopped with `s`; Output and Remove
+    schedule from its menu.
 - [x] **T66.5 Docs** · XS
   - AC: README and README.tr; CHANGELOG.
+- [x] **T66.6 The Run panel and the output, live** · M
+  - AC: D61, §9.3 "Scheduler" (user: "I tried it, it did not work": the runs worked, but
+    showed nothing until they ended): 🚀 opens one panel (`internal/autodialog`) where the CLI,
+    the model, the time and the access are chosen already and Enter runs it (a typed model or
+    time, arrows, letters and clicks); the CLIs stream (Claude `stream-json`, Copilot `json`,
+    Antigravity `stream-json`) and `auto.Output` reads their events; a run started from the
+    panel opens its output (`internal/autoview` in the pager's `Live` mode), which follows the
+    run: each tool call with its result's first line, the answer with its Markdown drawn,
+    errors; `s` stops it; no escape or control character from the agent reaches the terminal;
+    the log is written line by line; unit tests (panel, parser, drawing, live pager).
+- [x] **T66.7 No agent writing** · XS
+  - AC: user request ("making an agent in the Scheduler takes too long; leave it"): ✨ New
+    agent…, the blank agent file and the view's right-click menu go, and the New skill dialog is
+    as before (v0.50.0); the empty view says where definitions go.
 
 ## M65: No native Windows (added 2026-11-12)
 
