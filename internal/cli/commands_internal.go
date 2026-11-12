@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -251,7 +251,7 @@ func runExecSpec(e *Env, args []string) error {
 		return err
 	}
 	if s.Pane == "" {
-		s.Pane = tmux.EnvPane()
+		s.Pane = os.Getenv("TMUX_PANE")
 	}
 	if err := launchExec(s); err != nil {
 		return fmt.Errorf("%s: %w", s.Agent, err)

@@ -6,17 +6,16 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -285,19 +284,18 @@ const (
 )
 
 // VSCodeBrowser is what ExecAttach keeps of a terminal's environment: its
-// BROWSER when it is VS Code's helper (browser.sh; browser.cmd on Windows),
-// and VSCODE_IPC_HOOK_CLI; "" for other terminals.
+// BROWSER when it is VS Code's helper, and VSCODE_IPC_HOOK_CLI; "" for
+// other terminals.
 func VSCodeBrowser(getenv func(string) string) (helper, ipc string) {
 	b, i := getenv("BROWSER"), getenv("VSCODE_IPC_HOOK_CLI")
-	h := filepath.ToSlash(b)
-	if i == "" || (!strings.HasSuffix(h, "/helpers/browser.sh") && !strings.HasSuffix(h, "/helpers/browser.cmd")) {
+	if i == "" || !strings.HasSuffix(b, "/helpers/browser.sh") {
 		return "", ""
 	}
 	return b, i
 }
 
-// execFunc is sysx.Exec; tests replace it.
-var execFunc = sysx.Exec
+// execFunc is syscall.Exec; tests replace it.
+var execFunc = syscall.Exec
 
 // ShellAgent is the name menus and commands use for a plain terminal.
 const ShellAgent = "shell"

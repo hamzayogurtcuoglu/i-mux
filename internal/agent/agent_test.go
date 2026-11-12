@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -80,66 +79,36 @@ func TestRegistry(t *testing.T) {
 // shell scripts, and macOS scans a new executable on its first run: about
 // 0.2 s when idle, but over 2 s when every package's tests run in parallel.
 // The probe logic is what these tests check, not machine speed.
-//
-// On Windows the fake agents are copies of this test binary (see
-// testutil.FakeMain); fakes holds what they do there.
 func TestMain(m *testing.M) {
-	testutil.FakeMain(fakes)
 	SetProbeTimeout(30 * time.Second)
 	os.Exit(m.Run())
 }
 
-// fakes are the Windows counterparts of the shell scripts below.
-var fakes = map[string]testutil.FakeFunc{
-	// "count-version" appends a line to the file data names, then prints
-	// a version for --version and fails otherwise.
-	"count-version": func(data string, args []string) int {
-		f, err := os.OpenFile(data, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
-		if err != nil {
-			return 2
-		}
-		_, _ = f.WriteString("x\n")
-		_ = f.Close()
-		if len(args) > 0 && args[0] == "--version" {
-			_, _ = os.Stdout.WriteString("1.0.110\n")
-			return 0
-		}
-		return 3
-	},
-	// "hang" prints a version only after 20 s.
-	"hang": func(string, []string) int {
-		time.Sleep(20 * time.Second)
-		_, _ = os.Stdout.WriteString("9.9.9\n")
-		return 0
-	},
-}
-
-// writeExe writes the shell script script at path (on Windows the fake
-// program fake with data at path.cmd) and returns the executable's path.
-func writeExe(t *testing.T, path, script, fake, data string) string {
+func writeExe(t *testing.T, path, script string) {
 	t.Helper()
-	return testutil.Script(t, path, script, fake, data)
+	testutil.WriteFile(t, path, []byte("#!/bin/sh\n"+script+"\n"))
+	if err := os.Chmod(path, 0o755); err != nil {
+		t.Fatal(err)
+	}
 }
-
-// pathList joins dirs as a PATH value.
-func pathList(dirs ...string) string { return strings.Join(dirs, string(os.PathListSeparator)) }
 
 func TestResolveSymlinkKeepsUnresolvedDir(t *testing.T) {
 	h := testutil.Isolate(t)
 	nvmBin := filepath.Join(h.Home, "nvm", "bin")
 	libDir := filepath.Join(h.Home, "nvm", "lib", "claude-code")
-	cli := writeExe(t, filepath.Join(libDir, "cli.js"), "echo 2.1.0 '(Claude Code)'", "print", "2.1.0 (Claude Code)\n")
+	writeExe(t, filepath.Join(libDir, "cli.js"), "echo 2.1.0 '(Claude Code)'")
 	if err := os.MkdirAll(nvmBin, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	link := testutil.FakeName(filepath.Join(nvmBin, "claude"))
-	testutil.Symlink(t, cli, link)
-	t.Setenv("PATH", pathList(nvmBin, "/usr/bin", "/bin"))
+	if err := os.Symlink(filepath.Join(libDir, "cli.js"), filepath.Join(nvmBin, "claude")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", nvmBin+":/usr/bin:/bin")
 	r := Resolve(config.Default(), session.Claude, nil)
-	if !r.Installed || r.Path != link {
+	if !r.Installed || r.Path != filepath.Join(nvmBin, "claude") {
 		t.Fatalf("%+v", r)
 	}
-	if !strings.HasPrefix(r.PathEnv, nvmBin+string(os.PathListSeparator)) {
+	if !strings.HasPrefix(r.PathEnv, nvmBin+":") {
 		t.Fatalf("PathEnv %q should start with the unresolved dir", r.PathEnv)
 	}
 	if v := ProbeVersion(r.Path, r.PathEnv); v != "2.1.0" {
@@ -151,8 +120,8 @@ func TestResolveConfigBinWins(t *testing.T) {
 	h := testutil.Isolate(t)
 	onPath := filepath.Join(h.Home, "bin", "agy")
 	custom := filepath.Join(h.Home, "custom", "my-agy")
-	onPath = writeExe(t, onPath, "true", "exit", "0")
-	custom = writeExe(t, custom, "true", "exit", "0")
+	writeExe(t, onPath, "true")
+	writeExe(t, custom, "true")
 	t.Setenv("PATH", filepath.Dir(onPath))
 	cfg := config.Default()
 	cfg.Agent("antigravity").Bin = custom
@@ -169,12 +138,12 @@ func TestResolveConfigBinWins(t *testing.T) {
 func TestResolveFromCache(t *testing.T) {
 	h := testutil.Isolate(t)
 	bin := filepath.Join(h.Home, "nvm", "bin", "codex")
-	bin = writeExe(t, bin, "echo codex-cli 0.38.0", "print", "codex-cli 0.38.0\n")
-	t.Setenv("PATH", pathList("/usr/bin", "/bin")) // server env without nvm
+	writeExe(t, bin, "echo codex-cli 0.38.0")
+	t.Setenv("PATH", "/usr/bin:/bin") // server env without nvm
 	st := &state.State{}
 	st.SetBin("codex", &state.Bin{Path: bin, PathEnv: "/nvm/bin:/usr/bin", Version: "0.38.0"})
 	r := Resolve(config.Default(), session.Codex, st)
-	if !r.Installed || !r.FromCache || r.Version != "0.38.0" || !strings.HasPrefix(r.PathEnv, filepath.Dir(bin)+string(os.PathListSeparator)) {
+	if !r.Installed || !r.FromCache || r.Version != "0.38.0" || !strings.HasPrefix(r.PathEnv, filepath.Dir(bin)+":") {
 		t.Fatalf("%+v", r)
 	}
 	if r := Resolve(config.Default(), session.Copilot, st); r.Installed {
@@ -186,8 +155,8 @@ func TestRefreshCache(t *testing.T) {
 	h := testutil.Isolate(t)
 	bin := filepath.Join(h.Home, "bin", "claude")
 	counter := filepath.Join(h.Home, "count")
-	writeExe(t, bin, `echo x >> "`+counter+`"; [ "$1" = "--version" ] && echo 1.0.110 || exit 3`, "count-version", counter)
-	t.Setenv("PATH", pathList(filepath.Dir(bin), "/usr/bin", "/bin"))
+	writeExe(t, bin, `echo x >> "`+counter+`"; [ "$1" = "--version" ] && echo 1.0.110 || exit 3`)
+	t.Setenv("PATH", filepath.Dir(bin)+":/usr/bin:/bin")
 	now := testutil.FrozenTime
 	res, err := RefreshCache(config.Default(), now)
 	if err != nil {
@@ -215,7 +184,7 @@ func TestProbeVersionTimesOutOnHangingBinary(t *testing.T) {
 	bin := filepath.Join(h.Home, "bin", "hang")
 	// The shell forks sleep, which inherits stdout; killing only the shell
 	// must not leave the probe waiting for the child to close the pipe.
-	bin = writeExe(t, bin, "sleep 20; echo 9.9.9", "hang", "")
+	writeExe(t, bin, "sleep 20; echo 9.9.9")
 	defer SetProbeTimeout(300 * time.Millisecond)()
 	start := time.Now()
 	if v := ProbeVersion(bin, "/usr/bin:/bin"); v != "" {
@@ -247,11 +216,7 @@ func TestInstallCommand(t *testing.T) {
 	if got := Install(cfg, session.Codex); got != "npm i -g @openai/codex" {
 		t.Errorf("codex: %q", got)
 	}
-	wantOpenCode := "curl -fsSL https://opencode.ai/install | bash"
-	if runtime.GOOS == "windows" {
-		wantOpenCode = "npm i -g opencode-ai"
-	}
-	if got := Install(cfg, session.OpenCode); got != wantOpenCode {
+	if got := Install(cfg, session.OpenCode); got != "curl -fsSL https://opencode.ai/install | bash" {
 		t.Errorf("opencode: %q", got)
 	}
 	cfg.Agents = map[string]*config.Agent{"codex": {Install: "brew install codex"}}

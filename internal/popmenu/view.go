@@ -3,11 +3,12 @@ package popmenu
 import (
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 const (
@@ -236,8 +237,8 @@ func Run(m *Menu, in, out *os.File) (int, error) {
 	_, _ = io.WriteString(out, "\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h")
 	defer func() { _, _ = io.WriteString(out, "\x1b[?1003l\x1b[?1000l\x1b[?1006l\x1b[?25h") }()
 	winch := make(chan os.Signal, 1)
-	sysx.Notify(winch, sysx.SIGWINCH)
-	defer sysx.Stop(winch)
+	signal.Notify(winch, syscall.SIGWINCH)
+	defer signal.Stop(winch)
 	v := NewView(m)
 	last := ""
 	draw := func() {

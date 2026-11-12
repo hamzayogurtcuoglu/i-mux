@@ -1,8 +1,7 @@
 // Package termfont tells whether the user's terminal draws Nerd Font icons
 // (ARCHITECTURE "Icons, Settings on the rail, updates"): some terminals
 // bring the symbols, others draw them only when their font is a Nerd Font.
-// On Windows, and under WSL where the terminal runs on Windows, Windows
-// Terminal's and VS Code's settings are read in the Windows user's folder.
+// Under WSL the terminal runs on Windows: its settings are read there.
 package termfont
 
 import (
@@ -11,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/jsonc"
@@ -41,13 +39,6 @@ var WSL = func() bool {
 	return strings.Contains(strings.ToLower(string(b)), "microsoft")
 }
 
-// Native reports native Windows (psmux), where the user folder holds
-// Windows Terminal's and VS Code's settings; tests replace it.
-var Native = func() bool { return runtime.GOOS == "windows" }
-
-// onWindows reports whether the terminal runs on Windows.
-func onWindows() bool { return Native() || WSL() }
-
 // winHomeRe finds a Windows user folder in a WSL path entry.
 var winHomeRe = regexp.MustCompile(`^(/mnt/[a-z]/Users/[^/]+)/`)
 
@@ -58,9 +49,6 @@ var winHomeRe = regexp.MustCompile(`^(/mnt/[a-z]/Users/[^/]+)/`)
 var WindowsHomes = func() []string {
 	if h := os.Getenv("IMUX_WINDOWS_HOME"); h != "" {
 		return []string{h}
-	}
-	if Native() {
-		return []string{Home()}
 	}
 	var out []string
 	seen := map[string]bool{}
@@ -105,10 +93,9 @@ func NerdFont(program string) bool {
 		return anyNerd(vscodeFonts())
 	case p == "windowsterminal":
 		return anyNerd(windowsTerminalFonts())
-	case p == "" && onWindows():
+	case p == "" && WSL():
 		// Started from the Start menu, Windows hands WSL to its default
-		// terminal and tells it nothing (no TERM_PROGRAM, no WT_SESSION);
-		// natively Windows Terminal sets no TERM_PROGRAM either.
+		// terminal and tells it nothing (no TERM_PROGRAM, no WT_SESSION).
 		return anyNerd(windowsTerminalFonts()) || anyNerd(vscodeFonts())
 	}
 	return false
@@ -126,7 +113,7 @@ func anyNerd(names []string) bool {
 // windowsTerminalFonts are the fonts of the Windows Terminals WSL sees ("" for
 // one that keeps its default, Cascadia Mono).
 func windowsTerminalFonts() []string {
-	if !onWindows() {
+	if !WSL() {
 		return nil
 	}
 	var out []string
@@ -180,13 +167,13 @@ func itermFont() string {
 }
 
 // vscodeFonts are VS Code's terminal fonts: macOS's and Linux's settings,
-// and on Windows or under WSL the Windows user's (VS Code runs there).
+// and under WSL the Windows user's (VS Code runs there).
 func vscodeFonts() []string {
 	dirs := []string{
 		filepath.Join(Home(), "Library", "Application Support", "Code", "User"),
 		filepath.Join(Home(), ".config", "Code", "User"),
 	}
-	if onWindows() {
+	if WSL() {
 		for _, home := range WindowsHomes() {
 			dirs = append(dirs, filepath.Join(home, "AppData", "Roaming", "Code", "User"))
 		}

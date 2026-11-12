@@ -1,7 +1,7 @@
 // Package fileops does what the explorer's menus ask (§9.3 "Explorer menus
-// and hover"): new files and folders, rename, the Trash (Windows' Recycle
-// Bin), copy / move with free names, the system clipboard for paths, and
-// revealing a file in the desktop's file manager.
+// and hover"): new files and folders, rename, the Trash, copy / move with
+// free names, the system clipboard for paths, and revealing a file in the
+// desktop's file manager.
 package fileops
 
 import (
@@ -17,12 +17,11 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/clipimage"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/winx"
 )
 
 // ErrExists is a name that is taken.
@@ -35,17 +34,15 @@ var ErrBadName = errors.New("not a valid name")
 var ErrIntoItself = errors.New("a folder cannot be pasted into itself")
 
 // cleanName checks a typed name: relative, inside the folder ("a/b.txt"
-// makes folder a), not empty. On Windows a name with a drive ("C:x") or a
-// leading slash (the drive's root) is not relative either.
+// makes folder a), not empty.
 func cleanName(name string) (string, error) {
-	sep := string(filepath.Separator)
 	name = strings.TrimSpace(name)
-	name = strings.TrimRight(name, "/"+sep)
-	if name == "" || filepath.IsAbs(name) || filepath.VolumeName(name) != "" || strings.HasPrefix(name, "/") || strings.HasPrefix(name, sep) {
+	name = strings.TrimRight(name, "/")
+	if name == "" || filepath.IsAbs(name) {
 		return "", ErrBadName
 	}
 	c := filepath.Clean(name)
-	if c == "." || c == ".." || strings.HasPrefix(c, ".."+sep) {
+	if c == "." || c == ".." || strings.HasPrefix(c, "../") {
 		return "", ErrBadName
 	}
 	return c, nil
@@ -152,7 +149,7 @@ func Paste(src, dir string, move bool) (string, error) {
 		if err == nil {
 			return to, nil
 		}
-		if !sysx.CrossDevice(err) {
+		if !errors.Is(err, syscall.EXDEV) {
 			return "", err
 		}
 		// Another disk: copy, then remove.
@@ -230,8 +227,6 @@ type System struct {
 	Exists func(string) bool
 	// WinHomes are the Windows user folders (WSL); nil = termfont's.
 	WinHomes func() []string
-	// Recycle moves a path to Windows' Recycle Bin; nil = the shell's.
-	Recycle func(path string) error
 }
 
 func (s *System) goos() string {
@@ -261,7 +256,7 @@ func (s *System) run(ctx context.Context, stdin, name string, args ...string) er
 	if s.Run != nil {
 		return s.Run(ctx, stdin, name, args...)
 	}
-	cmd := command(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdin = strings.NewReader(stdin)
 	// No pipes on stdout: xclip and wl-copy stay behind to serve the
 	// clipboard, and a pipe would keep Wait waiting.
@@ -273,7 +268,7 @@ func (s *System) output(ctx context.Context, name string, args ...string) ([]byt
 	if s.Output != nil {
 		return s.Output(ctx, name, args...)
 	}
-	return winx.Hidden(exec.CommandContext(ctx, name, args...)).Output()
+	return exec.CommandContext(ctx, name, args...).Output()
 }
 
 func (s *System) now() time.Time {
@@ -294,20 +289,17 @@ func (s *System) desktop() bool {
 }
 
 // CopyText puts text on the system clipboard. IMUX_COPY_COMMAND (an sh
-// command reading stdin; on Windows a PowerShell one) replaces it.
+// command reading stdin) replaces it.
 func (s *System) CopyText(ctx context.Context, text string) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	if c := s.env("IMUX_COPY_COMMAND"); c != "" {
-		if s.goos() == "windows" {
-			return s.run(ctx, text, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", c)
-		}
 		return s.run(ctx, text, "/bin/sh", "-c", c)
 	}
 	switch {
 	case s.goos() == "darwin":
 		return s.run(ctx, text, "pbcopy")
-	case (s.goos() == "windows" || s.wsl()) && s.look("powershell.exe"):
+	case s.wsl() && s.look("powershell.exe"):
 		// clip.exe reads the console code page; Set-Clipboard keeps any
 		// character. The text goes as UTF-8 bytes in base64.
 		ps := "Set-Clipboard -Value ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" +
@@ -329,7 +321,7 @@ func (s *System) Reveal() string {
 	switch {
 	case s.goos() == "darwin":
 		return "file.reveal_finder"
-	case s.goos() == "windows", s.wsl():
+	case s.wsl():
 		return "file.reveal_explorer"
 	case s.goos() == "linux" && s.desktop():
 		return "file.reveal_folder"
@@ -344,14 +336,6 @@ func (s *System) RevealFile(ctx context.Context, path string) error {
 	switch {
 	case s.goos() == "darwin":
 		return s.run(ctx, "", "open", "-R", path)
-	case s.goos() == "windows":
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return err
-		}
-		// explorer.exe exits 1 even when it worked.
-		_ = s.run(ctx, "", "explorer.exe", "/select,"+abs)
-		return nil
 	case s.wsl():
 		w, err := s.output(ctx, "wslpath", "-w", path)
 		if err != nil {
@@ -421,31 +405,16 @@ func (s *System) winDefault(ctx context.Context) string {
 	return ""
 }
 
-// winDirs are where Windows browsers are installed: Program Files, Program
-// Files (x86) and the user's AppData\Local; under WSL as /mnt/c paths.
-func (s *System) winDirs() []string {
+// winExe finds a Chromium browser's program on Windows (a WSL path).
+func (s *System) winExe(c chromium) string {
 	var dirs []string
-	if s.goos() == "windows" {
-		for _, k := range []string{"ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"} {
-			if d := s.env(k); d != "" {
-				dirs = append(dirs, d)
-			}
-		}
-		return dirs
-	}
 	for _, pf := range []string{"Program Files", "Program Files (x86)"} {
 		dirs = append(dirs, "/mnt/c/"+pf)
 	}
 	for _, h := range s.winHomes() {
 		dirs = append(dirs, filepath.Join(h, "AppData", "Local"))
 	}
-	return dirs
-}
-
-// winExe finds a Chromium browser's program on Windows (a WSL path under
-// WSL).
-func (s *System) winExe(c chromium) string {
-	for _, d := range s.winDirs() {
+	for _, d := range dirs {
 		if p := filepath.Join(d, filepath.FromSlash(c.win)); s.exists(p) {
 			return p
 		}
@@ -463,8 +432,8 @@ func (s *System) winHomes() []string {
 // OpenPage opens u in a browser and says which (its name, "" when the
 // system's default): in a window of its own when window (the app window of
 // Chrome, Edge, Brave, Vivaldi or Chromium: no tabs, no address bar), else
-// a tab of the default browser. On Windows, and under WSL, it is Windows'
-// browser: the default one when it is Chromium-based, else Edge. IMUX_BROWSE_COMMAND
+// a tab of the default browser. Under WSL it is Windows' browser: the
+// default one when it is Chromium-based, else Edge. IMUX_BROWSE_COMMAND
 // (sh, the URL in $1) replaces it (tests).
 func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -473,7 +442,7 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 		return "", s.run(ctx, "", "/bin/sh", "-c", c, "sh", u)
 	}
 	switch {
-	case s.wsl() || s.goos() == "windows":
+	case s.wsl():
 		progID := s.winDefault(ctx)
 		var def *chromium // the default browser, when Chromium-based
 		for i, c := range chromiums {
@@ -490,14 +459,8 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 				return c.name, s.start(exe, "--app="+u)
 			}
 		}
-		if s.goos() == "windows" {
-			if err := s.start("rundll32.exe", "url.dll,FileProtocolHandler", u); err != nil {
-				return "", err
-			}
-		} else {
-			// explorer.exe exits 1 even when it worked.
-			_ = s.run(ctx, "", "explorer.exe", u)
-		}
+		// explorer.exe exits 1 even when it worked.
+		_ = s.run(ctx, "", "explorer.exe", u)
 		if def != nil {
 			return def.name, nil
 		}
@@ -531,11 +494,10 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 }
 
 // Raise brings the window whose title starts with title to the front: on
-// Windows (natively or from WSL), in the background, as well as Windows
-// lets it.
+// Windows (from WSL), in the background, as well as Windows lets it.
 func (s *System) Raise(title string) {
 	title = strings.TrimSpace(title)
-	if title == "" || (!s.wsl() && s.goos() != "windows") {
+	if title == "" || !s.wsl() {
 		return
 	}
 	if r := []rune(title); len(r) > 120 {
@@ -559,8 +521,8 @@ func (s *System) start(name string, args ...string) error {
 	return nil
 }
 
-// Trash moves path to the Trash (on Windows the Recycle Bin). IMUX_TRASH_DIR
-// replaces the Trash (a plain folder; tests).
+// Trash moves path to the Trash. IMUX_TRASH_DIR replaces the Trash (a
+// plain folder; tests).
 func (s *System) Trash(ctx context.Context, path string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -573,12 +535,6 @@ func (s *System) Trash(ctx context.Context, path string) error {
 			return err
 		}
 		return os.Rename(path, filepath.Join(d, FreeName(d, filepath.Base(path), fi.IsDir())))
-	}
-	if s.goos() == "windows" {
-		if s.Recycle != nil {
-			return s.Recycle(path)
-		}
-		return recycle(path)
 	}
 	if s.goos() == "darwin" {
 		// NSFileManager's trash: the Finder's Put Back works.

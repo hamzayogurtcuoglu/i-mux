@@ -6,6 +6,16 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-11-12
+
+### Removed
+
+- **Native Windows.** The port on psmux that came in 0.49.0 is gone, with its `install.ps1` and the
+  Windows release archives. On Windows, run i-mux in WSL 2, as before 0.49: open a WSL terminal
+  and run the one-line `install.sh`. Nothing changes on macOS, Linux or WSL. A native install from
+  0.49 cannot update itself: delete `%LOCALAPPDATA%\Programs\imux`, remove that folder from your
+  user PATH, and `winget uninstall marlocarlo.psmux` if you installed psmux for i-mux.
+
 ## [0.49.1] - 2026-11-12
 
 ### Fixed

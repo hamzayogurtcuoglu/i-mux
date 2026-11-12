@@ -14,9 +14,7 @@ import (
 // A folder and refs a shell or tmux would read as commands.
 const evilDir = "/tmp/a b;#(touch x)$(y)"
 
-// evilBits are pieces of the data above that no command may hold (the
-// commands themselves have ";" and "&" on Windows, where PowerShell runs
-// them).
+// evilBits are pieces of the data above that no command may hold.
 var evilBits = []string{"a b;", "touch x", "$(y)", "#(x)"}
 
 func testCtx() Ctx {

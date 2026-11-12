@@ -70,19 +70,6 @@ func keepSidebars(w *workspace.WS, logger *log.Logger) {
 	}
 }
 
-// deadHandler is the watcher's stand-in for the pane-died hook where the
-// hook cannot name the dead pane (tmux.HookTargetsActive); nil elsewhere.
-func deadHandler(w *workspace.WS, logger *log.Logger) func(context.Context, string, int) {
-	if !tmux.HookTargetsActive {
-		return nil
-	}
-	return func(ctx context.Context, pane string, status int) {
-		if err := w.PaneDied(ctx, pane, status); err != nil {
-			logger.Printf("pane %s died: %v", pane, err)
-		}
-	}
-}
-
 // newTicker builds the watcher's per-tick work from the config.
 var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmux.Client, error) {
 	tc := tmux.New(paths.TmuxConf())
@@ -121,7 +108,6 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 			return keeper.Commands(panes)
 		},
 		OnTickFailed:  keeper.Forget,
-		OnDead:        deadHandler(w, logger),
 		WatchDetached: cfg.Notify.Enabled,
 		OnActivity: func(at time.Time, changed map[string]time.Time, asking map[string]bool) {
 			a := &bus.Activity{At: at.UnixMilli(), Changed: map[string]int64{}}

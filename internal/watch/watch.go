@@ -11,17 +11,18 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -37,17 +38,20 @@ func lockPid() (*os.File, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	ok, err := sysx.Lock(f, false)
-	if err != nil {
-		f.Close()
-		return nil, false, err
+	err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	if err == nil {
+		return f, true, nil
 	}
-	return f, ok, nil
+	if errors.Is(err, syscall.EWOULDBLOCK) {
+		return f, false, nil
+	}
+	f.Close()
+	return nil, false, err
 }
 
 func readPid(f *os.File) int {
 	b := make([]byte, 32)
-	n, _ := f.ReadAt(b, pidOffset)
+	n, _ := f.ReadAt(b, 0)
 	pid, _ := strconv.Atoi(strings.TrimSpace(string(b[:n])))
 	return pid
 }
@@ -70,7 +74,7 @@ func Status() (bool, int) {
 func Ensure(self string) error {
 	if running, pid := Status(); running {
 		if pid > 0 {
-			_ = sysx.Wake(pid)
+			_ = syscall.Kill(pid, syscall.SIGUSR1)
 		}
 		return nil
 	}
@@ -85,11 +89,13 @@ func start(self string) error {
 		return err
 	}
 	defer logf.Close()
-	return sysx.StartDetached(func() *exec.Cmd {
-		cmd := exec.Command(self, "__watch", "run")
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, logf
-		return cmd
-	})
+	cmd := exec.Command(self, "__watch", "run")
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, logf
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
 }
 
 // Stop sends SIGTERM to a running watcher and waits up to 2 s for it.
@@ -98,7 +104,7 @@ func Stop() bool {
 	if !running || pid <= 0 {
 		return false
 	}
-	_ = sysx.Signal(pid, sysx.SIGTERM)
+	_ = syscall.Kill(pid, syscall.SIGTERM)
 	for i := 0; i < 40; i++ {
 		if r, _ := Status(); !r {
 			return true
@@ -228,7 +234,7 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 	if err := f.Truncate(0); err != nil {
 		return err
 	}
-	if _, err := f.WriteAt([]byte(strconv.Itoa(os.Getpid())+"\n"), pidOffset); err != nil {
+	if _, err := f.WriteAt([]byte(strconv.Itoa(os.Getpid())+"\n"), 0); err != nil {
 		return err
 	}
 	runtime.GOMAXPROCS(1)
@@ -246,9 +252,9 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 		return err
 	}
 	wake := make(chan os.Signal, 1)
-	sysx.Notify(wake, sysx.SIGUSR1)
+	signal.Notify(wake, syscall.SIGUSR1)
 	stop := make(chan os.Signal, 1)
-	sysx.Notify(stop, sysx.SIGTERM, sysx.SIGINT, sysx.SIGHUP)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	logger.Printf("started (poll %v, idle %v)", poll, idle)
 	stamp := selfexec.Take()
 	cfgMod := config.ModTime(paths.Config())
@@ -260,11 +266,6 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 		// process's file; the new one takes it again).
 		logger.Printf("imux binary or config changed; restarting with it")
 		f.Close()
-		if !sysx.ExecKeepsLocks {
-			// Windows cannot replace the process: start the new
-			// watcher on its own and end this one.
-			return start(stamp.Path)
-		}
 		return stamp.Exec(os.Args)
 	}
 	return err

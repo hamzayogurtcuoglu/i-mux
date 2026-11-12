@@ -11,7 +11,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/bus"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 func init() {
@@ -57,7 +56,7 @@ func runSend(e *Env, args []string) error {
 		return err
 	}
 	res, err := b.Send(context.Background(), bus.SendReq{
-		From: tmux.EnvPane(), FromAgent: session.AgentID(os.Getenv("IMUX_AGENT")),
+		From: os.Getenv("TMUX_PANE"), FromAgent: session.AgentID(os.Getenv("IMUX_AGENT")),
 		Target: pos[0], Msg: msg, WaitIdle: *waitIdle, NoEnter: *noEnter, Timeout: time.Duration(*timeout) * time.Second,
 	})
 	if errors.Is(err, bus.ErrTimeout) {

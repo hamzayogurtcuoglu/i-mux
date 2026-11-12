@@ -154,7 +154,6 @@ func TestShowLoad(t *testing.T) {
 		t.Fatalf("files %q", files)
 	}
 	id := strings.TrimSuffix(filepath.Base(files[0]), ".pick.json")
-	// The commands as the platform's shell runs them (PowerShell on Windows).
 	want := []string{
 		"-L", "s", "-u", "display-popup", "-c", "/dev/pts/3", "-t", "%3", "-E", "-w", "48", "-h", "13", "-x", "C", "-y", "C",
 		tmux.ShJoin("/opt/imux", "__quickpick", id), ";",

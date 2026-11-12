@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -24,11 +23,10 @@ func cmdOf(m *Menu, key string) string {
 // noMicro makes micro missing and no editor chosen (D45).
 func noMicro(t *testing.T) {
 	t.Helper()
-	look, ours, git := editor.LookPath, editor.OurMicro, editor.GitTool
+	look, ours := editor.LookPath, editor.OurMicro
 	editor.LookPath = func(string) (string, error) { return "", errors.New("no") }
 	editor.OurMicro = func() string { return "" }
-	editor.GitTool = func(string) string { return "" } // Git for Windows' nano
-	t.Cleanup(func() { editor.LookPath, editor.OurMicro, editor.GitTool = look, ours, git })
+	t.Cleanup(func() { editor.LookPath, editor.OurMicro = look, ours })
 	t.Setenv("VISUAL", "")
 	t.Setenv("EDITOR", "")
 }
@@ -65,21 +63,12 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	// A tmux that lacks features says so on the row (tmux -V's reply); 3.4
 	// has them all (menus take the mouse on every tmux, D54).
-	olds := map[string]string{
+	for v, want := range map[string]string{
 		"tmux 3.2a": "⚠ Versions and updates… (tmux 3.2a is old)",
 		"tmux 3.3a": "⚠ Versions and updates… (tmux 3.3a is old)",
 		"tmux 3.4":  "Versions and updates…",
 		"tmux 3.5a": "Versions and updates…",
-	}
-	if runtime.GOOS == "windows" {
-		// psmux draws its menus itself: it is old only below tmux.MinVersion.
-		olds = map[string]string{
-			"tmux 3.5a": "Versions and updates…",
-			"tmux 3.2a": "Versions and updates…",
-			"tmux 3.4":  "Versions and updates…",
-		}
-	}
-	for v, want := range olds {
+	} {
 		f.replies[""] = v
 		for _, it := range w.SettingsMenu("%1", "c1").Items {
 			if it.Key == "c" && it.Name != want {
@@ -244,10 +233,7 @@ func TestWebPrompt(t *testing.T) {
 	i18n.SetLocale("en")
 	w, f, _ := testWS(t)
 	f.replies["show-options"] = "http://localhost:5173\n"
-	// Unescaped: under psmux the template is double-quoted (it holds the
-	// single-quoted PowerShell call), so its own quotes are \".
-	unq := func(c string) string { return strings.ReplaceAll(c, `\"`, `"`) }
-	if c := unq(w.WebPrompt("%1", "c1")); !strings.Contains(c, "set-option -g @imux_web_pane %1 ; set-option -g @imux_web_client c1 ; command-prompt -t c1 -I http://localhost:5173") ||
+	if c := w.WebPrompt("%1", "c1"); !strings.Contains(c, "set-option -g @imux_web_pane %1 ; set-option -g @imux_web_client c1 ; command-prompt -t c1 -I http://localhost:5173") ||
 		!strings.Contains(c, `set-option -g @imux_web_url "%%%"`) || !strings.Contains(c, "web open --from-option") {
 		t.Errorf("open a page: %s", c)
 	}

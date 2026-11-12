@@ -71,7 +71,7 @@ func (w *WS) PaneDied(ctx context.Context, pane string, status int) error {
 	// respawn-pane without a command would re-run the pane's original
 	// command (imux __exec with a consumed spec): start the login shell.
 	_, err = w.T.Run(ctx,
-		append(tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD}, tmux.LoginShell(w.loginShell(ctx))...),
+		tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD, w.loginShell(ctx), "-l"},
 		tmux.Cmd{"set-option", "-p", "-t", p.ID, "remain-on-exit", "off"},
 		tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, OptAgent},
 		tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, OptStart},
@@ -137,7 +137,7 @@ func (w *WS) loginShell(ctx context.Context) string {
 	if sh := os.Getenv("SHELL"); sh != "" {
 		return sh
 	}
-	return tmux.FallbackShell()
+	return "/bin/sh"
 }
 
 // SetFallback stores spec as pane's fallback (used by the resume path).

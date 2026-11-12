@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 )
 
 // Str formats s as a TOML string value.
@@ -63,7 +61,7 @@ func Set(path, section, key, value string) error {
 	if _, _, err := Load(tmp.Name()); err != nil {
 		return err
 	}
-	return paths.Rename(tmp.Name(), path)
+	return os.Rename(tmp.Name(), path)
 }
 
 var headerRe = regexp.MustCompile(`^\s*\[([A-Za-z0-9_.\-]+)\]\s*(#.*)?$`)

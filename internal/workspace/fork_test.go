@@ -22,7 +22,7 @@ func TestPostResumeDiscovery(t *testing.T) {
 	dir := filepath.Join(h.Claude, "projects", claude.EncodeCWD(h.Project))
 	write := func(id string, mtime time.Time) string {
 		p := filepath.Join(dir, id+".jsonl")
-		testutil.WriteFile(t, p, []byte(`{"type":"user","sessionId":"`+id+`","cwd":"`+jsonPath(h.Project)+`","timestamp":"2026-11-05T10:00:00Z","uuid":"u","message":{"role":"user","content":"x"}}`+"\n"))
+		testutil.WriteFile(t, p, []byte(`{"type":"user","sessionId":"`+id+`","cwd":"`+h.Project+`","timestamp":"2026-11-05T10:00:00Z","uuid":"u","message":{"role":"user","content":"x"}}`+"\n"))
 		testutil.Touch(t, p, mtime)
 		return p
 	}

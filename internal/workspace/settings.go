@@ -73,7 +73,7 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	// Versions and updates: i-mux, tmux, the agents; a tmux that lacks
 	// features says so here.
 	vers := MenuItem{Name: i18n.T("settings.versions"), Key: "c", Cmd: w.popupCmd("90%", "80%", "versions", "--popup")}
-	if v, err := w.TmuxVersion(context.Background()); err == nil && versions.Outdated(v) {
+	if v, err := w.TmuxVersion(context.Background()); err == nil && !v.AtLeast(versions.TmuxWants[0], versions.TmuxWants[1]) {
 		vers.Name = i18n.T("settings.versions_old", v.String())
 	}
 	m.Items = append(m.Items, row, vers, Separator(),

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -115,12 +114,7 @@ func TestRender(t *testing.T) {
 	}
 	text := esc.ReplaceAllString(strings.Join(m.Render(80, 12), "\n"), "")
 	t.Logf("\n%s", text)
-	// Paths show with the OS's separator; Windows calls the computer a PC.
-	header := "ON THIS MAC"
-	if runtime.GOOS == "windows" {
-		header = "ON THIS PC"
-	}
-	for _, want := range []string{"Open a project", "> ▏", "RECENT", "▸ " + filepath.FromSlash("~/code/blog"), "recent", header, filepath.FromSlash("~/code/acme-api"), "git", "Esc cancel"} {
+	for _, want := range []string{"Open a project", "> ▏", "RECENT", "▸ ~/code/blog", "recent", "ON THIS MAC", "~/code/acme-api", "git", "Esc cancel"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("lacks %q", want)
 		}
@@ -133,7 +127,7 @@ func TestRender(t *testing.T) {
 	// The selection scrolls into view.
 	m.Query, m.Scanning = "", false
 	m.Sel = 5 // two section headers come before it
-	if text := esc.ReplaceAllString(strings.Join(m.Render(80, 6), "\n"), ""); !strings.Contains(text, "▸ "+filepath.FromSlash("~/Masaüstü/notlar")) {
+	if text := esc.ReplaceAllString(strings.Join(m.Render(80, 6), "\n"), ""); !strings.Contains(text, "▸ ~/Masaüstü/notlar") {
 		t.Errorf("scroll:\n%s", text)
 	}
 }
@@ -209,7 +203,7 @@ func TestHere(t *testing.T) {
 		t.Errorf("this folder listed %d times", n)
 	}
 	text := esc.ReplaceAllString(strings.Join(m.Render(80, 14), "\n"), "")
-	if !strings.Contains(text, filepath.FromSlash("~/code/blog")) || !strings.Contains(text, "this folder") {
+	if !strings.Contains(text, "~/code/blog") || !strings.Contains(text, "this folder") {
 		t.Errorf("render:\n%s", text)
 	}
 	m.Key("down")

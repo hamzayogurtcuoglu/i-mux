@@ -37,13 +37,9 @@ func TestMain(m *testing.M) {
 func TestConcurrentWritersLoseNothing(t *testing.T) {
 	t.Setenv("IMUX_HOME", t.TempDir())
 	const procs, n = 2, 60
-	self, err := os.Executable() // os.Args[0] may be a bare name
-	if err != nil {
-		t.Fatal(err)
-	}
 	var cmds []*exec.Cmd
 	for p := 0; p < procs; p++ {
-		cmd := exec.Command(self, "-test.run=^$")
+		cmd := exec.Command(os.Args[0], "-test.run=^$")
 		cmd.Env = append(os.Environ(), helperEnv+"="+strconv.Itoa(p), "IMUX_STATE_TEST_N="+strconv.Itoa(n))
 		cmd.Stderr = os.Stderr
 		if err := cmd.Start(); err != nil {

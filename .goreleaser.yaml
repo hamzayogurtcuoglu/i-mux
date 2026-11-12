@@ -10,8 +10,7 @@ builds:
     binary: imux
     env:
       - CGO_ENABLED=0
-    # windows: native, on psmux (install.ps1; docs/WINDOWS.md).
-    goos: [darwin, linux, windows]
+    goos: [darwin, linux]
     goarch: [amd64, arm64]
     flags:
       - -trimpath
@@ -25,10 +24,6 @@ builds:
 archives:
   - id: imux
     formats: [tar.gz]
-    # Windows gets a zip (Expand-Archive in install.ps1): imux_X.Y.Z_windows_amd64.zip
-    format_overrides:
-      - goos: windows
-        formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
@@ -54,12 +49,10 @@ release:
     name: i-mux
   draft: false
   prerelease: auto
-  # The installers are attached to every release too, so this also works:
+  # The installer is attached to every release too, so this also works:
   #   curl -fsSL https://github.com/hamzayogurtcuoglu/i-mux/releases/latest/download/install.sh | sh
-  # `imux update` on Windows runs the release's install.ps1.
   extra_files:
     - glob: ./install.sh
-    - glob: ./install.ps1
 
 # Homebrew formula in hamzayogurtcuoglu/homebrew-tap:
 #   brew install hamzayogurtcuoglu/tap/imux

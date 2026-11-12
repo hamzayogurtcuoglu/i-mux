@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -24,11 +23,10 @@ func TestIsNerdName(t *testing.T) {
 
 func TestNerdFont(t *testing.T) {
 	home := t.TempDir()
-	oldHome, oldRun, oldWSL, oldNative := Home, Run, WSL, Native
-	defer func() { Home, Run, WSL, Native = oldHome, oldRun, oldWSL, oldNative }()
+	oldHome, oldRun, oldWSL := Home, Run, WSL
+	defer func() { Home, Run, WSL = oldHome, oldRun, oldWSL }()
 	Home = func() string { return home }
 	WSL = func() bool { return false }
-	Native = func() bool { return false }
 	font := "SFMono-Regular"
 	Run = func(name string, args ...string) ([]byte, error) {
 		a := strings.Join(args, " ")
@@ -76,11 +74,10 @@ func TestNerdFont(t *testing.T) {
 // does.
 func TestNerdFontWSL(t *testing.T) {
 	win := filepath.Join(t.TempDir(), "Users", "me")
-	oldHome, oldWSL, oldHomes, oldNative := Home, WSL, WindowsHomes, Native
-	defer func() { Home, WSL, WindowsHomes, Native = oldHome, oldWSL, oldHomes, oldNative }()
+	oldHome, oldWSL, oldHomes := Home, WSL, WindowsHomes
+	defer func() { Home, WSL, WindowsHomes = oldHome, oldWSL, oldHomes }()
 	Home = func() string { return t.TempDir() }
 	WSL = func() bool { return true }
-	Native = func() bool { return false }
 	WindowsHomes = func() []string { return []string{win} }
 	write := func(rel, body string) {
 		t.Helper()
@@ -114,38 +111,7 @@ func TestNerdFontWSL(t *testing.T) {
 	}
 }
 
-// TestNerdFontNative: on Windows itself the user folder holds Windows
-// Terminal's and VS Code's settings; Windows Terminal sets no TERM_PROGRAM.
-func TestNerdFontNative(t *testing.T) {
-	home := t.TempDir()
-	oldHome, oldWSL, oldNative := Home, WSL, Native
-	defer func() { Home, WSL, Native = oldHome, oldWSL, oldNative }()
-	Home = func() string { return home }
-	WSL = func() bool { return false }
-	Native = func() bool { return true }
-	t.Setenv("IMUX_WINDOWS_HOME", "")
-	if got := WindowsHomes(); len(got) != 1 || got[0] != home {
-		t.Fatalf("homes %q", got)
-	}
-	if NerdFont("") {
-		t.Fatal("no settings: no icons")
-	}
-	wt := filepath.Join(home, "AppData", "Local", "Microsoft", "Windows Terminal", "settings.json")
-	if err := os.MkdirAll(filepath.Dir(wt), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(wt, []byte(`{"profiles": {"defaults": {"font": {"face": "JetBrainsMono NF"}}}}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if !NerdFont("") || !NerdFont("WindowsTerminal") {
-		t.Fatal("Windows Terminal with a Nerd Font")
-	}
-}
-
 func TestWindowsHomes(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("WSL's PATH is ':'-separated; Go on Windows splits PATH at ';'")
-	}
 	t.Setenv("PATH", "/usr/bin:/mnt/c/Users/hamza.y/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/hamza.y/.dotnet/tools:/mnt/c/WINDOWS")
 	if got := WindowsHomes(); len(got) != 1 || got[0] != "/mnt/c/Users/hamza.y" {
 		t.Fatalf("%q", got)

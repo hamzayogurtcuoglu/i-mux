@@ -25,8 +25,8 @@ func paneRow(p *Pane) string {
 func TestSwitchResumesWithDelta(t *testing.T) {
 	w, f, h := testWS(t)
 	w.SetBins(map[session.AgentID]agent.Resolved{
-		"claude": {Agent: "claude", Installed: true, Path: optClaude, PathEnv: "/opt/bin"},
-		"codex":  {Agent: "codex", Installed: true, Path: optCodex, PathEnv: "/opt/bin"},
+		"claude": {Agent: "claude", Installed: true, Path: "/opt/bin/claude", PathEnv: "/opt/bin"},
+		"codex":  {Agent: "codex", Installed: true, Path: "/opt/bin/codex", PathEnv: "/opt/bin"},
 	})
 	tr, _ := multiHop(t, h)
 	p := &Pane{ID: "%1", Agent: "codex", CWD: h.Project, Trail: tr}

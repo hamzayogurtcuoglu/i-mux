@@ -6,16 +6,15 @@ package picker
 import (
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"time"
+	"syscall"
 	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 const (
@@ -83,7 +82,7 @@ func (m *Model) List() []folders.Cand {
 		out = append(out, recent...)
 	}
 	if len(git) > 0 {
-		out = append(out, folders.Cand{Kind: folders.KindHeader, Label: i18n.T(thisComputer())})
+		out = append(out, folders.Cand{Kind: folders.KindHeader, Label: i18n.T("folders.on_this_mac")})
 		out = append(out, git...)
 	}
 	return out
@@ -272,10 +271,6 @@ type Options struct {
 	Here    string // the folder imux started in: a row after Restore (D49)
 }
 
-// inputPoll is how long Run waits for a key before it checks whether it
-// is done.
-const inputPoll = 50 * time.Millisecond
-
 // Run shows the picker until a row is chosen (ok false = cancelled).
 func Run(o Options) (folders.Cand, bool, error) {
 	restore, err := sidebar.RawMode(int(o.In.Fd()))
@@ -290,7 +285,7 @@ func Run(o Options) (folders.Cand, bool, error) {
 		if p == o.Home {
 			return "~"
 		}
-		if strings.HasPrefix(p, o.Home+string(filepath.Separator)) {
+		if strings.HasPrefix(p, o.Home+"/") {
 			return "~" + p[len(o.Home):]
 		}
 		return p
@@ -309,33 +304,21 @@ func Run(o Options) (folders.Cand, bool, error) {
 		_, _ = io.WriteString(o.Out, b.String())
 	}
 	winch := make(chan os.Signal, 1)
-	sysx.Notify(winch, sysx.SIGWINCH)
-	defer sysx.Stop(winch)
-	// The reader stops, and Run waits for it, before Run returns: a read
-	// left waiting would take the keys meant for what imux starts next (on
-	// Windows tmux attach runs as imux's child, on the same console).
-	input, stop, done := make(chan []byte, 8), make(chan struct{}), make(chan struct{})
-	defer func() { close(stop); <-done }()
+	signal.Notify(winch, syscall.SIGWINCH)
+	defer signal.Stop(winch)
+	input := make(chan []byte, 8)
 	go func() {
-		defer close(done)
-		defer close(input)
-		fd := int(o.In.Fd())
+		buf := make([]byte, 1024)
 		for {
-			select {
-			case <-stop:
-				return
-			default:
+			n, err := o.In.Read(buf)
+			if n > 0 {
+				b := make([]byte, n)
+				copy(b, buf[:n])
+				input <- b
 			}
-			b, err := sidebar.ReadInput(fd, inputPoll)
 			if err != nil {
+				close(input)
 				return
-			}
-			if len(b) > 0 {
-				select {
-				case input <- b:
-				case <-stop:
-					return
-				}
 			}
 		}
 	}()
@@ -388,13 +371,4 @@ func Run(o Options) (folders.Cand, bool, error) {
 		}
 		draw()
 	}
-}
-
-// thisComputer is the i18n key of the header over the folders found on the
-// computer.
-func thisComputer() string {
-	if runtime.GOOS == "windows" {
-		return "folders.on_this_pc"
-	}
-	return "folders.on_this_mac"
 }

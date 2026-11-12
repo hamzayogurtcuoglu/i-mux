@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 func init() {
@@ -33,7 +33,7 @@ func runRead(e *Env, args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	p, err := b.Resolve(ctx, pos[0], tmux.EnvPane())
+	p, err := b.Resolve(ctx, pos[0], os.Getenv("TMUX_PANE"))
 	if err != nil {
 		return err
 	}

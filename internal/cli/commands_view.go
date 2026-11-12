@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -44,12 +43,6 @@ func init() {
 		Args:   "[--line N] <path>",
 		Hidden: true,
 		Run:    runView,
-	})
-	register(&command{
-		Name:   "__page",
-		Args:   "<imux command...>",
-		Hidden: true,
-		Run:    runPage,
 	})
 }
 
@@ -269,16 +262,4 @@ func page(e *Env, header, lines []string, top int) error {
 		return nil
 	}
 	return pager.Run(&pager.Pager{Header: header, Lines: lines, Top: top}, os.Stdin, os.Stdout)
-}
-
-// runPage runs an imux command and shows what it prints, its errors too, in
-// i-mux's pager: a popup's `imux ... 2>&1 | less` where the shell's pipe
-// would not keep UTF-8 (PowerShell's re-encodes it).
-func runPage(e *Env, args []string) error {
-	if len(args) == 0 {
-		return &UsageError{Msg: i18n.T("cli.usage", "__page <imux command...>")}
-	}
-	var out bytes.Buffer
-	Run(&Env{Stdin: e.Stdin, Stdout: &out, Stderr: &out}, args)
-	return page(e, nil, pager.Text(out.String()), 0)
 }

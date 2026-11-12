@@ -2,6 +2,7 @@ package opencode
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 // A synthetic export in the shape OpenCode 2.2.6 writes (§7.7).
@@ -94,7 +94,10 @@ insert into session_message values ('m1', 'ses_b', 'user', 1, '{"text":"first as
 	if out, err := exec.Command(sq, db, sql).CombinedOutput(); err != nil {
 		t.Fatalf("sqlite3: %v %s", err, out)
 	}
-	fake := testutil.Script(t, filepath.Join(home, "opencode"), "cat <<'X'\n"+exportJSON+"\nX", "print", exportJSON+"\n")
+	fake := filepath.Join(home, "opencode")
+	if err := os.WriteFile(fake, []byte("#!/bin/sh\ncat <<'X'\n"+exportJSON+"\nX\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	p := &Provider{Env: session.Env{OpenCodeHome: home, OpenCodeBin: fake}}
 	ctx := context.Background()
 	refs, err := p.Find(ctx, session.Query{CWD: "/home/u/proj"})

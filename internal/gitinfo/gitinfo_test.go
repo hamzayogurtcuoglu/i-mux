@@ -9,8 +9,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func git(t *testing.T, dir string, args ...string) {
@@ -93,7 +91,10 @@ func TestNoGit(t *testing.T) {
 
 func TestTimeout(t *testing.T) {
 	dir := t.TempDir()
-	slow := testutil.Script(t, filepath.Join(dir, "slowgit"), "sleep 5", "sleep", "5s")
+	slow := filepath.Join(dir, "slowgit")
+	if err := os.WriteFile(slow, []byte("#!/bin/sh\nsleep 5\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	oldBin, oldT := GitBinary, Timeout
 	GitBinary, Timeout = slow, 100*time.Millisecond
 	defer func() { GitBinary, Timeout = oldBin, oldT }()

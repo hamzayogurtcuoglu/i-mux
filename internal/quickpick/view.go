@@ -3,14 +3,15 @@ package quickpick
 import (
 	"io"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gotofile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 const (
@@ -325,8 +326,8 @@ func Run(p *Pick, in, out *os.File) (int, string, error) {
 	_, _ = io.WriteString(out, "\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h\x1b[?2004h")
 	defer func() { _, _ = io.WriteString(out, "\x1b[?2004l\x1b[?1003l\x1b[?1000l\x1b[?1006l\x1b[?25h") }()
 	winch := make(chan os.Signal, 1)
-	sysx.Notify(winch, sysx.SIGWINCH)
-	defer sysx.Stop(winch)
+	signal.Notify(winch, syscall.SIGWINCH)
+	defer signal.Stop(winch)
 	m := New(p)
 	last := ""
 	draw := func() {

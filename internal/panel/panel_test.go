@@ -52,7 +52,7 @@ func copilotSession(t *testing.T, h *testutil.Homes, id string, mtime time.Time,
 	t.Helper()
 	dir := filepath.Join(h.Copilot, "session-state", id)
 	testutil.WriteFile(t, filepath.Join(dir, "workspace.yaml"), []byte("id: "+id+"\ncwd: "+h.Project+"\n"))
-	body := `{"type":"session.start","id":"e0","timestamp":"2026-11-05T08:00:00.000Z","data":{"context":{"cwd":` + jsonStr(h.Project) + `}}}` + "\n"
+	body := `{"type":"session.start","id":"e0","timestamp":"2026-11-05T08:00:00.000Z","data":{"context":{"cwd":"` + h.Project + `"}}}` + "\n"
 	for i, v := range totals {
 		typ := "session.usage_checkpoint"
 		if i == len(totals)-1 {
@@ -85,7 +85,7 @@ func TestCodexLimits(t *testing.T) {
 	f := sources.New(config.Default())
 	write := func(id, extra string, mtime time.Time) {
 		p := filepath.Join(h.Codex, "sessions", "2026", "11", "05", "rollout-2026-11-05T08-00-00-"+id+".jsonl")
-		testutil.WriteFile(t, p, []byte(`{"timestamp":"2026-11-05T08:00:00.000Z","type":"session_meta","payload":{"id":"`+id+`","cwd":`+jsonStr(h.Project)+`}}`+"\n"+extra))
+		testutil.WriteFile(t, p, []byte(`{"timestamp":"2026-11-05T08:00:00.000Z","type":"session_meta","payload":{"id":"`+id+`","cwd":"`+h.Project+`"}}`+"\n"+extra))
 		testutil.Touch(t, p, mtime)
 	}
 	write("cccccccc-0000-4000-8000-000000000001", "", testutil.FrozenTime)
@@ -210,10 +210,4 @@ func TestCopilotQuota(t *testing.T) {
 	if q == nil || q.Used != 3 {
 		t.Fatalf("newest %+v", q)
 	}
-}
-
-// jsonStr is s as a JSON string (a Windows path's backslashes escaped).
-func jsonStr(s string) string {
-	b, _ := json.Marshal(s)
-	return string(b)
 }

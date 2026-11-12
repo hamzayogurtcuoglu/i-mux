@@ -3,9 +3,7 @@ package cli
 import (
 	"bytes"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -25,7 +23,7 @@ func TestStatusline(t *testing.T) {
 	old := StatuslineTimeout
 	StatuslineTimeout = 30 * time.Second
 	t.Cleanup(func() { StatuslineTimeout = old })
-	in := `{"workspace":{"current_dir":"` + jsonPath(h.Project) + `"},"rate_limits":{"five_hour":{"used_percentage":72.4,"resets_at":1999999999},"seven_day":{"used_percentage":18}}}`
+	in := `{"workspace":{"current_dir":"` + h.Project + `"},"rate_limits":{"five_hour":{"used_percentage":72.4,"resets_at":1999999999},"seven_day":{"used_percentage":18}}}`
 	run := func() string {
 		var o, e bytes.Buffer
 		if code := Run(&Env{Stdin: strings.NewReader(in), Stdout: &o, Stderr: &e}, []string{"__statusline", "claude"}); code != ExitOK {
@@ -40,16 +38,11 @@ func TestStatusline(t *testing.T) {
 	if u == nil || u.FiveHour.UsedPercent != 72.4 || u.Weekly.UsedPercent != 18 {
 		t.Fatalf("saved %+v", u)
 	}
-	// The user's status line gets the same input. It is a command for sh,
-	// which Windows has only with Git for Windows' bin on PATH; there the
-	// script is named with forward slashes, as sh wants it.
-	if _, err := exec.LookPath("sh"); err != nil && runtime.GOOS == "windows" {
-		t.Skip("no sh on PATH: status line commands run with sh")
-	}
+	// The user's status line gets the same input.
 	script := filepath.Join(h.Home, "line.sh")
 	testutil.WriteFile(t, script, []byte("#!/bin/sh\nprintf 'mine:'; head -c 13\n"))
 	_ = os.Chmod(script, 0o755)
-	testutil.WriteFile(t, filepath.Join(h.Home, ".claude", "settings.json"), []byte(`{"statusLine":{"type":"command","command":"`+filepath.ToSlash(script)+`"}}`))
+	testutil.WriteFile(t, filepath.Join(h.Home, ".claude", "settings.json"), []byte(`{"statusLine":{"type":"command","command":"`+script+`"}}`))
 	if out := run(); out != `mine:{"workspace":` {
 		t.Fatalf("user line %q", out)
 	}

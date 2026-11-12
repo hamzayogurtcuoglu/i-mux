@@ -11,16 +11,17 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // liveJS reloads the page when the server says so: "reload" after a file
@@ -431,20 +432,8 @@ func Serve(ctx context.Context, root string) error {
 			_ = os.Remove(rec)
 		}
 	}()
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	defer cancel()
-	// Stop's SIGTERM, and the console's; on Windows sysx turns them into
-	// events.
-	sigs := make(chan os.Signal, 1)
-	sysx.Notify(sigs, sysx.Std()...)
-	defer sysx.Stop(sigs)
-	go func() {
-		select {
-		case <-sigs:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
 	srv := &http.Server{Handler: s, ReadHeaderTimeout: 10 * time.Second}
 	go s.loop(ctx, cancel)
 	go func() {

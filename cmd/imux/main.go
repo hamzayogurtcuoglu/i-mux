@@ -6,12 +6,8 @@ import (
 	"os"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/cli"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/pwshshim"
 )
 
 func main() {
-	if code, ok := pwshshim.Run(os.Args); ok {
-		os.Exit(code)
-	}
 	os.Exit(cli.Main(os.Args))
 }

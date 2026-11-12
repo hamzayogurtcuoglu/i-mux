@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -17,7 +19,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/search"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 const (
@@ -456,8 +457,8 @@ func Run(o Options) (*search.Match, error) {
 		_, _ = io.WriteString(o.Out, b.String())
 	}
 	winch := make(chan os.Signal, 1)
-	sysx.Notify(winch, sysx.SIGWINCH)
-	defer sysx.Stop(winch)
+	signal.Notify(winch, syscall.SIGWINCH)
+	defer signal.Stop(winch)
 	// No reader goroutine: one left waiting after the popup hands the
 	// terminal to the editor would swallow the editor's first key.
 	fd := int(o.In.Fd())

@@ -10,7 +10,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -34,7 +33,7 @@ func targetPane(flagVal string) (string, error) {
 	if flagVal != "" {
 		return flagVal, nil
 	}
-	if p := tmux.EnvPane(); p != "" {
+	if p := os.Getenv("TMUX_PANE"); p != "" {
 		return p, nil
 	}
 	return "", &UsageError{Msg: i18n.T("cli.no_pane")}

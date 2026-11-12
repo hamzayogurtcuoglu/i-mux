@@ -60,12 +60,6 @@ type Detector struct {
 	OnTick func(ctx context.Context, panes []PaneRow, clients []Client) []tmux.Cmd
 	// OnTickFailed runs when the exec carrying OnTick's commands failed.
 	OnTickFailed func()
-	// OnDead, when set, runs once for each agent pane found dead (its exit
-	// status, -1 when unknown): where the pane-died hook cannot name the
-	// pane that died (psmux expands it as the active pane), the watcher
-	// does what the hook would.
-	OnDead   func(ctx context.Context, pane string, status int)
-	deadSeen map[string]bool
 	// OnActivity receives, after each attached tick, when each agent pane's
 	// screen last changed (the bus uses it for idle/busy) and which screens
 	// ask the user something (Asking).
@@ -108,29 +102,6 @@ const (
 // shell, close or fallback) never runs. Any child exit makes tmux reap them
 // all, so a run-shell job that exits at once is enough.
 var reapNudge = tmux.Cmd{"run-shell", "-b", "true"}
-
-// reportDead calls OnDead for agent panes that died since the last tick.
-func (d *Detector) reportDead(ctx context.Context, rows [][]string) {
-	if d.deadSeen == nil {
-		d.deadSeen = map[string]bool{}
-	}
-	next := map[string]bool{}
-	for _, r := range rows {
-		if r[3] != "1" || r[1] == "" {
-			continue
-		}
-		next[r[0]] = true
-		if d.deadSeen[r[0]] {
-			continue
-		}
-		status, err := strconv.Atoi(r[6])
-		if err != nil {
-			status = -1
-		}
-		d.OnDead(ctx, r[0], status)
-	}
-	d.deadSeen = next
-}
 
 // maxNudges bounds the nudges sent for one dead pane.
 const maxNudges = 3
@@ -182,9 +153,6 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	}
 	d.nudges = nudges
 	d.prune(panes)
-	if d.OnDead != nil {
-		d.reportDead(ctx, tmux.Rows(sec["panes"], 7))
-	}
 	var extra []tmux.Cmd
 	if d.OnTick != nil {
 		extra = d.OnTick(ctx, panes, clients)

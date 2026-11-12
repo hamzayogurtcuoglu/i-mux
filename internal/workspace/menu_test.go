@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"context"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -32,12 +31,6 @@ func TestPaneMenuDisplayMenuArgs(t *testing.T) {
 	}
 	got := strings.Join(args, "\x00")
 	until := reset.Local().Format("15:04")
-	// The preview pipes the document to less; on Windows imux __page runs
-	// the command and pages its output itself.
-	previewItem := "Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/imux/bin/imux handoff --pane %3 --print 2>&1 | LESSCHARSET=utf-8 less -R'"
-	if runtime.GOOS == "windows" {
-		previewItem = "Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/imux/bin/imux __page handoff --pane %3 --print'"
-	}
 	wantSeq := []string{
 		"-c\x00/dev/pts/4\x00-t\x00%3\x00-T\x00i-mux · Claude\x00-x\x00C\x00-y\x00C",
 		"Switch to Antigravity (with context) (limited until " + until + ")\x00a\x00run-shell -b '/opt/imux/bin/imux switch antigravity --pane %3 --client /dev/pts/4 >/dev/null 2>&1 || true'",
@@ -46,13 +39,12 @@ func TestPaneMenuDisplayMenuArgs(t *testing.T) {
 		"Sessions…\x00s\x00run-shell -b '/opt/imux/bin/imux __menu --sessions --pane %3 --client /dev/pts/4",
 		"New pane → Claude\x00C\x00run-shell -b '/opt/imux/bin/imux split claude -h --pane %3",
 		"New pane → Antigravity\x00A\x00",
-		previewItem,
+		"Preview handoff\x00v\x00display-popup -E -w 90% -h 90% -d /home/test/proj '/opt/imux/bin/imux handoff --pane %3 --print 2>&1 | LESSCHARSET=utf-8 less -R'",
 		"Limits\x00l\x00display-popup -E -w 80% -h 60% '/opt/imux/bin/imux limits --pager'",
 		"Close pane\x00k\x00kill-pane -t %3",
 	}
 	pos := 0
 	for _, w := range wantSeq {
-		w = plat(w)
 		i := strings.Index(got[pos:], w)
 		if i < 0 {
 			t.Fatalf("display-menu args lack (in order) %q\nargs: %q", w, args)

@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 )
 
 // Window is one usage window.
@@ -106,7 +104,7 @@ func Save(path string, s *Snapshot) error {
 	if err := os.WriteFile(tmp, b, 0o600); err != nil {
 		return err
 	}
-	return paths.Rename(tmp, path)
+	return os.Rename(tmp, path)
 }
 
 // Load reads a snapshot (nil when missing).

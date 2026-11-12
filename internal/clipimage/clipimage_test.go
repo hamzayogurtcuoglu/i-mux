@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -66,8 +65,7 @@ func TestX11AndWayland(t *testing.T) {
 		if b, _ := os.ReadFile(got[0]); string(b) != string(png) {
 			t.Fatalf("%s: content", c.tool)
 		}
-		// Windows has no Unix modes (the profile folder is private).
-		if fi, _ := os.Stat(got[0]); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
+		if fi, _ := os.Stat(got[0]); fi.Mode().Perm() != 0o600 {
 			t.Fatalf("%s: mode %v", c.tool, fi.Mode().Perm())
 		}
 	}
@@ -84,9 +82,7 @@ func TestX11AndWayland(t *testing.T) {
 		}
 		return []byte("file://" + strings.ReplaceAll(a, " ", "%20") + "\r\nfile://" + b + "\n"), nil
 	})
-	// A file URI names a Unix path (file:///home/...); a Windows temp folder
-	// (C:\...) makes none.
-	if got, err := r.Read(ctx); runtime.GOOS != "windows" && (err != nil || len(got) != 1 || got[0] != a) {
+	if got, err := r.Read(ctx); err != nil || len(got) != 1 || got[0] != a {
 		t.Fatalf("uri list: %v %v", got, err)
 	}
 	r = reader(t, "linux", map[string]string{"DISPLAY": ":0"}, []string{"xclip"}, func(string, []string) ([]byte, error) {
@@ -170,48 +166,5 @@ func TestMacAnswer(t *testing.T) {
 	}
 	if _, err := r.answer([]byte("NONE\n"), saved); !errors.Is(err, ErrNoImage) {
 		t.Fatal("none")
-	}
-}
-
-func TestNativeWindows(t *testing.T) {
-	ctx := context.Background()
-	b64 := func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
-	answer := "PNG:" + base64.StdEncoding.EncodeToString(png) + "\r\n"
-	var script string
-	r := reader(t, "windows", nil, []string{"powershell.exe"}, func(name string, args []string) ([]byte, error) {
-		if name == "/usr/bin/powershell.exe" && strings.Contains(strings.Join(args, " "), "-STA") {
-			script = args[len(args)-1]
-			return []byte(answer), nil
-		}
-		return nil, errors.New("unexpected " + name)
-	})
-	if r.WSL() {
-		t.Fatal("Windows is not WSL")
-	}
-	if src, hint := r.Source(); src != "powershell.exe (Windows clipboard)" || hint != "" {
-		t.Fatalf("source %q %q", src, hint)
-	}
-	got, err := r.Read(ctx)
-	if err != nil || len(got) != 1 || filepath.Base(got[0]) != "20261108-153000-1.png" {
-		t.Fatalf("image: %v %v", got, err)
-	}
-	if b, _ := os.ReadFile(got[0]); string(b) != string(png) {
-		t.Fatal("content")
-	}
-	if !strings.Contains(script, "'FILE64:' + [Convert]::ToBase64String") || strings.Contains(script, "'FILE:'") {
-		t.Fatalf("native script lists files as UTF-8 base64:\n%s", script)
-	}
-	// Copied files are used where they are, whatever their letters; no wslpath.
-	answer = "FILE64:" + b64(`C:\Users\me\Resimler\ekran görüntüsü.PNG`) + "\r\nFILE64:" + b64(`C:\Users\me\a.docx`) + "\r\n"
-	if got, err := r.Read(ctx); err != nil || len(got) != 1 || got[0] != `C:\Users\me\Resimler\ekran görüntüsü.PNG` {
-		t.Fatalf("files: %q %v", got, err)
-	}
-	answer = "NONE\r\n"
-	if _, err := r.Read(ctx); !errors.Is(err, ErrNoImage) {
-		t.Fatalf("none: %v", err)
-	}
-	// WSL keeps its own answer (FILE: and wslpath).
-	if strings.Contains(winScript, "FILE64") {
-		t.Fatal("WSL script changed")
 	}
 }

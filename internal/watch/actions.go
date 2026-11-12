@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
@@ -11,7 +12,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/limits"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
@@ -29,11 +29,13 @@ var resolve = func(*workspace.WS) {}
 
 // SpawnDetached starts a command in its own session without waiting.
 func SpawnDetached(self string, args ...string) error {
-	return sysx.StartDetached(func() *exec.Cmd {
-		cmd := exec.Command(self, args...)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
-		return cmd
-	})
+	cmd := exec.Command(self, args...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
 }
 
 // Record writes the limit to state.json (§15) and returns it.

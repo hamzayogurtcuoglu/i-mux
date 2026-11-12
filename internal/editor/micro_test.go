@@ -10,7 +10,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -20,14 +19,14 @@ import (
 )
 
 func TestMicroAssets(t *testing.T) {
-	for _, p := range [][2]string{{"linux", "amd64"}, {"linux", "arm64"}, {"darwin", "amd64"}, {"darwin", "arm64"}, {"windows", "amd64"}, {"windows", "arm64"}} {
+	for _, p := range [][2]string{{"linux", "amd64"}, {"linux", "arm64"}, {"darwin", "amd64"}, {"darwin", "arm64"}} {
 		a, ok := MicroFor(p[0], p[1])
 		if !ok || len(a.Sum) != 64 || a.Size < 4<<20 || !strings.HasPrefix(MicroURL(a), "https://github.com/zyedidia/micro/releases/download/v2.0.15/micro-2.0.15-") {
 			t.Errorf("%v: %+v %s", p, a, MicroURL(a))
 		}
 	}
-	if a, _ := MicroFor("windows", "amd64"); !strings.HasSuffix(a.Name, ".zip") {
-		t.Errorf("windows: %+v", a)
+	if _, ok := MicroFor("windows", "amd64"); ok {
+		t.Error("a Windows build")
 	}
 }
 
@@ -37,9 +36,6 @@ func TestMicroAssets(t *testing.T) {
 func TestInstallMicro(t *testing.T) {
 	if !CanGetMicro() {
 		t.Skip("no micro for this system")
-	}
-	if runtime.GOOS == "windows" {
-		t.Skip("the fake micro is a shell script; fetch's tests cover the .zip")
 	}
 	i18n.SetLocale("en")
 	testutil.Isolate(t)

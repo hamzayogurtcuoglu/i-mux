@@ -115,12 +115,11 @@ func clipboardImages(ctx context.Context, cfg *config.Config) ([]string, error) 
 }
 
 // ImageText is what the agent gets: the paths as a dropped file arrives
-// (spaces escaped; quoted on Windows), "@path" for Antigravity, and a space
-// after.
+// (spaces escaped), "@path" for Antigravity, and a space after.
 func ImageText(agent session.AgentID, files []string) string {
 	parts := make([]string, 0, len(files))
 	for _, f := range files {
-		f = droppedPath(f)
+		f = strings.ReplaceAll(f, " ", `\ `)
 		if agent == session.Antigravity {
 			f = "@" + f
 		}

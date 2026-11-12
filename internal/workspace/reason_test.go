@@ -26,7 +26,7 @@ func TestReasonFromSessionError(t *testing.T) {
 	id := "aaaaaaaa-7777-4000-8000-000000000001"
 	p := filepath.Join(h.Claude, "projects", claude.EncodeCWD(h.Project), id+".jsonl")
 	reset := time.Date(2026, 11, 5, 17, 0, 0, 0, time.UTC)
-	lines := `{"type":"user","sessionId":"` + id + `","cwd":"` + jsonPath(h.Project) + `","timestamp":"2026-11-05T14:00:00Z","uuid":"u","message":{"role":"user","content":"refactor the cache"}}
+	lines := `{"type":"user","sessionId":"` + id + `","cwd":"` + h.Project + `","timestamp":"2026-11-05T14:00:00Z","uuid":"u","message":{"role":"user","content":"refactor the cache"}}
 {"type":"assistant","sessionId":"` + id + `","timestamp":"2026-11-05T14:01:00Z","uuid":"a","message":{"id":"m1","role":"assistant","model":"claude-opus-4-1","content":[{"type":"text","text":"Working on it."}]}}
 {"type":"assistant","isApiErrorMessage":true,"error":"rate_limit","sessionId":"` + id + `","timestamp":"2026-11-05T14:02:00Z","uuid":"e","message":{"id":"x","role":"assistant","model":"<synthetic>","content":[{"type":"text","text":"Claude AI usage limit reached|` + itoa(int(reset.Unix())) + `"}]}}
 `

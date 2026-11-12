@@ -8,8 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+	"syscall"
 )
 
 const (
@@ -21,7 +20,7 @@ const (
 
 // SetUmask makes every file and directory created by this process private.
 // It is called once at startup.
-func SetUmask() { sysx.SetUmask() }
+func SetUmask() { syscall.Umask(0o077) }
 
 // UserHome returns $HOME, falling back to os.UserHomeDir.
 func UserHome() string {
@@ -96,7 +95,7 @@ func EnsureDir(dir string) error {
 }
 
 // WriteFile atomically writes data to path with FileMode: temp file in the
-// same directory, fsync, rename (Rename: on Windows it waits for a reader).
+// same directory, fsync, rename.
 func WriteFile(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if err := EnsureDir(dir); err != nil {
@@ -126,7 +125,7 @@ func WriteFile(path string, data []byte) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	if err := Rename(tmp, path); err != nil {
+	if err := os.Rename(tmp, path); err != nil {
 		return err
 	}
 	ok = true

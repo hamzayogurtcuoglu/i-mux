@@ -26,7 +26,7 @@ jobs:
         with:
           version: latest
       - name: go vet
-        run: go vet ./... && go vet -tags e2e ./... && GOOS=windows go vet ./cmd/... ./internal/... && GOOS=windows golangci-lint run ./cmd/... ./internal/...
+        run: go vet ./... && go vet -tags e2e ./...
       - name: Generated files are current
         run: go generate ./... && git diff --exit-code
 
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -51,13 +51,9 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Unit tests (race)
-        if: runner.os != 'Windows'
         env:
           CGO_ENABLED: "1"
         run: go test -race -count=1 ./...
-      - name: Unit tests (Windows)
-        if: runner.os == 'Windows'
-        run: go test -count=1 ./...
 
   e2e:
     strategy:

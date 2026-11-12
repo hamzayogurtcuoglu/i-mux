@@ -363,8 +363,7 @@ func WorktreePath(top, branch string) string {
 // Ignore adds p (relative to dir) to the .gitignore at the top of the
 // working tree, as a path from there. Where dir is in the tree is git's
 // answer: dir compared with --show-toplevel's path would differ when it was
-// reached through a symlink (macOS's /var is /private/var) or by a short
-// name (Windows' C:\Users\RUNNER~1).
+// reached through a symlink (macOS's /var is /private/var).
 func Ignore(ctx context.Context, dir, p string) error {
 	out, err := git(ctx, dir, "rev-parse", "--show-cdup", "--show-prefix")
 	if err != nil {

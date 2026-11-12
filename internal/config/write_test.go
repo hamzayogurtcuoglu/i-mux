@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -58,7 +57,7 @@ func TestSet(t *testing.T) {
 	if b2, _ := os.ReadFile(p); string(b2) != string(b) {
 		t.Fatal("a failed Set changed the file")
 	}
-	if fi, _ := os.Stat(p); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // Windows has no Unix modes
+	if fi, _ := os.Stat(p); fi.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", fi.Mode().Perm())
 	}
 	if ModTime(p).IsZero() || !ModTime(filepath.Join(t.TempDir(), "none")).IsZero() {

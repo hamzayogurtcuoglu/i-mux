@@ -157,7 +157,9 @@ func (w *WS) previewCmd(p *Pane, from string) string {
 	if from != "" {
 		args = []string{w.Self, "handoff", "--session", from, "--cwd", p.CWD, "--print"}
 	}
-	sh := pagedCmd(args)
+	// LESSCHARSET: the document is UTF-8 whatever the popup's locale (under
+	// a C locale less shows "·" as <C2><B7>).
+	sh := tmux.ShJoin(args...) + " 2>&1 | LESSCHARSET=utf-8 less -R"
 	// Menu items run on the client that chose them: no -c (tmux 3.2a
 	// rejects -c inside menu item commands).
 	c := "display-popup -E -w 90% -h 90%"

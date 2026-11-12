@@ -2,10 +2,9 @@
 // user's terminal draws text, and points the terminals i-mux can set at it
 // (D34; ARCHITECTURE "Icons, Settings on the rail, updates"). The font is
 // Nerd Fonts' JetBrainsMono, checked against its release's SHA-256 and
-// installed for the user alone (no administrator rights). On Windows, and
-// under WSL where the terminal runs on Windows, the font goes to the Windows
-// user's fonts (%LOCALAPPDATA%\Microsoft\Windows\Fonts, listed under HKCU),
-// and Windows Terminal's and VS Code's settings there name it.
+// installed for the user alone (no administrator rights). Under WSL the
+// terminal runs on Windows: the font goes to the Windows user's fonts, and
+// Windows Terminal's and VS Code's settings there name it.
 package nerdfont
 
 import (
@@ -68,8 +67,6 @@ const (
 	MacOS = "macos"
 	Linux = "linux"
 	WSL   = "wsl" // Linux in WSL: the terminal runs on Windows
-	// Windows is native Windows (psmux).
-	Windows = "windows"
 )
 
 // Terminal is a terminal whose settings file i-mux edits.
@@ -84,7 +81,7 @@ type Terminal struct {
 type System struct {
 	Kind      string
 	FontDir   string     // where the font goes (under WSL the Windows user's fonts, under /mnt)
-	WinDir    string     // WSL and Windows: FontDir as Windows names it (the registry's)
+	WinDir    string     // WSL: FontDir as Windows names it (the registry's)
 	SystemDir string     // fonts installed for every user (only looked at)
 	Family    string     // the font's name for the terminals
 	Terminals []Terminal // the ones on this system
@@ -112,7 +109,7 @@ var winSystem32 = []string{"/mnt/c/Windows/System32", "/mnt/c/Windows/System32/W
 
 func run(ctx context.Context, name string, args ...string) ([]byte, error) {
 	var dir string
-	if strings.HasSuffix(name, ".exe") && runtime.GOOS != "windows" {
+	if strings.HasSuffix(name, ".exe") {
 		if _, err := exec.LookPath(name); err != nil {
 			for _, d := range winSystem32 {
 				if p := filepath.Join(d, name); isFile(p) {
@@ -169,15 +166,24 @@ func Detect(ctx context.Context) (*System, error) {
 		s := &System{Kind: MacOS, FontDir: filepath.Join(home, "Library", "Fonts"), SystemDir: SystemFonts[MacOS], Family: Family}
 		s.vscode(filepath.Join(home, "Library", "Application Support"))
 		return s, nil
-	case GOOS == "windows":
-		local, roaming, sysroot := nativeDirs(home)
-		return windowsSystem(Windows, local, roaming, sysroot), nil
 	case IsWSL():
 		local, roaming, sysroot, err := windowsDirs(ctx)
 		if err != nil {
 			return nil, err
 		}
-		return windowsSystem(WSL, local, roaming, sysroot), nil
+		s := &System{
+			Kind: WSL, FontDir: filepath.Join(local.unix, "Microsoft", "Windows", "Fonts"),
+			WinDir: local.win + `\Microsoft\Windows\Fonts`, SystemDir: filepath.Join(sysroot.unix, "Fonts"), Family: FamilyWindows,
+		}
+		for i, rel := range termfont.WTSettings {
+			name := "Windows Terminal"
+			if i == 1 {
+				name = "Windows Terminal Preview"
+			}
+			s.add(Terminal{Name: name, File: filepath.Join(local.unix, filepath.FromSlash(rel)), Key: termfont.WTFont})
+		}
+		s.vscode(roaming.unix)
+		return s, nil
 	}
 	data := os.Getenv("XDG_DATA_HOME")
 	if data == "" {
@@ -190,39 +196,6 @@ func Detect(ctx context.Context) (*System, error) {
 	s := &System{Kind: Linux, FontDir: filepath.Join(data, "fonts"), SystemDir: SystemFonts[Linux], Family: Family}
 	s.vscode(conf)
 	return s, nil
-}
-
-// nativeDirs are the Windows user's AppData\Local and AppData\Roaming and
-// the Windows folder, from the environment (else where Windows puts them).
-func nativeDirs(home string) (local, roaming, sysroot winPath) {
-	dir := func(env, fallback string) winPath {
-		d := os.Getenv(env)
-		if d == "" {
-			d = fallback
-		}
-		return winPath{win: d, unix: d}
-	}
-	return dir("LOCALAPPDATA", filepath.Join(home, "AppData", "Local")),
-		dir("APPDATA", filepath.Join(home, "AppData", "Roaming")),
-		dir("SystemRoot", `C:\Windows`)
-}
-
-// windowsSystem is where a Windows user's fonts go and the terminals there,
-// seen natively or from WSL (paths under /mnt).
-func windowsSystem(kind string, local, roaming, sysroot winPath) *System {
-	s := &System{
-		Kind: kind, FontDir: filepath.Join(local.unix, "Microsoft", "Windows", "Fonts"),
-		WinDir: local.win + `\Microsoft\Windows\Fonts`, SystemDir: filepath.Join(sysroot.unix, "Fonts"), Family: FamilyWindows,
-	}
-	for i, rel := range termfont.WTSettings {
-		name := "Windows Terminal"
-		if i == 1 {
-			name = "Windows Terminal Preview"
-		}
-		s.add(Terminal{Name: name, File: filepath.Join(local.unix, filepath.FromSlash(rel)), Key: termfont.WTFont})
-	}
-	s.vscode(roaming.unix)
-	return s
 }
 
 // add keeps a terminal whose settings file exists.
@@ -308,7 +281,7 @@ func (s *System) Install(ctx context.Context) error {
 	for _, st := range Styles {
 		args = append(args, st.File)
 	}
-	if out, err := Run(ctx, tarBin(), args...); err != nil {
+	if out, err := Run(ctx, "tar", args...); err != nil {
 		return fmt.Errorf("tar: %v: %s", err, bytes.TrimSpace(out))
 	}
 	if err := os.MkdirAll(s.FontDir, 0o755); err != nil {
@@ -320,26 +293,12 @@ func (s *System) Install(ctx context.Context) error {
 		}
 	}
 	switch s.Kind {
-	case WSL, Windows:
+	case WSL:
 		return s.register(ctx)
 	case Linux:
 		_, _ = Run(ctx, "fc-cache", "-f", s.FontDir) // without fontconfig there is nobody to tell
 	}
 	return nil
-}
-
-// tarBin is the tar that unpacks the archive: on Windows its own bsdtar
-// (System32, xz included), not another tar earlier on PATH (Git's needs an
-// xz program).
-func tarBin() string {
-	if GOOS == "windows" {
-		if root := os.Getenv("SystemRoot"); root != "" {
-			if p := filepath.Join(root, "System32", "tar.exe"); isFile(p) {
-				return p
-			}
-		}
-	}
-	return "tar"
 }
 
 // fontsKey is where Windows lists the fonts installed for the user.

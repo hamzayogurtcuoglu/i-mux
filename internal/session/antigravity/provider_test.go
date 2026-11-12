@@ -73,8 +73,8 @@ func TestLoadTranscript(t *testing.T) {
 			"content": "Let me look.", "thinking": "private reasoning", "input_tokens": 100, "cache_read_tokens": 40, "output_tokens": 10,
 			"tool_calls": []map[string]any{
 				{"name": "run_command", "args": map[string]any{"CommandLine": "npm test", "WaitMsBeforeAsync": 0, "toolSummary": "run tests"}},
-				{"name": "read_file", "args": map[string]any{"Path": filepath.Join(h.Project, "src/auth.ts")}},
-				{"name": "list_dir", "args": map[string]any{"DirectoryPath": filepath.Join(h.Project, "src")}},
+				{"name": "read_file", "args": map[string]any{"Path": h.Project + "/src/auth.ts"}},
+				{"name": "list_dir", "args": map[string]any{"DirectoryPath": h.Project + "/src"}},
 			},
 		},
 		{"source": "MODEL", "type": "GENERIC", "created_at": ts(at.Add(2 * time.Second)), "content": "1 failing"},
@@ -118,7 +118,7 @@ func TestLoadTranscript(t *testing.T) {
 	for _, tc := range a1.Tools {
 		lines = append(lines, toolsum.Summarize(tc, h.Project).Line)
 	}
-	if lines[0] != "$ npm test" || lines[1] != "read "+filepath.FromSlash("src/auth.ts")+" (failed)" || !strings.HasPrefix(lines[2], "listed src") {
+	if lines[0] != "$ npm test" || lines[1] != "read src/auth.ts (failed)" || !strings.HasPrefix(lines[2], "listed src") {
 		t.Fatalf("tool lines %q", lines)
 	}
 	if !strings.Contains(a2.Text, "next= parameter") {

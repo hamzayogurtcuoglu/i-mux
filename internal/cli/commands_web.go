@@ -8,12 +8,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
@@ -188,8 +188,9 @@ func webOpen(ctx context.Context, w *workspace.WS, what, pane, client, as string
 // window). It returns the browser's name ("" when unknown).
 func openPage(ctx context.Context, w *workspace.WS, u string, window bool) (string, error) {
 	if f := strings.Fields(w.Cfg.Web.Browser); len(f) > 0 {
-		cmd, err := sysx.StartDetachedCmd(func() *exec.Cmd { return exec.Command(f[0], append(f[1:], u)...) })
-		if err != nil {
+		cmd := exec.Command(f[0], append(f[1:], u)...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		if err := cmd.Start(); err != nil {
 			return "", err
 		}
 		go func() { _ = cmd.Wait() }()

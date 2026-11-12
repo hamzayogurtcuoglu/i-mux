@@ -7,8 +7,10 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -16,7 +18,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 )
 
@@ -348,8 +349,8 @@ func Run(m *Model, o Options) (string, error) {
 	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h\x1b[?2004h")
 	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?2004l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 	winch := make(chan os.Signal, 1)
-	sysx.Notify(winch, sysx.SIGWINCH)
-	defer sysx.Stop(winch)
+	signal.Notify(winch, syscall.SIGWINCH)
+	defer signal.Stop(winch)
 
 	refs := make([]session.Ref, len(m.Convs))
 	for i, c := range m.Convs {

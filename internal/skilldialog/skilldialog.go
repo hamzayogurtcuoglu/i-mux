@@ -8,7 +8,9 @@ package skilldialog
 import (
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -17,7 +19,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/skills"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 const (
@@ -581,8 +582,8 @@ func Run(m *Model, in, out *os.File) (Result, error) {
 	_, _ = io.WriteString(out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h\x1b[?2004h")
 	defer func() { _, _ = io.WriteString(out, "\x1b[?2004l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 	winch := make(chan os.Signal, 1)
-	sysx.Notify(winch, sysx.SIGWINCH)
-	defer sysx.Stop(winch)
+	signal.Notify(winch, syscall.SIGWINCH)
+	defer signal.Stop(winch)
 	draw := func() {
 		w, h := sidebar.Size(int(out.Fd()))
 		var sc sidebar.Screen

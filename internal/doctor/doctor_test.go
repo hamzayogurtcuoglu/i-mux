@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -32,30 +31,9 @@ func (f fakeTmux) Run(_ context.Context, _ string, args []string) ([]byte, []byt
 		if f.version == "" {
 			return nil, nil, &os.PathError{Op: "exec", Path: "tmux", Err: os.ErrNotExist}
 		}
-		if strings.Contains(f.version, "\n") {
-			return []byte(f.version), nil, nil // psmux's own output
-		}
 		return []byte("tmux " + f.version + "\n"), nil, nil
 	}
 	return nil, nil, nil
-}
-
-// unixOnly skips a test whose fake agents are shell scripts and whose
-// permissions are Unix mode bits, and makes the others check macOS/Linux.
-func unixOnly(t *testing.T) {
-	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("the fake agents are shell scripts and ~/.imux's permissions Unix mode bits")
-	}
-	onOS(t, "linux")
-}
-
-// onOS makes the checks and their messages those of system name.
-func onOS(t *testing.T, name string) {
-	t.Helper()
-	oldGOOS, oldI18n := goos, i18n.OS
-	t.Cleanup(func() { goos, i18n.OS = oldGOOS, oldI18n })
-	goos, i18n.OS = name, name
 }
 
 // script writes an executable shell script and returns its path.
@@ -79,7 +57,6 @@ func find(r *Report, sub string) *Result {
 }
 
 func TestDoctor(t *testing.T) {
-	unixOnly(t)
 	h := testutil.Isolate(t)
 	i18n.SetLocale("en")
 	if err := os.MkdirAll(h.Imux, 0o700); err != nil {
@@ -173,7 +150,6 @@ func TestDoctor(t *testing.T) {
 // failure with the upgrade command. A cached 1.x version is re-probed first:
 // the bin cache lags an in-place `opencode upgrade --major` by up to a day.
 func TestDoctorOpenCode1(t *testing.T) {
-	unixOnly(t)
 	h := testutil.Isolate(t)
 	i18n.SetLocale("en")
 	if err := os.MkdirAll(h.Imux, 0o700); err != nil {
@@ -214,77 +190,6 @@ func TestDoctorOpenCode1(t *testing.T) {
 	r = Run(context.Background(), o)
 	if x := find(r, "OpenCode: not installed"); x == nil || !strings.Contains(x.Msg, "brew install opencode") || !strings.Contains(x.Msg, "opencode upgrade --major") {
 		t.Fatalf("opencode hint: %+v", r.Results)
-	}
-}
-
-// TestDoctorWindows: on Windows doctor checks psmux (its own version, no
-// terminfo), says nothing of Unix permission bits, checks ~/.imux is in the
-// user's folder, recommends Windows Terminal and gives Windows install hints.
-func TestDoctorWindows(t *testing.T) {
-	h := testutil.Isolate(t)
-	i18n.SetLocale("en")
-	onOS(t, "windows")
-	if err := os.MkdirAll(h.Imux, 0o777); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("WT_SESSION", "")
-	t.Setenv("TERM_PROGRAM", "")
-	o := Options{
-		Cfg: config.Default(), Self: filepath.Join(h.Root, "imux.exe"),
-		Tmux:     &tmux.Client{Bin: "psmux", Socket: "x", Runner: fakeTmux{"tmux 3.4.0\r\npsmux 3.4.0 (20aa1d7 2026-10-13)\r\n"}},
-		Resolved: map[session.AgentID]agent.Resolved{}, Users: func() []string { return nil },
-	}
-	r := Run(context.Background(), o)
-	for _, c := range []struct {
-		sub   string
-		level Level
-	}{
-		{"psmux 3.4.0 (", OK},
-		{"is in your user folder", OK},
-		{"Windows Terminal (winget install Microsoft.WindowsTerminal)", Info},
-		{"no agent CLI", Fail},
-	} {
-		if x := find(r, c.sub); x == nil || x.Level != c.level {
-			t.Errorf("%q: got %+v", c.sub, x)
-		}
-	}
-	for _, sub := range []string{"terminfo", "chmod", "0700", "tmux 3.4.0", "\n", "writable by other users"} {
-		if x := find(r, sub); x != nil {
-			t.Errorf("%q on Windows: %+v", sub, x)
-		}
-	}
-	// Under Windows Terminal it says so; an ~/.imux outside the user's
-	// folder is a hint; no psmux is a failure with the winget command.
-	t.Setenv("WT_SESSION", "1")
-	t.Setenv("IMUX_HOME", t.TempDir())
-	t.Setenv("HOME", filepath.Join(h.Root, "elsewhere"))
-	o.Tmux.Runner = fakeTmux{""}
-	r = Run(context.Background(), o)
-	if x := find(r, "Windows Terminal"); x == nil || x.Level != OK {
-		t.Errorf("windows terminal: %+v", r.Results)
-	}
-	if x := find(r, "outside your user folder"); x == nil || x.Level != Info {
-		t.Errorf("shared home: %+v", r.Results)
-	}
-	if x := find(r, "psmux is not installed (winget install --id marlocarlo.psmux)"); x == nil || x.Level != Fail {
-		t.Errorf("no psmux: %+v", r.Results)
-	}
-}
-
-func TestInside(t *testing.T) {
-	for _, c := range []struct {
-		p, dir string
-		want   bool
-	}{
-		{filepath.Join("a", "b", ".imux"), filepath.Join("a", "b"), true},
-		{filepath.Join("A", "B"), filepath.Join("a", "b"), true},
-		{filepath.Join("a", "bc"), filepath.Join("a", "b"), false},
-		{"a", filepath.Join("a", "b"), false},
-		{"x", "", false},
-	} {
-		if got := inside(c.p, c.dir); got != c.want {
-			t.Errorf("inside(%q, %q) = %v", c.p, c.dir, got)
-		}
 	}
 }
 

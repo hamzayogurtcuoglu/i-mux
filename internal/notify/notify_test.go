@@ -3,8 +3,6 @@ package notify
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
-	"encoding/xml"
 	"errors"
 	"strings"
 	"testing"
@@ -114,61 +112,5 @@ func TestTerminals(t *testing.T) {
 	got := n.Terminals([]Client{{TTY: "/dev/pts/1", Program: "WezTerm"}, {TTY: "/dev/gone"}, {TTY: ""}}, m)
 	if got != 1 || !strings.HasPrefix(written["/dev/pts/1"].String(), "\x1b]777;notify;") {
 		t.Fatalf("terminals: %d %q", got, written)
-	}
-}
-
-func TestWindowsToast(t *testing.T) {
-	ctx := context.Background()
-	m := Message{Title: `Claude finished · <api> & "x"`, Body: "tab 1\nok 'q'", Sound: true}
-	n, calls := fake("windows", []string{"powershell.exe"}, nil)
-	if how, err := n.System(ctx, m); err != nil || how != "toast" {
-		t.Fatalf("windows: %s %v", how, err)
-	}
-	c := (*calls)[0]
-	if c.name != "powershell.exe" || strings.Join(c.args[:3], " ") != "-NoProfile -NonInteractive -Command" {
-		t.Fatalf("powershell %q %q", c.name, c.args)
-	}
-	script := c.args[3]
-	if !strings.Contains(script, "CreateToastNotifier('"+ToastApp+"')") {
-		t.Fatalf("app id:\n%s", script)
-	}
-	// The text reaches the toast only inside the base64 XML.
-	if strings.Contains(script, "Claude") {
-		t.Fatalf("text outside the base64:\n%s", script)
-	}
-	i := strings.Index(script, "FromBase64String('") + len("FromBase64String('")
-	raw, err := base64.StdEncoding.DecodeString(script[i : i+strings.Index(script[i:], "'")])
-	if err != nil {
-		t.Fatal(err)
-	}
-	x := string(raw)
-	for _, want := range []string{
-		"<text>Claude finished · &lt;api&gt; &amp; &#34;x&#34;</text>",
-		"<text>tab 1 ok &#39;q&#39;</text>",
-		`<text placement="attribution">i-mux</text>`,
-		`<audio src="ms-winsoundevent:Notification.Default"/>`,
-	} {
-		if !strings.Contains(x, want) {
-			t.Errorf("toast lacks %q:\n%s", want, x)
-		}
-	}
-	var v struct{ XMLName xml.Name }
-	if err := xml.Unmarshal(raw, &v); err != nil || v.XMLName.Local != "toast" {
-		t.Fatalf("not XML: %v\n%s", err, x)
-	}
-	// No sound asked: a silent toast.
-	m.Sound = false
-	if x := toastXML(m); !strings.Contains(x, `<audio silent="true"/>`) || strings.Contains(x, "ms-winsoundevent") {
-		t.Fatalf("silent %s", x)
-	}
-	// Without PowerShell: nothing; a configured command still wins.
-	n, _ = fake("windows", nil, nil)
-	if _, err := n.System(ctx, m); !errors.Is(err, ErrNone) {
-		t.Fatalf("no powershell: %v", err)
-	}
-	n, calls = fake("windows", []string{"powershell.exe"}, nil)
-	n.Command = []string{"ntfy", "publish"}
-	if how, _ := n.System(ctx, m); how != "command" || (*calls)[0].name != "ntfy" {
-		t.Fatalf("command: %q", *calls)
 	}
 }

@@ -17,11 +17,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Defaults.
@@ -156,8 +156,8 @@ func Sweep(age time.Duration) {
 	}
 }
 
-// execFunc is sysx.Exec; tests replace it.
-var execFunc = sysx.Exec
+// execFunc is syscall.Exec; tests replace it.
+var execFunc = syscall.Exec
 
 // Exec validates the spec, changes directory and replaces the current
 // process with the agent. It returns only on error.

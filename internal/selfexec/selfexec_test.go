@@ -3,17 +3,12 @@ package selfexec
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 )
 
 func TestChanged(t *testing.T) {
-	name := "imux"
-	if runtime.GOOS == "windows" {
-		name += ".exe" // Windows runs a file by its extension
-	}
-	p := filepath.Join(t.TempDir(), name)
+	p := filepath.Join(t.TempDir(), "imux")
 	if err := os.WriteFile(p, []byte("old"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -38,12 +33,9 @@ func TestChanged(t *testing.T) {
 		t.Fatal("a file being written is not a change yet")
 	}
 	_ = os.Chtimes(p, old, old)
-	// Windows has no executable bit (an .exe is executable by its name).
-	if runtime.GOOS != "windows" {
-		_ = os.Chmod(p, 0o644)
-		if s.Changed() {
-			t.Fatal("not executable")
-		}
+	_ = os.Chmod(p, 0o644)
+	if s.Changed() {
+		t.Fatal("not executable")
 	}
 	_ = os.Remove(p)
 	if s.Changed() || (Stamp{}).Changed() {
