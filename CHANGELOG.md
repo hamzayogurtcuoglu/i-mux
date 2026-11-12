@@ -16,6 +16,13 @@ All notable changes to i-mux are listed here. The format follows
   0.49 cannot update itself: delete `%LOCALAPPDATA%\Programs\imux`, remove that folder from your
   user PATH, and `winget uninstall marlocarlo.psmux` if you installed psmux for i-mux.
 
+### Fixed
+
+- **Git actions no longer fail with "index.lock: File exists".** The sidebar's own refresh ran
+  `git diff`, which rewrites git's index under `.git/index.lock`, so a stage, commit or checkout
+  clicked at that moment could fail. i-mux's background reads take no lock now, and an action
+  waits up to two seconds for another program's git (an agent's, an editor's), as VS Code does.
+
 ## [0.49.1] - 2026-11-12
 
 ### Fixed

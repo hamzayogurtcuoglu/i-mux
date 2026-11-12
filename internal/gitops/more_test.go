@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // g runs git in dir for a test.
@@ -414,5 +416,86 @@ func TestSaid(t *testing.T) {
 	want := "remote: Counting objects: 100% (2/2), done.\nTo git@h:o/r.git\n   1a2b3c4..5d6e7f8  main -> main"
 	if got := said(in); got != want {
 		t.Errorf("said:\n%q\nwant\n%q", got, want)
+	}
+}
+
+// indexFile is .git/index as it is now: a git that refreshes the index
+// writes a new one under .git/index.lock and renames it over the old.
+func indexFile(t *testing.T, dir string) os.FileInfo {
+	t.Helper()
+	fi, err := os.Stat(filepath.Join(dir, ".git", "index"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fi
+}
+
+// staleStat gives file another time, as a save of the same bytes does: git's
+// cached stat of it is stale, and a git that refreshes rewrites the index.
+func staleStat(t *testing.T, file string, ago time.Duration) {
+	t.Helper()
+	when := time.Now().Add(-ago)
+	if err := os.Chtimes(file, when, when); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestReadsTakeNoLock (T65.3): the reads the sidebar runs every few seconds
+// leave the index alone, so an action run meanwhile finds no index.lock.
+func TestReadsTakeNoLock(t *testing.T) {
+	dir := repo(t)
+	a := filepath.Join(dir, "a.go")
+	staleStat(t, a, time.Hour)
+	before := indexFile(t, dir)
+	if out, err := exec.Command("git", "-C", dir, "diff", "--numstat").CombinedOutput(); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if os.SameFile(before, indexFile(t, dir)) {
+		t.Skip("this git's diff does not rewrite the index: nothing to check")
+	}
+	staleStat(t, a, 2*time.Hour)
+	before = indexFile(t, dir)
+	if _, err := Read(context.Background(), dir); err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(before, indexFile(t, dir)) {
+		t.Fatal("Read rewrote the index: it took .git/index.lock")
+	}
+}
+
+// TestActionWaitsForIndexLock (T65.3): an action waits for another git's
+// index lock; past LockWait it says what git said.
+func TestActionWaitsForIndexLock(t *testing.T) {
+	dir := repo(t)
+	lock := filepath.Join(dir, ".git", "index.lock")
+	hold := func() {
+		t.Helper()
+		f, err := os.OpenFile(lock, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+	}
+	write(t, dir, "a.go", "changed\n")
+	hold()
+	time.AfterFunc(300*time.Millisecond, func() { os.Remove(lock) })
+	if err := Stage(context.Background(), dir, "a.go"); err != nil {
+		t.Fatalf("stage while another git held the lock for a moment: %v", err)
+	}
+	if out := g(t, dir, "diff", "--cached", "--name-only"); strings.TrimSpace(out) != "a.go" {
+		t.Fatalf("staged %q", out)
+	}
+	old := LockWait
+	LockWait = 200 * time.Millisecond
+	defer func() { LockWait = old }()
+	hold()
+	defer os.Remove(lock)
+	write(t, dir, "b.go", "changed\n")
+	start := time.Now()
+	if err := Stage(context.Background(), dir, "b.go"); err == nil || !strings.Contains(err.Error(), "index.lock") {
+		t.Fatalf("stage while the lock stays: %v", err)
+	}
+	if d := time.Since(start); d > 2*time.Second {
+		t.Fatalf("waited %v past LockWait", d)
 	}
 }

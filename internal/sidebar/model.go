@@ -719,11 +719,15 @@ func (s *Source) numstat(ctx context.Context, dir string, ttl time.Duration) map
 	return num
 }
 
-// gitNumstat runs git diff --numstat HEAD in dir (2 s at most).
+// gitNumstat runs git diff --numstat HEAD in dir (2 s at most), taking no
+// lock (gitops.NoLocksArgs): an action run meanwhile would find it.
 func gitNumstat(ctx context.Context, dir string) string {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "git", "-C", dir, "diff", "--numstat", "HEAD").Output()
+	args := append(append([]string{"-C", dir}, gitops.NoLocksArgs...), "diff", "--numstat", "HEAD")
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Env = append(os.Environ(), gitops.NoLocksEnv...)
+	out, err := cmd.Output()
 	if err != nil {
 		return ""
 	}

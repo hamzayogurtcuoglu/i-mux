@@ -819,6 +819,61 @@ func TestParseNumstat(t *testing.T) {
 	}
 }
 
+// TestGitNumstatTakesNoLock (T65.3): the explorer's counts, read every few
+// seconds, leave the index alone (git diff would rewrite it under
+// .git/index.lock) and still count a change.
+func TestGitNumstatTakesNoLock(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	dir := t.TempDir()
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com",
+			"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com", "GIT_CONFIG_GLOBAL=/dev/null")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	a, b := filepath.Join(dir, "a.txt"), filepath.Join(dir, "b.txt")
+	for _, f := range []string{a, b} {
+		if err := os.WriteFile(f, []byte("x\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	git("init", "-q", "-b", "main")
+	git("add", ".")
+	git("commit", "-q", "-m", "init")
+	if err := os.WriteFile(b, []byte("x\ny\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	index := filepath.Join(dir, ".git", "index")
+	stale := func(ago time.Duration) os.FileInfo {
+		when := time.Now().Add(-ago)
+		if err := os.Chtimes(a, when, when); err != nil {
+			t.Fatal(err)
+		}
+		fi, err := os.Stat(index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fi
+	}
+	before := stale(time.Hour)
+	git("diff", "--numstat", "HEAD")
+	if after, _ := os.Stat(index); os.SameFile(before, after) {
+		t.Skip("this git's diff does not rewrite the index: nothing to check")
+	}
+	before = stale(2 * time.Hour)
+	if got := ParseNumstat(gitNumstat(context.Background(), dir)); !reflect.DeepEqual(got, map[string][2]int{"b.txt": {1, 0}}) {
+		t.Fatalf("numstat %v", got)
+	}
+	if after, _ := os.Stat(index); !os.SameFile(before, after) {
+		t.Fatal("gitNumstat rewrote the index: it took .git/index.lock")
+	}
+}
+
 // The rail: a line between it and the view on every row; the editor's
 // icons with a Nerd Font.
 func TestRailThemes(t *testing.T) {

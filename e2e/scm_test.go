@@ -23,7 +23,10 @@ func TestSourceControl(t *testing.T) {
 	}
 	git := func(args ...string) string {
 		t.Helper()
-		cmd := exec.Command("git", append([]string{"-c", "user.name=t", "-c", "user.email=t@example.com"}, args...)...)
+		// No optional lock, as i-mux's own reads: the test's git status
+		// must not hold .git/index.lock while the sidebar acts.
+		cmd := exec.Command("git", append([]string{"-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "diff.autoRefreshIndex=false"}, args...)...)
+		cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
 		cmd.Dir = h.Homes.Project
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -116,7 +119,10 @@ func TestSourceControlMenus(t *testing.T) {
 	p := h.Homes.Project
 	git := func(args ...string) string {
 		t.Helper()
-		cmd := exec.Command("git", append([]string{"-c", "user.name=t", "-c", "user.email=t@example.com"}, args...)...)
+		// No optional lock, as i-mux's own reads: the test's git status
+		// must not hold .git/index.lock while the sidebar acts.
+		cmd := exec.Command("git", append([]string{"-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "diff.autoRefreshIndex=false"}, args...)...)
+		cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
 		cmd.Dir = p
 		out, err := cmd.CombinedOutput()
 		if err != nil {

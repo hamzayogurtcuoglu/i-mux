@@ -104,3 +104,42 @@ func TestTimeout(t *testing.T) {
 		t.Fatalf("%+v after %v", info, time.Since(start))
 	}
 }
+
+// TestCollectTakesNoLock (T65.3): Collect, which the sidebar runs every few
+// seconds, leaves the index alone: git diff would rewrite it under
+// .git/index.lock, and a stage or checkout run meanwhile would fail.
+func TestCollectTakesNoLock(t *testing.T) {
+	needGit(t)
+	dir := t.TempDir()
+	git(t, dir, "init", "-q", "-b", "main")
+	f := filepath.Join(dir, "a.txt")
+	if err := os.WriteFile(f, []byte("a\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git(t, dir, "add", ".")
+	git(t, dir, "commit", "-q", "-m", "init")
+	index := filepath.Join(dir, ".git", "index")
+	stale := func(ago time.Duration) os.FileInfo {
+		when := time.Now().Add(-ago)
+		if err := os.Chtimes(f, when, when); err != nil {
+			t.Fatal(err)
+		}
+		fi, err := os.Stat(index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fi
+	}
+	before := stale(time.Hour)
+	git(t, dir, "diff", "--stat", "HEAD")
+	if after, _ := os.Stat(index); os.SameFile(before, after) {
+		t.Skip("this git's diff does not rewrite the index: nothing to check")
+	}
+	before = stale(2 * time.Hour)
+	if info := Collect(context.Background(), dir); info.State != OK {
+		t.Fatalf("%+v", info)
+	}
+	if after, _ := os.Stat(index); !os.SameFile(before, after) {
+		t.Fatal("Collect rewrote the index: it took .git/index.lock")
+	}
+}

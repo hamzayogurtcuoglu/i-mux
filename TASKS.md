@@ -1002,19 +1002,19 @@ slow (about a second).
 User request: remove the Windows port on psmux (#2, M62); i-mux need not run natively on Windows,
 and nothing else may break.
 
-- [ ] **T65.1 Revert the port** · M
+- [x] **T65.1 Revert the port** · M
   - AC: D60: the merge of #2 is reverted: the psmux adapter, `sysx`, `winx`, `pwshshim`,
     `install.ps1`, the PowerShell scripts, `docs/WINDOWS.md`, the Windows builds and archives, the
     Windows CI job and lint, the `key@windows` messages and `golang.org/x/sys` go; every file the
     port changed is as before it, plus what came after (Source Control, `make ci`) without its
     Windows parts: the Quick Pick takes its signals from `os/signal`, the Windows rename retry
     (T64.4) and `make test-windows` go.
-- [ ] **T65.2 Nothing else breaks** · S
+- [x] **T65.2 Nothing else breaks** · S
   - AC: `make ci` passes (lint and vet for Linux and macOS, race, test-macos, size, e2e), the
     GoReleaser snapshot builds darwin and linux only, README, README.tr and CONTRIBUTING say WSL
     for Windows; the check-before-push and commit-and-release skills and AGENTS.md lose their
     Windows steps; CHANGELOG.
-- [ ] **T65.3 Actions do not trip over the sidebar's index lock** · S
+- [x] **T65.3 Actions do not trip over the sidebar's index lock** · S
   - AC: §18: v0.49.1's macOS e2e job failed: a checkout from the Quick Pick found
     `.git/index.lock` taken by the sidebar's own refresh (`git diff` rewrites the index, even
     with `GIT_OPTIONAL_LOCKS=0`). gitops' reads, gitinfo and the explorer's numstat take no lock;

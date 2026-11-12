@@ -51,11 +51,23 @@ type Status struct {
 // Timeout bounds every git call.
 var Timeout = 10 * time.Second
 
-// git runs git in dir and returns its stdout; stderr is the error text.
+// git runs a read in dir and returns its stdout; stderr is the error text.
+// Reads take no lock (NoLocks): the sidebar reads every few seconds, and an
+// action run meanwhile would find .git/index.lock taken.
 func git(ctx context.Context, dir string, args ...string) (string, error) {
-	out, _, err := gitOut(ctx, dir, nil, args...)
+	out, _, err := gitOut(ctx, dir, NoLocksEnv, append(NoLocksArgs[:len(NoLocksArgs):len(NoLocksArgs)], args...)...)
 	return out, err
 }
+
+// NoLocksEnv and NoLocksArgs make a git read take no lock: git status and
+// git diff refresh the index as a side effect and write it back under
+// .git/index.lock; git diff does even with GIT_OPTIONAL_LOCKS=0, unless
+// diff.autoRefreshIndex is off. Every read i-mux runs in the background
+// passes both.
+var (
+	NoLocksEnv  = []string{"GIT_OPTIONAL_LOCKS=0"}
+	NoLocksArgs = []string{"-c", "diff.autoRefreshIndex=false"}
+)
 
 // gitOut runs git in dir with env added and returns its stdout and stderr;
 // on failure the error is stderr's text.

@@ -62,7 +62,10 @@ var errTimeout = errors.New("timeout")
 func run(ctx context.Context, dir string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, GitBinary, append([]string{"-C", dir}, args...)...)
+	// No lock: git diff rewrites the index (under .git/index.lock) even
+	// with GIT_OPTIONAL_LOCKS=0 unless diff.autoRefreshIndex is off, and the
+	// sidebar runs this every few seconds.
+	cmd := exec.CommandContext(ctx, GitBinary, append([]string{"-C", dir, "-c", "diff.autoRefreshIndex=false"}, args...)...)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
 	var out, errb bytes.Buffer
 	cmd.Stdout = &out

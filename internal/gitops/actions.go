@@ -80,14 +80,34 @@ func run(ctx context.Context, dir string, args ...string) (string, error) {
 	return runEnv(ctx, dir, nil, args...)
 }
 
+// LockWait is how long an action waits for another git's index lock (an
+// agent's git, an editor's), as VS Code does.
+var LockWait = 2 * time.Second
+
 func runEnv(ctx context.Context, dir string, env []string, args ...string) (string, error) {
-	out, errOut, err := gitOut(ctx, dir, env, args...)
-	if err == nil {
-		Log(dir, args, out+errOut, nil)
-	} else {
-		Log(dir, args, out, err)
+	deadline := time.Now().Add(LockWait)
+	for wait := 50 * time.Millisecond; ; wait *= 2 {
+		out, errOut, err := gitOut(ctx, dir, env, args...)
+		if err != nil && locked(errOut) && time.Now().Add(wait).Before(deadline) {
+			select {
+			case <-ctx.Done():
+			case <-time.After(wait):
+				continue
+			}
+		}
+		if err == nil {
+			Log(dir, args, out+errOut, nil)
+		} else {
+			Log(dir, args, out, err)
+		}
+		return out, err
 	}
-	return out, err
+}
+
+// locked reports git's failure to take .git/index.lock because another git
+// holds it: git stops there, before it changed anything.
+func locked(stderr string) bool {
+	return strings.Contains(stderr, "index.lock") && strings.Contains(stderr, "File exists")
 }
 
 // Errors of the actions.
