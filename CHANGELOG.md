@@ -6,6 +6,12 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-11-12
+
+### Changed
+
+- **The ⏰ Schedule tab on the sidebar rail is now named Jobs (`İşler`), and the separate 🧩 Skills rail tab is removed.** Jobs already lists and runs the project's skills alongside its agents, both on demand (🚀) and on a schedule.
+
 ## [0.51.0] - 2026-11-12
 
 ### Added

@@ -562,8 +562,6 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 	case "4":
 		s.do(ctx, Action{Kind: ActView, Section: ViewChanges})
 	case "5":
-		s.do(ctx, Action{Kind: ActView, Section: ViewSkills})
-	case "6":
 		s.do(ctx, Action{Kind: ActView, Section: ViewAuto})
 	default:
 		for _, a := range s.model.Agents {

@@ -36,7 +36,8 @@ func TestSkillsView(t *testing.T) {
 	c, _ := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
 
-	h.openView(c, bar, "🧩", "skills")
+	h.mustTmux("set-option", "-w", "-t", bar, "@imux_view", "skills")
+	_, _, _ = h.imux("__sidebar", "--signal")
 	h.rowOf(bar, "claude-only")
 	if s := h.screen(bar); !strings.Contains(s, "✻·◉·▣") || !strings.Contains(s, "Helps with local migrations.") {
 		t.Fatalf("skills screen:\n%s", s)

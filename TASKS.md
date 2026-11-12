@@ -1002,7 +1002,7 @@ slow (about a second).
 User request: rename the Schedule tab to Jobs (since it also triggers skills and agents on demand
 and in batch mode) and remove the separate Skills tab from the left rail.
 
-- [ ] **T67.1 Jobs on the rail, no Skills rail tab** · XS
+- [x] **T67.1 Jobs on the rail, no Skills rail tab** · XS
   - AC: D62: the ⏰ rail tab is named `Jobs` (`İşler` in Turkish) with header `JOBS` (`İŞLER`),
     opened by key `5`; the separate 🧩 Skills item is removed from the activity rail; unit and
     e2e tests updated; README, README.tr and CHANGELOG updated.

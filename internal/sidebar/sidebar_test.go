@@ -954,7 +954,7 @@ func TestClosedPanel(t *testing.T) {
 				}
 			}
 		}
-		for _, v := range []string{ViewAgents, ViewExplorer, ViewChanges, ViewSkills} {
+		for _, v := range []string{ViewAgents, ViewExplorer, ViewChanges, ViewAuto} {
 			if !views[v] {
 				t.Errorf("%s: no icon opens %s", theme, v)
 			}

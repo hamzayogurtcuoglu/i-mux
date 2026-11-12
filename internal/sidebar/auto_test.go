@@ -77,7 +77,7 @@ func TestAutoView(t *testing.T) {
 	text := screenText(sc)
 	clock := func(d time.Duration) string { return textfmt.Clock(m.Now, m.Now.Add(d)) }
 	for _, want := range []string{
-		"SCHEDULER · acme-api", "▾ SCHEDULED  4", "✻  sim-tag", "every 5 min · Claude · haiku", "→ " + clock(5*time.Minute),
+		"JOBS · acme-api", "▾ SCHEDULED  4", "✻  sim-tag", "every 5 min · Claude · haiku", "→ " + clock(5*time.Minute),
 		"✓ " + clock(-5*time.Minute) + " v2.3 is out: pipeline started", "docs-check", "daily 09:00 · Copilot", "running · 2m",
 		"✗ " + clock(-time.Hour) + " go test failed", "its definition is gone",
 		"▾ AGENTS  3", "by-hand", "· " + clock(-time.Minute) + " nothing new", "release-helper  personal", "Prepares a release",
@@ -87,7 +87,7 @@ func TestAutoView(t *testing.T) {
 			t.Errorf("view lacks %q:\n%s", want, text)
 		}
 	}
-	if strings.Contains(text, "⏰") && !strings.Contains(text, "Schedule") || strings.Contains(text, "run now") {
+	if strings.Contains(text, "⏰") && !strings.Contains(text, "Jobs") || strings.Contains(text, "run now") {
 		t.Errorf("a ⏰ button or the hint with schedules there:\n%s", text)
 	}
 	want := map[string]bool{}
@@ -223,13 +223,13 @@ func TestRailSchedule(t *testing.T) {
 			schedRow = i
 		}
 	}
-	if schedRow != 15 {
-		t.Fatalf("Schedule icon at row %d", schedRow)
+	if schedRow != 12 {
+		t.Fatalf("Jobs icon at row %d", schedRow)
 	}
 	if p := Plain(sc.Lines[schedRow].Text); !strings.Contains(p, "⏰") || !strings.Contains(p, "2") {
 		t.Errorf("icon row %q", p)
 	}
-	if p := Plain(sc.Lines[schedRow+1].Text); !strings.Contains(p, "Schedule") {
+	if p := Plain(sc.Lines[schedRow+1].Text); !strings.Contains(p, "Jobs") {
 		t.Errorf("label row %q", p)
 	}
 	for _, h := range []int{12, 15, 16, 20, 25, 26} {
@@ -243,7 +243,7 @@ func TestRailSchedule(t *testing.T) {
 				}
 			}
 		}
-		if len(views) != 5 || !views[ViewAuto] {
+		if len(views) != 4 || !views[ViewAuto] {
 			t.Errorf("h=%d: views %v", h, views)
 		}
 	}

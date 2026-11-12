@@ -243,12 +243,11 @@ const (
 )
 
 // railIcons are the rail's icons per theme: agents, files, search, git,
-// limits, help, settings, skills, schedule. Nerd Font codicons (v3): hubot,
-// files, search, source_control, dashboard, question, settings-gear,
-// extensions, watch.
-var railIcons = map[string][9]string{
-	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueae6", "\ueb7c"},
-	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "🧩", "⏰"},
+// limits, help, settings, jobs. Nerd Font codicons (v3): hubot, files,
+// search, source_control, dashboard, question, settings-gear, watch.
+var railIcons = map[string][8]string{
+	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueb7c"},
+	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "⏰"},
 }
 
 // railItems are the rail's icons: the views at the top, then the bottom
@@ -263,8 +262,7 @@ func railItems(theme string) (top, bottom []railItem) {
 		{icon: ic[1], label: "rail.files", view: ViewExplorer},
 		{icon: ic[2], label: "rail.search", action: Action{Kind: ActSearch}},
 		{icon: ic[3], label: "rail.git", view: ViewChanges},
-		{icon: ic[7], label: "rail.skills", view: ViewSkills},
-		{icon: ic[8], label: "rail.schedule", view: ViewAuto},
+		{icon: ic[7], label: "rail.schedule", view: ViewAuto},
 	}, []railItem{
 		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
 		{icon: ic[6], label: "rail.settings", action: Action{Kind: ActSettings}},
