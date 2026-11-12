@@ -14,6 +14,11 @@ import (
 // A folder and refs a shell or tmux would read as commands.
 const evilDir = "/tmp/a b;#(touch x)$(y)"
 
+// evilBits are pieces of the data above that no command may hold (the
+// commands themselves have ";" and "&" on Windows, where PowerShell runs
+// them).
+var evilBits = []string{"a b;", "touch x", "$(y)", "#(x)"}
+
 func testCtx() Ctx {
 	return Ctx{Self: "/opt/imux", Dir: evilDir, Client: "/dev/pts/3", Pane: "%5", Sidebar: "%6", Now: time.Unix(1_800_000_000, 0)}
 }
@@ -57,8 +62,10 @@ func TestMenusCarryNoData(t *testing.T) {
 				if it.Cmd == "" && !it.Disabled {
 					t.Errorf("%s %s: %q does nothing", loc, name, it.Name)
 				}
-				if strings.Contains(it.Cmd, "a b") || strings.ContainsAny(it.Cmd, "#$;") {
-					t.Errorf("%s %s: %q carries data: %s", loc, name, it.Name, it.Cmd)
+				for _, bit := range evilBits {
+					if strings.Contains(it.Cmd, bit) {
+						t.Errorf("%s %s: %q carries data: %s", loc, name, it.Name, it.Cmd)
+					}
 				}
 				if it.Cmd != "" && !strings.Contains(it.Cmd, "/opt/imux") {
 					t.Errorf("%s %s: %q runs no imux: %s", loc, name, it.Name, it.Cmd)

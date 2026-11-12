@@ -129,10 +129,14 @@ func TestExecByteExactArgv(t *testing.T) {
 	fake := filepath.Join(h.Home, "bin", "fake-agent")
 	out := filepath.Join(h.Home, "argv.bin")
 	agentEnv := map[string]string{"PATH": "/usr/bin:/bin"}
+	self, err := os.Executable() // os.Args[0] may be a bare name
+	if err != nil {
+		t.Fatal(err)
+	}
 	if runtime.GOOS == "windows" {
 		// No shell scripts: the fake agent is this test binary (see
 		// argvEnv), so argv crosses Windows' command-line quoting.
-		fake = os.Args[0]
+		fake = self
 		agentEnv[argvEnv] = out
 	} else {
 		testutil.WriteFile(t, fake, []byte("#!/bin/sh\nfor a in \"$@\"; do printf '%s\\0' \"$a\"; done > \""+out+"\"\nprintf '%s|%s|%s' \"$IMUX_PANE\" \"$IMUX_AGENT\" \"$(pwd)\" > \""+out+".env\"\n"))
@@ -150,7 +154,7 @@ func TestExecByteExactArgv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=^$")
+	cmd := exec.Command(self, "-test.run=^$")
 	cmd.Env = append(os.Environ(), helperEnv+"="+sp)
 	if b, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("%v: %s", err, b)
