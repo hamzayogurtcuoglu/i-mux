@@ -168,9 +168,14 @@ type Model struct {
 	SCMSort   string          // "name", "status" or "" (the path): @imux_scm_sort
 	SCMClosed map[string]bool // folded folders of the tree ("side:path"), per sidebar
 	Skills    []skills.Skill  // the project's Agent Skills (Skills view)
-	Icons     string          // the rail's icon theme (IconsNerd, IconsEmoji)
-	Scroll    int             // first row of the view's list
-	Selected  string          // the explorer's selected row (a path relative to CWD)
+	Auto      []AutoItem      // the project's agents and skills with their schedules (Scheduler view)
+	AutoRoot  string          // the Scheduler's project root
+	// AutoRunning counts the scheduled runs going on, in every project (the
+	// rail's badge).
+	AutoRunning int
+	Icons       string // the rail's icon theme (IconsNerd, IconsEmoji)
+	Scroll      int    // first row of the view's list
+	Selected    string // the explorer's selected row (a path relative to CWD)
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -374,7 +379,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	scmView, scmSort := "", ""
 	if rows := tmux.Rows(sec["me"], 19); len(rows) > 0 {
 		scmView, scmSort = rows[0][17], rows[0][18]
-		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges || v == ViewSkills {
+		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges || v == ViewSkills || v == ViewAuto {
 			view = v
 		}
 		closed, program = rows[0][10] == "1", rows[0][11]
@@ -647,6 +652,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		skills.Sync(root)
 		m.Skills = skills.List(root)
 	}
+	gatherAuto(&m, cwd, skills.Root)
 	return m, win, nil
 }
 

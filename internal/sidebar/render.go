@@ -50,6 +50,9 @@ const (
 	ActSCM                    // Source Control: `imux __scm Section Path` (a menu, a Quick Pick, a prompt; D58)
 	ActSCMDir                 // fold or unfold a folder of Source Control's tree ("side:path" in Path)
 	ActSCMMenuAt              // Source Control's menu of file Path (side Section, Status) or commit Path (Section "commit") at the pointer
+	ActAuto                   // the Scheduler: `imux __auto Section Path` (run, stop, log, open, "menu when"; D61)
+	ActAutoMenu               // the Scheduler's menu of definition Path ("": the view's) at the pointer
+	ActAutoNew                // the New agent dialog: an agent writes an agent for the Scheduler, or a blank one
 )
 
 // Action is a row's action.
@@ -768,6 +771,8 @@ func Render(m Model, w, h int, sel Item) Screen {
 		content = renderChanges(m, cw, h)
 	case ViewSkills:
 		content = renderSkills(m, cw, h)
+	case ViewAuto:
+		content = renderAuto(m, cw, h)
 	default:
 		content = renderAgents(m, cw, h)
 	}
@@ -911,8 +916,12 @@ func compose(cells []Cell, w int) string {
 	return b.String()
 }
 
-// Animated reports whether the screen shows a spinner (a working agent).
+// Animated reports whether the screen shows a spinner (a working agent, a
+// scheduled run).
 func (m Model) Animated() bool {
+	if m.autoRunning() {
+		return true
+	}
 	for _, pr := range m.Projects {
 		for _, p := range pr.Panes {
 			if p.State == StateWorking && p.Limited == "" {

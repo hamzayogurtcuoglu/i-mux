@@ -18,7 +18,8 @@ const (
 	ViewExplorer = "explorer"
 	ViewSearch   = "search" // a popup: the rail opens it, the view stays
 	ViewChanges  = "changes"
-	ViewSkills   = "skills" // the project's Agent Skills (D32)
+	ViewSkills   = "skills"   // the project's Agent Skills (D32)
+	ViewAuto     = "schedule" // the Scheduler: the project's agents and skills on a schedule (D61)
 	OptView      = "@imux_view"
 	// OptClosed is "1" while the panel is closed (§9.3 "Closing the side
 	// panel"): the sidebar is only the rail.
@@ -242,11 +243,12 @@ const (
 )
 
 // railIcons are the rail's icons per theme: agents, files, search, git,
-// limits, help, settings, skills. Nerd Font codicons (v3): hubot, files,
-// search, source_control, dashboard, question, settings-gear, extensions.
-var railIcons = map[string][8]string{
-	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueae6"},
-	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "🧩"},
+// limits, help, settings, skills, schedule. Nerd Font codicons (v3): hubot,
+// files, search, source_control, dashboard, question, settings-gear,
+// extensions, watch.
+var railIcons = map[string][9]string{
+	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueae6", "\ueb7c"},
+	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "🧩", "⏰"},
 }
 
 // railItems are the rail's icons: the views at the top, then the bottom
@@ -262,6 +264,7 @@ func railItems(theme string) (top, bottom []railItem) {
 		{icon: ic[2], label: "rail.search", action: Action{Kind: ActSearch}},
 		{icon: ic[3], label: "rail.git", view: ViewChanges},
 		{icon: ic[7], label: "rail.skills", view: ViewSkills},
+		{icon: ic[8], label: "rail.schedule", view: ViewAuto},
 	}, []railItem{
 		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
 		{icon: ic[6], label: "rail.settings", action: Action{Kind: ActSettings}},
@@ -313,8 +316,16 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 		bg = selBg
 	}
 	// The Agents icon's badge (D46): how many agents work, in the item's
-	// 7th and 8th columns, one blank after the icon's two.
-	if n := workingCount(m); it.view == ViewAgents && n > 0 {
+	// 7th and 8th columns, one blank after the icon's two. The Schedule
+	// icon's: how many scheduled runs go on (D61).
+	n := 0
+	switch it.view {
+	case ViewAgents:
+		n = workingCount(m)
+	case ViewAuto:
+		n = m.AutoRunning
+	}
+	if n > 0 {
 		num := strconv.Itoa(n)
 		if n > 9 {
 			num = "9+"
@@ -373,6 +384,9 @@ func withRail(content []Line, m Model, w, h int) []Line {
 	if h == 0 {
 		bottomAt = max(rows, len(top)*step) + 1
 	}
+	// A pane too short for both: the bottom items go below the top ones
+	// (and off the pane) rather than over them.
+	bottomAt = max(bottomAt, len(top)*step)
 	for i, it := range bottom {
 		place(bottomAt+i*step, it)
 	}

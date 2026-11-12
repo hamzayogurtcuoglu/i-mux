@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -22,7 +23,7 @@ import (
 func init() {
 	register(&command{
 		Name:   "__skill",
-		Args:   "<op> [--client C] [--agent A | --here] [--template]",
+		Args:   "<op> [--client C] [--agent A | --here] [--template] [--agents]",
 		Hidden: true,
 		Run:    runSkill,
 	})
@@ -47,6 +48,7 @@ type skillCtx struct {
 	agent    string // --agent: who writes the skill in a new pane
 	here     bool   // --here: the target pane's agent writes it
 	template bool   // --template: the dialog opens at the blank template
+	agents   bool   // --agents: the New agent dialog (the Scheduler's, D61)
 	sys      *fileops.System
 }
 
@@ -59,6 +61,7 @@ func runSkill(e *Env, args []string) error {
 	agentF := fs.String("agent", "", "write: the agent that writes the skill in a new pane")
 	hereF := fs.Bool("here", false, "write: the target pane's agent writes the skill")
 	templateF := fs.Bool("template", false, "dialog: open at the blank template's name")
+	agentsF := fs.Bool("agents", false, "dialog, new, write: an agent definition for the Scheduler instead of a skill")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
@@ -70,7 +73,7 @@ func runSkill(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	s := &skillCtx{ctx: context.Background(), e: e, w: w, client: *clientF, agent: *agentF, here: *hereF, template: *templateF, sys: &fileops.System{}}
+	s := &skillCtx{ctx: context.Background(), e: e, w: w, client: *clientF, agent: *agentF, here: *hereF, template: *templateF, agents: *agentsF, sys: &fileops.System{}}
 	out, err := w.T.Run(s.ctx,
 		tmux.DelimCmd("dir"), tmux.Cmd{"show-options", "-gqv", sidebar.OptSkill},
 		tmux.DelimCmd("root"), tmux.Cmd{"show-options", "-gqv", sidebar.OptSkillRoot},
@@ -98,6 +101,9 @@ func (s *skillCtx) again(op string) []string {
 	args := []string{"__skill", op}
 	if s.client != "" {
 		args = append(args, "--client", s.client)
+	}
+	if s.agents {
+		args = append(args, "--agents")
 	}
 	return args
 }
@@ -157,16 +163,34 @@ func (s *skillCtx) newSkill() error {
 	for _, a := range agent.Ordered(s.w.Cfg) {
 		agents = append(agents, skilldialog.Agent{ID: a.ID, Name: a.Short, Key: a.Key, Installed: s.w.Installed(a.ID), Limited: s.w.LimitedUntil(a.ID)})
 	}
-	m := skilldialog.New(skilldialog.Options{
+	o := skilldialog.Options{
 		Agents: agents, Current: cur, Template: s.template,
 		Exists: func(name string) bool { return skills.Exists(s.root, name) },
-	})
+	}
+	if s.agents {
+		o.Texts, o.ExistsKey = "auto.dialog", "auto.exists"
+		o.Exists = func(name string) bool { return auto.Exists(s.root, name) }
+		o.Path = func(name string) string { return s.rel(auto.AgentFile(s.root, session.Claude, name)) }
+	}
+	m := skilldialog.New(o)
 	res, err := skilldialog.Run(m, os.Stdin, os.Stdout)
 	if err != nil {
 		return err
 	}
 	switch res.Kind {
 	case skilldialog.Template:
+		if s.agents {
+			p, err := auto.Create(s.root, res.Text)
+			if errors.Is(err, auto.ErrExists) {
+				s.say(i18n.T("auto.exists", res.Text))
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			sidebar.RefreshAll(ctx, s.w.T)
+			return runEdit(s.e, []string{s.rel(p)})
+		}
 		p, err := skills.Create(s.root, res.Text, "")
 		if errors.Is(err, skills.ErrExists) {
 			s.say(i18n.T("skills.exists", res.Text))
@@ -198,23 +222,34 @@ func (s *skillCtx) newSkill() error {
 // agent beside the target pane (or in the "No agents" pane), named for it.
 func (s *skillCtx) write() error {
 	ctx := s.ctx
-	prompt := skills.WritePrompt(s.root, s.text, i18n.T("skills.language"))
+	lang := i18n.T("skills.language")
+	prompt := skills.WritePrompt(s.root, s.text, lang)
 	if s.here {
 		p, err := s.agentPane()
 		if err != nil {
 			s.say(i18n.T("skills.no_agent"))
 			return nil
 		}
+		msg := i18n.T("skills.writing", session.ShortName(p.Agent))
+		if s.agents {
+			prompt = auto.WritePrompt(s.root, p.Agent, s.text, lang)
+			msg = i18n.T("auto.writing", session.ShortName(p.Agent), auto.AgentDir(p.Agent))
+		}
 		if err := s.w.Paste(ctx, p.ID, prompt, true); err != nil {
 			return err
 		}
 		_, _ = s.w.T.Run(ctx, tmux.Cmd{"select-pane", "-t", p.ID})
-		s.say(i18n.T("skills.writing", session.ShortName(p.Agent)))
+		s.say(msg)
 		return nil
 	}
 	id, err := parseAgentFlag("agent", s.agent)
 	if err != nil || id == "" {
 		return &UsageError{Msg: i18n.T("cli.usage", "__skill write --agent <agent> | --here")}
+	}
+	paneName, msg := i18n.T("skills.pane_name"), i18n.T("skills.writing_new", session.ShortName(id))
+	if s.agents {
+		prompt = auto.WritePrompt(s.root, id, s.text, lang)
+		paneName, msg = i18n.T("auto.pane_name"), i18n.T("auto.writing_new", session.ShortName(id))
 	}
 	if s.pane == "" {
 		return errors.New("no pane chosen")
@@ -223,11 +258,11 @@ func (s *skillCtx) write() error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.w.StartPrompt(ctx, p, id, prompt, i18n.T("skills.pane_name")); err != nil {
+	if _, err := s.w.StartPrompt(ctx, p, id, prompt, paneName); err != nil {
 		s.say(workspace.SwitchError(id, err))
 		return nil
 	}
-	s.say(i18n.T("skills.writing_new", session.ShortName(id)))
+	s.say(msg)
 	return nil
 }
 

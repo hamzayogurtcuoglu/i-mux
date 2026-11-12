@@ -291,7 +291,7 @@ func (s *sidebar) draw() {
 // isMenu reports actions that open a menu.
 func isMenu(k ActionKind) bool {
 	switch k {
-	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActSettings, ActSCMMenuAt:
+	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActSettings, ActSCMMenuAt, ActAutoMenu:
 		return true
 	}
 	return false
@@ -304,6 +304,9 @@ func (s *sidebar) waits(ctx context.Context, a Action) bool {
 		return true // the command prompt
 	case ActSCM:
 		return a.Section == "ask" || !s.t.MenuTakesMouse(ctx)
+	case ActAuto:
+		// ⏰'s menu; 🚀 asks the CLI the first time.
+		return (a.Section == "run" || strings.HasPrefix(a.Section, "menu")) && !s.t.MenuTakesMouse(ctx)
 	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm, ActSuggest:
 		return !s.t.MenuTakesMouse(ctx)
 	case ActOpenFile:
@@ -407,6 +410,9 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		if s.model.View == ViewSkills {
 			n = len(s.model.Skills) * 2
 		}
+		if s.model.View == ViewAuto {
+			n = len(s.model.autoRows(40))
+		}
 		if ev.Key == "up" {
 			s.scroll = max(s.scroll-3, 0)
 		} else {
@@ -435,11 +441,13 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		case ActSkillMenu:
 			menu = a
 			s.selected = a.Path
+		case ActAuto, ActAutoMenu:
+			menu = Action{Kind: ActAutoMenu, Path: a.Path}
 		case ActToggleDir:
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
 			s.selected = a.Path
-		case ActNone, ActSearch, ActRefresh, ActSkillNew:
-			// The explorer's or skills' empty space and title.
+		case ActNone, ActSearch, ActRefresh, ActSkillNew, ActAutoNew:
+			// The explorer's, skills' or Scheduler's empty space and title.
 			if s.model.Closed || ev.X <= railW {
 				return
 			}
@@ -448,6 +456,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 				menu = Action{Kind: ActFileMenu, Section: MenuRoot}
 			case ViewSkills:
 				menu = Action{Kind: ActSkillMenu}
+			case ViewAuto:
+				menu = Action{Kind: ActAutoMenu}
 			default:
 				return
 			}
@@ -501,6 +511,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		case ActSkillMenu:
 			s.selected = a.Path
 			s.menuX, s.menuY = ev.X, ev.Y
+		case ActAuto, ActAutoMenu, ActAutoNew:
+			s.menuX, s.menuY = ev.X, ev.Y // its menus open at the click
 		case ActSCM:
 			s.menuX, s.menuY = ev.X, ev.Y // ⋯ and ▾ drop down from the button
 		}
@@ -556,6 +568,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.do(ctx, Action{Kind: ActView, Section: ViewChanges})
 	case "5":
 		s.do(ctx, Action{Kind: ActView, Section: ViewSkills})
+	case "6":
+		s.do(ctx, Action{Kind: ActView, Section: ViewAuto})
 	default:
 		for _, a := range s.model.Agents {
 			if a.Key == ev.Key {
@@ -712,6 +726,9 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActSkillMenu:
 		s.skillMenu(ctx, client, a, s.menuX, s.menuY)
 		return
+	case ActAuto, ActAutoMenu, ActAutoNew:
+		s.autoDo(ctx, client, a)
+		return
 	case ActGit:
 		switch a.Section {
 		case "stage-merge": // MERGE CHANGES' +: every conflicted file, resolved
@@ -769,7 +786,7 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActFold:
 		// Fold or unfold a section in every sidebar (@imux_fold, global).
 		var names []string
-		for _, n := range []string{SecProjects, SecAgents, SecChanges, SecStaged, SecUnstaged, SecHistory} {
+		for _, n := range []string{SecProjects, SecAgents, SecChanges, SecStaged, SecUnstaged, SecHistory, SecAutoScheduled, SecAutoAgents, SecAutoSkills} {
 			if f := s.model.Fold[n]; f != (n == a.Section) {
 				names = append(names, n)
 			}

@@ -67,6 +67,12 @@ type Options struct {
 	Current  session.AgentID // the agent of the pane the sidebar acts on ("" for none)
 	Template bool            // open at the blank template's name
 	Exists   func(name string) bool
+	// Texts is the i18n prefix of the dialog's texts ("" = "skills.dialog");
+	// a text it lacks is the New skill dialog's. The New agent dialog
+	// (§9.3 "Scheduler") is "auto.dialog".
+	Texts     string
+	ExistsKey string                   // the i18n key of "%q already exists" ("" = "skills.exists")
+	Path      func(name string) string // the blank template's file for name ("" = a skill's)
 }
 
 type item struct {
@@ -88,22 +94,34 @@ type field struct {
 // Model is the dialog's state: step 0 picks who writes the skill, step 1
 // takes the description or the name.
 type Model struct {
-	items  []item
-	exists func(string) bool
-	sel    int
-	step   int
-	chosen item
-	direct bool // opened at the name: Esc closes
-	desc   field
-	name   field
-	err    string
-	boxW   int   // the text box's width as last drawn
-	rows   []int // step 0: the item on each drawn row (-1 for none)
+	items     []item
+	exists    func(string) bool
+	texts     string
+	existsKey string
+	path      func(string) string
+	sel       int
+	step      int
+	chosen    item
+	direct    bool // opened at the name: Esc closes
+	desc      field
+	name      field
+	err       string
+	boxW      int   // the text box's width as last drawn
+	rows      []int // step 0: the item on each drawn row (-1 for none)
 }
 
 // New makes the dialog for o. The current pane's agent is chosen first.
 func New(o Options) *Model {
-	m := &Model{exists: o.Exists, sel: -1, boxW: 60}
+	m := &Model{exists: o.Exists, sel: -1, boxW: 60, texts: o.Texts, existsKey: o.ExistsKey, path: o.Path}
+	if m.texts == "" {
+		m.texts = "skills.dialog"
+	}
+	if m.existsKey == "" {
+		m.existsKey = "skills.exists"
+	}
+	if m.path == nil {
+		m.path = func(name string) string { return skills.Home + "/" + name + "/" + skills.File }
+	}
 	var current Agent
 	for _, a := range o.Agents {
 		m.items = append(m.items, item{kind: NewPane, agent: a, key: a.Key})
@@ -130,6 +148,15 @@ func New(o Options) *Model {
 		m.choose(len(m.items) - 1)
 	}
 	return m
+}
+
+// t is the dialog's text key (its prefix's, else the New skill dialog's).
+func (m *Model) t(key string, args ...any) string {
+	k := m.texts + "." + key
+	if !i18n.Has(k) {
+		k = "skills.dialog." + key
+	}
+	return i18n.T(k, args...)
 }
 
 // next is the next item from i in direction d that can be chosen.
@@ -274,9 +301,9 @@ func (m *Model) submit() (Result, bool) {
 	name := skills.Slug(text)
 	switch {
 	case name == "":
-		m.err = i18n.T("skills.dialog.name_empty")
+		m.err = m.t("name_empty")
 	case m.exists != nil && m.exists(name):
-		m.err = i18n.T("skills.exists", name)
+		m.err = i18n.T(m.existsKey, name)
 	default:
 		return Result{Kind: Template, Text: name}, true
 	}
@@ -416,12 +443,12 @@ func (f *field) box(w, rows int, placeholder string) []string {
 }
 
 // label is an item's name.
-func (it item) label() string {
+func (m *Model) label(it item) string {
 	switch it.kind {
 	case Here:
-		return i18n.T("skills.dialog.here", it.agent.Name)
+		return m.t("here", it.agent.Name)
 	case Template:
-		return i18n.T("skills.dialog.template")
+		return m.t("template")
 	}
 	return it.agent.Name
 }
@@ -445,11 +472,11 @@ func (m *Model) row(i, w, nameW int) string {
 	case it.kind == NewPane && it.agent.Limited != "":
 		note = yellow + i18n.T("sidebar.limited", it.agent.Limited) + reset
 	case it.kind == Here:
-		note = muted + i18n.T("skills.dialog.here_note") + reset
+		note = muted + m.t("here_note") + reset
 	case it.kind == Template:
-		note = muted + i18n.T("skills.dialog.template_note") + reset
+		note = muted + m.t("template_note") + reset
 	}
-	name := sidebar.Fit(it.label(), nameW)
+	name := sidebar.Fit(m.label(it), nameW)
 	text := "  " + cyan + it.key + reset + "  " + it.glyph() + " " + bold + name + reset + "  " + note
 	if !it.ok() {
 		text = "  " + muted + it.key + "  " + sidebar.Plain(it.glyph()) + " " + name + reset + "  " + note
@@ -465,11 +492,11 @@ func (m *Model) row(i, w, nameW int) string {
 // Render draws the dialog for w columns and h rows.
 func (m *Model) Render(w, h int) []string {
 	w, h = max(w, 20), max(h, 8)
-	title := "✨ " + i18n.T("skills.dialog.title")
+	title := "✨ " + m.t("title")
 	if m.step == 1 {
-		title += " · " + sidebar.Plain(m.chosen.glyph()) + " " + m.chosen.label()
+		title += " · " + sidebar.Plain(m.chosen.glyph()) + " " + m.label(m.chosen)
 		if m.chosen.kind == NewPane {
-			title += " · " + i18n.T("skills.dialog.new_pane")
+			title += " · " + m.t("new_pane")
 		}
 	}
 	out := []string{
@@ -481,12 +508,12 @@ func (m *Model) Render(w, h int) []string {
 	switch {
 	case m.step == 0:
 		out = append(out,
-			" "+bold+sidebar.Fit(i18n.T("skills.dialog.who"), w-2)+reset,
-			" "+muted+sidebar.Fit(i18n.T("skills.dialog.who_note"), w-2)+reset,
+			" "+bold+sidebar.Fit(m.t("who"), w-2)+reset,
+			" "+muted+sidebar.Fit(m.t("who_note"), w-2)+reset,
 			"")
 		nameW := 0
 		for _, it := range m.items {
-			nameW = max(nameW, sidebar.DisplayWidth(it.label()))
+			nameW = max(nameW, sidebar.DisplayWidth(m.label(it)))
 		}
 		m.rows = []int{-1, -1, -1, -1, -1}
 		for i, it := range m.items {
@@ -497,28 +524,28 @@ func (m *Model) Render(w, h int) []string {
 			out = append(out, m.row(i, w, nameW))
 			m.rows = append(m.rows, i)
 		}
-		hint = i18n.T("skills.dialog.choose_hint")
+		hint = m.t("choose_hint")
 	case m.chosen.kind == Template:
 		bw := max(w-5, 4)
 		m.boxW = bw
-		out = append(out, "", " "+bold+i18n.T("skills.dialog.name")+reset)
-		out = append(out, boxed(m.name.box(bw, 1, i18n.T("skills.dialog.name_placeholder")), bw)...)
+		out = append(out, "", " "+bold+m.t("name")+reset)
+		out = append(out, boxed(m.name.box(bw, 1, m.t("name_placeholder")), bw)...)
 		name := skills.Slug(string(m.name.r))
 		switch {
 		case m.err != "":
 			out = append(out, " "+yellow+"⚠ "+sidebar.Fit(m.err, w-4)+reset)
 		case name != "" && m.exists != nil && m.exists(name):
-			out = append(out, " "+yellow+"⚠ "+sidebar.Fit(i18n.T("skills.exists", name), w-4)+reset)
+			out = append(out, " "+yellow+"⚠ "+sidebar.Fit(i18n.T(m.existsKey, name), w-4)+reset)
 		case name != "":
-			out = append(out, " "+muted+"→ "+sidebar.Fit(skills.Home+"/"+name+"/"+skills.File, w-4)+reset)
+			out = append(out, " "+muted+"→ "+sidebar.Fit(m.path(name), w-4)+reset)
 		default:
 			out = append(out, "")
 		}
-		out = append(out, " "+faint+sidebar.Fit(i18n.T("skills.dialog.name_rule"), w-2)+reset)
-		out = append(out, "", " "+muted+sidebar.Fit(i18n.T("skills.dialog.template_info"), w-2)+reset)
-		hint = i18n.T("skills.dialog.name_hint")
+		out = append(out, " "+faint+sidebar.Fit(m.t("name_rule"), w-2)+reset)
+		out = append(out, "", " "+muted+sidebar.Fit(m.t("template_info"), w-2)+reset)
+		hint = m.t("name_hint")
 		if m.direct {
-			hint = i18n.T("skills.dialog.name_hint_close")
+			hint = m.t("name_hint_close")
 		}
 	default:
 		bw := max(w-5, 4)
@@ -528,10 +555,10 @@ func (m *Model) Render(w, h int) []string {
 		// box keeps 3.
 		rows := h - 8
 		guide := []string{
-			" " + muted + sidebar.Fit(i18n.T("skills.dialog.guide", m.chosen.agent.Name), w-2) + reset,
-			"   " + faint + "•" + reset + " " + muted + sidebar.Fit(i18n.T("skills.dialog.guide_1"), w-6) + reset,
-			"   " + faint + "•" + reset + " " + muted + sidebar.Fit(i18n.T("skills.dialog.guide_2"), w-6) + reset,
-			"   " + faint + "•" + reset + " " + muted + sidebar.Fit(i18n.T("skills.dialog.guide_3"), w-6) + reset,
+			" " + muted + sidebar.Fit(m.t("guide", m.chosen.agent.Name), w-2) + reset,
+			"   " + faint + "•" + reset + " " + muted + sidebar.Fit(m.t("guide_1"), w-6) + reset,
+			"   " + faint + "•" + reset + " " + muted + sidebar.Fit(m.t("guide_2"), w-6) + reset,
+			"   " + faint + "•" + reset + " " + muted + sidebar.Fit(m.t("guide_3"), w-6) + reset,
 			"",
 		}
 		if rows-len(guide) >= 3 {
@@ -539,10 +566,10 @@ func (m *Model) Render(w, h int) []string {
 			rows -= len(guide)
 		}
 		rows = min(max(rows, 1), maxRows)
-		out = append(out, " "+bold+i18n.T("skills.dialog.ask")+reset)
-		out = append(out, boxed(m.desc.box(bw, rows, i18n.T("skills.dialog.ask_placeholder")), bw)...)
-		out = append(out, " "+muted+sidebar.Fit(i18n.T("skills.dialog.ask_empty", m.chosen.agent.Name), w-2)+reset)
-		hint = i18n.T("skills.dialog.write_hint")
+		out = append(out, " "+bold+m.t("ask")+reset)
+		out = append(out, boxed(m.desc.box(bw, rows, m.t("ask_placeholder")), bw)...)
+		out = append(out, " "+muted+sidebar.Fit(m.t("ask_empty", m.chosen.agent.Name), w-2)+reset)
+		hint = m.t("write_hint")
 	}
 	for len(out) < h-1 {
 		out = append(out, "")

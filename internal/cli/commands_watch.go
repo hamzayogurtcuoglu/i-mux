@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/bus"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -70,6 +71,48 @@ func keepSidebars(w *workspace.WS, logger *log.Logger) {
 	}
 }
 
+// ScheduleCheckEvery is how often the watcher looks for schedules that are
+// due (§9.3 "Scheduler", D61).
+var ScheduleCheckEvery = 20 * time.Second
+
+// keepSchedules starts the Scheduler's runs that are due, each on its own
+// (`imux __auto exec`): at once, then every ScheduleCheckEvery. One started
+// is not started again for a minute, while it takes its lock.
+func keepSchedules(self string, logger *log.Logger) {
+	every := ScheduleCheckEvery
+	if d, err := time.ParseDuration(os.Getenv("IMUX_AUTO_CHECK")); err == nil && d > 0 {
+		every = d // tests
+	}
+	recent := map[string]time.Time{}
+	check := func() {
+		ss, err := auto.Load()
+		if err != nil {
+			logger.Printf("schedules: %v", err)
+			return
+		}
+		now := time.Now()
+		for id, at := range recent {
+			if now.Sub(at) >= time.Minute {
+				delete(recent, id)
+			}
+		}
+		for _, s := range auto.DueNow(ss, now, recent) {
+			if err := auto.Launch(self, s.ID, false); err != nil {
+				logger.Printf("schedule %s: %v", s.ID, err)
+				continue
+			}
+			recent[s.ID] = now
+			logger.Printf("schedule %s (%s) started", s.ID, s.Name)
+		}
+	}
+	check()
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for range t.C {
+		check()
+	}
+}
+
 // newTicker builds the watcher's per-tick work from the config.
 var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmux.Client, error) {
 	tc := tmux.New(paths.TmuxConf())
@@ -88,6 +131,7 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 		logger.Printf("tmux config: %v", err)
 	}
 	go keepSidebars(w, logger)
+	go keepSchedules(w.Self, logger)
 	actor := &watch.Actor{W: w, Log: logger}
 	keeper := &watch.StatusKeeper{W: w}
 	states := &watch.PaneStates{T: tc, Notify: newNotifier(cfg.Notify, tc).Send}

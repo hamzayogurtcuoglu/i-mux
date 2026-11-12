@@ -204,8 +204,8 @@ func SkillMenuItems(self, client string, st SkillMenuState) []string {
 	return items
 }
 
-// skillStart sets the skill options and runs `imux __skill <op>`.
-func (s *sidebar) skillStart(ctx context.Context, client, op string) {
+// skillStart sets the skill options and runs `imux __skill <op> [extra]`.
+func (s *sidebar) skillStart(ctx context.Context, client, op string, extra ...string) {
 	if s.model.CWD == "" {
 		return
 	}
@@ -213,7 +213,7 @@ func (s *sidebar) skillStart(ctx context.Context, client, op string) {
 	_, _ = s.t.Run(ctx,
 		tmux.Cmd{"set-option", "-g", OptSkillRoot, root},
 		tmux.Cmd{"set-option", "-g", OptSkillPane, s.model.Target})
-	s.spawn(append([]string{"__skill", op}, clientArgs(client)...))
+	s.spawn(append(append([]string{"__skill", op}, clientArgs(client)...), extra...))
 }
 
 // skillMenu opens the menu of a skill (or of the Skills view's empty space)
