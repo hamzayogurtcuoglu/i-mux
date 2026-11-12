@@ -40,8 +40,8 @@ Run every check CI runs, here, before creating the code commit and again before 
 make ci
 ```
 
-It covers Linux, macOS (a symlinked `TMPDIR`) and Windows (from WSL, on the Windows host), lint,
-generated files (`docs/CONFIG.md`), fixtures and e2e. **Do not commit, tag or push while it
+It covers Linux and macOS (a symlinked `TMPDIR`), lint, generated files (`docs/CONFIG.md`),
+fixtures and e2e. **Do not commit, tag or push while it
 fails**, and tell the user which checks could not run on this machine.
 
 ## Release steps

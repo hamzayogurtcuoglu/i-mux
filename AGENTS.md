@@ -11,9 +11,11 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) first; [ARCHITECTURE.md](ARCHITECTURE.md
   CHANGELOG entries are always in English, tags use `vX.Y.Z`, and commits must **never** include
   `Co-Authored-By:` trailers for Claude or any other AI agent.
 - **Before a commit that will be pushed: `make ci`** (`.agents/skills/check-before-push/SKILL.md`):
-  what CI checks, here: lint for the Linux, Windows and macOS builds, the unit tests on Linux,
-  with macOS's symlinked temp folder and on Windows (from WSL), and e2e. Unit tests passing on
-  Linux are not enough (v0.49.0 failed CI on macOS and Windows). Do not commit, tag or hand over
-  a push while it fails, and say which checks could not run here.
+  what CI checks, here: lint for the Linux and macOS builds, the unit tests on Linux and with
+  macOS's symlinked temp folder, and e2e. Unit tests passing on Linux are not enough (v0.49.0
+  failed CI on macOS). Do not commit, tag or hand over a push while it fails, and say which
+  checks could not run here.
+- **No native Windows** (D60): i-mux runs on macOS and Linux, and on Windows in WSL. Do not add
+  Windows-only code, builds or CI jobs.
 - Tests use synthetic fixtures only: never read the real `~/.claude`, `~/.gemini`, `~/.copilot`,
   `~/.codex` or `~/.imux`, and never start an agent CLI with a real prompt.

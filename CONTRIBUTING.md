@@ -13,7 +13,6 @@ make ci            # every check CI runs, here: run it before you push
 make build         # bin/imux
 make test          # unit tests
 make test-macos    # unit tests with TMPDIR behind a symlink, as on macOS
-make test-windows  # unit tests on Windows (from WSL: on the Windows host)
 make race          # unit tests with the race detector
 make e2e           # end-to-end tests against a real tmux on a private socket
 make lint          # golangci-lint (vet, staticcheck, errcheck, gofumpt, misspell)
@@ -22,28 +21,23 @@ make fuzz-short    # every fuzz target for 60 s
 make check-fixtures
 ```
 
-CI runs the unit tests on Linux, macOS and Windows, so passing `make test` here is not enough:
-run `make ci` before you push. It stops at the first failure: golangci-lint and vet for the
-Linux, Windows and macOS builds, generated files, fixtures, shellcheck, the unit tests with the
-race detector, `make test-macos` (macOS's temp folder is a symlink, `/var` to `/private/var`,
-and git reports the resolved path), `make test-windows`, the size gate and e2e. From WSL,
-`make test-windows` runs the Windows test binaries on the Windows host through interop
-(`scripts/wsl-exec.sh`), with Git for Windows' `sh` and `git` and a throwaway user profile, so
-tests never see your real Windows settings; elsewhere it only vets the Windows build. `PKGS=`
-narrows the test targets (`make test-windows PKGS=./internal/gitops/`).
+CI runs the unit tests on Linux and macOS, so passing `make test` here is not enough: run
+`make ci` before you push. It stops at the first failure: golangci-lint and vet for the Linux and
+macOS builds, generated files, fixtures, shellcheck, the unit tests with the race detector,
+`make test-macos` (macOS's temp folder is a symlink, `/var` to `/private/var`, and git reports
+the resolved path), the size gate and e2e. `PKGS=` narrows the test targets
+(`make test-macos PKGS=./internal/gitops/`).
 
 To try a build as your everyday `imux`, run `make install-local`. Never `cp` (or `go build -o`)
 onto the `imux` that is running: macOS kills every process of a program whose file changes in
 place (`SIGKILL (Code Signature Invalid)`), so the sidebars and the watcher die at once.
 `make install-local` writes a new file and moves it over the old one, as `imux update` does.
 
-On Windows, you can work inside WSL (end-to-end tests copy the binary to the Linux file system,
-because programs under `/mnt/c` start slowly) or natively with Go and psmux (see
-[docs/WINDOWS.md](docs/WINDOWS.md)).
+On Windows, work inside WSL. End-to-end tests copy the binary to the Linux file system, because
+programs under `/mnt/c` start slowly.
 
-The dependency rule is strict: the standard library plus `github.com/BurntSushi/toml` (and
-`golang.org/x/sys` on Windows for console, event and file-lock calls). Do not add other modules
-(test helpers included; the e2e pty helper uses raw ioctls for this reason).
+The dependency rule is strict: the standard library plus `github.com/BurntSushi/toml`. Do not add
+modules (test helpers included; the e2e pty helper uses raw ioctls for this reason).
 
 Every user-facing string goes through `internal/i18n` (a test fails on a missing key). The handoff
 document is model-facing and always English.

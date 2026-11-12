@@ -15,17 +15,13 @@ PKGS      ?= ./...
 
 export CGO_ENABLED = 0
 
-.PHONY: all build build-windows install test race e2e lint fmt bench fuzz-short check-fixtures size clean generate \
-	ci lint-all generate-check shellcheck test-macos test-windows
+.PHONY: all build install test race e2e lint fmt bench fuzz-short check-fixtures size clean generate \
+	ci lint-all generate-check shellcheck test-macos
 
 all: lint test build
 
 build: ## Build bin/imux
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/imux
-
-# On Windows without make: scripts/build-windows.ps1 does the same.
-build-windows: ## Build bin/imux.exe for Windows (GOARCH=arm64 for ARM)
-	GOOS=windows $(GO) build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY).exe ./cmd/imux
 
 # A new file, then mv: overwriting a running imux in place makes macOS kill
 # every imux process (Code Signature Invalid), the sidebars included.
@@ -44,16 +40,14 @@ test: ## Unit tests
 race: ## Unit tests with the race detector (needs cgo)
 	CGO_ENABLED=1 $(GO) test -race $(PKGS)
 
-# CI runs the unit tests on Linux, macOS and Windows; a test that passes here
-# can fail there. `make ci` runs what CI runs, as close as this machine can:
-# run it before a push (.agents/skills/check-before-push).
-ci: lint-all generate-check check-fixtures shellcheck race test-macos test-windows size e2e ## Every check CI runs, here: run it before a push
+# CI runs the unit tests on Linux and macOS; a test that passes here can
+# fail there. `make ci` runs what CI runs, as close as this machine can: run
+# it before a push (.agents/skills/check-before-push).
+ci: lint-all generate-check check-fixtures shellcheck race test-macos size e2e ## Every check CI runs, here: run it before a push
 
-lint-all: ## Lint and vet as CI does: Linux (e2e tests too), Windows and macOS builds
+lint-all: ## Lint and vet as CI does: Linux (e2e tests too) and the macOS build
 	golangci-lint run ./...
-	GOOS=windows golangci-lint run ./cmd/... ./internal/...
 	$(GO) vet ./... && $(GO) vet -tags e2e ./...
-	GOOS=windows $(GO) vet ./cmd/... ./internal/...
 	GOOS=darwin $(GO) vet ./...
 
 generate-check: ## Fail if go generate changes a file (CI: "Generated files are current")
@@ -79,21 +73,6 @@ test-macos: ## Unit tests with TMPDIR behind a symlink, as on macOS
 	@real=$$(mktemp -d) && ln -s "$$real" "$$real.link" && \
 	trap 'rm -rf "$$real" "$$real.link"' EXIT && \
 	TMPDIR="$$real.link" $(GO) test -count=1 $(PKGS)
-
-# In WSL the Windows test binaries run on the Windows host through interop,
-# as on CI's Windows runner (PowerShell commands, 8.3 temp paths, CRLF), with
-# Git for Windows' sh and git and a throwaway user profile
-# (scripts/wsl-exec.sh). Elsewhere only the Windows build is vetted.
-test-windows: ## Unit tests on Windows: from WSL on the Windows host; elsewhere vets the Windows build only
-	@if grep -qs '^enabled' /proc/sys/fs/binfmt_misc/WSLInterop /proc/sys/fs/binfmt_misc/WSLInterop-late; then \
-		wintemp=$$(cd /mnt/c && cmd.exe /d /c 'echo %TEMP%' | tr -d '\r') && \
-		IMUX_WINTEST_PROFILE=$$(wslpath -u "$$wintemp")/imux-wintest.$$$$ && export IMUX_WINTEST_PROFILE && \
-		trap 'rm -rf "$$IMUX_WINTEST_PROFILE"' EXIT && \
-		GOOS=windows $(GO) test -count=1 -exec "$(CURDIR)/scripts/wsl-exec.sh" $(PKGS); \
-	else \
-		echo "test-windows: not WSL with Windows interop: Windows tests NOT run, vetting the Windows build only"; \
-		GOOS=windows $(GO) vet ./cmd/... ./internal/...; \
-	fi
 
 e2e: build ## End-to-end tests against a real tmux on a private socket
 	IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) $(GO) test -tags e2e -count=1 -timeout 15m ./e2e/...
