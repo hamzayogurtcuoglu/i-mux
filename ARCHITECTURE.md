@@ -2287,40 +2287,47 @@ time: what to do is in the agent or skill already written.
 ```
  SCHEDULER · scc                     ✨  🔄
  ▾ SCHEDULED  2
-   ✻ sim-tag                       🚀  ⋯
-     every 5 min · Claude · haiku
-     ✓ 12:05 v2.3 is out: pipeline… → 12:10
-   ◉ docs-check                    🛑  ⋯
+   ✻  sim-tag                      🚀  ⋯
+     every 5 min · Claude · haiku → 12:10
+     ✓ 12:05 v2.3 is out: pipeline started
+   ◉  docs-check                   🛑  ⋯
      daily 09:00 · Copilot
-     ⠹ running · 2 min
+     ⠹ running · 2m
  ▾ AGENTS  1
-   ✻ release-helper  personal      🚀  ⏰
+   ✻  release-helper  personal     🚀  ⏰
+     Prepares a release
  ▾ SKILLS  1
    🧩 release-notes                🚀  ⏰
+     Writes release notes
 ```
 
 - **What it lists** (the project root, as Skills): agents from `.claude/agents/*.md` (Claude
   Code), `.github/agents/*.agent.md` and `*.md` (Copilot), `.opencode/agent(s)/*.md` (OpenCode),
   `.agents/agents/*.md` (any CLI), and the personal ones in `~/.claude/agents` and
   `~/.copilot/agents`; their name and description come from the front matter (else the file's
-  name). Then the project's skills. A definition with a schedule or a run goes to SCHEDULED, with
-  its time, CLI and model, the last run's state and first line, and the next run.
+  name). Then the project's skills. A definition with a schedule goes to SCHEDULED, with its
+  time, CLI and model and, on the right, its next run; under them the run going on, or the last
+  run's state and first line (the news gets the row's whole width). The others show their
+  description. Key `6` opens the view.
 - **⏰ (no form, no prompt):** a menu asks when: every 5 minutes, every 15 minutes, every hour on
   the hour, every day at 09:00, or Custom… (one line: `10m`, `2h`, `hourly`, `09:00 18:30`); then
   which CLI (every agent CLI i-mux knows, the definition's own first and marked; the ones not
   installed disabled, a limited one says until when); then which model, in a Quick Pick: the
   default (the agent's own `model`, else the CLI's), the CLI's models (`agy models`, Claude's
   aliases from `claude --help`, `opencode models`, `auto` for Copilot; cached a day) and the
-  ones used before, and what is typed as a model name. Interval schedules start at once;
-  calendar ones at their next time. 🚀 asks the CLI and the model the first time, then reuses
-  them.
+  ones used before, and what is typed as a model name (`~/.imux/models.json` keeps the lists).
+  Interval schedules start at once; calendar ones at their next time. 🚀 asks the CLI and the
+  model the first time (the definition then has a schedule run only by hand), then reuses them.
 - **Running:** the watcher looks every 20 s (`IMUX_AUTO_CHECK` in tests) for schedules that are
   due (not paused, not running, their definition still there): an interval after the last run's
   start; a calendar time after the last run (or after the schedule was made), so a time missed
   while i-mux was closed runs once when it opens. It starts `imux __auto exec <id>` detached,
   which holds `auto/<id>/run.lock` while it runs: in the project folder, stdin empty, the agent
-  CLI's PATH, `NO_COLOR=1`, killed with its process group after the timeout (20 min, or the
-  schedule's `timeout`). A CLI that is not installed or is limited makes the run "skipped".
+  CLI's PATH, `NO_COLOR=1`, no `TMUX`, killed with its process group after the timeout (20 min,
+  or the schedule's `timeout`). A CLI that is not installed or is limited makes the run
+  "skipped". A start on schedule looks again once it holds the lock: the watcher and ⏰'s start
+  at once may both start one, and the second, which waited for the first's lock, is not due any
+  more. A sidebar's `Running` check holds the lock for a moment, so a run tries it for 200 ms.
 - **The command line** (the headless flag first, as ✨ commit messages, D29):
   - Claude: `claude -p --session-id <uuid> [--agent <name>] [--model M] --dangerously-skip-permissions`
     (read only: `--permission-mode dontAsk`);
@@ -2340,22 +2347,28 @@ time: what to do is in the agent or skill already written.
   alone); the item menu makes it read only.
 - **A run's result:** `ok` (a report), `quiet` (`IMUX_NOTHING_NEW`), `failed` (non-zero exit:
   the first line of its error output), `timeout`, `stopped` or `skipped`, with the report's first
-  line, the log and, for Claude, the session (`--session-id`). A run with a report or a failure
-  notifies (§ "Notifications": the system's and the clients' status line); a quiet one does not.
+  line, the log and, for Claude, the session (`--session-id`). A run with a report notifies
+  (§ "Notifications": the system's and the clients' status line), and a failure after a run
+  that did not fail (not one every five minutes); a quiet one does not.
 - **The item menu** (⋯ or right-click): Run now / Stop, Last output (a pager over the log),
   History… (a Quick Pick of the runs), Continue in a pane (Claude: `imux split claude
   --from-session`), Change time…, Change CLI and model…, Access › Full / Read only, Pause /
-  Resume, Open definition, Remove schedule. A click on an item shows its last output.
-- **✨ New agent…:** the New skill dialog (§ "Skills") with its own texts: an agent writes the
+  Resume, Open definition, Remove schedule. A click on a scheduled item shows its last output
+  (its menu before its first run); on another one, opens its definition. Right-click on the
+  view's empty space: New agent…, Blank agent file….
+- **✨ New agent…:** the New skill dialog (§ "Skills") with its own texts (`imux __skill dialog
+  --agents`; a text it lacks is the skill dialog's): an agent writes the
   agent definition where its CLI reads them (`.claude/agents/<name>.md` for Claude,
   `.github/agents/<name>.agent.md` for Copilot, `.opencode/agent/<name>.md` for OpenCode,
   `.agents/agents/<name>.md` for the others), self-contained and non-interactive; the blank
   template is `.claude/agents/<name>.md`.
 - **The rail's badge** counts the runs going on, as the Agents icon counts working agents.
 - Menu commands carry no names or paths (D58): a definition is a 12-hex-digit id (a hash of the
-  project and the file), the project is in `@imux_auto_cwd`, the choices so far in
-  `@imux_auto_when` and `@imux_auto_cli`, typed text in `@imux_auto_text`; Quick Pick items
-  are argv.
+  project and the file), the project is in `@imux_auto_cwd`, a time typed in `@imux_auto_text`;
+  the choices so far go along as fixed words (`--when 5m`, `--cli claude`; a time's spaces as
+  commas); Quick Pick items are argv. Code: `internal/auto` (definitions, times, store, runs,
+  command lines), `internal/autoui` (menus, Quick Picks), `imux __auto`, the sidebar's
+  `auto.go`.
 
 ### 9.4 Pane options
 
@@ -2748,6 +2761,7 @@ sequenceDiagram
 | `web/` | 0700 | `imux __web-serve` | one `<hash>.json` per served folder (folder, port, pid, token), 0600, removed when it stops |
 | `schedules.toml` (+ `schedules.lock`) | 0600 | the Scheduler view (flock + atomic rename); the user may edit it | what runs when: project, agent or skill, CLI, model, time, access (D61) |
 | `auto/<id>/` | 0700 | `imux __auto exec` | a schedule's runs: `runs.json` (the last 20), `<start>.log` each, `current.json` and `run.lock` while one runs |
+| `models.json` | 0600 | the Scheduler's model menu | each agent CLI's models, for a day (D61) |
 | tmux socket | tmux-managed | tmux | `$TMUX_TMPDIR/tmux-<uid>/imux` (dir 0700) |
 
 Read-only access (never written): `~/.claude/projects`, `~/.gemini/{projects.json,tmp}`,
