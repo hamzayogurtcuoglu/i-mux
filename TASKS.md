@@ -997,6 +997,24 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M65: No native Windows (added 2026-11-12)
+
+User request: remove the Windows port on psmux (#2, M62); i-mux need not run natively on Windows,
+and nothing else may break.
+
+- [ ] **T65.1 Revert the port** · M
+  - AC: D60: the merge of #2 is reverted: the psmux adapter, `sysx`, `winx`, `pwshshim`,
+    `install.ps1`, the PowerShell scripts, `docs/WINDOWS.md`, the Windows builds and archives, the
+    Windows CI job and lint, the `key@windows` messages and `golang.org/x/sys` go; every file the
+    port changed is as before it, plus what came after (Source Control, `make ci`) without its
+    Windows parts: the Quick Pick takes its signals from `os/signal`, the Windows rename retry
+    (T64.4) and `make test-windows` go.
+- [ ] **T65.2 Nothing else breaks** · S
+  - AC: `make ci` passes (lint and vet for Linux and macOS, race, test-macos, size, e2e), the
+    GoReleaser snapshot builds darwin and linux only, README, README.tr and CONTRIBUTING say WSL
+    for Windows; the check-before-push and commit-and-release skills and AGENTS.md lose their
+    Windows steps; CHANGELOG.
+
 ## M64: CI's checks run before a push (added 2026-11-12)
 
 User request: the pipelines failed again (v0.49.0 on macOS and Windows); coding agents must run
@@ -1017,7 +1035,7 @@ the tests here before code is pushed.
     symlinks and 8.3 names do not matter); TestShowLoad and TestMenusCarryNoData build what they
     expect with the platform's shell; tests that run their own binary find it with
     `os.Executable`; `make test-macos` and `make test-windows` pass.
-- [x] **T64.4 Writes on Windows wait for a file in use** · XS
+- [x] **T64.4 Writes on Windows wait for a file in use** · XS (removed with the port, M65)
   - AC: §18: atomic writes retry a rename Windows refuses while another process has the file open
     (seen by `make test-windows` on a machine with a virus scanner: TestConcurrentWritersLoseNothing
     failed 4 runs in 5); a Windows unit test holds the file open and Rename waits for it.
@@ -1367,11 +1385,13 @@ agent, starting with i-mux's skill-writing prompt; a separate popup is fine.
 
 ## M62: Native Windows port on psmux (added 2026-11-11)
 
+Removed in v0.50 (M65, D60).
+
 - [x] **T62.1 Platform abstractions and psmux adapter** · L
   - AC: `internal/sysx`, `internal/winx`, `internal/pwshshim` and the `internal/tmux` psmux
     adapter (`%pane~session` routing across per-session psmux servers, PowerShell command lines,
     menus and popups); `install.ps1`, `scripts/build-psmux.ps1`, `scripts/build-windows.ps1`,
-    [docs/WINDOWS.md](docs/WINDOWS.md); unit tests pass on Linux, macOS and Windows (`ci.yml`).
+    `docs/WINDOWS.md`; unit tests pass on Linux, macOS and Windows (`ci.yml`).
 
 ---
 
