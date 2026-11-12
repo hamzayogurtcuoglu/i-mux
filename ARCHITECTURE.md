@@ -71,7 +71,8 @@ done by tmux on a dedicated socket. i-mux only:
   - Claude's thinking blocks are signed and cannot be given to other models.
   - We inject a condensed markdown handoff instead: lossy, but robust.
 - **Reading provider usage endpoints** in v1 (no undocumented APIs). This may become an opt-in module later.
-- **Windows.** WSL works if tmux works there; it is not a target.
+- **Windows as the main target.** WSL with tmux is the supported way; since v0.49 i-mux also runs
+  natively on psmux ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ## 3. Key decisions
 
@@ -134,6 +135,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D55 | **"Working" is what the agent says: Claude Code, Codex, Copilot and Antigravity work while they show their busy line** (added 2026-11-11, v0.47, at the user's request; refines D38): a screen change of these agents counts as work only while the screen's last 16 non-blank lines show what the agent shows while it works, and only then: `esc to interrupt` (Claude Code's and Codex's progress line, Antigravity's "Press esc to interrupt generation"), `ctrl+c interrupt` (Copilot's footer). Other agents (OpenCode) keep D38's rule. | The spinner turned while the user moved through a list in the Copilot CLI (its screen changed above the input line too), not only after a prompt. Each of these CLIs shows how to interrupt it exactly while it works. |
 | D56 | **No dots for uncommitted changes or for "Done"** (added 2026-11-11, v0.47, at the user's request): a project row shows its name and branch; the yellow dot (uncommitted changes) and the green dot (an agent finished while the user looked elsewhere) are gone from the sidebar and the tab bar, and a finished agent is idle (its notification still says it finished). Working, Needs you, limited and exited stay. | The user did not know what the dots meant. The rail's Git icon counts the changed files, and Source Control lists them. |
 | D57 | **No Image button in the sidebar** (added 2026-11-11, v0.48, at the user's request): the row under "Continue this chat in" holds History alone; the 📎 Image button, which pasted the clipboard's image into the target agent, is gone. Ctrl+V and Alt+V in an agent's pane paste images as before (§9.3 "Pasting images"). | The user found it needless: copying and pasting an image already gives it to the agent, and Alt+V does where the terminal keeps Ctrl+V for itself. |
+| D58 | **Source Control works like VS Code's, every action of it included** (added 2026-11-12, v0.49, at the user's request; extends D27): the view's title gets ⋯ (More Actions) with VS Code's menu and its submenus (View & Sort, Commit, Changes, Pull/Push, Branch, Remote, Stash, Tags, Worktrees) and its other items (Pull, Push, Clone, Checkout to, Fetch, Show Git Output); what to act on (a branch, tag, stash, remote, worktree) is chosen in a Quick Pick that filters as one types; names and messages are asked on the command prompt; the Commit button gets VS Code's dropdown and turns into Continue / Commit Merge while a rebase, merge, cherry-pick or revert is under way; conflicts get their own MERGE CHANGES section; files list as a list or a tree, sorted by name, path or status; a right-click on a file or a commit opens VS Code's menu for it; HISTORY is a graph with branch and tag labels and incoming / outgoing marks. | The user wanted the editor's source control with every feature of it. tmux menus do not cascade, so a submenu replaces its menu (‹ Back returns); tmux's own menus cannot show more rows than the window has, so long lists go to a Quick Pick. No ref, path or message from a repository goes into a shell or tmux command line: menus read what they act on from options, and the Quick Pick runs imux with an argv. |
 
 ## 4. Components
 
@@ -2183,6 +2185,89 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
 - `Ctrl+\` is SIGQUIT in cooked mode. Binding it means shells inside imux panes lose that key; acceptable.
 - Pass-through in VS Code's terminal is Q1.
 - Menu latency target: < 100 ms from key press or click (one i-mux exec plus one tmux exec).
+
+#### Source Control like VS Code (v0.49, D58)
+
+```
+ SOURCE CONTROL                 ⟳ ⋯
+ ⎇ main ▾  ↑1 ↓0             ⏬ ⏫ 🔃
+ [        ✓ Commit…        ] ▾ ✨
+ ▾ MERGE CHANGES  1               +
+   !  api.go  internal
+ ▾ STAGED CHANGES  1              −
+   M  a.go                +3 −1   −
+ ▾ CHANGES  2                   ⏪ ➕
+   M  b.go                +1    ⏪ ➕
+   U  c.txt                     ⏪ ➕
+ ▾ HISTORY  50
+   ● ↑ 1a2b3c4 (main) feat: login  2h
+   ● 9f8e7d6 (origin/main) fix: …  1d
+```
+
+- **⋯ More Actions** (title, next to ⟳): VS Code's menu, in its order and groups: View & Sort ›;
+  Pull, Push, Clone…, Checkout to…, Fetch; Commit ›, Changes ›, Pull, Push ›, Branch ›, Remote ›,
+  Stash ›, Tags ›, Worktrees ›; Show Git Output. A submenu (`imux __scm-menu <name>`) opens where
+  its menu was, with ‹ Back first. Its items:
+  - **View & Sort:** View as List / View as Tree; Sort by Name / Path / Status (● the current).
+  - **Commit:** Commit, Commit Staged, Commit All, Undo Last Commit (`git reset --soft HEAD~`; the
+    first commit: `git update-ref -d HEAD`), Abort Rebase / Merge / Cherry-Pick / Revert (only
+    during one); Commit (Amend), Commit Staged (Amend), Commit All (Amend); Commit (Signed Off),
+    Commit Staged (Signed Off), Commit All (Signed Off).
+  - **Changes:** Stage All Changes, Unstage All Changes, Discard All Changes (asks).
+  - **Pull, Push:** Sync; Pull, Pull (Rebase), Pull from…; Push, Push to…, Push Tags; Fetch,
+    Fetch (Prune), Fetch From All Remotes.
+  - **Branch:** Merge…, Rebase Branch…; Create Branch…, Create Branch From…; Rename Branch…,
+    Delete Branch… (not merged: asks to force), Delete Remote Branch… (asks); Publish Branch….
+  - **Remote:** Add Remote… (its name, then its URL), Remove Remote… (asks).
+  - **Stash:** Stash…, Stash (Include Untracked)…, Stash Staged…; Apply Latest Stash, Apply
+    Stash…; Pop Latest Stash, Pop Stash…; Drop Stash…, Drop All Stashes… (both ask); View Stash….
+  - **Tags:** Create Tag… (a name, then a message: annotated; none: lightweight), Delete Tag…,
+    Delete Remote Tag… (asks).
+  - **Worktrees:** Create Worktree… (a branch, or a new one, in `<project>.worktrees/<branch>`
+    next to the project), Open Worktree… (as an i-mux project, `imux open`), Delete Worktree…
+    (asks; one with changes asks again to force).
+- **Quick Pick** (`imux __quickpick <id>`, a popup like Go to File): its title, an input that
+  filters as one types (Go to File's matching), the items in groups (branches, remote branches,
+  tags, …) with a description each (the commit's subject, a stash's branch, a remote's URL).
+  ↑ ↓, the wheel and the pointer move; Enter or a click chooses; Esc closes. Its items run imux
+  with an argv: actions that print (merge, rebase, push…) in the same popup, the others after it
+  closed. **Checkout to…** (also a click on the branch row, as VS Code's status bar): + Create new
+  branch…, + Create new branch from…, Checkout detached…, then the branches, the remote branches
+  (a local branch tracking it is made, or switched to) and the tags (detached).
+- **Asking:** names and messages on the command prompt (`@imux_git`, as Commit…), the amend's
+  pre-filled with the last subject (left as it is: the whole message is kept); what cannot be
+  undone asks in a menu first.
+- **Where git runs:** local actions at once, with a message; network ones (pull, push, fetch,
+  sync, publish, clone, deleting a remote branch or tag) and the ones that may stop on a conflict
+  (merge, rebase, pull (rebase), cherry-pick, revert, continue) in a popup showing git's output,
+  ending on "press Enter". Every command i-mux runs from the view, with its exit and what git
+  said, goes to `~/.imux/git.log` (the last 256 KB); Show Git Output pages it.
+- **Commit button:** "✓ Commit…"; while a merge is under way "✓ Commit Merge" (`git commit
+  --no-edit`); during a rebase, cherry-pick or revert "✓ Continue" (`--continue`,
+  `GIT_EDITOR=true`, in a popup). ▾ next to it: Commit, Commit (Amend), Commit & Push, Commit &
+  Sync (the commit, then the push or sync popup).
+- **Branch row:** a click opens Checkout to…; with no upstream ☁ Publish takes Sync's place.
+- **Sections:** MERGE CHANGES (conflicted files; + stages them: resolved), STAGED CHANGES,
+  CHANGES. Letters as VS Code's: U untracked (green), ! conflict (red), M, A, D, R. Files list as a
+  list or a tree (`@imux_scm_view` = `tree`), sorted by path (default), name or status
+  (`@imux_scm_sort`), both global like `@imux_fold`. The tree joins folders with one child
+  (`internal/api`); a folder row folds (per sidebar) and carries its section's buttons for all
+  under it.
+- **Right-click on a file:** Open Changes, Open File, Open File (HEAD); Stage / Unstage Changes,
+  Discard Changes; Add to .gitignore (untracked); Reveal in Explorer View, Reveal in Finder /
+  File Explorer; Copy Path, Copy Relative Path. Like the explorer's menu, it reads its file from
+  `@imux_file` and `@imux_file_root`.
+- **HISTORY** is a graph: `git log --graph --topo-order` of HEAD and its upstream, 50 commits,
+  read again only when a ref moved (HEAD, the upstream, `for-each-ref`). Lanes as ● │ ╱ ╲, the
+  refs as labels (the branch cyan, remote branches dim, tags yellow), ↑ for commits not pushed
+  and ↓ for incoming ones. A click shows the commit (`git show`); a right-click: Open Changes,
+  Checkout (Detached), Create Branch…, Create Tag…, Cherry Pick, Revert, Copy Commit ID, Copy
+  Commit Message.
+- **Not a repository:** Initialize Repository (`git init`) and Clone Repository… buttons, as
+  VS Code's.
+- Menu commands carry no repository data: the folder is in `@imux_scm_cwd` (set by the sidebar
+  as it opens a menu), a file in `@imux_file`, a commit in `@imux_scm_commit` (a hash); Quick Pick
+  items are argv. A branch named `$(…)` or `#H` stays a name.
 
 ### 9.4 Pane options
 
