@@ -152,36 +152,53 @@ func Show(self string) func(ctx context.Context, c *tmux.Client, cmd tmux.Cmd) e
 		}
 		out := filepath.Join(dir, id+".tmux")
 		w, h := Size(m)
-		pop := tmux.Cmd{"display-popup"}
-		if m.Client != "" {
-			pop = append(pop, "-c", m.Client)
-		}
-		if m.Pane != "" {
-			pop = append(pop, "-t", m.Pane)
-		}
-		pop = append(pop, "-E", "-w", strconv.Itoa(w), "-h", strconv.Itoa(h), "-x", m.X, "-y", m.Y,
-			tmux.ShJoin(self, "__menu-popup", id))
-		var cmds []tmux.Cmd
-		if c.MessageTakesClient(ctx) {
-			// A status-line message freezes the client's terminal, and tmux
-			// 3.3 and 3.4 then draw none of the popup's output until it goes:
-			// one shown with -d 0 ("✨ Writing…") until a key. An empty
-			// message that lasts 1 ms replaces it. (3.2 draws a popup through
-			// the freeze, which its popups need.)
-			clear := tmux.Cmd{"display-message", "-d", "1"}
-			if m.Client != "" {
-				clear = append(clear, "-c", m.Client)
-			}
-			cmds = append(cmds, append(clear, ""))
-		}
-		var env []string
-		if m.Pane != "" {
-			env = []string{"TMUX_PANE=" + m.Pane}
-		}
-		return c.SpawnEnv(env, append(cmds, pop,
+		return Popup(ctx, c, m.Client, m.Pane, w, h, m.X, m.Y, tmux.ShJoin(self, "__menu-popup", id),
 			tmux.Cmd{"source-file", "-q", out},
-			tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat("rm -f " + tmux.ShQuote(out))})...)
+			tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat("rm -f " + tmux.ShQuote(out))})
 	}
+}
+
+// Popup shows program (a shell command) in a w×h popup at x, y on client,
+// from pane, and does not wait for it; after runs once the popup closed (a
+// popup cannot open over another). The tmux client that shows it starts
+// from pane (TMUX_PANE), as display-menu runs a choice there.
+func Popup(ctx context.Context, c *tmux.Client, client, pane string, w, h int, x, y, program string, after ...tmux.Cmd) error {
+	pop := tmux.Cmd{"display-popup"}
+	if client != "" {
+		pop = append(pop, "-c", client)
+	}
+	if pane != "" {
+		pop = append(pop, "-t", pane)
+	}
+	pop = append(pop, "-E", "-w", strconv.Itoa(w), "-h", strconv.Itoa(h), "-x", x, "-y", y, program)
+	var cmds []tmux.Cmd
+	if c.MessageTakesClient(ctx) {
+		// A status-line message freezes the client's terminal, and tmux
+		// 3.3 and 3.4 then draw none of the popup's output until it goes:
+		// one shown with -d 0 ("✨ Writing…") until a key. An empty
+		// message that lasts 1 ms replaces it. (3.2 draws a popup through
+		// the freeze, which its popups need.)
+		clear := tmux.Cmd{"display-message", "-d", "1"}
+		if client != "" {
+			clear = append(clear, "-c", client)
+		}
+		cmds = append(cmds, append(clear, ""))
+	}
+	var env []string
+	if pane != "" {
+		env = []string{"TMUX_PANE=" + pane}
+	}
+	return c.SpawnEnv(env, append(append(cmds, pop), after...)...)
+}
+
+// NewID is a random file name for a popup's data under paths.Menus(); it
+// also removes the files older ones left.
+func NewID() (string, error) {
+	if err := paths.EnsureDir(paths.Menus()); err != nil {
+		return "", err
+	}
+	prune(paths.Menus())
+	return newID()
 }
 
 // newID is a random file name.
