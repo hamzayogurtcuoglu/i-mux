@@ -997,6 +997,16 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M67: Jobs on the rail, without a separate Skills tab (added 2026-11-12)
+
+User request: rename the Schedule tab to Jobs (since it also triggers skills and agents on demand
+and in batch mode) and remove the separate Skills tab from the left rail.
+
+- [ ] **T67.1 Jobs on the rail, no Skills rail tab** · XS
+  - AC: D62: the ⏰ rail tab is named `Jobs` (`İşler` in Turkish) with header `JOBS` (`İŞLER`),
+    opened by key `5`; the separate 🧩 Skills item is removed from the activity rail; unit and
+    e2e tests updated; README, README.tr and CHANGELOG updated.
+
 ## M66: Scheduler: the project's agents and skills on a schedule (added 2026-11-12)
 
 User request: a rail tab that shows scheduled agents (checks, batch jobs) and makes them; no

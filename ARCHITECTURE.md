@@ -139,6 +139,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D59 | **CI's checks run here before a push: `make ci`** (added 2026-11-12, v0.49.1, at the user's request after v0.49.0's CI run failed on macOS and Windows; its Windows part went with the port, D60): one target runs what CI runs, as close as this machine can: golangci-lint and vet for the Linux and macOS builds, generated files, fixtures and shellcheck, the unit tests with the race detector, again with `TMPDIR` behind a symlink (macOS's `/var` is `/private/var`), the size gate and the e2e tests. Coding agents run it before every commit that will be pushed (`.agents/skills/check-before-push`). | The unit tests ran on Linux only, so a test comparing a temp path with git's (a symlink on macOS) passed here and failed in CI. macOS cannot run here, but its symlinked temp folder can be copied. |
 | D60 | **No native Windows: the psmux port is removed** (added 2026-11-12, v0.50, at the user's request; undoes the port merged in #2, M62): i-mux runs on macOS and Linux, and on Windows in WSL. Gone: the psmux adapter and the `sysx`, `winx` and `pwshshim` packages, `install.ps1` and the PowerShell scripts, the Windows builds, release archives and CI jobs, `make test-windows`, the `key@windows` variants of messages, and `golang.org/x/sys` (D13 and D15 are as before the port). What came after the port stays, without its Windows parts: Source Control (D58) and `make ci` (D59). | The user decided i-mux need not run natively on Windows: WSL already runs it with tmux, while the port needed a psmux built from source (3.4.0 stops running i-mux's keys) and its own CI job and checks. Reverting the merge brings back the code the port had changed, as it was. |
 | D61 | **A Scheduler view runs the project's own agents and skills, now or on a schedule** (added 2026-11-12, v0.51, at the user's request): a rail tab lists the project's agent definitions (`.claude/agents`, `.github/agents`, `.opencode/agent`, `.agents/agents`, and the personal ones in `~/.claude/agents` and `~/.copilot/agents`) and its skills; 🚀 opens one Run panel where the installed CLI, the model, the time (now, a preset, or one typed) and the access are chosen already, and Enter runs it. i-mux runs it headless with the CLI's own flags (`claude -p --agent`, `copilot -p --agent`, `agy -p`, `codex exec`, `opencode run`), streaming where the CLI can, in the project, while i-mux is open (the watcher); a run's output opens live (each tool call, the answer; `s` stops it); the view shows each one's last report, state and next run, and notifies when a run has news or fails. i-mux does not write agents. | The user wanted scheduled and batch agents without filling forms or writing prompts: the agent or skill already written says what to do, so the user only confirms when, which CLI and which model, in one place. A run that only printed at its end looked like it had not worked, hence the live output. The agent CLIs already run headless (✨ commit messages, D29), and the watcher already lives exactly as long as i-mux. |
+| D62 | **The rail tab is named Jobs, and the separate Skills tab on the rail is gone** (added 2026-11-12, v0.52, at the user's request; refines D32 and D61): the ⏰ view on the activity rail is called **Jobs** (`İşler` in Turkish; title `JOBS` / `İŞLER`, key `5`), and the separate **🧩 Skills** icon on the rail is removed because Jobs already lists and triggers the project's skills alongside its agents. | "Schedule" sounded like a calendar timer only, while the view also triggers agents and skills on demand and runs them headless in batch mode. With skills already listed inside Jobs, a separate Skills tab on the rail duplicated them. |
 
 ## 4. Components
 
@@ -2278,12 +2279,12 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
   as it opens a menu), a file in `@imux_file`, a commit in `@imux_scm_commit` (a hash); Quick Pick
   items are argv. A branch named `$(…)` or `#H` stays a name.
 
-#### Scheduler (v0.51, D61)
+#### Scheduler / Jobs (v0.51, D61; named Jobs in v0.52, D62)
 
-The rail's ⏰ **Schedule** view (after Skills) runs the project's own agents and skills, now or
-on a schedule while i-mux is open, and shows what they do as they do it. The user writes
-nothing: what to do is in the agent or skill already written (in the agent CLIs, or by hand;
-i-mux does not write agents).
+The rail's ⏰ **Jobs** view (after Git; the separate 🧩 Skills rail tab was removed in v0.52, D62)
+runs the project's own agents and skills, now or on a schedule while i-mux is open, and shows
+what they do as they do it. The user writes nothing: what to do is in the agent or skill already
+written (in the agent CLIs, or by hand; i-mux does not write agents).
 
 ```
  SCHEDULER · scc                         🔄
