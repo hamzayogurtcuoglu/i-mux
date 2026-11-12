@@ -63,9 +63,9 @@ func TestChangesViewNames(t *testing.T) {
 		{Status: "M", Path: "automation-framework/src/collector/run_and_collect.py", Added: 65},
 	}}
 	for w, wants := range map[int][]string{
-		43: {"?  automatio…ramework/", "M  .env.example     +4", "M  blim_s…ps.py +47 −3", "M  run_and…lect.py +65"},
+		43: {"U  automatio…ramework/", "M  .env.example     +4", "M  blim_s…ps.py +47 −3", "M  run_and…lect.py +65"},
 		60: {
-			"?  automation-framework/", "M  .env.example automation-framewor… +4",
+			"U  automation-framework/", "M  .env.example automation-framewor… +4",
 			"M  blim_steps.py automation-fra… +47 −3", "M  run_and_collect.py automation-f… +65",
 		},
 	} {

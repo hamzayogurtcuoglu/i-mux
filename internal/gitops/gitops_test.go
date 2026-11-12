@@ -65,8 +65,8 @@ func TestFlow(t *testing.T) {
 	if c := st.Changes[0]; c.Added != 2 || c.Removed != 1 {
 		t.Fatalf("numstat %+v", c)
 	}
-	if len(st.History) != 1 || st.History[0].Subject != "init" {
-		t.Fatalf("history %+v", st.History)
+	if len(st.Graph) != 1 || st.Graph[0].Subject != "init" || st.Graph[0].Lanes != "●" || st.Op != "" {
+		t.Fatalf("graph %+v", st.Graph)
 	}
 
 	// Stage one file; it moves to the staged side.
@@ -103,7 +103,7 @@ func TestFlow(t *testing.T) {
 		t.Fatalf("commit %v %v", staged, err)
 	}
 	st, _ = Read(ctx, dir)
-	if len(st.Staged)+len(st.Changes) != 0 || st.History[0].Subject != "second" {
+	if len(st.Staged)+len(st.Changes) != 0 || st.Graph[0].Subject != "second" {
 		t.Fatalf("after commit %+v", st)
 	}
 	if _, err := Commit(ctx, dir, "  "); err == nil {
@@ -155,10 +155,11 @@ func TestParse(t *testing.T) {
 	if st.Branch != "main" || st.Upstream != "origin/main" || st.Ahead != 2 || st.Behind != 1 {
 		t.Fatalf("branch %+v", st)
 	}
-	if names(st.Staged) != "M both.go, R new.go, M staged.go" || names(st.Changes) != "M both.go, U conflict.go, ? n.txt, M work.go" {
-		t.Fatalf("sides %q / %q", names(st.Staged), names(st.Changes))
+	if names(st.Staged) != "M both.go, R new.go, M staged.go" || names(st.Changes) != "M both.go, ? n.txt, M work.go" ||
+		names(st.Conflicts) != "U conflict.go" || st.NoCommits {
+		t.Fatalf("sides %q / %q / %q", names(st.Staged), names(st.Changes), names(st.Conflicts))
 	}
-	if st := ParseStatus("## No commits yet on main\x00"); st.Branch != "main" {
+	if st := ParseStatus("## No commits yet on main\x00"); st.Branch != "main" || !st.NoCommits {
 		t.Fatalf("no commits %+v", st)
 	}
 	if st := ParseStatus("## HEAD (no branch)\x00"); st.Branch != "" {

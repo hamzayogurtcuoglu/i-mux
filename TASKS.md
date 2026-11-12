@@ -1002,26 +1002,26 @@ slow (about a second).
 User request: the Git view should be VS Code's, every feature of it: the ⋯ menu with its
 submenus and the rest.
 
-- [ ] **T63.1 Git reads and actions** · L
+- [x] **T63.1 Git reads and actions** · L
   - AC: D58, §9.3 "Source Control like VS Code": `gitops` reads conflicts, the operation under
     way, local and remote branches, tags, stashes, remotes, worktrees and the graph (refs, ↑ ↓,
     cached by refs); runs every action of the menus; `~/.imux/git.log`; unit tests on real
     repositories.
-- [ ] **T63.2 Quick Pick** · M
-  - AC: `imux __quickpick`: filter, groups, keys, mouse, an argv per item run in the popup or
-    after it; unit tests.
-- [ ] **T63.3 ⋯ and its submenus** · L
-  - AC: `imux __scm-menu`: VS Code's items and groups, ‹ Back, prompts, confirmations, Checkout
+- [x] **T63.2 Quick Pick** · M
+  - AC: `imux __quickpick`: filter (the best match first), groups, keys, mouse, an argv per item
+    run in the popup or once it closed, what was typed naming a new branch; unit tests.
+- [x] **T63.3 ⋯ and its submenus** · L
+  - AC: `imux __scm menu`: VS Code's items and groups, ‹ Back, prompts, confirmations, Checkout
     to…, the commit dropdown, the file and commit menus; no repository data in a command line;
     unit tests (the items, the argv).
-- [ ] **T63.4 The view** · M
+- [x] **T63.4 The view** · M
   - AC: ⋯ and ▾, Continue / Commit Merge, ☁ Publish, MERGE CHANGES, U and !, list / tree and the
     sort, the graph, Initialize / Clone outside a repository, right-click menus, the branch row
     opens Checkout to…; unit tests (render).
-- [ ] **T63.5 End to end** · S
+- [x] **T63.5 End to end** · S
   - AC: e2e: ⋯ → Stash › Stash… stashes; the branch row → Checkout to… → a typed branch switches;
     a right-click on an untracked file → Add to .gitignore.
-- [ ] **T63.6 Docs** · XS
+- [x] **T63.6 Docs** · XS
   - AC: README and README.tr; CHANGELOG (with the Windows port of M62).
 
 ## M61: No Image button (added 2026-11-11)

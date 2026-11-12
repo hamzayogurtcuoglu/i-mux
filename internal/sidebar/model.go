@@ -127,6 +127,9 @@ type ChangeRow struct {
 	Path    string
 	Added   int // lines (git diff --numstat HEAD); 0 when unknown
 	Removed int
+	Letter  string // the letter shown instead of Status (Source Control: U, !)
+	Name    string // the name shown instead of the path's (a tree's row)
+	Indent  int    // levels of a tree
 }
 
 // AgentRow is one agent the target pane can continue in.
@@ -142,29 +145,32 @@ type AgentRow struct {
 
 // Model is everything the sidebar shows.
 type Model struct {
-	Project  string // directory name of the target pane
-	CWD      string // its directory (diff popups run there)
-	Branch   string // "" outside a git repository
-	Changed  int    // files with uncommitted changes
-	Git      bool
-	Changes  []ChangeRow
-	Projects []ProjectRow // the current project first
-	Panes    []PaneRow    // the current window's panes (also inside Projects)
-	Agents   []AgentRow
-	Target   string          // pane id actions apply to; "" when the window has none
-	NoAgents bool            // the target is the "No agents" pane: nothing to continue
-	Now      time.Time       // for the times shown
-	Tick     int             // spinner frame
-	Fold     map[string]bool // folded sections (@imux_fold)
-	View     string          // the view on the activity rail (@imux_view)
-	Closed   bool            // the panel is closed: only the rail shows (@imux_collapsed)
-	Update   string          // a newer i-mux release ("0.27.0"), "" when up to date
-	Tree     []TreeRow       // the explorer's rows (Explorer view)
-	SCM      *gitops.Status  // the Source Control view's repository (nil outside git)
-	Skills   []skills.Skill  // the project's Agent Skills (Skills view)
-	Icons    string          // the rail's icon theme (IconsNerd, IconsEmoji)
-	Scroll   int             // first row of the view's list
-	Selected string          // the explorer's selected row (a path relative to CWD)
+	Project   string // directory name of the target pane
+	CWD       string // its directory (diff popups run there)
+	Branch    string // "" outside a git repository
+	Changed   int    // files with uncommitted changes
+	Git       bool
+	Changes   []ChangeRow
+	Projects  []ProjectRow // the current project first
+	Panes     []PaneRow    // the current window's panes (also inside Projects)
+	Agents    []AgentRow
+	Target    string          // pane id actions apply to; "" when the window has none
+	NoAgents  bool            // the target is the "No agents" pane: nothing to continue
+	Now       time.Time       // for the times shown
+	Tick      int             // spinner frame
+	Fold      map[string]bool // folded sections (@imux_fold)
+	View      string          // the view on the activity rail (@imux_view)
+	Closed    bool            // the panel is closed: only the rail shows (@imux_collapsed)
+	Update    string          // a newer i-mux release ("0.27.0"), "" when up to date
+	Tree      []TreeRow       // the explorer's rows (Explorer view)
+	SCM       *gitops.Status  // the Source Control view's repository (nil outside git)
+	SCMView   string          // "tree" or "" (a list): @imux_scm_view
+	SCMSort   string          // "name", "status" or "" (the path): @imux_scm_sort
+	SCMClosed map[string]bool // folded folders of the tree ("side:path"), per sidebar
+	Skills    []skills.Skill  // the project's Agent Skills (Skills view)
+	Icons     string          // the rail's icon theme (IconsNerd, IconsEmoji)
+	Scroll    int             // first row of the view's list
+	Selected  string          // the explorer's selected row (a path relative to CWD)
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -250,6 +256,8 @@ type Source struct {
 	// Expanded holds the explorer's open folders (paths relative to the
 	// project folder); the sidebar process keeps it.
 	Expanded map[string]bool
+	// SCMClosed holds Source Control's folded tree folders ("side:path").
+	SCMClosed map[string]bool
 	// Host is this machine's name (a terminal title equal to it is not a
 	// name); nil = os.Hostname.
 	Host func() string
@@ -351,7 +359,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}\t" + PanesFormat + "\t#{session_windows}\t#{window_active}\t#{session_attached}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}\t" + PanesFormat + "\t#{session_windows}\t#{window_active}\t#{session_attached}\t#{" + OptSCMView + "}\t#{" + OptSCMSort + "}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}\t#{client_termname}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -363,7 +371,9 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	fold := map[string]bool{}
 	view := ViewAgents
 	closed, program := false, ""
-	if rows := tmux.Rows(sec["me"], 17); len(rows) > 0 {
+	scmView, scmSort := "", ""
+	if rows := tmux.Rows(sec["me"], 19); len(rows) > 0 {
+		scmView, scmSort = rows[0][17], rows[0][18]
 		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges || v == ViewSkills {
 			view = v
 		}
@@ -487,7 +497,10 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		target = 0
 	}
 	panes[target].row.Target = true
-	m := Model{Target: panes[target].row.ID, NoAgents: panes[target].empty, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program)}
+	m := Model{
+		Target: panes[target].row.ID, NoAgents: panes[target].empty, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program),
+		SCMView: scmView, SCMSort: scmSort, SCMClosed: s.SCMClosed,
+	}
 	if m.Target != win.Last && win.ID != "" {
 		_, _ = s.T.Run(ctx, tmux.Cmd{"set-option", "-w", "-t", win.ID, OptLast, m.Target})
 		win.Last = m.Target

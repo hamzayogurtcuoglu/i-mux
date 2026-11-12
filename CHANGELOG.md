@@ -6,6 +6,37 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-11-12
+
+### Added
+
+- **Source Control like VS Code.** **⋯** in the Git view's title opens VS Code's menu: Pull, Push,
+  Clone…, Checkout to…, Fetch, Show Git Output, and the Commit (Staged, All, Amend, Signed Off,
+  Undo Last Commit, Abort), Changes, Pull/Push (Pull (Rebase), Pull from…, Push to…, Push Tags,
+  Fetch (Prune), Fetch From All Remotes), Branch (Merge, Rebase, Create, Create From, Rename,
+  Delete, Delete Remote, Publish), Remote, Stash (Include Untracked, Staged; Apply, Pop, Drop,
+  View), Tags and Worktrees submenus, with View & Sort (a list or a tree; by name, path or status).
+  Branches, tags, stashes, remotes and worktrees are chosen in a Quick Pick that filters as you
+  type; in Checkout to…, what you typed names a new branch. The Commit button gets a ▾ (Commit &
+  Push, Commit & Sync, Amend) and turns into Continue / Commit Merge during a rebase or merge;
+  conflicts get a MERGE CHANGES section; a branch without an upstream shows Publish; a click on the
+  branch opens Checkout to…; a right-click on a file or a commit opens its menu; HISTORY is a graph
+  with branch and tag labels and ↑ ↓ for outgoing and incoming commits; outside a repository,
+  Initialize Repository and Clone Repository…. Every git command run from the view, with what git
+  said, goes to `~/.imux/git.log` (Show Git Output).
+- **Native Windows (experimental)**, by @yusatll (#2): i-mux runs without WSL on
+  [psmux](https://github.com/marlocarlo/psmux), with `install.ps1`, PowerShell in the panes, the Nerd
+  Font set up for Windows Terminal and VS Code, and Windows in CI. psmux 3.4.0, its current release,
+  stops running i-mux's keys and clicks: build psmux from its main branch
+  (`scripts\build-psmux.ps1`) until a newer release. WSL 2 stays the recommended way on Windows.
+
+### Fixed
+
+- **Discarding a file named like a command is safe.** The discard confirmation put the file's path
+  unquoted into a shell command line, and the commit prompt and the branch menu put the folder and
+  branch names into tmux commands; a name like `$(…)` could run. Paths, names and messages now reach
+  imux through tmux options or as arguments, never in a command line.
+
 ## [0.48.0] - 2026-11-11
 
 ### Removed

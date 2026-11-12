@@ -10,25 +10,28 @@ type Icons struct {
 	Edit, History, Search         string
 	Suggest                       string // an agent writes the commit message
 	GoTo                          string // Go to File
+	More                          string // ⋯ More Actions
+	Publish                       string // publish a branch with no upstream
 }
 
 var buttonIcons = map[string]Icons{
 	// Codicons (Nerd Fonts v3): add, remove, discard, refresh, arrow-down,
 	// arrow-up, sync, check, git branch, chevron-down, chevron-right, edit,
-	// history, search, sparkle (Nerd Fonts 3.2+).
+	// history, search, sparkle (Nerd Fonts 3.2+), go-to-file, ellipsis,
+	// cloud-upload.
 	IconsNerd: {
 		Add: "\uea60", Remove: "\ueb3b", Discard: "\ueae2", Refresh: "\ueb37",
 		Pull: "\uea9a", Push: "\ueaa1", Sync: "\uea77", Commit: "\ueab2",
 		Branch: "\ue725", Open: "\ueab4", Closed: "\ueab6",
 		Edit: "\uea73", History: "\uea82", Search: "\uea6d",
-		Suggest: "\uec10", GoTo: "\uea94",
+		Suggest: "\uec10", GoTo: "\uea94", More: "\uea7c", Publish: "\ueac3",
 	},
 	IconsEmoji: {
 		Add: "➕", Remove: "➖", Discard: "⏪", Refresh: "🔄",
 		Pull: "⏬", Push: "⏫", Sync: "🔃", Commit: "✅",
 		Branch: "🌿", Open: "▾", Closed: "▸",
 		Edit: "📝", History: "📜", Search: "🔍",
-		Suggest: "✨", GoTo: "📄",
+		Suggest: "✨", GoTo: "📄", More: "⋯", Publish: "📤",
 	},
 }
 

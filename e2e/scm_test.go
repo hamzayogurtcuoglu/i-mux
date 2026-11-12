@@ -91,7 +91,7 @@ func TestSourceControl(t *testing.T) {
 
 	// ↶ on new.txt asks, then deletes it.
 	time.Sleep(500 * time.Millisecond)
-	_, y = h.rowOf(bar, "?  new.txt")
+	_, y = h.rowOf(bar, "U  new.txt")
 	mark = c.Mark()
 	c.Click(0, col(6), y) // ⏪, left of ➕
 	c.waitScreenAfter(h, mark, "cannot be undone", 5*time.Second)
@@ -101,4 +101,92 @@ func TestSourceControl(t *testing.T) {
 		_, err := os.Stat(filepath.Join(h.Homes.Project, "new.txt"))
 		return os.IsNotExist(err)
 	})
+}
+
+// TestSourceControlMenus (T63.5): a right-click on a file → Copy Relative
+// Path, on a new file → Add to .gitignore; ⋯ → Stash › → Stash… → a
+// message: the change is stashed, the submenu where ⋯ opened; a
+// click on the branch → Checkout to… → typing part of a branch's name and
+// Enter: on that branch (its "#" and "/" go through whole).
+func TestSourceControlMenus(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	p := h.Homes.Project
+	git := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-c", "user.name=t", "-c", "user.email=t@example.com"}, args...)...)
+		cmd.Dir = p
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return string(out)
+	}
+	testutil.WriteFile(t, filepath.Join(p, "a.txt"), []byte("one\n"))
+	git("init", "-q", "-b", "main")
+	git("add", "-A")
+	git("commit", "-q", "-m", "init")
+	git("branch", "feat/#1")
+	testutil.WriteFile(t, filepath.Join(p, "a.txt"), []byte("one\ntwo\n"))
+	testutil.WriteFile(t, filepath.Join(p, "new.txt"), []byte("x\n"))
+	t.Setenv("GIT_AUTHOR_NAME", "t")
+	t.Setenv("GIT_AUTHOR_EMAIL", "t@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "t")
+	t.Setenv("GIT_COMMITTER_EMAIL", "t@example.com")
+
+	_, bar := h.startWithSidebar()
+	h.run("claude", 1)
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	h.openView(c, bar, "🔀", "changes")
+	h.rowOf(bar, "CHANGES  2")
+	time.Sleep(500 * time.Millisecond)
+
+	// Right-click on a changed file → Copy Relative Path.
+	copied := func() string { b, _ := os.ReadFile(filepath.Join(h.Log, "copied")); return string(b) }
+	h.menu(c, bar, "M  a.txt", 0, 0)
+	c.Write("l")
+	h.waitFor("relative path copied", 5*time.Second, func() bool { return copied() == "a.txt" })
+
+	// Right-click on the new file → Add to .gitignore.
+	time.Sleep(500 * time.Millisecond)
+	h.menu(c, bar, "U  new.txt", 0, 0)
+	c.Write("i")
+	h.waitFor(".gitignore", 5*time.Second, func() bool { return strings.Contains(h.readFile(filepath.Join(p, ".gitignore")), "new.txt") })
+	h.rowOf(bar, "U  .gitignore")
+
+	// ⋯ → Stash › → Stash… → a message.
+	time.Sleep(500 * time.Millisecond)
+	x, y := h.rowOf(bar, "⋯")
+	mark := c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "Stash ›", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("s")
+	c.waitScreenAfter(h, mark, "Drop All Stashes", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("s")
+	c.waitScreenAfter(h, mark, "Stash message", 5*time.Second)
+	c.Write("wip #2\r")
+	h.waitFor("stashed", 5*time.Second, func() bool { return strings.Contains(git("stash", "list"), "wip #2") })
+	if out := git("status", "--porcelain", "--", "a.txt"); out != "" {
+		t.Errorf("a.txt still changed: %q", out)
+	}
+
+	// The branch → Checkout to… → "feat" and Enter: the best match.
+	time.Sleep(500 * time.Millisecond)
+	x, y = h.rowOf(bar, "🌿 main")
+	mark = c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "Select a ref to checkout", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	c.Write("feat")
+	time.Sleep(300 * time.Millisecond)
+	c.Write("\r")
+	h.waitFor("on feat/#1", 5*time.Second, func() bool { return strings.TrimSpace(git("branch", "--show-current")) == "feat/#1" })
+	h.rowOf(bar, "🌿 feat/#1")
 }

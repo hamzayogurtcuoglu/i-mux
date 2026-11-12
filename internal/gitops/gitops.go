@@ -1,45 +1,51 @@
-// Package gitops is the source control behind the sidebar (ARCHITECTURE D27):
-// it reads a repository's staged and unstaged changes, branch, upstream and
-// history, and runs the editor-like actions (stage, unstage, discard,
-// commit, checkout) with the git CLI.
+// Package gitops is the source control behind the sidebar (ARCHITECTURE D27,
+// D58): it reads a repository's changes, branch, upstream, the operation
+// under way, its refs and its history as a graph, and runs VS Code's source
+// control actions with the git CLI.
 package gitops
 
 import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// Change is one changed file on one side (staged or not).
+// Change is one changed file on one side (staged or not), or a conflict.
 type Change struct {
-	Status    string // M, A, D, R, C, U, or ? (untracked)
+	Status    string // M, A, D, R, C, ? (untracked), or U (a conflict)
 	Path      string // relative to the folder git ran in
 	Added     int
 	Removed   int
 	Untracked bool
 }
 
-// LogEntry is one history entry.
-type LogEntry struct {
-	Hash    string
-	Subject string
-	When    time.Time
-}
+// Operations that can be under way (Status.Op).
+const (
+	OpMerge      = "merge"
+	OpRebase     = "rebase"
+	OpCherryPick = "cherry-pick"
+	OpRevert     = "revert"
+)
 
 // Status is a repository as the source control view shows it.
 type Status struct {
-	Branch   string // "" when detached
-	Upstream string // "" without one
-	Ahead    int
-	Behind   int
-	Staged   []Change
-	Changes  []Change
-	History  []LogEntry
+	Branch    string // "" when detached
+	Upstream  string // "" without one
+	Ahead     int
+	Behind    int
+	NoCommits bool     // the branch has no commit yet
+	Op        string   // the operation under way (OpMerge ...), "" for none
+	Conflicts []Change // unmerged paths: MERGE CHANGES
+	Staged    []Change
+	Changes   []Change
+	Graph     []GraphRow // HEAD's and its upstream's history (HISTORY)
 }
 
 // Timeout bounds every git call.
@@ -47,9 +53,19 @@ var Timeout = 10 * time.Second
 
 // git runs git in dir and returns its stdout; stderr is the error text.
 func git(ctx context.Context, dir string, args ...string) (string, error) {
+	out, _, err := gitOut(ctx, dir, nil, args...)
+	return out, err
+}
+
+// gitOut runs git in dir with env added and returns its stdout and stderr;
+// on failure the error is stderr's text.
+func gitOut(ctx context.Context, dir string, env []string, args ...string) (string, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir, "-c", "color.ui=false"}, args...)...)
+	if env != nil {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	if err := cmd.Run(); err != nil {
@@ -57,9 +73,9 @@ func git(ctx context.Context, dir string, args ...string) (string, error) {
 		if msg == "" {
 			msg = err.Error()
 		}
-		return out.String(), errors.New(msg)
+		return out.String(), errb.String(), errors.New(msg)
 	}
-	return out.String(), nil
+	return out.String(), errb.String(), nil
 }
 
 // Read reads the repository that contains dir (an error outside one).
@@ -73,10 +89,33 @@ func Read(ctx context.Context, dir string) (*Status, error) {
 	work, _ := git(ctx, dir, "diff", "--numstat")
 	addCounts(st.Staged, ParseNumstat(staged))
 	addCounts(st.Changes, ParseNumstat(work))
-	if log, err := git(ctx, dir, "log", "-n", "15", "--format=%h%x1f%s%x1f%ct"); err == nil {
-		st.History = ParseLog(log)
+	if gd, err := git(ctx, dir, "rev-parse", "--absolute-git-dir"); err == nil {
+		st.Op = operation(strings.TrimSpace(gd))
+	}
+	if !st.NoCommits {
+		st.Graph, _ = Graph(ctx, dir, st.Upstream != "", GraphLimit)
 	}
 	return st, nil
+}
+
+// operation is the operation under way in the repository whose git
+// directory is gitDir ("" for none; `git am` counts as none).
+func operation(gitDir string) string {
+	has := func(name string) bool {
+		_, err := os.Stat(filepath.Join(gitDir, name))
+		return err == nil
+	}
+	switch {
+	case has("rebase-merge"), has("rebase-apply") && !has(filepath.Join("rebase-apply", "applying")):
+		return OpRebase
+	case has("MERGE_HEAD"):
+		return OpMerge
+	case has("CHERRY_PICK_HEAD"):
+		return OpCherryPick
+	case has("REVERT_HEAD"):
+		return OpRevert
+	}
+	return ""
 }
 
 func addCounts(cs []Change, n map[string][2]int) {
@@ -97,7 +136,9 @@ func ParseStatus(out string) *Status {
 			continue
 		}
 		if strings.HasPrefix(e, "## ") {
-			parseBranch(st, e[3:])
+			h := e[3:]
+			st.NoCommits = strings.HasPrefix(h, "No commits yet on ") || strings.HasPrefix(h, "Initial commit on ")
+			parseBranch(st, h)
 			continue
 		}
 		x, y, path := e[0], e[1], e[3:]
@@ -113,7 +154,7 @@ func ParseStatus(out string) *Status {
 		}
 		conflict := x == 'U' || y == 'U' || x == 'A' && y == 'A' || x == 'D' && y == 'D'
 		if conflict {
-			st.Changes = append(st.Changes, Change{Status: "U", Path: path})
+			st.Conflicts = append(st.Conflicts, Change{Status: "U", Path: path})
 			continue
 		}
 		if x != ' ' {
@@ -126,6 +167,7 @@ func ParseStatus(out string) *Status {
 	sortChanges := func(cs []Change) {
 		sort.SliceStable(cs, func(i, j int) bool { return cs[i].Path < cs[j].Path })
 	}
+	sortChanges(st.Conflicts)
 	sortChanges(st.Staged)
 	sortChanges(st.Changes)
 	return st
@@ -183,37 +225,23 @@ func ParseNumstat(out string) map[string][2]int {
 	return m
 }
 
-// ParseLog reads `git log --format=%h%x1f%s%x1f%ct`.
-func ParseLog(out string) []LogEntry {
-	var cs []LogEntry
-	for _, l := range strings.Split(strings.TrimSpace(out), "\n") {
-		f := strings.Split(l, "\x1f")
-		if len(f) != 3 {
-			continue
-		}
-		ts, _ := strconv.ParseInt(f[2], 10, 64)
-		cs = append(cs, LogEntry{Hash: f[0], Subject: f[1], When: time.Unix(ts, 0)})
-	}
-	return cs
-}
-
 // Stage adds paths (deletions too) to the index.
 func Stage(ctx context.Context, dir string, paths ...string) error {
-	_, err := git(ctx, dir, append([]string{"add", "-A", "--"}, paths...)...)
+	_, err := run(ctx, dir, append([]string{"add", "-A", "--"}, paths...)...)
 	return err
 }
 
 // StageAll stages every change.
 func StageAll(ctx context.Context, dir string) error {
-	_, err := git(ctx, dir, "add", "-A")
+	_, err := run(ctx, dir, "add", "-A")
 	return err
 }
 
 // Unstage takes paths out of the index (keeping the work tree).
 func Unstage(ctx context.Context, dir string, paths ...string) error {
-	if _, err := git(ctx, dir, append([]string{"restore", "--staged", "--"}, paths...)...); err != nil {
+	if _, err := run(ctx, dir, append([]string{"restore", "--staged", "--"}, paths...)...); err != nil {
 		// A repository without commits has nothing to restore from.
-		_, err2 := git(ctx, dir, append([]string{"rm", "--cached", "-r", "-q", "--"}, paths...)...)
+		_, err2 := run(ctx, dir, append([]string{"rm", "--cached", "-r", "-q", "--"}, paths...)...)
 		if err2 != nil {
 			return err
 		}
@@ -223,8 +251,8 @@ func Unstage(ctx context.Context, dir string, paths ...string) error {
 
 // UnstageAll empties the index back to HEAD.
 func UnstageAll(ctx context.Context, dir string) error {
-	if _, err := git(ctx, dir, "restore", "--staged", "--", "."); err != nil {
-		_, err2 := git(ctx, dir, "rm", "--cached", "-r", "-q", "--", ".")
+	if _, err := run(ctx, dir, "restore", "--staged", "--", "."); err != nil {
+		_, err2 := run(ctx, dir, "rm", "--cached", "-r", "-q", "--", ".")
 		if err2 != nil {
 			return err
 		}
@@ -236,19 +264,29 @@ func UnstageAll(ctx context.Context, dir string) error {
 // untracked ones.
 func Discard(ctx context.Context, dir string, untracked bool, paths ...string) error {
 	if untracked {
-		_, err := git(ctx, dir, append([]string{"clean", "-f", "-q", "--"}, paths...)...)
+		_, err := run(ctx, dir, append([]string{"clean", "-f", "-q", "--"}, paths...)...)
 		return err
 	}
-	_, err := git(ctx, dir, append([]string{"restore", "--worktree", "--"}, paths...)...)
+	_, err := run(ctx, dir, append([]string{"restore", "--worktree", "--"}, paths...)...)
+	return err
+}
+
+// DiscardPath throws away every unstaged change under path (a folder):
+// tracked files back to the index, untracked ones deleted.
+func DiscardPath(ctx context.Context, dir, path string) error {
+	if _, err := run(ctx, dir, "restore", "--worktree", "--", path); err != nil && !strings.Contains(err.Error(), "did not match") {
+		return err
+	}
+	_, err := run(ctx, dir, "clean", "-f", "-d", "-q", "--", path)
 	return err
 }
 
 // DiscardAll throws away every unstaged change, untracked files included.
 func DiscardAll(ctx context.Context, dir string) error {
-	if _, err := git(ctx, dir, "restore", "--worktree", "--", "."); err != nil && !strings.Contains(err.Error(), "did not match") {
+	if _, err := run(ctx, dir, "restore", "--worktree", "--", "."); err != nil && !strings.Contains(err.Error(), "did not match") {
 		return err
 	}
-	_, err := git(ctx, dir, "clean", "-f", "-d", "-q", "--", ".")
+	_, err := run(ctx, dir, "clean", "-f", "-d", "-q", "--", ".")
 	return err
 }
 
@@ -256,20 +294,7 @@ func DiscardAll(ctx context.Context, dir string) error {
 // every change first (as an editor's "commit all"). It reports whether it
 // staged.
 func Commit(ctx context.Context, dir, message string) (bool, error) {
-	message = strings.TrimSpace(message)
-	if message == "" {
-		return false, errors.New("empty commit message")
-	}
-	staged := false
-	if _, err := git(ctx, dir, "diff", "--cached", "--quiet"); err == nil {
-		// Nothing staged (exit 0): stage everything.
-		if err := StageAll(ctx, dir); err != nil {
-			return false, err
-		}
-		staged = true
-	}
-	_, err := git(ctx, dir, "commit", "-q", "-m", message)
-	return staged, err
+	return CommitWith(ctx, dir, CommitOpts{Message: message})
 }
 
 // Branches lists the local branches, the current one first.
@@ -292,16 +317,4 @@ func Branches(ctx context.Context, dir string) ([]string, string, error) {
 		bs = append(bs, strings.TrimPrefix(l, " "))
 	}
 	return bs, cur, nil
-}
-
-// Checkout switches to branch.
-func Checkout(ctx context.Context, dir, branch string) error {
-	_, err := git(ctx, dir, "switch", branch)
-	return err
-}
-
-// NewBranch creates branch from HEAD and switches to it.
-func NewBranch(ctx context.Context, dir, branch string) error {
-	_, err := git(ctx, dir, "switch", "-c", strings.TrimSpace(branch))
-	return err
 }

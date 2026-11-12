@@ -38,7 +38,6 @@ const (
 	ActGit                    // run git action Section on Path (Status "?" = untracked)
 	ActGitConfirm             // ask, then run git action Section (discards)
 	ActCommit                 // ask for a commit message and commit
-	ActBranchMenu             // the branch menu (checkout, new branch)
 	ActGitPopup               // run git action Section in a popup (push, pull, sync, show Path)
 	ActFileMenu               // the menu of file Path (edit, view, VS Code)
 	ActRefresh                // redraw
@@ -48,6 +47,9 @@ const (
 	ActSkillNew               // the New skill dialog: an agent writes a skill, or a blank SKILL.md (D32)
 	ActSkillMenu              // the menu of skill Path (open, view, add, improve, share, delete)
 	ActScroll                 // scroll the list to row Section (a click on its scroll bar)
+	ActSCM                    // Source Control: `imux __scm Section Path` (a menu, a Quick Pick, a prompt; D58)
+	ActSCMDir                 // fold or unfold a folder of Source Control's tree ("side:path" in Path)
+	ActSCMMenuAt              // Source Control's menu of file Path (side Section, Status) or commit Path (Section "commit") at the pointer
 )
 
 // Action is a row's action.
@@ -567,6 +569,13 @@ func changeRow(c ChangeRow, w int) Line {
 	case "R":
 		color = cyan
 	}
+	letter := c.Status
+	switch c.Letter {
+	case "U":
+		letter, color = "U", green
+	case "!":
+		letter, color = "!", red
+	}
 	right, rw := "", 0
 	if c.Added > 0 || c.Removed > 0 {
 		var parts []string
@@ -582,12 +591,17 @@ func changeRow(c ChangeRow, w int) Line {
 		rw += len(parts) - 1
 	}
 	// "   M  name folder +12 −3 ": indent, status, gap, path, counts, margin.
-	pw := w - 7
+	indent := 2 * min(c.Indent, 8)
+	pw := w - 7 - indent
 	if rw > 0 {
 		pw -= rw + 1
 	}
 	pw = max(pw, 1)
-	text := "   " + color + fit(c.Status, 1) + reset + "  " + fileLabel(c.Path, pw)
+	label := fileLabel(c.Path, pw)
+	if c.Name != "" {
+		label = fitMiddle(c.Name, pw)
+	}
+	text := "   " + strings.Repeat(" ", indent) + color + fit(letter, 1) + reset + "  " + label
 	if rw > 0 {
 		text += " " + right
 	}

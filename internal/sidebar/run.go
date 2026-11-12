@@ -5,12 +5,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
@@ -290,7 +290,7 @@ func (s *sidebar) draw() {
 // isMenu reports actions that open a menu.
 func isMenu(k ActionKind) bool {
 	switch k {
-	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActBranchMenu, ActSettings:
+	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActSettings, ActSCMMenuAt:
 		return true
 	}
 	return false
@@ -301,6 +301,8 @@ func (s *sidebar) waits(ctx context.Context, a Action) bool {
 	switch a.Kind {
 	case ActCommit, ActRename:
 		return true // the command prompt
+	case ActSCM:
+		return a.Section == "ask" || !s.t.MenuTakesMouse(ctx)
 	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm, ActSuggest:
 		return !s.t.MenuTakesMouse(ctx)
 	case ActOpenFile:
@@ -399,7 +401,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 	if ev.Kind == EvScroll {
 		n := len(s.model.Tree)
 		if s.model.View == ViewChanges && s.model.SCM != nil {
-			n = len(s.model.SCM.Staged) + len(s.model.SCM.Changes) + len(s.model.SCM.History) + 3
+			n = len(s.model.scmRows(40))
 		}
 		if s.model.View == ViewSkills {
 			n = len(s.model.Skills) * 2
@@ -448,6 +450,14 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			default:
 				return
 			}
+		case ActDiff:
+			// Source Control: a changed file's menu (D58).
+			menu = Action{Kind: ActSCMMenuAt, Path: a.Path, Status: a.Status, Section: a.Section}
+		case ActGitPopup:
+			if a.Section != "show" {
+				return
+			}
+			menu = Action{Kind: ActSCMMenuAt, Path: a.Path, Section: "commit"}
 		case ActProject, ActProjectMenu:
 			menu = Action{Kind: ActProjectMenu, Session: a.Session}
 		case ActFocus, ActAgentMenu:
@@ -490,6 +500,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		case ActSkillMenu:
 			s.selected = a.Path
 			s.menuX, s.menuY = ev.X, ev.Y
+		case ActSCM:
+			s.menuX, s.menuY = ev.X, ev.Y // ⋯ and ▾ drop down from the button
 		}
 		wait := time.Duration(0)
 		if s.waits(ctx, a) {
@@ -648,6 +660,30 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 			_, _ = s.t.Run(ctx, setView)
 		}
 		return
+	case ActSCMDir:
+		if s.o.Source.SCMClosed == nil {
+			s.o.Source.SCMClosed = map[string]bool{}
+		}
+		if s.o.Source.SCMClosed[a.Path] {
+			delete(s.o.Source.SCMClosed, a.Path)
+		} else {
+			s.o.Source.SCMClosed[a.Path] = true
+		}
+		return
+	case ActSCM:
+		var at []string
+		if a.Section == "menu" && s.menuX > 0 && s.menuY > 0 {
+			at = []string{"--x", strconv.Itoa(s.menuX), "--y", strconv.Itoa(s.menuY)}
+		}
+		s.spawn(s.scmArgs(client, a.Section, a.Path, at...))
+		return
+	case ActSCMMenuAt:
+		if a.Section == "commit" {
+			s.scmMenu(ctx, client, Action{Kind: ActGitPopup, Path: a.Path}, s.menuX, s.menuY)
+		} else {
+			s.scmMenu(ctx, client, Action{Kind: ActDiff, Path: a.Path, Status: a.Status, Section: a.Section}, s.menuX, s.menuY)
+		}
+		return
 	case ActToggleDir:
 		if s.o.Source.Expanded == nil {
 			s.o.Source.Expanded = map[string]bool{}
@@ -676,14 +712,26 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.skillMenu(ctx, client, a, s.menuX, s.menuY)
 		return
 	case ActGit:
-		s.spawn(s.gitArgs(a.Section, client, a.Status == "?", a.Path))
+		switch a.Section {
+		case "stage-merge": // MERGE CHANGES' +: every conflicted file, resolved
+			var paths []string
+			if s.model.SCM != nil {
+				for _, c := range s.model.SCM.Conflicts {
+					paths = append(paths, c.Path)
+				}
+			}
+			if len(paths) > 0 {
+				s.spawn(s.gitArgs("stage", client, false, paths...))
+			}
+		default:
+			s.spawn(s.gitArgs(a.Section, client, a.Status == "?", a.Path))
+		}
 		return
 	case ActGitConfirm:
 		s.confirmDiscard(ctx, client, a)
 		return
 	case ActCommit:
-		s.prompt(ctx, client, i18n.T("prompt.commit"), "",
-			"set-option -g @imux_git \"%%%\" ; "+tmux.RunShell(s.o.Self, s.gitArgs("commit", client, false)...)+"")
+		s.spawn(s.scmArgs(client, "ask", "commit"))
 		return
 	case ActSettings:
 		args := []string{"__settings", "menu"}
@@ -701,9 +749,6 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 			args = append(args, "--pane", s.model.Target)
 		}
 		s.spawn(args)
-		return
-	case ActBranchMenu:
-		s.branchMenu(ctx, client)
 		return
 	case ActGitPopup:
 		args := []string{"__git", a.Section, "--cwd", s.model.CWD}
@@ -732,6 +777,10 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		RefreshAll(ctx, s.t)
 		return
 	case ActDiff:
+		if a.Section == sideMerge {
+			s.popup(client, "90%", "90%", "__edit", a.Path) // a conflict: resolve it in the editor
+			return
+		}
 		s.diff(a, client)
 		return
 	case ActAgentMenu:
@@ -800,17 +849,6 @@ func (s *sidebar) focus(ctx context.Context, id, client string) {
 	_, _ = s.t.Run(ctx, cmds...)
 }
 
-// prompt asks on the client's command prompt and runs template with the
-// answer. The answer only ever reaches tmux, escaped by %%%: never a shell.
-func (s *sidebar) prompt(ctx context.Context, client, label, initial, template string) {
-	c := tmux.Cmd{"command-prompt"}
-	if client != "" {
-		c = append(c, "-t", client)
-	}
-	c = append(c, "-I", initial, "-p", label, template)
-	_, _ = s.t.Run(ctx, c)
-}
-
 // diff opens a popup with a changed file's diff.
 func (s *sidebar) diff(a Action, client string) {
 	c := tmux.Cmd{"display-popup"}
@@ -834,9 +872,6 @@ func (s *sidebar) gitArgs(op, client string, untracked bool, paths ...string) []
 	if client != "" {
 		args = append(args, "--client", client)
 	}
-	if op == "commit" || op == "new-branch" {
-		args = append(args, "--from-option")
-	}
 	if untracked {
 		args = append(args, "--untracked")
 	}
@@ -846,57 +881,70 @@ func (s *sidebar) gitArgs(op, client string, untracked bool, paths ...string) []
 	return args
 }
 
-// menu shows a display-menu on client.
-func (s *sidebar) menu(ctx context.Context, client, title string, items ...string) {
-	c := s.t.Menu(ctx)
+// scmArgs is `imux __scm verb name` for the project folder, the client,
+// the pane the sidebar follows and the sidebar itself (D58).
+func (s *sidebar) scmArgs(client, verb, name string, extra ...string) []string {
+	args := []string{"__scm", verb, name, "--cwd", s.model.CWD, "--sidebar", s.o.Pane}
 	if client != "" {
-		c = append(c, "-c", client)
+		args = append(args, "--client", client)
 	}
-	c = append(append(c, "-T", tmux.EscapeFormat(title), "-x", "C", "-y", "C", "--"), items...)
-	_ = s.t.ShowMenu(ctx, c)
+	if s.model.Target != "" {
+		args = append(args, "--pane", s.model.Target)
+	}
+	return append(args, extra...)
 }
 
-// confirmDiscard asks before throwing changes away (they cannot be had back).
+// confirmDiscard asks before throwing changes away (they cannot be had
+// back). What it discards reaches the confirmation as an option (the
+// file) or an argument, never in a command line: a file named "$(…)"
+// stays a name.
 func (s *sidebar) confirmDiscard(ctx context.Context, client string, a Action) {
-	title := i18n.T("git.discard_all_title")
-	var args []string
-	if a.Section == "discard-all" {
-		args = s.gitArgs("discard-all", client, false)
-	} else {
-		title = i18n.T("git.discard_title", a.Path)
-		args = s.gitArgs("discard", client, a.Status == "?", a.Path)
+	switch a.Section {
+	case "discard-all":
+		s.spawn(s.scmArgs(client, "confirm", "discard-all"))
+	case "discard-dir":
+		s.spawn(s.scmArgs(client, "confirm", "discard-dir", "--", a.Path))
+	default:
+		if !s.setFileOption(ctx, a.Path) {
+			return
+		}
+		var extra []string
+		if a.Status == "?" {
+			extra = []string{"--untracked"}
+		}
+		s.spawn(s.scmArgs(client, "confirm", "discard-file", extra...))
 	}
-	s.menu(ctx, client, title,
-		tmux.EscapeFormat(i18n.T("git.discard_yes")), "y", tmux.RunShell(s.o.Self, args...),
-		tmux.EscapeFormat(i18n.T("click.cancel")), "n", "")
 }
 
-// branchMenu lists the local branches (checkout) and New branch.
-func (s *sidebar) branchMenu(ctx context.Context, client string) {
-	bs, cur, err := gitops.Branches(ctx, s.model.CWD)
-	if err != nil {
-		return
+// setFileOption sets the file a Source Control menu acts on (@imux_file,
+// relative path p in the project folder), as the explorer's menus do.
+func (s *sidebar) setFileOption(ctx context.Context, p string) bool {
+	if s.model.CWD == "" {
+		return false
 	}
-	var items []string
-	for i, b := range bs {
-		if i >= 20 {
-			break
+	_, err := s.t.Run(ctx,
+		tmux.Cmd{"set-option", "-g", OptFile, filepath.Join(s.model.CWD, p)},
+		tmux.Cmd{"set-option", "-g", OptFileRoot, s.model.CWD})
+	return err == nil
+}
+
+// scmMenu opens Source Control's menu for a (a changed file or a commit) at
+// the pointer (x, y in the sidebar).
+func (s *sidebar) scmMenu(ctx context.Context, client string, a Action, x, y int) {
+	at := []string{"--x", strconv.Itoa(x), "--y", strconv.Itoa(y)}
+	switch a.Kind {
+	case ActDiff:
+		if !s.setFileOption(ctx, a.Path) {
+			return
 		}
-		name := "  " + b
-		cmd := tmux.RunShell(s.o.Self, append(s.gitArgs("checkout", client, false), b)...)
-		if b == cur {
-			name, cmd = "✓ "+b, ""
+		extra := append(at, "--side", a.Section, "--status", a.Status)
+		if a.Status == "?" {
+			extra = append(extra, "--untracked")
 		}
-		items = append(items, tmux.EscapeFormat(name), "", cmd)
+		s.spawn(s.scmArgs(client, "menu", "file", extra...))
+	case ActGitPopup:
+		s.spawn(s.scmArgs(client, "menu", "commit-row", append(at, "--hash", a.Path)...))
 	}
-	newCmd := "command-prompt"
-	if client != "" {
-		newCmd += " -t " + tmux.Quote(client)
-	}
-	newCmd += " -p " + tmux.Quote(i18n.T("prompt.branch")) + " " +
-		tmux.Quote("set-option -g @imux_git \"%%%\" ; "+tmux.RunShell(s.o.Self, s.gitArgs("new-branch", client, false)...))
-	items = append(items, "", tmux.EscapeFormat("+ "+i18n.T("git.new_branch")), "n", newCmd)
-	s.menu(ctx, client, i18n.T("git.branches"), items...)
 }
 
 // popup runs an imux command in a popup in the project folder.

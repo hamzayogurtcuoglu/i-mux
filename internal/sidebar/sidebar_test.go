@@ -432,7 +432,7 @@ func TestChangesView(t *testing.T) {
 		Branch: "main", Upstream: "origin/main", Ahead: 1,
 		Staged:  []gitops.Change{{Status: "M", Path: "a.go", Added: 3, Removed: 1}},
 		Changes: []gitops.Change{{Status: "M", Path: "b.go", Added: 1}, {Status: "?", Path: "c.txt", Untracked: true}},
-		History: []gitops.LogEntry{{Hash: "a1b2c3d", Subject: "feat: login", When: m.Now.Add(-2 * time.Hour)}},
+		Graph:   []gitops.GraphRow{{Hash: "a1b2c3d", Subject: "feat: login", When: m.Now.Add(-2 * time.Hour)}},
 	}
 	for _, l := range Render(m, 41, 30, NoItem).Lines {
 		if n := DisplayWidth(Plain(l.Text)); n != 41 {
@@ -444,7 +444,7 @@ func TestChangesView(t *testing.T) {
 	t.Logf("\n%s", text)
 	for _, want := range []string{
 		"SOURCE CONTROL", "🔄", "🌿 main ▾", "↑1 ↓0", "🔃", "✅ Commit…", "▾ STAGED CHANGES  1", "M  a.go", "+3 −1",
-		"▾ CHANGES  2", "M  b.go", "?  c.txt", "▾ HISTORY  1", "a1b2c3d feat: login", "2h", "▌  🔀",
+		"▾ CHANGES  2", "M  b.go", "U  c.txt", "▾ HISTORY  1", "feat: login", "2h", "▌  🔀",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("lacks %q", want)
@@ -488,13 +488,13 @@ func TestChangesView(t *testing.T) {
 	if a := at("Commit…", 0); a.Kind != ActCommit {
 		t.Errorf("commit %+v", a)
 	}
-	if a := at("🌿 main", 0); a.Kind != ActBranchMenu {
+	if a := at("🌿 main", 0); a != (Action{Kind: ActSCM, Section: "pick", Path: "checkout"}) {
 		t.Errorf("branch %+v", a)
 	}
 	if a := at("🔃", 0); a != (Action{Kind: ActGitPopup, Section: "sync"}) {
 		t.Errorf("sync %+v", a)
 	}
-	if a := at("a1b2c3d", 0); a != (Action{Kind: ActGitPopup, Section: "show", Path: "a1b2c3d"}) {
+	if a := at("feat: login", 0); a != (Action{Kind: ActGitPopup, Section: "show", Path: "a1b2c3d"}) {
 		t.Errorf("history %+v", a)
 	}
 	// Folding a section hides its rows.
@@ -983,7 +983,7 @@ func TestWideText(t *testing.T) {
 	m.SCM = &gitops.Status{
 		Branch:  "main",
 		Changes: []gitops.Change{{Status: "M", Path: "文档/说明书.md", Added: 3}},
-		History: []gitops.LogEntry{
+		Graph: []gitops.GraphRow{
 			{Hash: "c7c81ba", Subject: "feat: ✨ Commit message suggestions from the user's agents", When: m.Now},
 			{Hash: "a1b2c3d", Subject: "修复：标签页的关闭按钮 🎉🎉🎉 and more", When: m.Now},
 		},

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
 
@@ -210,13 +209,6 @@ func renderExplorer(m Model, w, h int) []Line {
 	return append(out, scrolled(rows, m.Scroll, n, w)...)
 }
 
-// Fold names of the Source Control view (in @imux_fold).
-const (
-	SecStaged   = "staged"
-	SecUnstaged = "unstaged"
-	SecHistory  = "history"
-)
-
 // buttons lays out a row: a main cell (the rest of the width) and the
 // buttons on the right.
 func buttons(w int, main Cell, btns ...Cell) Line {
@@ -233,120 +225,6 @@ func buttons(w int, main Cell, btns ...Cell) Line {
 		x += b.W
 	}
 	return Line{Text: compose(cells, w), Cells: cells}
-}
-
-// scmRow is one changed file of the Source Control view with its buttons.
-func scmRow(c gitops.Change, staged bool, w int, ic Icons) Line {
-	cr := ChangeRow{Status: c.Status, Path: c.Path, Added: c.Added, Removed: c.Removed}
-	side := "worktree"
-	var bs []Cell
-	if staged {
-		side = "staged"
-		bs = append(bs, button(ic.Remove, muted, Action{Kind: ActGit, Section: "unstage", Path: c.Path}))
-	} else {
-		st := ""
-		if c.Untracked {
-			st = "?"
-		}
-		bs = append(bs, button(ic.Discard, muted, Action{Kind: ActGitConfirm, Section: "discard", Path: c.Path, Status: st}),
-			button(ic.Add, muted, Action{Kind: ActGit, Section: "stage", Path: c.Path}))
-	}
-	inner := changeRow(cr, w-width(bs))
-	main := Cell{Text: inner.Text, Action: Action{Kind: ActDiff, Path: c.Path, Status: c.Status, Section: side}}
-	return buttons(w, main, bs...)
-}
-
-// renderChanges is the Source Control view, like an editor's (D27).
-func renderChanges(m Model, w, h int) []Line {
-	st := m.SCM
-	if st == nil {
-		return []Line{
-			{Text: title + fit(" "+i18n.T("sidebar.source_control"), w) + reset},
-			{Text: muted + fit("   "+i18n.T("sidebar.no_git"), w) + reset},
-		}
-	}
-	folded := func(n string) bool { return m.Fold[n] }
-	ic := m.icons()
-	refresh := button(ic.Refresh, muted, Action{Kind: ActRefresh})
-	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.source_control"), w-refresh.W) + reset}, refresh)}
-
-	// Branch, ahead / behind, sync.
-	branch := st.Branch
-	if branch == "" {
-		branch = i18n.T("git.detached")
-	}
-	sync := ""
-	if st.Upstream != "" {
-		sync = "↑" + strconv.Itoa(st.Ahead) + " ↓" + strconv.Itoa(st.Behind)
-	}
-	syncBtns := []Cell{
-		button(ic.Pull, muted, Action{Kind: ActGitPopup, Section: "pull"}),
-		button(ic.Push, muted, Action{Kind: ActGitPopup, Section: "push"}),
-		button(ic.Sync, cyan, Action{Kind: ActGitPopup, Section: "sync"}),
-	}
-	// " ⎇ " name " " sync, left of the three buttons.
-	nw := max(w-width(syncBtns)-(DisplayWidth(ic.Branch)+2)-1-runes(sync), 4)
-	left := " " + cyan + ic.Branch + reset + " " + fit(branch+" "+ic.Open, nw) + " " + muted + sync + reset
-	out = append(out, buttons(w, Cell{Text: left, Action: Action{Kind: ActBranchMenu}}, syncBtns...))
-
-	// Commit button, and ✨: an agent writes the message (D29).
-	suggest := button(ic.Suggest, cyan, Action{Kind: ActSuggest})
-	label := ic.Commit + " " + i18n.T("git.commit_button")
-	cw := w - suggest.W
-	pad := max(cw-2-DisplayWidth(label), 0)
-	commit := Cell{
-		W:      cw,
-		Text:   " " + "\x1b[48;5;24m\x1b[38;5;255m" + strings.Repeat(" ", pad/2) + label + strings.Repeat(" ", pad-pad/2) + reset + " ",
-		Action: Action{Kind: ActCommit},
-	}
-	suggest.X = cw
-	out = append(out, Line{Text: compose([]Cell{commit, suggest}, w), Cells: []Cell{commit, suggest}})
-
-	var rows []Line
-	section := func(name, text string, n int, btns ...Cell) {
-		arrow := ic.fold(folded(name))
-		head := Cell{
-			Text:   " " + muted + arrow + reset + " " + title + fit(text+"  "+strconv.Itoa(n), w-3-width(btns)) + reset,
-			Action: Action{Kind: ActFold, Section: name},
-		}
-		rows = append(rows, buttons(w, head, btns...))
-	}
-	if len(st.Staged) > 0 {
-		section(SecStaged, i18n.T("git.staged"), len(st.Staged), button(ic.Remove, muted, Action{Kind: ActGit, Section: "unstage-all"}))
-		if !folded(SecStaged) {
-			for _, c := range st.Staged {
-				rows = append(rows, scmRow(c, true, w, ic))
-			}
-		}
-	}
-	section(SecUnstaged, i18n.T("git.changes"), len(st.Changes),
-		button(ic.Discard, muted, Action{Kind: ActGitConfirm, Section: "discard-all"}), button(ic.Add, muted, Action{Kind: ActGit, Section: "stage-all"}))
-	if !folded(SecUnstaged) {
-		if len(st.Changes) == 0 {
-			rows = append(rows, Line{Text: muted + fit("   "+i18n.T("sidebar.no_changes"), w) + reset})
-		}
-		for _, c := range st.Changes {
-			rows = append(rows, scmRow(c, false, w, ic))
-		}
-	}
-	if len(st.History) > 0 {
-		section(SecHistory, i18n.T("git.history"), len(st.History))
-		if !folded(SecHistory) {
-			for _, c := range st.History {
-				when := age(m.Now, c.When)
-				sw := max(w-12-runes(when), 1) // "   " hash " " subject " " when
-				rows = append(rows, Line{
-					Text:   "   " + yellow + fit(c.Hash, 7) + reset + " " + fit(c.Subject, sw) + " " + muted + when + reset,
-					Action: Action{Kind: ActGitPopup, Section: "show", Path: c.Hash},
-				})
-			}
-		}
-	}
-	n := 0
-	if h > 0 {
-		n = h - len(out)
-	}
-	return append(out, scrolled(rows, m.Scroll, n, w)...)
 }
 
 // railItem is one icon of the activity rail.
