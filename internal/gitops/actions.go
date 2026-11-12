@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -359,23 +360,27 @@ func WorktreePath(top, branch string) string {
 	return filepath.Join(filepath.Dir(top), filepath.Base(top)+".worktrees", filepath.FromSlash(branch))
 }
 
-// Ignore adds path (relative to dir) to the .gitignore at the top of the
-// working tree, as a path from there.
-func Ignore(ctx context.Context, dir, path string) error {
-	top, err := TopLevel(ctx, dir)
+// Ignore adds p (relative to dir) to the .gitignore at the top of the
+// working tree, as a path from there. Where dir is in the tree is git's
+// answer: dir compared with --show-toplevel's path would differ when it was
+// reached through a symlink (macOS's /var is /private/var) or by a short
+// name (Windows' C:\Users\RUNNER~1).
+func Ignore(ctx context.Context, dir, p string) error {
+	out, err := git(ctx, dir, "rev-parse", "--show-cdup", "--show-prefix")
 	if err != nil {
 		return err
 	}
-	rel, err := filepath.Rel(top, filepath.Join(dir, path))
-	if err != nil || strings.HasPrefix(rel, "..") {
-		return fmt.Errorf("%s is outside the repository", path)
+	cdup, prefix, _ := strings.Cut(strings.TrimSuffix(strings.ReplaceAll(out, "\r", ""), "\n"), "\n")
+	rel := path.Clean(prefix + filepath.ToSlash(p))
+	if filepath.IsAbs(p) || rel == "." || rel == ".." || strings.HasPrefix(rel, "../") {
+		return fmt.Errorf("%s is outside the repository", p)
 	}
-	file := filepath.Join(top, ".gitignore")
+	file := filepath.Join(dir, filepath.FromSlash(cdup), ".gitignore")
 	b, err := os.ReadFile(file)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	entry := filepath.ToSlash(rel)
+	entry := rel
 	for _, l := range strings.Split(string(b), "\n") {
 		if strings.TrimSpace(l) == entry {
 			return nil
@@ -392,7 +397,7 @@ func Ignore(ctx context.Context, dir, path string) error {
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
-	Log(dir, []string{"(add to .gitignore)", filepath.ToSlash(rel)}, "", err)
+	Log(dir, []string{"(add to .gitignore)", rel}, "", err)
 	return err
 }
 

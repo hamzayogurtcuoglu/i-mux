@@ -366,6 +366,11 @@ func TestIgnoreAndLog(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(dir, ".gitignore")); string(b) != "*.tmp\nsub/x.txt\n" {
 		t.Fatalf(".gitignore %q", b)
 	}
+	for _, p := range []string{"..", "../x.txt", ".", filepath.Join(dir, "sub", "x.txt")} {
+		if err := Ignore(ctx, dir, p); err == nil {
+			t.Errorf("ignored %q", p)
+		}
+	}
 	if err := StageAll(ctx, dir); err != nil {
 		t.Fatal(err)
 	}
