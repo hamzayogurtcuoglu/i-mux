@@ -11,6 +11,8 @@
 # Behavior controls (all optional):
 #   $IMUX_FAKE_LOG/A.sh   sourced after start-up (print a limit line, sleep, exit 3, ...)
 #   $IMUX_FAKE_LOG/A.nosession   if present, no session file is written
+#   $IMUX_FAKE_LOG/A.headless-reply   print mode's reply (see below)
+#   $IMUX_FAKE_LOG/A.headless-plain   if present, print mode replies with it as it is
 #   FAKE_SCRIPT           evaluated after the control file
 set -u
 agent="${FAKE_AGENT:?FAKE_AGENT not set}"
@@ -27,6 +29,13 @@ fi
 if [ "${1:-}" = update ] || [ "${1:-}" = upgrade ]; then
 	echo "$agent $*" >>"$log/updates"
 	echo "$agent is up to date"
+	exit 0
+fi
+# Model lists (the Scheduler's model menu: agy models, opencode models) are
+# not runs either.
+if [ "$#" -eq 1 ] && [ "$1" = models ]; then
+	printf 'fake-model-1\tFake Model One\nfake-model-2\tFake Model Two\n'
+	echo "$agent models" >>"$log/version-probes"
 	exit 0
 fi
 if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
@@ -81,6 +90,8 @@ if [ -n "$headless" ]; then
 		done
 		echo "codex: thinking" >&2
 		printf '%s\n' "$msg" >"$out"
+	elif [ -f "$log/$agent.headless-plain" ]; then
+		printf '%s\n' "$msg"
 	else
 		# The backticks are a code fence, as agents often reply.
 		# shellcheck disable=SC2016
