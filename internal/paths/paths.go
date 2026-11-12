@@ -96,7 +96,7 @@ func EnsureDir(dir string) error {
 }
 
 // WriteFile atomically writes data to path with FileMode: temp file in the
-// same directory, fsync, rename.
+// same directory, fsync, rename (Rename: on Windows it waits for a reader).
 func WriteFile(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if err := EnsureDir(dir); err != nil {
@@ -126,7 +126,7 @@ func WriteFile(path string, data []byte) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	if err := os.Rename(tmp, path); err != nil {
+	if err := Rename(tmp, path); err != nil {
 		return err
 	}
 	ok = true

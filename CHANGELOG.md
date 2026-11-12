@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.49.1] - 2026-11-12
+
+### Fixed
+
+- **Add to .gitignore in a project opened through a symlink.** It said the file was outside the
+  repository when git spelled the project's folder differently: a folder reached through a
+  symlink (on macOS, anything under `/tmp` or `/var`) or, on Windows, by its short (8.3) name.
+- **Windows: saving the state and settings waits for a file in use.** Windows refuses for a moment
+  to replace a file another process has open, often the virus scanner checking a file just
+  written; i-mux's state, settings and usage writes now try again for up to two seconds instead of
+  failing.
+
 ## [0.49.0] - 2026-11-12
 
 ### Added
