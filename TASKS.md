@@ -997,6 +997,33 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M66: Scheduler: the project's agents and skills on a schedule (added 2026-11-12)
+
+User request: a rail tab that shows scheduled agents (checks, batch jobs) and makes them; no
+form and no prompt: the agent or skill already written says what to do, the user picks when,
+which CLI (Claude, Antigravity, whatever is installed) and which model, and sees the output.
+
+- [ ] **T66.1 Definitions, times and runs** · L
+  - AC: D61, §9.3 "Scheduler": `internal/auto` lists the agent definitions and skills of a
+    project, parses times (`5m`, `2h`, `hourly`, `09:00 18:30`) and says when one is due, keeps
+    `schedules.toml` and the runs (`auto/<id>/`), builds each CLI's headless command line and
+    runs it with a timeout, a lock, a log and a result (ok, quiet, failed, timeout, skipped);
+    unit tests with synthetic projects and a fake CLI.
+- [ ] **T66.2 Menus, Quick Picks and the watcher** · M
+  - AC: `imux __auto`: the time, CLI and model steps, run now, stop, last output, history,
+    continue, access, pause, remove, open; the model list from the CLIs (cached); the watcher
+    starts due runs; notifications; no name or path in a menu command; unit tests.
+- [ ] **T66.3 The view** · M
+  - AC: the Schedule rail tab (⏰, codicon watch) with its running badge; SCHEDULED with time,
+    CLI, model, state, first line and next run; AGENTS and SKILLS with 🚀 and ⏰; ✨ New agent…
+    (the New skill dialog with its own texts); unit tests (render, actions, widths).
+- [ ] **T66.4 End to end** · S
+  - AC: e2e with the fake agents: 🚀 on a project agent → CLI → model → its report shows in the
+    view and `schedules.toml` keeps the choice; ⏰ every 5 minutes; a due schedule runs from the
+    watcher.
+- [ ] **T66.5 Docs** · XS
+  - AC: README and README.tr; CHANGELOG.
+
 ## M65: No native Windows (added 2026-11-12)
 
 User request: remove the Windows port on psmux (#2, M62); i-mux need not run natively on Windows,
