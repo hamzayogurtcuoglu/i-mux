@@ -1014,6 +1014,12 @@ and nothing else may break.
     GoReleaser snapshot builds darwin and linux only, README, README.tr and CONTRIBUTING say WSL
     for Windows; the check-before-push and commit-and-release skills and AGENTS.md lose their
     Windows steps; CHANGELOG.
+- [ ] **T65.3 Actions do not trip over the sidebar's index lock** · S
+  - AC: §18: v0.49.1's macOS e2e job failed: a checkout from the Quick Pick found
+    `.git/index.lock` taken by the sidebar's own refresh (`git diff` rewrites the index, even
+    with `GIT_OPTIONAL_LOCKS=0`). gitops' reads, gitinfo and the explorer's numstat take no lock;
+    actions wait up to 2 s for one; unit tests: a read leaves the index file as it was, an action
+    waits for a lock released after a moment; the e2e tests' own git takes no optional lock.
 
 ## M64: CI's checks run before a push (added 2026-11-12)
 

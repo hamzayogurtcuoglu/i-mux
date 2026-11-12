@@ -2803,6 +2803,7 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
 | Double key press / concurrent switch | `@imux_lock` (pid, checked for liveness) | Second invocation exits with "switch already in progress". |
 | Two panes, same agent, same cwd | discovery ambiguity | Claude: pre-assigned ids. Others: exclude files claimed by other panes' trails and pick the newest. If still ambiguous, show a warning in the menu. |
 | Git missing, not a repo, or slow | exec error / 2 s timeout | Section says "not a git repository" / "git status timed out". |
+| Another git holds `.git/index.lock` (an agent, an editor, the sidebar's own refresh) | git says `index.lock': File exists` | i-mux's background reads take no lock: `git status` and `git diff` rewrite the index as a side effect, `git diff` even with `GIT_OPTIONAL_LOCKS=0`, so reads pass `GIT_OPTIONAL_LOCKS=0` and `-c diff.autoRefreshIndex=false`. A Source Control action waits for someone else's lock for up to 2 s (as VS Code does), then shows git's message. |
 | Unparseable reset time | parser returns zero | `expires_at = at + 5h`. |
 | Handoff write fails (disk full) | error | Abort before killing the source agent. |
 | tmux server killed | exec error | Watcher exits. The next `imux` invocation starts a new server and watcher. |
