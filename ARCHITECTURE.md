@@ -2206,7 +2206,7 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
 
 - **⋯ More Actions** (title, next to ⟳): VS Code's menu, in its order and groups: View & Sort ›;
   Pull, Push, Clone…, Checkout to…, Fetch; Commit ›, Changes ›, Pull, Push ›, Branch ›, Remote ›,
-  Stash ›, Tags ›, Worktrees ›; Show Git Output. A submenu (`imux __scm-menu <name>`) opens where
+  Stash ›, Tags ›, Worktrees ›; Show Git Output. A submenu (`imux __scm menu <name>`) opens where
   its menu was, with ‹ Back first. Its items:
   - **View & Sort:** View as List / View as Tree; Sort by Name / Path / Status (● the current).
   - **Commit:** Commit, Commit Staged, Commit All, Undo Last Commit (`git reset --soft HEAD~`; the
@@ -2229,19 +2229,25 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
 - **Quick Pick** (`imux __quickpick <id>`, a popup like Go to File): its title, an input that
   filters as one types (Go to File's matching), the items in groups (branches, remote branches,
   tags, …) with a description each (the commit's subject, a stash's branch, a remote's URL).
-  ↑ ↓, the wheel and the pointer move; Enter or a click chooses; Esc closes. Its items run imux
-  with an argv: actions that print (merge, rebase, push…) in the same popup, the others after it
-  closed. **Checkout to…** (also a click on the branch row, as VS Code's status bar): + Create new
-  branch…, + Create new branch from…, Checkout detached…, then the branches, the remote branches
-  (a local branch tracking it is made, or switched to) and the tags (detached).
+  ↑ ↓, the wheel and the pointer move; Enter or a click chooses; Esc closes. Typing lists the
+  best matches first and the fixed items (+ Create new branch…) after them, as VS Code does, so
+  Enter takes the best match. Its items run imux with an argv: actions that print (merge,
+  rebase, push…) in the same popup, the others once it closed, as tmux shows one popup at a time
+  and no menu or prompt over it: the popup keeps the choice in `menus/<id>.run.json`, and
+  `run-shell -b "imux __quickpick --run <id>"`, queued after the popup, runs it. **Checkout to…**
+  (also a click on the branch row, as VS Code's status bar): + Create new branch…, + Create new
+  branch from…, Checkout detached…, then the branches, the remote branches (a local branch
+  tracking it is made, or switched to) and the tags (detached). What was typed is the new
+  branch's name to start from.
 - **Asking:** names and messages on the command prompt (`@imux_git`, as Commit…), the amend's
   pre-filled with the last subject (left as it is: the whole message is kept); what cannot be
   undone asks in a menu first.
 - **Where git runs:** local actions at once, with a message; network ones (pull, push, fetch,
   sync, publish, clone, deleting a remote branch or tag) and the ones that may stop on a conflict
-  (merge, rebase, pull (rebase), cherry-pick, revert, continue) in a popup showing git's output,
-  ending on "press Enter". Every command i-mux runs from the view, with its exit and what git
-  said, goes to `~/.imux/git.log` (the last 256 KB); Show Git Output pages it.
+  (merge, rebase, pull (rebase), cherry-pick, revert, continue) in a popup showing git's output
+  (with `--progress`, as it goes to a pipe too), ending on "press Enter". Every command i-mux runs
+  from the view, with its exit and what git said (a progress line as it ended), goes to
+  `~/.imux/git.log` (the last 256 KB); Show Git Output pages it.
 - **Commit button:** "✓ Commit…"; while a merge is under way "✓ Commit Merge" (`git commit
   --no-edit`); during a rebase, cherry-pick or revert "✓ Continue" (`--continue`,
   `GIT_EDITOR=true`, in a popup). ▾ next to it: Commit, Commit (Amend), Commit & Push, Commit &
