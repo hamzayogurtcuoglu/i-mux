@@ -997,6 +997,31 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M64: CI's checks run before a push (added 2026-11-12)
+
+User request: the pipelines failed again (v0.49.0 on macOS and Windows); coding agents must run
+the tests here before code is pushed.
+
+- [ ] **T64.1 `make ci`** · S
+  - AC: D59: `make ci` runs lint-all (golangci-lint and vet for Linux, Windows and macOS),
+    generate-check, check-fixtures, shellcheck (says so when it is missing), race, test-macos
+    (`TMPDIR` behind a symlink), test-windows (from WSL on the Windows host with a throwaway
+    profile; elsewhere it vets the Windows build and says the tests did not run), size and e2e;
+    it stops at the first failure. `PKGS=` narrows the test targets.
+- [ ] **T64.2 The skill** · XS
+  - AC: `.agents/skills/check-before-push` (linked from `.claude/skills`): when and how to run
+    `make ci`, what to do with a red CI run, how to write tests that pass on macOS and Windows;
+    AGENTS.md, CONTRIBUTING.md and the commit-and-release skill point to it.
+- [ ] **T64.3 Green on macOS and Windows** · XS
+  - AC: Add to .gitignore asks git where the folder is in the working tree (no path comparison, so
+    symlinks and 8.3 names do not matter); TestShowLoad and TestMenusCarryNoData build what they
+    expect with the platform's shell; tests that run their own binary find it with
+    `os.Executable`; `make test-macos` and `make test-windows` pass.
+- [ ] **T64.4 Writes on Windows wait for a file in use** · XS
+  - AC: §18: atomic writes retry a rename Windows refuses while another process has the file open
+    (seen by `make test-windows` on a machine with a virus scanner: TestConcurrentWritersLoseNothing
+    failed 4 runs in 5); a Windows unit test holds the file open and Rename waits for it.
+
 ## M63: Source Control like VS Code (added 2026-11-12)
 
 User request: the Git view should be VS Code's, every feature of it: the ⋯ menu with its
