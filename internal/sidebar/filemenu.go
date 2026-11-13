@@ -68,8 +68,8 @@ func FileMenuItems(self, client, pane string, st MenuState) []string {
 		items = append(items, tmux.EscapeFormat(i18n.T(label)), key, cmd(op))
 	}
 	if st.Kind == MenuMore {
-		// The title's ⋯: its buttons that did not fit, Go to File and
-		// Search, then the hidden files' switch.
+		// The title's ⋯: its buttons that did not fit, Go to File, then
+		// the hidden files' switch.
 		for _, op := range st.More {
 			switch op {
 			case OpNewFile:
@@ -84,7 +84,6 @@ func FileMenuItems(self, client, pane string, st MenuState) []string {
 		}
 		sep()
 		add("file.goto", "p", "goto")
-		add("file.search", "/", "search")
 		sep()
 		op, label := "show-hidden", "  "+i18n.T("file.show_hidden")
 		if st.Hidden {

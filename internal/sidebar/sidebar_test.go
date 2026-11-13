@@ -427,10 +427,10 @@ func TestExplorer(t *testing.T) {
 	}
 }
 
-// TestExplorerTitle (T68.2): the explorer's title has VS Code's buttons
-// (New File…, New Folder…, Refresh, Collapse Folders) and ⋯ at every
-// width, the text cut first; Go to File and Search only where the title
-// keeps room, the VS Code buttons going into ⋯ from the right when narrow;
+// TestExplorerTitle (T68.2, T68.6): the explorer's title has VS Code's
+// buttons (New File…, New Folder…, Refresh, Collapse Folders) and ⋯ at
+// every width, the text cut first; Go to File only where the title keeps
+// room, and no Search; the VS Code buttons going into ⋯ from the right when narrow;
 // rows keep their width in both themes; a button's label takes the title's
 // place, the buttons where they were.
 func TestExplorerTitle(t *testing.T) {
@@ -442,7 +442,7 @@ func TestExplorerTitle(t *testing.T) {
 		{Kind: ActCollapse},
 	}
 	dots := Action{Kind: ActFileMenu, Section: MenuMore}
-	nav := []Action{{Kind: ActGoto}, {Kind: ActSearch}}
+	nav := []Action{{Kind: ActGoto}}
 	ops := []string{OpNewFile, OpNewFolder, OpRefresh, OpCollapse}
 	// The title's buttons right of the rail, and its text.
 	title := func(sc Screen) ([]Cell, string) {
@@ -464,7 +464,7 @@ func TestExplorerTitle(t *testing.T) {
 		m := model()
 		m.View, m.Icons, m.Project = ViewExplorer, theme, "sil-simulator"
 		m.Tree = []TreeRow{{Path: ".github", Name: ".github", Dir: true}, {Path: ".env", Name: ".env"}}
-		navFrom := map[string]int{IconsEmoji: 51, IconsNerd: 46}[theme]
+		navFrom := map[string]int{IconsEmoji: 47, IconsNerd: 43}[theme]
 		for w := config.MinSidebarWidth; w <= config.MaxSidebarWidth; w++ {
 			sc := Render(m, w, 6, NoItem)
 			for _, l := range sc.Lines {
@@ -1456,8 +1456,9 @@ func TestFileMenus(t *testing.T) {
 	if got := names(items); got != "New File…|New Folder…|-|Find in Folder…|-|Paste|-|Copy Path|-|Collapse Folders" {
 		t.Errorf("root menu %s", got)
 	}
-	// The title's ⋯ (D63): Go to File, Search and the hidden files' switch,
-	// ✓ while they show; the buttons that did not fit come first.
+	// The title's ⋯ (D63): Go to File and the hidden files' switch, ✓
+	// while they show; the buttons that did not fit come first; no
+	// Search (the rail has it, T68.6).
 	ops := func(items []string) string {
 		var out []string
 		for i := 2; i < len(items); i += 3 {
@@ -1472,13 +1473,13 @@ func TestFileMenus(t *testing.T) {
 	}
 	st = MenuState{Kind: MenuMore, Path: "/home/u/p", Agent: true, Clip: true}
 	items = FileMenuItems("/bin/imux", "/dev/ttys1", "%3", st)
-	if got, op := names(items), ops(items); got != "Go to File…|Search…|-|  Show Hidden Files" || op != "goto search show-hidden" {
+	if got, op := names(items), ops(items); got != "Go to File…|-|  Show Hidden Files" || op != "goto show-hidden" {
 		t.Errorf("⋯ menu %s (%s)", got, op)
 	}
 	st.Hidden, st.More = true, []string{OpRefresh, OpCollapse}
 	items = FileMenuItems("/bin/imux", "/dev/ttys1", "%3", st)
-	if got, op := names(items), ops(items); got != "Refresh Explorer|Collapse Folders|-|Go to File…|Search…|-|✓ Show Hidden Files" ||
-		op != "refresh collapse goto search hide-hidden" {
+	if got, op := names(items), ops(items); got != "Refresh Explorer|Collapse Folders|-|Go to File…|-|✓ Show Hidden Files" ||
+		op != "refresh collapse goto hide-hidden" {
 		t.Errorf("⋯ menu, narrow, hidden files shown: %s (%s)", got, op)
 	}
 	for _, it := range items {

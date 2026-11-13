@@ -234,7 +234,6 @@ var tr = map[string]string{
 	"file.refresh":                     "Gezgini yenile",
 	"file.more":                        "Diğer eylemler…",
 	"file.goto":                        "Dosyaya git…",
-	"file.search":                      "Ara…",
 	"file.show_hidden":                 "Gizli dosyaları göster",
 	"file.new_file_prompt":             "Yeni dosyanın adı",
 	"file.new_folder_prompt":           "Yeni klasörün adı",

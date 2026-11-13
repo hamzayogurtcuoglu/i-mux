@@ -6,6 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.53.1] - 2026-11-13
+
+### Changed
+
+- **The explorer's title has no Search button any more**, and its ⋯ no Search…: the rail's 🔍
+  opens search, as it always did. Go to File stays in ⋯, and its button comes back to the title
+  wherever there is room (from 43 columns with the editor's icons, the default width, and from
+  47 with emoji).
+
 ## [0.53.0] - 2026-11-13
 
 ### Added

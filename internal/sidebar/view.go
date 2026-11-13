@@ -192,8 +192,8 @@ func scrolled(list []Line, scroll, n, w int) []Line {
 }
 
 // The explorer title's text keeps at least titleMin columns beside VS
-// Code's buttons, and titleNav beside Go to File and Search too (§9.3
-// "Explorer title and hidden files").
+// Code's buttons, and titleNav beside Go to File too (§9.3 "Explorer title
+// and hidden files").
 const (
 	titleMin = 6
 	titleNav = 16
@@ -209,9 +209,10 @@ const (
 )
 
 // explorerButtons are the explorer title's buttons for w columns, left to
-// right: Go to File and Search while the title keeps titleNav columns, VS
-// Code's (New File…, New Folder…, Refresh Explorer, Collapse Folders) while
-// it keeps titleMin, and ⋯. more lists the VS Code buttons left to ⋯.
+// right: Go to File while the title keeps titleNav columns, VS Code's (New
+// File…, New Folder…, Refresh Explorer, Collapse Folders) while it keeps
+// titleMin, and ⋯. more lists the VS Code buttons left to ⋯. Search has no
+// button here: the rail opens it.
 func explorerButtons(ic Icons, w int) (btns []Cell, more []string) {
 	tip := func(c Cell, label string) Cell {
 		c.Tip = label
@@ -235,12 +236,9 @@ func explorerButtons(ic Icons, w int) (btns []Cell, more []string) {
 		btns = append(btns, b.c)
 		used += b.c.W
 	}
-	nav := []Cell{
-		tip(button(ic.GoTo, muted, Action{Kind: ActGoto}), i18n.T("file.goto")),
-		tip(button(ic.Search, muted, Action{Kind: ActSearch}), i18n.T("file.search")),
-	}
-	if len(more) == 0 && w-used-width(nav) >= titleNav {
-		btns = append(nav, btns...)
+	gotoFile := tip(button(ic.GoTo, muted, Action{Kind: ActGoto}), i18n.T("file.goto"))
+	if len(more) == 0 && w-used-gotoFile.W >= titleNav {
+		btns = append([]Cell{gotoFile}, btns...)
 	}
 	return append(btns, dots), more
 }

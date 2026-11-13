@@ -272,16 +272,16 @@ func TestExplorerTitle(t *testing.T) {
 	c.Write(sgrMouse(35, tx+2, ty, 'M'))
 	h.waitFor("the title back", 5*time.Second, func() bool { return strings.Contains(h.lineOf(bar, "⋯"), "EXPLORER · proj") })
 
-	// ⋯, then a click on Show Hidden Files (Go to File…, Search…, a line,
-	// then it): tmux's menu has its first item right below the clicked row,
-	// i-mux's popup menu (before tmux 3.5) a title row first.
+	// ⋯, then a click on Show Hidden Files (Go to File…, a line, then it):
+	// tmux's menu has its first item right below the clicked row, i-mux's
+	// popup menu (before tmux 3.5) a title row first.
 	time.Sleep(500 * time.Millisecond)
 	x, y = button("⋯")
 	mark := c.Mark()
 	c.Click(0, x, y)
 	c.waitScreenAfter(h, mark, "Show Hidden Files", 5*time.Second)
 	time.Sleep(600 * time.Millisecond) // past the popup's first 400 ms
-	item := y + 4
+	item := y + 3
 	if !h.menuMouse() {
 		item++
 	}
@@ -320,8 +320,8 @@ func TestExplorerTitle(t *testing.T) {
 	h.waitFor("the new tab's explorer with .env", 10*time.Second, func() bool { return strings.Contains(h.screen(bar2), ".env") })
 	h.mustTmux("select-window", "-t", agentPane)
 
-	// ⋯ → Search… and ⋯ → Go to File… (by their keys) find them too; ⋯
-	// shows ✓ now.
+	// ⋯ → Go to File… (by its key) finds them too, and ⋯ has no Search…
+	// (the rail has it); ⋯ shows ✓ now.
 	more := func(key, want string) {
 		t.Helper()
 		time.Sleep(500 * time.Millisecond)
@@ -335,13 +335,10 @@ func TestExplorerTitle(t *testing.T) {
 		c.waitScreenAfter(h, mark, want, 5*time.Second)
 		time.Sleep(300 * time.Millisecond)
 	}
-	testutil.WriteFile(t, filepath.Join(p, ".env"), []byte("dotneedle=1\n"))
-	more("/", "Search in proj")
-	mark = c.Mark()
-	c.Write("dotneedle")
-	c.waitScreenAfter(h, mark, "1 results in 1 files", 5*time.Second)
-	c.Write("\x1b")
 	more("p", "Go to File · proj")
+	if strings.Contains(c.Text(), "Search…") {
+		t.Error("⋯ has Search…")
+	}
 	mark = c.Mark()
 	c.Write("ciyml")
 	c.waitScreenAfter(h, mark, "1 files", 5*time.Second)

@@ -233,7 +233,6 @@ var en = map[string]string{
 	"file.refresh":                     "Refresh Explorer",
 	"file.more":                        "More Actions…",
 	"file.goto":                        "Go to File…",
-	"file.search":                      "Search…",
 	"file.show_hidden":                 "Show Hidden Files",
 	"file.new_file_prompt":             "New file name",
 	"file.new_folder_prompt":           "New folder name",

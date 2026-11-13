@@ -314,8 +314,6 @@ func (f *fileCtx) do(op string) error {
 		return nil
 	case "goto":
 		return f.popupSized(f.root, "80%", "70%", "__goto", "--run")
-	case "search":
-		return f.popup(f.root, "__search")
 	case "show-hidden", "hide-hidden":
 		// Saved as a Settings row is: every sidebar reads it again.
 		v := "on"
