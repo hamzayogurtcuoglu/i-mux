@@ -44,9 +44,9 @@ func TestParse(t *testing.T) {
 func TestRender(t *testing.T) {
 	ls := Parse(unified)
 	for _, side := range []bool{true, false} {
-		out, first := Render(ls, 80, side)
-		if first != 2 {
-			t.Errorf("side=%v first change %d", side, first)
+		out, changes, first := Render(ls, 80, side)
+		if first != 2 || len(changes) != len(out) {
+			t.Errorf("side=%v first change %d, %d changes for %d rows", side, first, len(changes), len(out))
 		}
 		for _, l := range out {
 			if n := utf8.RuneCountInString(esc.ReplaceAllString(l, "")); n > 80 {
@@ -61,8 +61,15 @@ func TestRender(t *testing.T) {
 			}
 		}
 	}
-	// Side by side: the removed line and the first added one share a row.
-	out, _ := Render(ls, 80, true)
+	// Side by side: the removed line and the first added one share a row,
+	// which changed both; one column has a row each (D64).
+	out, changes, _ := Render(ls, 80, true)
+	if changes[0] != 0 || changes[2] != RowRemoved|RowAdded || changes[3] != RowAdded {
+		t.Errorf("side by side changes %v", changes)
+	}
+	if _, one, _ := Render(ls, 80, false); one[2] != RowRemoved || one[3] != RowAdded || one[0] != 0 {
+		t.Errorf("one column changes %v", one)
+	}
 	row := esc.ReplaceAllString(out[2], "")
 	if !strings.Contains(row, "3 - func old() {}") || !strings.Contains(row, "3 + func renamed() {}") {
 		t.Errorf("paired row %q", row)

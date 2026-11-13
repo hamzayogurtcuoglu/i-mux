@@ -65,6 +65,87 @@ func TestPagerScrolls(t *testing.T) {
 	}
 }
 
+// TestPagerMarks (T69.1): a diff's changes in two lanes left of the bar
+// over the whole text, red where lines were removed and green where they
+// were added; a click on a mark goes to its change, a few lines below the
+// top, elsewhere as the bar; ] and [ go to the next and previous change
+// around the ends and say which; rows keep their width.
+func TestPagerMarks(t *testing.T) {
+	i18n.SetLocale("en")
+	marks := make([]Mark, 100)
+	marks[40], marks[41], marks[42] = MarkAdded, MarkAdded, MarkAdded
+	marks[80] = MarkRemoved | MarkAdded // a line replaced, side by side
+	marks[90] = MarkRemoved
+	p := &Pager{Lines: lines(100), Marks: marks}
+	sc := p.Render(30, 12) // 11 rows of text, each a slice of about 9 lines
+	for i, l := range sc[:11] {
+		pl := sidebar.Plain(l)
+		if w := sidebar.DisplayWidth(pl); w != 30 {
+			t.Fatalf("row %d of %d columns: %q", i, w, pl)
+		}
+		lanes := string([]rune(pl)[27:29])
+		want := map[int]string{4: " ▌", 8: "▐▌", 10: "▐ "}[i]
+		if want == "" {
+			want = "  "
+		}
+		if lanes != want {
+			t.Errorf("row %d lanes %q, want %q", i, lanes, want)
+		}
+	}
+	if !strings.Contains(sc[4], markGreen+"▌") || !strings.Contains(sc[10], markRed+"▐") {
+		t.Errorf("lane colors %q %q", sc[4], sc[10])
+	}
+	if !strings.HasPrefix(sidebar.Plain(sc[0]), "line 1"+strings.Repeat(" ", 21)+"  ") {
+		t.Errorf("text not 27 columns: %q", sidebar.Plain(sc[0]))
+	}
+	for _, c := range []struct {
+		key  string
+		top  int
+		note string
+	}{
+		{"]", 37, "change 1 of 3"},
+		{"]", 77, "change 2 of 3"},
+		{"]", 87, "change 3 of 3"},
+		{"]", 37, "change 1 of 3"},
+		{"[", 87, "change 3 of 3"},
+		{"g", 0, ""},
+		{"[", 87, "change 3 of 3"},
+	} {
+		p.Key(c.key)
+		if p.Top != c.top || !strings.HasPrefix(p.note, c.note) {
+			t.Errorf("%s: top %d (%q), want %d (%q)", c.key, p.Top, p.note, c.top, c.note)
+		}
+	}
+	// From where it was scrolled to, not from the change gone to last.
+	p.Top = 50
+	if p.Key("]"); p.Top != 77 {
+		t.Errorf("] from 50: top %d", p.Top)
+	}
+	p.Top = 50
+	if p.Key("["); p.Top != 37 {
+		t.Errorf("[ from 50: top %d", p.Top)
+	}
+	// A click on a mark goes to its change; a row without one as the bar.
+	for _, c := range []struct{ x, y, top int }{{29, 9, 77}, {28, 5, 37}, {28, 1, 0}, {29, 7, 53}, {28, 11, 87}} {
+		p.Mouse(sidebar.Event{Kind: sidebar.EvClick, X: c.x, Y: c.y})
+		if p.Top != c.top {
+			t.Errorf("click %d,%d: top %d, want %d", c.x, c.y, p.Top, c.top)
+		}
+	}
+	if !strings.HasPrefix(p.note, "change 3 of 3") {
+		t.Errorf("note after a click on a mark: %q", p.note)
+	}
+	// No marks, or text that fits: no lanes.
+	plainPager := &Pager{Lines: lines(100)}
+	if pl := sidebar.Plain(plainPager.Render(30, 12)[4]); !strings.HasPrefix(pl, "line 5"+strings.Repeat(" ", 23)) {
+		t.Errorf("lanes without marks: %q", pl)
+	}
+	short := &Pager{Lines: lines(3), Marks: []Mark{0, MarkAdded, 0}}
+	if pl := sidebar.Plain(short.Render(20, 10)[1]); strings.ContainsAny(pl, "▐▌") {
+		t.Errorf("lanes on a text that fits: %q", pl)
+	}
+}
+
 func TestPagerSearch(t *testing.T) {
 	i18n.SetLocale("en")
 	p := &Pager{Lines: lines(100)}
