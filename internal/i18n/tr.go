@@ -454,6 +454,8 @@ var tr = map[string]string{
 	"pager.where":                      "%d–%d / %d (%%%d)",
 	"pager.not_found":                  "%s: bulunamadı",
 	"pager.match":                      "%d / %d (%s) · n sonraki · N önceki",
+	"pager.change":                     "değişiklik %d / %d · ] sonraki · [ önceki",
+	"pager.hint_diff":                  "↑↓ kaydır · ] [ sonraki ve önceki değişiklik, ya da sağdaki işaretine tıkla · / ara · q kapat",
 	"view.no_diff":                     "Son commit'e göre değişiklik yok.",
 	"statusline.five_hour":             "5 saat %%%d",
 	"statusline.weekly":                "hafta %%%d",

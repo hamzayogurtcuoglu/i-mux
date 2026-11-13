@@ -16,6 +16,14 @@ const (
 	Added   = '+'
 )
 
+// What a drawn row changed (Render's changes; D64): its old side's line
+// was removed, its new side's line added; a line replaced, side by side,
+// both.
+const (
+	RowRemoved byte = 1 << iota
+	RowAdded
+)
+
 // Line is one line of either side of the diff.
 type Line struct {
 	Kind  byte
@@ -149,9 +157,10 @@ func num(n, w int) string {
 }
 
 // Render draws the diff for a terminal of width columns: side by side when
-// side is true, else one column with both line numbers. It returns the lines
-// and the index of the first changed one (-1 when nothing changed).
-func Render(lines []Line, width int, side bool) ([]string, int) {
+// side is true, else one column with both line numbers. It returns the
+// lines, what each changed (RowRemoved, RowAdded; 0 for none) and the index
+// of the first changed one (-1 when nothing changed).
+func Render(lines []Line, width int, side bool) ([]string, []byte, int) {
 	maxNo := 1
 	for _, l := range lines {
 		maxNo = max(maxNo, l.OldNo, l.NewNo)
@@ -159,15 +168,24 @@ func Render(lines []Line, width int, side bool) ([]string, int) {
 	nw := len(strconv.Itoa(maxNo))
 	first := -1
 	var out []string
+	var changes []byte
 	if !side {
 		tw := width - 2*nw - 5
 		for _, l := range lines {
 			if l.Kind != Same && first < 0 {
 				first = len(out)
 			}
+			var c byte
+			switch l.Kind {
+			case Removed:
+				c = RowRemoved
+			case Added:
+				c = RowAdded
+			}
 			out = append(out, oneColumn(l, nw, tw))
+			changes = append(changes, c)
 		}
-		return out, first
+		return out, changes, first
 	}
 	half := (width - 1) / 2
 	tw := half - nw - 3
@@ -176,6 +194,7 @@ func Render(lines []Line, width int, side bool) ([]string, int) {
 		if lines[i].Kind == Same {
 			l := lines[i]
 			out = append(out, sideCell(&l, nw, tw, false)+dim+"│"+reset+sideCell(&l, nw, tw, true))
+			changes = append(changes, 0)
 			i++
 			continue
 		}
@@ -193,16 +212,18 @@ func Render(lines []Line, width int, side bool) ([]string, int) {
 		}
 		for k := 0; k < max(len(rem), len(add)); k++ {
 			var left, right *Line
+			var c byte
 			if k < len(rem) {
-				left = &rem[k]
+				left, c = &rem[k], c|RowRemoved
 			}
 			if k < len(add) {
-				right = &add[k]
+				right, c = &add[k], c|RowAdded
 			}
 			out = append(out, sideCell(left, nw, tw, false)+dim+"│"+reset+sideCell(right, nw, tw, true))
+			changes = append(changes, c)
 		}
 	}
-	return out, first
+	return out, changes, first
 }
 
 // sideCell is one half of a side-by-side row: the old side or the new one.

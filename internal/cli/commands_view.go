@@ -83,13 +83,26 @@ func runDiff(e *Env, args []string) error {
 		lines = diffview.Parse(gitDiff(path, mode))
 	}
 	w, _ := sidebar.Size(int(os.Stdout.Fd()))
-	rows, first := diffview.Render(lines, w-1, w >= 120) // a column for the scroll bar
+	rows, changes, first := diffview.Render(lines, w-1-pager.MarksW, w >= 120) // columns for the marks and the scroll bar
 	added, removed := diffview.Stats(lines)
 	header := []string{fmt.Sprintf(" \x1b[1m%s\x1b[0m   \x1b[32m+%d\x1b[0m \x1b[31m−%d\x1b[0m", path, added, removed), ""}
-	if len(rows) == 0 {
-		rows = []string{"  " + i18n.T("view.no_diff")}
+	p := &pager.Pager{Header: header, Lines: rows, Top: max(first-3, 0)} // a little context above the first change
+	if first >= 0 {
+		// The changes beside the scroll bar, as VS Code's diff editor (D64).
+		p.Marks, p.Hint = make([]pager.Mark, len(rows)), i18n.T("pager.hint_diff")
+		for i, c := range changes {
+			if c&diffview.RowRemoved != 0 {
+				p.Marks[i] |= pager.MarkRemoved
+			}
+			if c&diffview.RowAdded != 0 {
+				p.Marks[i] |= pager.MarkAdded
+			}
+		}
 	}
-	return page(e, header, rows, max(first-3, 0)) // a little context above the first change
+	if len(rows) == 0 {
+		p.Lines = []string{"  " + i18n.T("view.no_diff")}
+	}
+	return pageWith(e, p)
 }
 
 // gitDiff is the file's whole-file diff: against HEAD ("head"; against the
@@ -255,11 +268,16 @@ func ViewArgs(self, path string, line int) []string {
 // page shows drawn lines in i-mux's pager (§9.3 "Scroll bars") from line
 // top, under header; printed as they are when not on a terminal.
 func page(e *Env, header, lines []string, top int) error {
+	return pageWith(e, &pager.Pager{Header: header, Lines: lines, Top: top})
+}
+
+// pageWith shows p in the pager; not on a terminal, its text is printed.
+func pageWith(e *Env, p *pager.Pager) error {
 	if !isTerminal(os.Stdin) || !isTerminal(os.Stdout) {
-		for _, l := range append(header, lines...) {
+		for _, l := range append(p.Header, p.Lines...) {
 			fmt.Fprintln(e.Stdout, l)
 		}
 		return nil
 	}
-	return pager.Run(&pager.Pager{Header: header, Lines: lines, Top: top}, os.Stdin, os.Stdout)
+	return pager.Run(p, os.Stdin, os.Stdout)
 }

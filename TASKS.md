@@ -1002,15 +1002,15 @@ slow (about a second).
 User request: in the diff viewer, show where the changes are beside the scroll bar, as VS Code
 does, and go there with a click instead of scrolling through the whole file; the whole file stays.
 
-- [ ] **T69.1 The marks** · S
+- [x] **T69.1 The marks** · S
   - AC: D64, §9.3 "Scroll bars": `pager.Marks`; two lanes left of the bar (red removed, green
     added) over the whole text; a click on a mark goes to its change, elsewhere as the bar; `]`
     `[` the next and previous change around the ends, "change 2 of 5"; the diff marks its rows (a
     replaced line side by side: both); unit tests (lanes, widths, clicks, keys).
-- [ ] **T69.2 End to end** · S
-  - AC: e2e: a diff opened from Source Control: `]` goes to the second change and `[` back; a
-    click on its mark goes there.
-- [ ] **T69.3 Docs** · XS
+- [x] **T69.2 End to end** · S
+  - AC: e2e: a diff in a pane: `]` goes to the second change and `[` back; a click on its mark
+    (found on the screen beside the bar) goes there.
+- [x] **T69.3 Docs** · XS
   - AC: README and README.tr; CHANGELOG.
 
 ## M68: The explorer's title like VS Code's, and hidden files (added 2026-11-13)

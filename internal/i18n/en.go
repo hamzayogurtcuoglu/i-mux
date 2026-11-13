@@ -453,6 +453,8 @@ var en = map[string]string{
 	"pager.where":                      "%d–%d of %d (%d%%)",
 	"pager.not_found":                  "%s: not found",
 	"pager.match":                      "%d of %d for %s · n next · N previous",
+	"pager.change":                     "change %d of %d · ] next · [ previous",
+	"pager.hint_diff":                  "↑↓ scroll · ] [ next and previous change, or click its mark at the right · / search · q close",
 	"view.no_diff":                     "No changes against the last commit.",
 	"statusline.five_hour":             "5h %d%%",
 	"statusline.weekly":                "week %d%%",

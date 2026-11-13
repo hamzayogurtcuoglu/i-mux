@@ -6,6 +6,16 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-11-13
+
+### Added
+
+- **The diff shows where its changes are, beside the scroll bar, as VS Code does.** Two thin
+  lanes left of the diff viewer's scroll bar map the whole file: red where lines were removed,
+  green where lines were added (a replaced line has both). Click a mark to go straight to that
+  change instead of scrolling through the file; **]** and **[** go to the next and previous
+  change, and the bottom row says which ("change 2 of 5"). The whole file still shows.
+
 ## [0.53.1] - 2026-11-13
 
 ### Changed
