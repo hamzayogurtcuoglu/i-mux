@@ -140,7 +140,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D60 | **No native Windows: the psmux port is removed** (added 2026-11-12, v0.50, at the user's request; undoes the port merged in #2, M62): i-mux runs on macOS and Linux, and on Windows in WSL. Gone: the psmux adapter and the `sysx`, `winx` and `pwshshim` packages, `install.ps1` and the PowerShell scripts, the Windows builds, release archives and CI jobs, `make test-windows`, the `key@windows` variants of messages, and `golang.org/x/sys` (D13 and D15 are as before the port). What came after the port stays, without its Windows parts: Source Control (D58) and `make ci` (D59). | The user decided i-mux need not run natively on Windows: WSL already runs it with tmux, while the port needed a psmux built from source (3.4.0 stops running i-mux's keys) and its own CI job and checks. Reverting the merge brings back the code the port had changed, as it was. |
 | D61 | **A Scheduler view runs the project's own agents and skills, now or on a schedule** (added 2026-11-12, v0.51, at the user's request): a rail tab lists the project's agent definitions (`.claude/agents`, `.github/agents`, `.opencode/agent`, `.agents/agents`, and the personal ones in `~/.claude/agents` and `~/.copilot/agents`) and its skills; 🚀 opens one Run panel where the installed CLI, the model, the time (now, a preset, or one typed) and the access are chosen already, and Enter runs it. i-mux runs it headless with the CLI's own flags (`claude -p --agent`, `copilot -p --agent`, `agy -p`, `codex exec`, `opencode run`), streaming where the CLI can, in the project, while i-mux is open (the watcher); a run's output opens live (each tool call, the answer; `s` stops it); the view shows each one's last report, state and next run, and notifies when a run has news or fails. i-mux does not write agents. | The user wanted scheduled and batch agents without filling forms or writing prompts: the agent or skill already written says what to do, so the user only confirms when, which CLI and which model, in one place. A run that only printed at its end looked like it had not worked, hence the live output. The agent CLIs already run headless (✨ commit messages, D29), and the watcher already lives exactly as long as i-mux. |
 | D62 | **The rail tab is named Jobs, and the separate Skills tab on the rail is gone** (added 2026-11-12, v0.52, at the user's request; refines D32 and D61): the ⏰ view on the activity rail is called **Jobs** (`İşler` in Turkish; title `JOBS` / `İŞLER`, key `5`), and the separate **🧩 Skills** icon on the rail is removed because Jobs already lists and triggers the project's skills alongside its agents. | "Schedule" sounded like a calendar timer only, while the view also triggers agents and skills on demand and runs them headless in batch mode. With skills already listed inside Jobs, a separate Skills tab on the rail duplicated them. |
-| D63 | **The explorer's title has VS Code's buttons, and its ⋯ shows hidden files** (added 2026-11-13, v0.53, at the user's request): New File…, New Folder…, Refresh Explorer and Collapse Folders are buttons in the Files view's title, as in VS Code's explorer, with ⋯ (More Actions) after them; its menu holds Go to File…, Search… and **Show Hidden Files** (✓ while on; `[explorer] show_hidden`, off by default). The button under the pointer shows its label in the title. Go to File and Search keep their buttons only where the title has room. With hidden files shown, names starting with a dot (`.github`, `.gitlab-ci.yml`, `.vscode`, `.env`) show in the explorer, and search and Go to File look into hidden folders outside git repositories too; `.git`, `.svn`, `.hg`, `CVS`, `.DS_Store`, `Thumbs.db` and the explorer's skip list (`node_modules` …) never show. | The user wanted his projects' dot files in the explorer, and VS Code's title actions. Hidden stays the default, so a tree keeps its look until asked, and with the setting off nothing changes: search and Go to File keep finding what they found before (git's list has the dot files it tracks, such as `.github/…`). Seven buttons and a title do not fit the default 43 columns, so VS Code's four and ⋯ come first and the rest go into ⋯, as VS Code's toolbars overflow. The setting is saved as Settings saves its rows, so it survives restarts and every sidebar follows at once. |
+| D63 | **The explorer's title has VS Code's buttons, and its ⋯ shows hidden files** (added 2026-11-13, v0.53, at the user's request): New File…, New Folder…, Refresh Explorer and Collapse Folders are buttons in the Files view's title, as in VS Code's explorer, with ⋯ (More Actions) after them; its menu holds Go to File… and **Show Hidden Files** (✓ while on; `[explorer] show_hidden`, off by default). The button under the pointer shows its label in the title. Go to File keeps its button only where the title has room; Search has none there (v0.53.1: the rail's 🔍 opens it). With hidden files shown, names starting with a dot (`.github`, `.gitlab-ci.yml`, `.vscode`, `.env`) show in the explorer, and search and Go to File look into hidden folders outside git repositories too; `.git`, `.svn`, `.hg`, `CVS`, `.DS_Store`, `Thumbs.db` and the explorer's skip list (`node_modules` …) never show. | The user wanted his projects' dot files in the explorer, and VS Code's title actions. Hidden stays the default, so a tree keeps its look until asked, and with the setting off nothing changes: search and Go to File keep finding what they found before (git's list has the dot files it tracks, such as `.github/…`). Six buttons and a title do not fit the default 43 columns everywhere, so VS Code's four and ⋯ come first and Go to File goes into ⋯ when there is no room, as VS Code's toolbars overflow; the rail already has Search, so the title does not repeat it (the user's request). The setting is saved as Settings saves its rows, so it survives restarts and every sidebar follows at once. |
 
 ## 4. Components
 
@@ -1673,9 +1673,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
  EXPLORER · sil… 📝  📁  🔄  ⊟  ⋯      New File…, New Folder…, Refresh, Collapse, ⋯
  ▸ 📁 .github             ┌──── EXPLORER ────────┐
  ▸ 📁 src                 │ Go to File…        p │
-   🔑 .env                │ Search…            / │
-   📖 README.md           │──────────────────────│
-                          │ ✓ Show Hidden Files h│
+   🔑 .env                │──────────────────────│
+   📖 README.md           │ ✓ Show Hidden Files h│
                           └──────────────────────┘
 ```
 
@@ -1683,14 +1682,15 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   "Buttons"): **New File…**, **New Folder…**, **Refresh Explorer** and **Collapse Folders**, and
   **⋯** (More Actions) at the right end. `nerd`: codicons new-file U+EA7F, new-folder U+EA80,
   refresh U+EB37, collapse-all U+EAC5, ellipsis U+EA7C; `emoji`: 📝 📁 🔄 ⊟ ⋯. The text is cut
-  ("…") before a button goes. Go to File (📄, go-to-file U+EA94) and Search (🔍) come before
-  them only while the text keeps 16 columns (a sidebar of 46 columns with the editor's icons, 51
-  with emoji; the default is 43); otherwise they are in ⋯ only. In a narrower sidebar VS Code's
+  ("…") before a button goes. Go to File (📄, go-to-file U+EA94) comes before them only while
+  the text keeps 16 columns (a sidebar of 43 columns with the editor's icons, the default, and
+  47 with emoji); otherwise it is in ⋯ only. Search has no button in the title: the rail's 🔍
+  opens it (v0.53.1, at the user's request). In a narrower sidebar VS Code's
   buttons go into ⋯ from the right, Collapse first, once the text would keep fewer than 6
   columns; ⋯ always stays. A right-click anywhere on the title opens the root menu.
 - **Labels:** while the pointer is on a title button (or the keyboard selects it), its label
   takes the place of the title's text, as VS Code shows a tooltip: New File…, New Folder…,
-  Refresh Explorer, Collapse Folders, More Actions…, Go to File…, Search…. A click hides it
+  Refresh Explorer, Collapse Folders, More Actions…, Go to File…. A click hides it
   until the pointer leaves the button, as a tooltip goes. The frame is drawn again only when
   the item under the pointer changes (D31).
 - **New File… / New Folder…:** the root menu's operations (`imux __file new-file|new-folder`: the
@@ -1704,9 +1704,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Collapse Folders:** closes every open folder of this explorer and scrolls to the top, at once
   (the menus' Collapse Folders, as before, closes them in every sidebar of the project).
 - **⋯ (More Actions):** a menu titled EXPLORER at the button (i-mux's popup menu before tmux 3.5,
-  D54): the title buttons that do not fit, **Go to File…** and **Search…** (the project), then
-  **Show Hidden Files**, `✓ ` before it while on. Its commands are `imux __file
-  new-file|new-folder|refresh|collapse|goto|search|show-hidden|hide-hidden`; the narrow
+  D54): the title buttons that do not fit, **Go to File…** (the project), then **Show Hidden
+  Files**, `✓ ` before it while on. Its commands are `imux __file
+  new-file|new-folder|refresh|collapse|goto|show-hidden|hide-hidden`; the narrow
   sidebar's Refresh reaches every sidebar of the project through `@imux_reveal`.
 - **Hidden files:** names starting with "." are left out by default, as before. **Show Hidden
   Files** (`[explorer] show_hidden = true`) shows them: `.github`, `.gitlab-ci.yml`, `.vscode`,

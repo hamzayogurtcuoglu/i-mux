@@ -1028,6 +1028,11 @@ buttons (New File, New Folder, Refresh, Collapse Folders); keep the look.
     Collapse Folders closes the open folders; ⋯ → Go to File… opens Go to File.
 - [x] **T68.5 Docs** · XS
   - AC: README and README.tr; CHANGELOG.
+- [x] **T68.6 Search only on the rail** · XS
+  - AC: user request ("the rail already has Search; Go to File is enough there"): the explorer's
+    title has no Search button and its ⋯ no Search…; Go to File keeps its button where the title
+    has room (43 columns with the editor's icons, 47 with emoji) and its ⋯ item; unit and e2e
+    tests; CHANGELOG (v0.53.1).
 
 ## M67: Jobs on the rail, without a separate Skills tab (added 2026-11-12)
 
