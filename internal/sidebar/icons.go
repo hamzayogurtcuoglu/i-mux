@@ -14,13 +14,15 @@ type Icons struct {
 	Publish                       string // publish a branch with no upstream
 	Run, Stop                     string // the Scheduler's: the Run panel, stop the run (D61)
 	Skill, Robot                  string // a skill, an agent any CLI runs (the Scheduler's rows)
+	NewFile, NewFolder, Collapse  string // the explorer's title (D63)
 }
 
 var buttonIcons = map[string]Icons{
 	// Codicons (Nerd Fonts v3): add, remove, discard, refresh, arrow-down,
 	// arrow-up, sync, check, git branch, chevron-down, chevron-right, edit,
 	// history, search, sparkle (Nerd Fonts 3.2+), go-to-file, ellipsis,
-	// cloud-upload, play, debug-stop, extensions, hubot.
+	// cloud-upload, play, debug-stop, extensions, hubot, new-file,
+	// new-folder, collapse-all.
 	IconsNerd: {
 		Add: "\uea60", Remove: "\ueb3b", Discard: "\ueae2", Refresh: "\ueb37",
 		Pull: "\uea9a", Push: "\ueaa1", Sync: "\uea77", Commit: "\ueab2",
@@ -28,7 +30,9 @@ var buttonIcons = map[string]Icons{
 		Edit: "\uea73", History: "\uea82", Search: "\uea6d",
 		Suggest: "\uec10", GoTo: "\uea94", More: "\uea7c", Publish: "\ueac3",
 		Run: "\ueb2c", Stop: "\uead7", Skill: "\ueae6", Robot: "\ueb08",
+		NewFile: "\uea7f", NewFolder: "\uea80", Collapse: "\ueac5",
 	},
+	// ⊟ is the search popup's Collapse all.
 	IconsEmoji: {
 		Add: "➕", Remove: "➖", Discard: "⏪", Refresh: "🔄",
 		Pull: "⏬", Push: "⏫", Sync: "🔃", Commit: "✅",
@@ -36,6 +40,7 @@ var buttonIcons = map[string]Icons{
 		Edit: "📝", History: "📜", Search: "🔍",
 		Suggest: "✨", GoTo: "📄", More: "⋯", Publish: "📤",
 		Run: "🚀", Stop: "🛑", Skill: "🧩", Robot: "🤖",
+		NewFile: "📝", NewFolder: "📁", Collapse: "⊟",
 	},
 }
 

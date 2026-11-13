@@ -29,17 +29,20 @@ const (
 	MenuFile   = "file"
 	MenuFolder = "folder"
 	MenuRoot   = "root" // empty space and the title: the project folder
+	MenuMore   = "more" // the title's ⋯ (More Actions, D63)
 )
 
 // MenuState is what decides which items an explorer menu has.
 type MenuState struct {
-	Kind    string // MenuFile, MenuFolder, MenuRoot
-	Agent   bool   // the target pane runs an agent (Add to Agent)
-	Clip    bool   // something was cut or copied (Paste)
-	Compare string // the file selected for compare, "" for none
-	Path    string // the menu's path (absolute)
-	Reveal  string // i18n key of the reveal item, "" without a file manager
-	VSCode  bool   // VS Code's CLI is there
+	Kind    string   // MenuFile, MenuFolder, MenuRoot, MenuMore
+	Agent   bool     // the target pane runs an agent (Add to Agent)
+	Clip    bool     // something was cut or copied (Paste)
+	Compare string   // the file selected for compare, "" for none
+	Path    string   // the menu's path (absolute)
+	Reveal  string   // i18n key of the reveal item, "" without a file manager
+	VSCode  bool     // VS Code's CLI is there
+	Hidden  bool     // hidden files are shown (⋯: ✓ Show Hidden Files)
+	More    []string // the title's buttons ⋯ lists: those that did not fit (OpNewFile ...)
 }
 
 // FileMenuItems lists an explorer menu as display-menu arguments: name,
@@ -51,7 +54,7 @@ func FileMenuItems(self, client, pane string, st MenuState) []string {
 			items = append(items, "")
 		}
 	}
-	add := func(label, key, op string) {
+	cmd := func(op string) string {
 		args := []string{"__file", op}
 		if client != "" {
 			args = append(args, "--client", client)
@@ -59,7 +62,35 @@ func FileMenuItems(self, client, pane string, st MenuState) []string {
 		if pane != "" {
 			args = append(args, "--pane", pane)
 		}
-		items = append(items, tmux.EscapeFormat(i18n.T(label)), key, tmux.RunShell(self, args...))
+		return tmux.RunShell(self, args...)
+	}
+	add := func(label, key, op string) {
+		items = append(items, tmux.EscapeFormat(i18n.T(label)), key, cmd(op))
+	}
+	if st.Kind == MenuMore {
+		// The title's ⋯: its buttons that did not fit, Go to File and
+		// Search, then the hidden files' switch.
+		for _, op := range st.More {
+			switch op {
+			case OpNewFile:
+				add("file.new_file", "n", op)
+			case OpNewFolder:
+				add("file.new_folder", "N", op)
+			case OpRefresh:
+				add("file.refresh", "r", op)
+			case OpCollapse:
+				add("file.collapse", "z", op)
+			}
+		}
+		sep()
+		add("file.goto", "p", "goto")
+		add("file.search", "/", "search")
+		sep()
+		op, label := "show-hidden", "  "+i18n.T("file.show_hidden")
+		if st.Hidden {
+			op, label = "hide-hidden", "✓ "+i18n.T("file.show_hidden")
+		}
+		return append(items, tmux.EscapeFormat(label), "h", cmd(op))
 	}
 	file, root := st.Kind == MenuFile, st.Kind == MenuRoot
 	if file {
@@ -139,7 +170,11 @@ func (s *sidebar) fileMenu(ctx context.Context, client string, a Action, x, y in
 		return
 	}
 	abs := root
-	if a.Section != MenuRoot {
+	switch a.Section {
+	case MenuRoot:
+	case MenuMore:
+		abs = filepath.Join(root, s.newIn()) // where its New File… and New Folder… create
+	default:
 		abs = filepath.Join(root, a.Path)
 	}
 	out, err := s.t.Run(ctx,
@@ -159,9 +194,14 @@ func (s *sidebar) fileMenu(ctx context.Context, client string, a Action, x, y in
 		Path:    abs,
 		Reveal:  s.revealKey,
 		VSCode:  editor.VSCode() != "",
+		Hidden:  s.o.Source.ShowHidden(),
+	}
+	title := filepath.Base(abs)
+	if a.Section == MenuMore {
+		_, st.More = explorerButtons(s.model.icons(), s.win.Width-railW)
+		title = i18n.T("sidebar.explorer")
 	}
 	items := FileMenuItems(s.o.Self, client, s.model.Target, st)
-	title := filepath.Base(abs)
 	c := append(s.t.Menu(ctx), "-t", s.o.Pane)
 	if client != "" {
 		c = append(c, "-c", client)
@@ -224,6 +264,29 @@ func MenuAt(x, y int) (string, string) {
 		"#{e|+:#{popup_pane_top}," + strconv.Itoa(y-1) + "}"
 }
 
+// newIn is the folder the title's New File… and New Folder… create in,
+// relative to the project: the selected row's (a folder, or a file's
+// folder) while it is in the tree, else the project folder (""), as the
+// editor does.
+func (s *sidebar) newIn() string {
+	if s.selected == "" {
+		return ""
+	}
+	for _, r := range s.model.Tree {
+		if r.Path != s.selected {
+			continue
+		}
+		if r.Dir {
+			return r.Path
+		}
+		if d := filepath.Dir(r.Path); d != "." {
+			return d
+		}
+		return ""
+	}
+	return ""
+}
+
 // targetAgent is the agent of the target pane ("" for none).
 func (s *sidebar) targetAgent() string {
 	for _, p := range s.model.Panes {
@@ -235,8 +298,9 @@ func (s *sidebar) targetAgent() string {
 }
 
 // reveal acts on OptReveal: the folders above a created, renamed or pasted
-// path open and it is selected and scrolled to; "collapse" closes them all.
-// The first value a sidebar sees is only remembered.
+// path open and it is selected and scrolled to; "collapse" closes them all;
+// "refresh" reads the git status anew. The first value a sidebar sees is
+// only remembered.
 func (s *sidebar) reveal(v string) bool {
 	if v == s.lastReveal {
 		return false
@@ -257,6 +321,12 @@ func (s *sidebar) reveal(v string) bool {
 		}
 		s.o.Source.Expanded = map[string]bool{}
 		s.scroll = 0
+		return true
+	case "refresh":
+		if filepath.Clean(f[2]) != filepath.Clean(s.model.CWD) {
+			return false
+		}
+		s.o.Source.Forget(s.model.CWD)
 		return true
 	case "reveal":
 		rel, err := filepath.Rel(s.model.CWD, f[2])

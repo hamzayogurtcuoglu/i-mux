@@ -36,16 +36,18 @@ type Match struct {
 }
 
 // Files lists the project's files, relative to dir: git's tracked and
-// untracked (not ignored) files in a repository, else a walk that skips
-// hidden folders and the explorer's skip list.
-func Files(ctx context.Context, dir string) []string {
+// untracked (not ignored) files in a repository, else a walk that skips the
+// explorer's skip list and, unless showHidden, hidden folders. The always
+// hidden names (.git, .DS_Store ...) are left out (§9.3 "Explorer title and
+// hidden files").
+func Files(ctx context.Context, dir string, showHidden bool) []string {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", "-C", dir, "ls-files", "-co", "--exclude-standard", "-z")
 	if out, err := cmd.Output(); err == nil {
 		var files []string
 		for _, f := range strings.Split(string(out), "\x00") {
-			if f != "" && len(files) < MaxFiles {
+			if f != "" && len(files) < MaxFiles && !folders.ExcludedPath(f) {
 				files = append(files, f)
 			}
 		}
@@ -57,11 +59,18 @@ func Files(ctx context.Context, dir string) []string {
 		if err != nil || len(files) >= MaxFiles {
 			return filepath.SkipDir
 		}
-		n := d.Name()
-		if d.IsDir() {
-			if p != dir && (strings.HasPrefix(n, ".") || folders.Skip[n]) {
+		if p == dir {
+			return nil
+		}
+		// Hidden files are found as before; hidden folders only while
+		// hidden files are shown.
+		if folders.Hidden(d.Name(), d.IsDir(), showHidden || !d.IsDir()) {
+			if d.IsDir() {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+		if d.IsDir() {
 			return nil
 		}
 		if rel, err := filepath.Rel(dir, p); err == nil {

@@ -112,11 +112,16 @@ func (f *fileCtx) self(args ...string) string {
 
 // popup runs an imux command in a popup in folder dir.
 func (f *fileCtx) popup(dir string, args ...string) error {
+	return f.popupSized(dir, "90%", "90%", args...)
+}
+
+// popupSized is popup w wide and h high.
+func (f *fileCtx) popupSized(dir, w, h string, args ...string) error {
 	c := tmux.Cmd{"display-popup"}
 	if f.client != "" {
 		c = append(c, "-c", f.client)
 	}
-	c = append(c, "-E", "-w", "90%", "-h", "90%", "-d", tmux.EscapeFormat(dir), f.self(args...))
+	c = append(c, "-E", "-w", w, "-h", h, "-d", tmux.EscapeFormat(dir), f.self(args...))
 	return f.w.T.Spawn(c)
 }
 
@@ -302,6 +307,25 @@ func (f *fileCtx) do(op string) error {
 		return nil
 	case "collapse":
 		f.signal("collapse", f.root)
+		return nil
+	// The explorer title's ⋯ (D63).
+	case "refresh":
+		f.signal("refresh", f.root)
+		return nil
+	case "goto":
+		return f.popupSized(f.root, "80%", "70%", "__goto", "--run")
+	case "search":
+		return f.popup(f.root, "__search")
+	case "show-hidden", "hide-hidden":
+		// Saved as a Settings row is: every sidebar reads it again.
+		v := "on"
+		if op == "hide-hidden" {
+			v = "off"
+		}
+		if err := setSetting("hidden_files", v); err != nil {
+			return err
+		}
+		sidebar.RefreshAll(ctx, f.w.T)
 		return nil
 	}
 	return &UsageError{Msg: i18n.T("cli.usage", "__file <op>")}

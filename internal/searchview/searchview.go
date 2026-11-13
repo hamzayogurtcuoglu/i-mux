@@ -391,6 +391,9 @@ type Options struct {
 	Out   *os.File
 	Dir   string
 	Theme string // the file icons' (sidebar.IconsNerd, IconsEmoji)
+	// ShowHidden looks into hidden folders too outside a git repository
+	// ([explorer] show_hidden, D63).
+	ShowHidden bool
 }
 
 type result struct {
@@ -414,7 +417,7 @@ func Run(o Options) (*search.Match, error) {
 		name = name[i+1:]
 	}
 	m := &Model{Title: i18n.T("search.title", name), Theme: o.Theme}
-	files := search.Files(context.Background(), o.Dir)
+	files := search.Files(context.Background(), o.Dir, o.ShowHidden)
 	results := make(chan result, 4)
 	gen := 0
 	var cancel context.CancelFunc = func() {}

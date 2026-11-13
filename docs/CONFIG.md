@@ -47,6 +47,7 @@ line number.
 | `notify.command` | `""` | Run this instead, with the title and the message as arguments (e.g. a push to your phone); "" = the system's notifications. |
 | `paste.images` | `true` | Ctrl+V (or Alt+V) in an agent's pane pastes the image on the clipboard (a screenshot) or copied image files: macOS, Linux with wl-clipboard or xclip, and WSL (the Windows clipboard). With no image the key goes to the pane as before. |
 | `paste.command` | `""` | Run this instead to get the images: it prints image file paths, one a line. |
+| `explorer.show_hidden` | `false` | Show the files and folders whose names start with a dot (.github, .env, .vscode) in the sidebar's explorer; search and Go to File then look into hidden folders outside git repositories too. The explorer's ⋯ → Show Hidden Files turns it on and off. .git, .svn, .hg, CVS, .DS_Store and Thumbs.db stay hidden, and node_modules and the other folders the explorer skips stay out of its tree. |
 | `web.enabled` | `true` | A click on an HTML file in the explorer asks how to open it: in your browser, served by i-mux on localhost, the page reloading itself when its files change (Live Preview; nothing to install), or to edit or view it. false: the click edits it at once. |
 | `web.open` | `"window"` | How Open Preview and `imux web open` show a page: "window": a window of its own, without tabs or an address bar (Chrome or Edge; under WSL, Windows' own); "tab": a tab of your default browser. |
 | `web.browser` | `""` | A command that opens pages instead, the URL after its words (e.g. "firefox"); "" = the system's browser. |
@@ -214,6 +215,15 @@ command           = ""
 images            = true
 # Run this instead to get the images: it prints image file paths, one a line.
 command           = ""
+
+[explorer]
+# Show the files and folders whose names start with a dot (.github, .env,
+# .vscode) in the sidebar's explorer; search and Go to File then look into
+# hidden folders outside git repositories too. The explorer's ⋯ → Show Hidden
+# Files turns it on and off. .git, .svn, .hg, CVS, .DS_Store and Thumbs.db
+# stay hidden, and node_modules and the other folders the explorer skips stay
+# out of its tree.
+show_hidden       = false
 
 [web]
 # A click on an HTML file in the explorer asks how to open it: in your browser,

@@ -54,6 +54,7 @@ var settingKeys = map[string]settingKey{
 	"notify":       {"notify", "enabled", []string{"on", "off"}, false},
 	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},
 	"paste_images": {"paste", "images", []string{"on", "off"}, false},
+	"hidden_files": {"explorer", "show_hidden", []string{"on", "off"}, false}, // the explorer's ⋯ (D63)
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane

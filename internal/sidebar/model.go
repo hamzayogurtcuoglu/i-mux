@@ -176,6 +176,7 @@ type Model struct {
 	Icons       string // the rail's icon theme (IconsNerd, IconsEmoji)
 	Scroll      int    // first row of the view's list
 	Selected    string // the explorer's selected row (a path relative to CWD)
+	Tip         string // the label of the title button under the pointer, shown in the title (D63)
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -639,7 +640,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		}
 	}
 	if m.View == ViewExplorer && cwd != "" {
-		m.Tree = BuildTree(cwd, s.Expanded, m.Changes)
+		m.Tree = BuildTree(cwd, s.Expanded, m.Changes, s.ShowHidden())
 	}
 	if m.View == ViewChanges && cwd != "" {
 		// Read at every redraw: actions change it, and they signal a redraw.
@@ -765,6 +766,20 @@ func ParseNumstat(out string) map[string][2]int {
 		m[path] = [2]int{a, r}
 	}
 	return m
+}
+
+// ShowHidden reports whether the explorer shows names starting with a dot
+// ([explorer] show_hidden: ⋯ → Show Hidden Files, D63).
+func (s *Source) ShowHidden() bool {
+	return s != nil && s.Cfg != nil && s.Cfg.Explorer.ShowHidden
+}
+
+// Forget drops dir's cached git status: the next gather reads it anew
+// (Refresh).
+func (s *Source) Forget(dir string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.git, dir)
 }
 
 // Reload reads the config again when its file changed (Settings); it

@@ -239,6 +239,9 @@ type Options struct {
 	In  *os.File
 	Out *os.File
 	Dir string
+	// ShowHidden looks into hidden folders too outside a git repository
+	// ([explorer] show_hidden, D63).
+	ShowHidden bool
 }
 
 // Run shows the popup until a file is chosen: its path (relative to Dir)
@@ -252,7 +255,7 @@ func Run(o Options) (string, int, error) {
 	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h")
 	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 
-	files := search.Files(context.Background(), o.Dir)
+	files := search.Files(context.Background(), o.Dir, o.ShowHidden)
 	m := &Model{Title: i18n.T("goto.title", filepath.Base(o.Dir)), Files: files, Recent: RecentFirst(o.Dir, files)}
 	m.Update()
 	draw := func() {

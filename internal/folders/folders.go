@@ -45,6 +45,33 @@ var Skip = map[string]bool{
 	"venv": true, "__pycache__": true, "Pods": true, "DerivedData": true,
 }
 
+// Excluded are the names the explorer, search and Go to File never show,
+// as VS Code's files.exclude leaves them out by default: version control
+// folders and the files the system writes (§9.3 "Explorer title and hidden
+// files", D63).
+var Excluded = map[string]bool{
+	".git": true, ".svn": true, ".hg": true, "CVS": true, ".DS_Store": true, "Thumbs.db": true,
+}
+
+// Hidden reports whether the explorer leaves out the entry called name
+// (dir: a folder): the Excluded names, the Skip folders and, unless
+// showHidden, a name starting with a dot.
+func Hidden(name string, dir, showHidden bool) bool {
+	return Excluded[name] || dir && Skip[name] || !showHidden && strings.HasPrefix(name, ".")
+}
+
+// ExcludedPath reports whether search and Go to File leave out the file at
+// the slash-separated path rel from git's list: one of its names is
+// Excluded. Git already left out what the project ignores.
+func ExcludedPath(rel string) bool {
+	for _, n := range strings.Split(rel, "/") {
+		if Excluded[n] {
+			return true
+		}
+	}
+	return false
+}
+
 // ScanOptions bound a scan.
 type ScanOptions struct {
 	Depth    int           // levels below root (default 4)

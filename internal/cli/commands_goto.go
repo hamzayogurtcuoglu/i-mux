@@ -35,7 +35,11 @@ func runGoto(e *Env, args []string) error {
 		if err != nil {
 			return err
 		}
-		path, line, err := gotofile.Run(gotofile.Options{In: os.Stdin, Out: os.Stdout, Dir: dir})
+		hidden := false
+		if cfg, err := loadConfig(e); err == nil {
+			hidden = cfg.Explorer.ShowHidden
+		}
+		path, line, err := gotofile.Run(gotofile.Options{In: os.Stdin, Out: os.Stdout, Dir: dir, ShowHidden: hidden})
 		if err != nil || path == "" {
 			return err
 		}

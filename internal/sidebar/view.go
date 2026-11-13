@@ -51,9 +51,10 @@ type TreeRow struct {
 const maxTree = 3000
 
 // BuildTree lists root as a tree: folders first, then files, by name; the
-// folders in open are listed inside. Hidden entries and the skip list are
-// left out; git marks files and the folders above them.
-func BuildTree(root string, open map[string]bool, changes []ChangeRow) []TreeRow {
+// folders in open are listed inside. Hidden entries (unless showHidden),
+// the always hidden ones and the skip list are left out (folders.Hidden);
+// git marks files and the folders above them.
+func BuildTree(root string, open map[string]bool, changes []ChangeRow, showHidden bool) []TreeRow {
 	status := map[string]string{}
 	dirty := map[string]bool{}
 	for _, c := range changes {
@@ -85,7 +86,7 @@ func BuildTree(root string, open map[string]bool, changes []ChangeRow) []TreeRow
 				return
 			}
 			n := e.Name()
-			if strings.HasPrefix(n, ".") || e.IsDir() && folders.Skip[n] {
+			if folders.Hidden(n, e.IsDir(), showHidden) {
 				continue
 			}
 			p := filepath.Join(rel, n)
@@ -190,12 +191,70 @@ func scrolled(list []Line, scroll, n, w int) []Line {
 	return out
 }
 
-// renderExplorer is the Explorer view: a title with the search button and
-// the project's tree.
+// The explorer title's text keeps at least titleMin columns beside VS
+// Code's buttons, and titleNav beside Go to File and Search too (§9.3
+// "Explorer title and hidden files").
+const (
+	titleMin = 6
+	titleNav = 16
+)
+
+// The explorer title's VS Code buttons, in their order: each is an `imux
+// __file` operation too, which ⋯ lists when the button does not fit.
+const (
+	OpNewFile   = "new-file"
+	OpNewFolder = "new-folder"
+	OpRefresh   = "refresh"
+	OpCollapse  = "collapse"
+)
+
+// explorerButtons are the explorer title's buttons for w columns, left to
+// right: Go to File and Search while the title keeps titleNav columns, VS
+// Code's (New File…, New Folder…, Refresh Explorer, Collapse Folders) while
+// it keeps titleMin, and ⋯. more lists the VS Code buttons left to ⋯.
+func explorerButtons(ic Icons, w int) (btns []Cell, more []string) {
+	tip := func(c Cell, label string) Cell {
+		c.Tip = label
+		return c
+	}
+	dots := tip(button(ic.More, muted, Action{Kind: ActFileMenu, Section: MenuMore}), i18n.T("file.more"))
+	used := dots.W
+	for _, b := range []struct {
+		op string
+		c  Cell
+	}{
+		{OpNewFile, tip(button(ic.NewFile, muted, Action{Kind: ActFileOp, Section: OpNewFile}), i18n.T("file.new_file"))},
+		{OpNewFolder, tip(button(ic.NewFolder, muted, Action{Kind: ActFileOp, Section: OpNewFolder}), i18n.T("file.new_folder"))},
+		{OpRefresh, tip(button(ic.Refresh, muted, Action{Kind: ActRefresh}), i18n.T("file.refresh"))},
+		{OpCollapse, tip(button(ic.Collapse, muted, Action{Kind: ActCollapse}), i18n.T("file.collapse"))},
+	} {
+		if len(more) > 0 || w-used-b.c.W < titleMin {
+			more = append(more, b.op) // the ones after it go too: the order stays
+			continue
+		}
+		btns = append(btns, b.c)
+		used += b.c.W
+	}
+	nav := []Cell{
+		tip(button(ic.GoTo, muted, Action{Kind: ActGoto}), i18n.T("file.goto")),
+		tip(button(ic.Search, muted, Action{Kind: ActSearch}), i18n.T("file.search")),
+	}
+	if len(more) == 0 && w-used-width(nav) >= titleNav {
+		btns = append(nav, btns...)
+	}
+	return append(btns, dots), more
+}
+
+// renderExplorer is the Explorer view: a title with the project, VS Code's
+// buttons and ⋯ (the label of the button under the pointer in its place
+// while it is there, D63), then the project's tree.
 func renderExplorer(m Model, w, h int) []Line {
-	search := button(m.icons().Search, muted, Action{Kind: ActSearch})
-	gotoFile := button(m.icons().GoTo, muted, Action{Kind: ActGoto})
-	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.explorer")+" · "+m.Project, w-search.W-gotoFile.W) + reset}, gotoFile, search)}
+	btns, _ := explorerButtons(m.icons(), w)
+	text, style := " "+i18n.T("sidebar.explorer")+" · "+m.Project, title
+	if m.Tip != "" {
+		text, style = " "+m.Tip, tipStyle
+	}
+	out := []Line{buttons(w, Cell{Text: style + fit(text, w-width(btns)) + reset}, btns...)}
 	var rows []Line
 	for _, r := range m.Tree {
 		rows = append(rows, treeRow(r, w, m.icons(), m.Icons, r.Path == m.Selected))

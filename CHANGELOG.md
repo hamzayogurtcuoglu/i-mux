@@ -6,6 +6,33 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-11-13
+
+### Added
+
+- **The explorer's title has VS Code's buttons.** New File…, New Folder…, Refresh Explorer and
+  Collapse Folders sit in the Files view's title as they do in VS Code (the editor's icons with
+  a Nerd Font, 📝 📁 🔄 ⊟ otherwise), with **⋯** (More Actions) after them. A new file or folder
+  goes into the selected folder (or the selected file's folder), else into the project's, and
+  opens or shows selected as from the right-click menu. Refresh reads the files and their git
+  colors at once; Collapse Folders closes every open folder. While the pointer is on a button,
+  the title says what it does.
+- **Show Hidden Files.** ⋯ → **Show Hidden Files** shows the files and folders whose names start
+  with a dot (`.github`, `.gitlab-ci.yml`, `.vscode`, `.env`); ✓ marks it while on, and choosing
+  it again hides them. It is saved in the config (`[explorer] show_hidden`), so it stays after a
+  restart, and every sidebar follows at once. `.git`, `.svn`, `.hg`, `CVS`, `.DS_Store` and
+  `Thumbs.db` stay hidden, and `node_modules` and the other folders the explorer skips stay out
+  of the tree, as in VS Code.
+
+### Changed
+
+- **Search and Go to File look into hidden folders** while Show Hidden Files is on, outside git
+  repositories too (in one, they already found files such as `.github/…`, and still do). They
+  never list `.git`, `.DS_Store` or `Thumbs.db`.
+- **Go to File and Search moved into ⋯** in the explorer's title at the default width (Ctrl+P
+  and 🔍 on the rail still open them); a sidebar wide enough (46 columns with the editor's icons,
+  51 with emoji) shows their buttons again.
+
 ## [0.52.0] - 2026-11-12
 
 ### Changed

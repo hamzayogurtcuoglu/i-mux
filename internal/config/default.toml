@@ -117,6 +117,15 @@ images            = true
 # Run this instead to get the images: it prints image file paths, one a line.
 command           = ""
 
+[explorer]
+# Show the files and folders whose names start with a dot (.github, .env,
+# .vscode) in the sidebar's explorer; search and Go to File then look into
+# hidden folders outside git repositories too. The explorer's ⋯ → Show Hidden
+# Files turns it on and off. .git, .svn, .hg, CVS, .DS_Store and Thumbs.db
+# stay hidden, and node_modules and the other folders the explorer skips stay
+# out of its tree.
+show_hidden       = false
+
 [web]
 # A click on an HTML file in the explorer asks how to open it: in your browser,
 # served by i-mux on localhost, the page reloading itself when its files change

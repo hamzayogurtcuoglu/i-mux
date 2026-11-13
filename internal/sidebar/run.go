@@ -45,9 +45,10 @@ type sidebar struct {
 	lastClick  time.Time
 	lastClickY int // row of the last click
 
-	hx, hy     int // the pointer (1-based; hx 0: not over the sidebar)
-	px, py     int // the motion report before it
-	moves      int // motion reports so far (the way-out check's turn)
+	hx, hy     int  // the pointer (1-based; hx 0: not over the sidebar)
+	noTip      Item // the button clicked last: no label for it until the pointer leaves it
+	px, py     int  // the motion report before it
+	moves      int  // motion reports so far (the way-out check's turn)
 	idle       chan int
 	selected   string // the explorer's selected path (relative)
 	menuX      int    // where the last right-click was (the menu opens there)
@@ -92,7 +93,7 @@ func Run(ctx context.Context, o Options) error {
 	if o.Safety <= 0 {
 		o.Safety = 15 * time.Second
 	}
-	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), save: make(chan struct{}, 1), revealKey: (&fileops.System{}).Reveal()}
+	s := &sidebar{o: o, t: o.Source.T, sel: NoItem, noTip: NoItem, clicks: make(chan Action, 4), idle: make(chan int, 4), save: make(chan struct{}, 1), revealKey: (&fileops.System{}).Reveal()}
 	restore, err := rawMode(int(o.In.Fd()))
 	if err == nil {
 		defer restore()
@@ -273,9 +274,23 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 
 // draw renders the cached model.
 func (s *sidebar) draw() {
-	s.model.Selected = s.selected
+	s.model.Selected, s.model.Tip = s.selected, ""
 	s.screen = Render(s.model, s.win.Width, s.win.Height, s.sel)
-	if it := s.screen.HoverAt(s.hx, s.hy, s.win.Width); it != NoItem && it != s.sel {
+	it := s.screen.HoverAt(s.hx, s.hy, s.win.Width)
+	tip := ""
+	if it != s.noTip {
+		tip = s.screen.TipOf(it)
+	}
+	if tip == "" {
+		tip = s.screen.TipOf(s.sel)
+	}
+	if tip != "" {
+		// A title button's label in the title, as the editor's tooltip
+		// (D63); the buttons stay where they are.
+		s.model.Tip = tip
+		s.screen = Render(s.model, s.win.Width, s.win.Height, s.sel)
+	}
+	if it != NoItem && it != s.sel {
 		Paint(s.screen, it, hoverBg, s.win.Width)
 	}
 	f := Frame(s.screen, s.win.Width, s.win.Height)
@@ -300,7 +315,7 @@ func isMenu(k ActionKind) bool {
 // waits reports whether a click's action waits OpenAfter (see there).
 func (s *sidebar) waits(ctx context.Context, a Action) bool {
 	switch a.Kind {
-	case ActCommit, ActRename:
+	case ActCommit, ActRename, ActFileOp:
 		return true // the command prompt
 	case ActSCM:
 		return a.Section == "ask" || !s.t.MenuTakesMouse(ctx)
@@ -355,7 +370,10 @@ func (s *sidebar) moved(x, y int) {
 func (s *sidebar) hover(x, y int) {
 	before := s.screen.HoverAt(s.hx, s.hy, s.win.Width)
 	s.hx, s.hy = x, y
-	if s.screen.HoverAt(x, y, s.win.Width) != before {
+	if now := s.screen.HoverAt(x, y, s.win.Width); now != before {
+		if now != s.noTip {
+			s.noTip = NoItem // the pointer left the clicked button: its label again next time
+		}
 		s.draw()
 	}
 }
@@ -443,8 +461,9 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		case ActToggleDir:
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
 			s.selected = a.Path
-		case ActNone, ActSearch, ActRefresh, ActSkillNew:
-			// The explorer's or skills' empty space and title.
+		case ActNone, ActSearch, ActRefresh, ActSkillNew, ActGoto, ActFileOp, ActCollapse, ActFileMenu:
+			// The explorer's or skills' empty space and title, its buttons
+			// included.
 			if s.model.Closed || ev.X <= railW {
 				return
 			}
@@ -472,6 +491,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			return
 		}
 		s.menuX, s.menuY = ev.X, ev.Y
+		s.noTip = s.screen.HoverAt(ev.X, ev.Y, s.win.Width)
 		if menu.Kind == ActFileMenu || menu.Kind == ActSkillMenu {
 			s.draw() // the row the menu is about, selected
 		}
@@ -496,6 +516,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		}
 		s.lastClick, s.lastClickY = now, ev.Y
 		s.sel = NoItem
+		s.noTip = s.screen.HoverAt(ev.X, ev.Y, s.win.Width) // a click hides a button's label, as the editor's tooltip
 		a := s.screen.Lines[row].ActionAt(ev.X - 1)
 		switch a.Kind {
 		case ActOpenFile, ActToggleDir:
@@ -508,7 +529,7 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			s.menuX, s.menuY = ev.X, ev.Y
 		case ActAuto, ActAutoMenu:
 			s.menuX, s.menuY = ev.X, ev.Y // its menus open at the click
-		case ActSCM:
+		case ActSCM, ActFileMenu:
 			s.menuX, s.menuY = ev.X, ev.Y // ⋯ and ▾ drop down from the button
 		}
 		wait := time.Duration(0)
@@ -530,6 +551,9 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		a := s.screen.ActionOf(s.sel)
 		if s.htmlAsk(a) {
 			s.menuX, s.menuY = 4, s.sel.Row+1
+		}
+		if a.Kind == ActFileMenu && s.sel.Cell >= 0 {
+			s.menuX, s.menuY = s.screen.Lines[s.sel.Row].Cells[s.sel.Cell].X+1, s.sel.Row+1 // ⋯ drops from it
 		}
 		s.do(ctx, a)
 	case "esc", "q":
@@ -692,6 +716,26 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 			s.scmMenu(ctx, client, Action{Kind: ActDiff, Path: a.Path, Status: a.Status, Section: a.Section}, s.menuX, s.menuY)
 		}
 		return
+	case ActFileOp:
+		// The title's New File… / New Folder…: the root menu's operation in
+		// the selected folder, else the project's (@imux_file, D63).
+		if s.setFileOption(ctx, s.newIn()) {
+			args := []string{"__file", a.Section}
+			if client != "" {
+				args = append(args, "--client", client)
+			}
+			if target != "" {
+				args = append(args, "--pane", target)
+			}
+			s.spawn(args)
+		}
+		return
+	case ActCollapse:
+		if s.o.Source != nil {
+			s.o.Source.Expanded = map[string]bool{}
+		}
+		s.scroll, s.model.Scroll = 0, 0
+		return
 	case ActToggleDir:
 		if s.o.Source.Expanded == nil {
 			s.o.Source.Expanded = map[string]bool{}
@@ -769,6 +813,11 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.popup(client, "80%", "70%", args...)
 		return
 	case ActRefresh:
+		// The view is gathered again after a click; the explorer's git
+		// status is read anew too.
+		if s.o.Source != nil {
+			s.o.Source.Forget(s.model.CWD)
+		}
 		return
 	case ActSearch:
 		s.popup(client, "90%", "90%", "__search")

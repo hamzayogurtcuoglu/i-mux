@@ -52,6 +52,8 @@ const (
 	ActSCMMenuAt              // Source Control's menu of file Path (side Section, Status) or commit Path (Section "commit") at the pointer
 	ActAuto                   // the Scheduler: `imux __auto Section Path` (run, log, stop; D61)
 	ActAutoMenu               // the Scheduler's menu of definition Path at the pointer
+	ActFileOp                 // the explorer title's `imux __file Section` (new-file, new-folder) in the selected folder (D63)
+	ActCollapse               // close every folder of the explorer (D63)
 )
 
 // Action is a row's action.
@@ -91,6 +93,7 @@ type Cell struct {
 	X, W   int
 	Text   string // exactly W columns, with escapes
 	Action Action
+	Tip    string // the button's label, shown in the title while the pointer is on it (D63)
 }
 
 // ActionAt is the action of column x (0-based) of the line.
@@ -134,6 +137,18 @@ func (s Screen) Items() []Item {
 		}
 	}
 	return out
+}
+
+// TipOf is the label of item it, a title button's ("" for none).
+func (s Screen) TipOf(it Item) string {
+	if it.Row < 0 || it.Row >= len(s.Lines) {
+		return ""
+	}
+	l := s.Lines[it.Row]
+	if it.Cell < 0 || it.Cell >= len(l.Cells) {
+		return ""
+	}
+	return l.Cells[it.Cell].Tip
 }
 
 // ActionOf is the action of a selected item.
@@ -192,6 +207,7 @@ const (
 	needPill  = "\x1b[48;5;58m\x1b[38;5;214m"
 	limitPill = "\x1b[48;5;52m\x1b[38;5;210m"
 	white     = "\x1b[38;5;255m"
+	tipStyle  = white // a button's label in its title (D63)
 )
 
 // avatarBg are the avatar colors; a project's comes from its name.

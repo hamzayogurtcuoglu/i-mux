@@ -232,11 +232,11 @@ func runSearch(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	theme := sidebar.IconsEmoji
+	theme, hidden := sidebar.IconsEmoji, false
 	if cfg, err := loadConfig(e); err == nil {
-		theme = sidebar.IconTheme(cfg)
+		theme, hidden = sidebar.IconTheme(cfg), cfg.Explorer.ShowHidden
 	}
-	m, err := searchview.Run(searchview.Options{In: os.Stdin, Out: os.Stdout, Dir: dir, Theme: theme})
+	m, err := searchview.Run(searchview.Options{In: os.Stdin, Out: os.Stdout, Dir: dir, Theme: theme, ShowHidden: hidden})
 	if err != nil || m == nil {
 		return err
 	}

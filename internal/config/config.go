@@ -143,6 +143,14 @@ type Web struct {
 	Browser string `toml:"browser"` // a command that opens the URL; "" = the system's
 }
 
+// Explorer is the [explorer] section: the sidebar's Files view.
+type Explorer struct {
+	// ShowHidden shows names starting with a dot in the explorer; search
+	// and Go to File look into hidden folders outside git too (⋯ → Show
+	// Hidden Files, D63).
+	ShowHidden bool `toml:"show_hidden"`
+}
+
 // The sidebar's width in columns (tmux.sidebar_width): what the config may
 // say and what dragging its edge may give it.
 const (
@@ -187,6 +195,7 @@ type Config struct {
 	Completion   Completion        `toml:"completion"`
 	Notify       Notify            `toml:"notify"`
 	Paste        Paste             `toml:"paste"`
+	Explorer     Explorer          `toml:"explorer"`
 	Web          Web               `toml:"web"`
 	Tmux         Tmux              `toml:"tmux"`
 	Agents       map[string]*Agent `toml:"agents"`
