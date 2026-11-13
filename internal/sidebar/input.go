@@ -18,14 +18,15 @@ const (
 	EvScroll                      // mouse wheel at X, Y: Key "up" or "down"
 	EvMove                        // the pointer moved to X, Y (X 0: it left the sidebar)
 	EvPaste                       // a bracketed paste: Text holds it, Key is "paste"
+	EvFocus                       // the pane gained (Key "in") or lost ("out") the focus (mode 1004)
 )
 
 // Event is one key press or mouse click.
 type Event struct {
 	Kind EventKind
-	Key  string // "up", "down", "left", "right", "home", "end", "delete", "pgup", "pgdown", "enter", "esc", "tab", "backtab", "backspace", "ctrl-a", "ctrl-e", "ctrl-u", "ctrl-w", "ctrl-c", or the character
+	Key  string // "up", "down", "left", "right", "home", "end", "delete", "pgup", "pgdown", "enter", "alt-enter", "esc", "tab", "backtab", "backspace", "ctrl-a", "ctrl-e", "ctrl-u", "ctrl-w", "ctrl-c", or the character
 	X, Y int
-	Text string // EvPaste: the pasted text
+	Text string // EvPaste: the pasted text; "enter": "\n" when it was Ctrl+J (a line feed, not Enter's CR)
 }
 
 // Paste markers of bracketed paste mode (only a program that turns the mode
@@ -98,6 +99,14 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 					return evs, in[i:]
 				}
 				switch in[j] {
+				case 'I', 'O':
+					if j == i+2 { // focus in, focus out (a pane that asked for them)
+						k := "in"
+						if in[j] == 'O' {
+							k = "out"
+						}
+						evs = append(evs, Event{Kind: EvFocus, Key: k})
+					}
 				case 'A':
 					key("up")
 				case 'B':
@@ -148,13 +157,19 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 				}
 				i += 3
 				continue
+			case '\r', '\n':
+				key("alt-enter")
+				i += 2
+				continue
 			default:
 				key("esc")
 				i++
 				continue
 			}
-		case c == '\r' || c == '\n':
+		case c == '\r':
 			key("enter")
+		case c == '\n':
+			evs = append(evs, Event{Kind: EvKey, Key: "enter", Text: "\n"}) // Ctrl+J
 		case c == '\t':
 			key("tab")
 		case c == 0x7f || c == 0x08:

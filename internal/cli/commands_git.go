@@ -27,7 +27,7 @@ import (
 func init() {
 	register(&command{
 		Name:   "__git",
-		Args:   "<op> [--cwd D | --scm] [--client C] [--pane P] [--untracked] [--from-option] [--file-option] [--arg-option] [--yes] [path...]",
+		Args:   "<op> [--cwd D | --scm] [--client C] [--pane P] [--untracked] [--from-option] [--draft] [--file-option] [--arg-option] [path...]",
 		Hidden: true,
 		Run:    runGit,
 	})
@@ -98,11 +98,11 @@ func runGit(e *Env, args []string) error {
 	client := fs.String("client", "", "client for messages")
 	untracked := fs.Bool("untracked", false, "the files are untracked (discard deletes them); stash: untracked files too")
 	fromOpt := fs.Bool("from-option", false, "read the message or name from @imux_git")
+	draft := fs.Bool("draft", false, "commit: the message is the one in the commit box (D65)")
 	fileOpt := fs.Bool("file-option", false, "the path is @imux_file")
 	argOpt := fs.Bool("arg-option", false, "a value from an earlier step is in @imux_scm_arg")
-	paneF := fs.String("pane", "", "the pane the sidebar follows (suggest: its agent writes the message)")
+	paneF := fs.String("pane", "", "the pane the sidebar follows")
 	sidebarF := fs.String("sidebar", "", "the sidebar's pane (reveal)")
-	yes := fs.Bool("yes", false, "suggest: the user agreed to send the changes")
 	mode := fs.String("mode", "", "commit: staged or all")
 	amend := fs.Bool("amend", false, "commit: amend the last commit")
 	signoff := fs.Bool("signoff", false, "commit: add Signed-off-by")
@@ -120,7 +120,7 @@ func runGit(e *Env, args []string) error {
 		return &UsageError{Msg: i18n.T("cli.usage", "__git <op> [path...]")}
 	}
 	op, files := pos[0], pos[1:]
-	w, cfg, err := newWorkspace(e, false)
+	w, _, err := newWorkspace(e, false)
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,15 @@ func runGit(e *Env, args []string) error {
 		}
 		err = gitops.DiscardPath(ctx, g.cwd, argVal)
 	case "commit":
-		err = g.commit(arg, gitops.CommitOpts{Message: arg, Mode: *mode, Amend: *amend, SignOff: *signoff}, *then)
+		msg := arg
+		if *draft {
+			msg = sidebar.CommitDraft(g.cwd)
+		}
+		var done bool
+		done, err = g.commit(msg, gitops.CommitOpts{Message: msg, Mode: *mode, Amend: *amend, SignOff: *signoff}, *then)
+		if done && *draft {
+			sidebar.ClearCommitDraft(g.cwd, msg) // the box empties
+		}
 	case "undo-commit":
 		var subject string
 		if subject, err = gitops.UndoLastCommit(ctx, g.cwd); err == nil {
@@ -335,10 +343,6 @@ func runGit(e *Env, args []string) error {
 		if err = gitops.Init(ctx, g.cwd); err == nil {
 			g.say(i18n.T("scm.initialized"))
 		}
-	case "suggest":
-		return suggestCommit(ctx, w, cfg, g.cwd, g.client, g.pane, *yes, g.say)
-	case "edit-message":
-		return editMessage(ctx, e, w, cfg, g.cwd, g.say)
 	default:
 		return &UsageError{Msg: i18n.T("cli.usage", "__git <op>")}
 	}
@@ -349,20 +353,20 @@ func runGit(e *Env, args []string) error {
 }
 
 // commit commits as o says (an empty message keeps an amend's), then
-// pushes or syncs in a popup.
-func (g *gitCall) commit(arg string, o gitops.CommitOpts, then string) error {
-	if arg == "" && !o.Amend {
-		return nil // the prompt was left empty
+// pushes or syncs in a popup; it reports whether it committed.
+func (g *gitCall) commit(arg string, o gitops.CommitOpts, then string) (bool, error) {
+	if strings.TrimSpace(arg) == "" && !o.Amend {
+		return false, nil // the prompt or the box was left empty
 	}
 	staged, err := gitops.CommitWith(g.ctx, g.cwd, o)
 	if err != nil {
 		if errors.Is(err, gitops.ErrNothingStaged) {
 			g.say(i18n.T("scm.nothing_staged"))
-			return nil
+			return false, nil
 		}
-		return err
+		return false, err
 	}
-	subject := arg
+	subject, _, _ := strings.Cut(strings.TrimSpace(arg), "\n")
 	if subject == "" {
 		subject, _, _ = gitops.LastCommit(g.ctx, g.cwd)
 	}
@@ -374,16 +378,16 @@ func (g *gitCall) commit(arg string, o gitops.CommitOpts, then string) error {
 	if then == "push" || then == "sync" {
 		self, err := workspace.Self()
 		if err != nil {
-			return err
+			return true, err
 		}
 		c := tmux.Cmd{"display-popup"}
 		if g.client != "" {
 			c = append(c, "-c", g.client)
 		}
 		c = append(c, "-E", "-w", "80%", "-h", "70%", "-d", tmux.EscapeFormat(g.cwd))
-		return g.w.T.Spawn(append(c, tmux.ShJoin(self, "__git", then, "--cwd", g.cwd)))
+		return true, g.w.T.Spawn(append(c, tmux.ShJoin(self, "__git", then, "--cwd", g.cwd)))
 	}
-	return nil
+	return true, nil
 }
 
 // confirmMenu asks the confirmation `imux __scm confirm op` builds (its

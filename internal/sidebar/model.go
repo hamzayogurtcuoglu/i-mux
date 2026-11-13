@@ -173,10 +173,11 @@ type Model struct {
 	// AutoRunning counts the scheduled runs going on, in every project (the
 	// rail's badge).
 	AutoRunning int
-	Icons       string // the rail's icon theme (IconsNerd, IconsEmoji)
-	Scroll      int    // first row of the view's list
-	Selected    string // the explorer's selected row (a path relative to CWD)
-	Tip         string // the label of the title button under the pointer, shown in the title (D63)
+	Icons       string    // the rail's icon theme (IconsNerd, IconsEmoji)
+	Scroll      int       // first row of the view's list
+	Selected    string    // the explorer's selected row (a path relative to CWD)
+	Tip         string    // the label of the title button under the pointer, shown in the title (D63)
+	Commit      CommitBox // the Git view's commit message box (D65)
 }
 
 // Window is what a refresh learned about the sidebar's own window.
@@ -194,6 +195,9 @@ type Window struct {
 	Last    string
 	Reveal  string // OptReveal: a path to reveal in the explorer
 	Visible bool   // the active window of a session a client shows
+	// CommitAsk is OptCommitAsk: a menu's commit that asks its message in
+	// the commit box (D65).
+	CommitAsk string
 }
 
 const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}\t#{@imux_state_at}\t#{@imux_done_at}\t#{@imux_seen}\t#{@imux_start}\t#{session_attached}\t#{pane_title}"
@@ -365,7 +369,7 @@ func CleanTitle(title, host string, agentID session.AgentID) string {
 // (@imux_seen), which turns its "Done" into idle.
 func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error) {
 	out, err := s.T.Run(ctx,
-		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}\t" + PanesFormat + "\t#{session_windows}\t#{window_active}\t#{session_attached}\t#{" + OptSCMView + "}\t#{" + OptSCMSort + "}"},
+		tmux.DelimCmd("me"), tmux.Cmd{"display-message", "-p", "-t", self, "#{window_id}\t#{@imux_last}\t#{pane_width}\t#{pane_height}\t#{session_name}\t#{window_width}\t#{@imux_tab_auto}\t#{@imux_tab_state}\t#{@imux_fold}\t#{@imux_view}\t#{@imux_collapsed}\t#{@imux_terminal}\t#{@imux_reveal}\t" + PanesFormat + "\t#{session_windows}\t#{window_active}\t#{session_attached}\t#{" + OptSCMView + "}\t#{" + OptSCMSort + "}\t#{" + OptCommitAsk + "}"},
 		tmux.DelimCmd("clients"), tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_activity}\t#{client_control_mode}\t#{client_termname}"},
 		tmux.DelimCmd("panes"), tmux.Cmd{"list-panes", "-a", "-F", paneFormat})
 	if err != nil {
@@ -378,8 +382,8 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	view := ViewAgents
 	closed, program := false, ""
 	scmView, scmSort := "", ""
-	if rows := tmux.Rows(sec["me"], 19); len(rows) > 0 {
-		scmView, scmSort = rows[0][17], rows[0][18]
+	if rows := tmux.Rows(sec["me"], 20); len(rows) > 0 {
+		scmView, scmSort, win.CommitAsk = rows[0][17], rows[0][18], rows[0][19]
 		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges || v == ViewSkills || v == ViewAuto {
 			view = v
 		}

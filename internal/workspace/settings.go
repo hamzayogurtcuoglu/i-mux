@@ -6,11 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	upd "github.com/hamzayogurtcuoglu/i-mux/internal/update"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
@@ -85,15 +83,10 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	if cfg.Notify.Enabled {
 		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify_sound", onOffLabel(cfg.Notify.Sound)), Key: "d", Cmd: menu("notify_sound")})
 	}
-	commit := i18n.T("settings.agent_auto")
-	if a := cfg.Git.CommitAgent; a != "" && a != "auto" {
-		commit = session.DisplayName(session.AgentID(a))
-	}
 	m.Items = append(m.Items,
 		MenuItem{Name: i18n.T("settings.paste_images", onOffLabel(cfg.Paste.Images)), Key: "v", Cmd: menu("paste_images")},
 		MenuItem{Name: i18n.T("settings.icons", labels(iconsValue(cfg.Tmux.Icons))), Key: "i", Cmd: menu("icons")},
 		MenuItem{Name: i18n.T("settings.font"), Key: "f", Cmd: w.popupCmd("90%", "70%", "font", "install", "--popup")},
-		MenuItem{Name: i18n.T("settings.commit_agent", commit), Key: "m", Cmd: menu("commit-agent")},
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
 		Separator(),
@@ -158,8 +151,6 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 	switch which {
 	case "editor":
 		return w.EditorMenu(pane, client)
-	case "commit-agent":
-		return w.CommitAgentMenu(pane, client)
 	case "notify":
 		return w.ChoiceMenu(i18n.T("settings.notify_title"), "notify", onOffValue(cfg.Notify.Enabled), onOff, pane, client)
 	case "notify_sound":
@@ -304,32 +295,4 @@ func limitLabel(v string) string {
 		return i18n.T("settings.limit_auto")
 	}
 	return labels(v)
-}
-
-// CommitAgentMenu chooses who writes commit messages: auto or an installed
-// agent.
-func (w *WS) CommitAgentMenu(pane, client string) *Menu {
-	tgt := settingsTarget(pane, client)
-	cur := w.Cfg.Git.CommitAgent
-	mark := func(v string) string {
-		if v == cur || v == "auto" && cur == "" {
-			return "● "
-		}
-		return "  "
-	}
-	m := &Menu{Title: i18n.T("settings.commit_agent_title")}
-	m.Items = append(m.Items, MenuItem{
-		Name: mark("auto") + i18n.T("settings.agent_auto"), Key: "0",
-		Cmd: w.ui(append([]string{"__settings", "set", "commit_agent", "auto"}, tgt...)...),
-	})
-	for _, a := range agent.Ordered(w.Cfg) {
-		if !w.Installed(a.ID) {
-			continue
-		}
-		m.Items = append(m.Items, MenuItem{
-			Name: mark(string(a.ID)) + a.Name, Key: a.Key,
-			Cmd: w.ui(append([]string{"__settings", "set", "commit_agent", string(a.ID)}, tgt...)...),
-		})
-	}
-	return m
 }

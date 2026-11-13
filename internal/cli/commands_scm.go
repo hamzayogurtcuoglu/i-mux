@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -346,9 +347,9 @@ var asks = map[string]askSpec{
 	"commit":                {label: "prompt.commit", git: []string{"commit"}},
 	"commit-staged":         {label: "prompt.commit", git: []string{"commit", "--mode", gitops.CommitStaged}},
 	"commit-all":            {label: "prompt.commit", git: []string{"commit", "--mode", gitops.CommitAll}},
-	"commit-amend":          {label: "scm.prompt_amend", git: []string{"commit", "--amend"}},
-	"commit-staged-amend":   {label: "scm.prompt_amend", git: []string{"commit", "--mode", gitops.CommitStaged, "--amend"}},
-	"commit-all-amend":      {label: "scm.prompt_amend", git: []string{"commit", "--mode", gitops.CommitAll, "--amend"}},
+	"commit-amend":          {git: []string{"commit", "--amend"}},
+	"commit-staged-amend":   {git: []string{"commit", "--mode", gitops.CommitStaged, "--amend"}},
+	"commit-all-amend":      {git: []string{"commit", "--mode", gitops.CommitAll, "--amend"}},
 	"commit-signoff":        {label: "prompt.commit", git: []string{"commit", "--signoff"}},
 	"commit-staged-signoff": {label: "prompt.commit", git: []string{"commit", "--mode", gitops.CommitStaged, "--signoff"}},
 	"commit-all-signoff":    {label: "prompt.commit", git: []string{"commit", "--mode", gitops.CommitAll, "--signoff"}},
@@ -369,11 +370,17 @@ var asks = map[string]askSpec{
 
 // ask opens the client's command prompt for op. The answer reaches imux
 // through @imux_git ("%%%" escapes it for tmux), never a shell; the
-// template carries no pane id (it would read "%1" as the answer).
+// template carries no pane id (it would read "%1" as the answer). A
+// commit takes the commit box's message instead (commitBox).
 func (s *scm) ask(op string) error {
 	spec, ok := asks[op]
 	if !ok {
 		return &UsageError{Msg: "no prompt " + op}
+	}
+	if len(spec.git) > 0 && spec.git[0] == "commit" && !s.fromOpt {
+		if done, err := s.commitBox(op, spec); done {
+			return err
+		}
 	}
 	switch {
 	case s.fromOpt:
@@ -421,6 +428,29 @@ func (s *scm) ask(op string) error {
 	c = append(c, "-p", i18n.T(spec.label), "set-option -g @imux_git \"%%%\" ; "+tmux.RunShell(s.c.Self, then...))
 	_, err := s.w.T.Run(s.ctx, c)
 	return err
+}
+
+// commitBox makes commit op with the message in the project's commit box
+// (D65): at once when there is one (an amend with none keeps the last
+// message); with none, the sidebar's box asks for it, the cursor in it.
+// It reports whether it did either: without a sidebar to ask, the command
+// prompt asks.
+func (s *scm) commitBox(op string, spec askSpec) (bool, error) {
+	if strings.TrimSpace(sidebar.CommitDraft(s.c.Dir)) != "" || slices.Contains(spec.git, "--amend") {
+		args := append(append([]string{}, spec.git...), "--cwd", s.c.Dir, "--draft")
+		if s.c.Client != "" {
+			args = append(args, "--client", s.c.Client)
+		}
+		return true, runGit(s.e, args)
+	}
+	if _, ok := sidebar.CommitAsks[op]; !ok || s.c.Sidebar == "" {
+		return false, nil
+	}
+	if _, err := s.w.T.Run(s.ctx, tmux.Cmd{"set-option", "-p", "-t", s.c.Sidebar, sidebar.OptCommitAsk, op}); err != nil {
+		return false, nil // the sidebar is gone
+	}
+	sidebar.RefreshAll(s.ctx, s.w.T)
+	return true, nil
 }
 
 // confirm asks before op; the value it acts on goes to OptArg first.

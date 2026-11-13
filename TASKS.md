@@ -1002,27 +1002,27 @@ slow (about a second).
 User request: remove the AI commit messages from Git (✨), and put a text box above the Commit
 button, as VS Code has, where the message is written.
 
-- [ ] **T70.1 The box** · M
+- [x] **T70.1 The box** · M
   - AC: D65, §9.3 "The commit message box": the box between the branch row and Commit (VS
     Code's hint, the cursor, wrapping up to six rows); a click places the cursor; typing, the
     keys, a paste, Enter commits, Ctrl+J / Alt+Enter a new line, Esc, Tab and a click elsewhere
     leave it; focus events hide the cursor; the message in `~/.imux/commit/` while it is written,
     read by every sidebar of the project; unit tests (editing, wrapping, drawing at every width
     in both icon themes, clicks, the file).
-- [ ] **T70.2 Committing from it** · S
+- [x] **T70.2 Committing from it** · S
   - AC: Commit, Enter and the commit items of ▾ and ⋯ commit the box's message (`__scm ask`,
     `__git commit --draft`), amend keeps the last message with an empty box; with none, the box
     asks (`@imux_commit_ask`, a yellow hint naming the command); the box empties after a commit
     and keeps a message whose commit failed; unit tests.
-- [ ] **T70.3 No AI commit messages** · S
+- [x] **T70.3 No AI commit messages** · S
   - AC: ✨, `__git suggest`, `__git edit-message`, `internal/commitmsg`, `[git] commit_agent` /
     `commit_model` (an old config with them loads without a warning), the Settings row and
     their texts are removed; `docs/CONFIG.md`.
-- [ ] **T70.4 End to end** · S
+- [x] **T70.4 End to end** · S
   - AC: e2e: a click on the box, a message typed, Enter: committed, the box empty again; Commit
     with an empty box puts the cursor in the box; ▾ → Commit & Push with an empty box asks in the
     box; Settings without "Commit messages by".
-- [ ] **T70.5 Docs** · XS
+- [x] **T70.5 Docs** · XS
   - AC: README and README.tr; CHANGELOG.
 
 ## M69: The diff's changes beside its scroll bar (added 2026-11-13)

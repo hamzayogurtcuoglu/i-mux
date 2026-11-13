@@ -51,7 +51,7 @@ func TestSet(t *testing.T) {
 	if err != nil || cfg.Handoff.OnArrival != "continue" {
 		t.Fatalf("load: %v %+v", err, cfg)
 	}
-	if err := Set(p, "git", "commit_agent", Str("nobody")); err == nil {
+	if err := Set(p, "handoff", "on_arrival", Str("nobody")); err == nil {
 		t.Fatal("an invalid value was written")
 	}
 	if b2, _ := os.ReadFile(p); string(b2) != string(b) {

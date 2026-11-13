@@ -25,6 +25,13 @@ var RemovedAgents = map[string]string{
 	"gemini": "Gemini CLI support was removed (Google stopped serving personal accounts in it on 2026-06-18); use \"antigravity\"",
 }
 
+// removedKeys were settings once; a config that still has one loads
+// quietly (the Settings menu wrote them).
+var removedKeys = map[string]bool{
+	// The ✨ commit messages' agent and model (D29, removed in v0.55: D65).
+	"git.commit_agent": true, "git.commit_model": true,
+}
+
 // Duration is a time.Duration written as a Go duration string ("2.5s").
 type Duration struct{ time.Duration }
 
@@ -110,13 +117,6 @@ type Bus struct {
 	RatePerMinute   int      `toml:"rate_per_minute"`
 }
 
-// Git is the [git] section: the Source Control view's commit message
-// suggestions (D29).
-type Git struct {
-	CommitAgent string `toml:"commit_agent"` // auto | an agent id
-	CommitModel string `toml:"commit_model"` // "" = the agent's default
-}
-
 // Notify is the [notify] section: notifications when an agent finishes or
 // needs the user.
 type Notify struct {
@@ -191,7 +191,6 @@ type Config struct {
 	Handoff      Handoff           `toml:"handoff"`
 	Limits       Limits            `toml:"limits"`
 	Bus          Bus               `toml:"bus"`
-	Git          Git               `toml:"git"`
 	Completion   Completion        `toml:"completion"`
 	Notify       Notify            `toml:"notify"`
 	Paste        Paste             `toml:"paste"`
@@ -276,7 +275,6 @@ func Default() *Config {
 			DefaultExpiry:    D(5 * time.Hour),
 			ClaudeStatusline: true,
 		},
-		Git:    Git{CommitAgent: "auto"},
 		Notify: Notify{Enabled: true, Sound: true},
 		Paste:  Paste{Images: true},
 		Web:    Web{Enabled: true, Open: "window"},
@@ -341,6 +339,9 @@ func Parse(data []byte) (*Config, []string, error) {
 	var raw struct {
 		Config
 		Agents map[string]toml.Primitive `toml:"agents"`
+		// Git was the ✨ commit messages' section (D29, removed in v0.55:
+		// D65): its keys are read only to be told apart from mistyped ones.
+		Git map[string]toml.Primitive `toml:"git"`
 	}
 	raw.Config = *cfg
 	raw.Config.Agents = nil
@@ -372,6 +373,16 @@ func Parse(data []byte) (*Config, []string, error) {
 		}
 		if err := md.PrimitiveDecode(raw.Agents[id], a); err != nil {
 			return nil, nil, &Error{Msg: fmt.Sprintf("[agents.%s]: %v", id, err)}
+		}
+	}
+	gitKeys := make([]string, 0, len(raw.Git))
+	for k := range raw.Git {
+		gitKeys = append(gitKeys, "git."+k)
+	}
+	sort.Strings(gitKeys)
+	for _, k := range gitKeys {
+		if !removedKeys[k] {
+			warnings = append(warnings, fmt.Sprintf("unknown key %q ignored", k))
 		}
 	}
 	for _, k := range md.Undecoded() {
@@ -428,7 +439,6 @@ func (c *Config) validate(src []byte) error {
 		{"on_arrival", c.Handoff.OnArrival, []string{"wait", "continue"}},
 		{"deliver", c.Handoff.Deliver, []string{"file", "inline"}},
 		{"icons", c.Tmux.Icons, []string{"auto", "nerd", "emoji"}},
-		{"commit_agent", c.Git.CommitAgent, append([]string{"auto"}, AgentIDs...)},
 		{"on_exit", c.OnExit, []string{"shell", "close"}},
 		{"inject", c.Handoff.Inject, []string{"argv", "paste"}},
 		{"locale", c.Locale, []string{"", "en", "tr"}},

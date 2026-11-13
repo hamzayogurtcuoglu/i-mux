@@ -244,14 +244,39 @@ func refColor(kind string) string {
 	return faint
 }
 
-// wideButton is a full-width button row (Commit, Initialize Repository).
+// wideButton is a full-width button row (Commit, Initialize Repository);
+// a label longer than the row is cut.
 func wideButton(label string, w int, a Action) Cell {
+	if DisplayWidth(label) > w-2 {
+		label = fit(label, max(w-2, 1))
+	}
 	pad := max(w-2-DisplayWidth(label), 0)
 	return Cell{
 		W:      w,
 		Text:   " " + "\x1b[48;5;24m\x1b[38;5;255m" + strings.Repeat(" ", pad/2) + label + strings.Repeat(" ", pad-pad/2) + reset + " ",
 		Action: a,
 	}
+}
+
+// commitButton is the commit button's label and action: Commit (the
+// commit box's message), Commit Merge (the box's message, else git's), or
+// Continue during a rebase, cherry-pick or revert.
+func commitButton(m Model) (string, Action) {
+	ic := m.icons()
+	label, act := ic.Commit+" "+i18n.T("git.commit_button"), Action{Kind: ActCommit}
+	if m.SCM == nil {
+		return label, act
+	}
+	switch m.SCM.Op {
+	case gitops.OpMerge:
+		label = ic.Commit + " " + i18n.T("scm.commit_merge")
+		if m.Commit.Empty() {
+			act = Action{Kind: ActGitPopup, Section: "continue"}
+		}
+	case gitops.OpRebase, gitops.OpCherryPick, gitops.OpRevert:
+		label, act = ic.Commit+" "+i18n.T("scm.continue"), Action{Kind: ActGitPopup, Section: "continue"}
+	}
+	return label, act
 }
 
 // renderChanges is the Source Control view, like VS Code's (D27, D58).
@@ -299,20 +324,18 @@ func renderChanges(m Model, w, h int) []Line {
 	left := " " + cyan + ic.Branch + reset + " " + fit(branch+" "+ic.Open, nw) + " " + muted + sync + reset
 	out = append(out, buttons(w, Cell{Text: left, Action: scmAction("pick", "checkout")}, syncBtns...))
 
-	// The commit button (Continue / Commit Merge during an operation), ▾
-	// its dropdown, and ✨: an agent writes the message (D29).
-	label, act := ic.Commit+" "+i18n.T("git.commit_button"), Action{Kind: ActCommit}
-	switch st.Op {
-	case gitops.OpMerge:
-		label, act = ic.Commit+" "+i18n.T("scm.commit_merge"), Action{Kind: ActGitPopup, Section: "continue"}
-	case gitops.OpRebase, gitops.OpCherryPick, gitops.OpRevert:
-		label, act = ic.Commit+" "+i18n.T("scm.continue"), Action{Kind: ActGitPopup, Section: "continue"}
+	// The commit message box (D65), then the commit button (Continue /
+	// Commit Merge during an operation) and ▾, its dropdown.
+	rows := maxBoxRows
+	if h > 0 {
+		rows = min(rows, max(1, (h-8)/3))
 	}
+	out = append(out, m.commitBoxRows(w, rows)...)
+	label, act := commitButton(m)
 	drop := button(ic.Open, muted, scmAction("menu", "commit-button"))
-	suggest := button(ic.Suggest, cyan, Action{Kind: ActSuggest})
-	commit := wideButton(label, w-drop.W-suggest.W, act)
-	drop.X, suggest.X = commit.W, commit.W+drop.W
-	cells := []Cell{commit, drop, suggest}
+	commit := wideButton(label, w-drop.W, act)
+	drop.X = commit.W
+	cells := []Cell{commit, drop}
 	out = append(out, Line{Text: compose(cells, w), Cells: cells})
 
 	n := 0

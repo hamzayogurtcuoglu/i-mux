@@ -53,7 +53,7 @@ func TestSourceControlLikeVSCode(t *testing.T) {
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
-		"SOURCE CONTROL", "⋯", "📤", "✅ Commit…", "▾ MERGE CHANGES  1", "!  api.go", "U  new.txt", "D  x.md",
+		"SOURCE CONTROL", "⋯", "📤", "Message (Enter to commit)", "✅ Commit", "▾ MERGE CHANGES  1", "!  api.go", "U  new.txt", "D  x.md",
 		"● ↑ 1a2b3c4 (main) mine", "│ ● ↓ 5d6e7f8 (origin/main, v1) theirs", "│╱", "▾ HISTORY  3",
 	} {
 		if !strings.Contains(text, want) {
@@ -74,31 +74,39 @@ func TestSourceControlLikeVSCode(t *testing.T) {
 		"api.go":    {Kind: ActDiff, Path: "internal/api/api.go", Status: "U", Section: "merge"},
 		"MERGE":     {Kind: ActFold, Section: SecMerge},
 		"1a2b3c4":   {Kind: ActGitPopup, Section: "show", Path: "1a2b3c4"},
-		"✅ Commit…": {Kind: ActCommit},
+		"✅ Commit":  {Kind: ActCommit},
+		"Message (": {Kind: ActCommitBox, Section: "0:0"},
 	} {
 		if got := click(sub, 0); got != want {
 			t.Errorf("%q: %+v, want %+v", sub, got, want)
 		}
 	}
-	// ▾ is the commit button's dropdown, between it and ✨.
-	l, x := lineWith(t, sc, "✨")
-	if got := l.ActionAt(x - 2); got != scmAction("menu", "commit-button") {
+	// ▾ is the commit button's dropdown, at the row's end; no ✨ (D65).
+	l, _ := lineWith(t, sc, "✅ Commit")
+	if got := l.ActionAt(58); got != scmAction("menu", "commit-button") {
 		t.Errorf("▾: %+v", got)
 	}
-	if got := l.ActionAt(x); got.Kind != ActSuggest {
-		t.Errorf("✨: %+v", got)
+	if strings.Contains(text, "✨") {
+		t.Error("✨ is back")
 	}
 	// MERGE CHANGES' + stages every conflict; a conflict's + stages it.
 	l, _ = lineWith(t, sc, "MERGE CHANGES")
 	if got := l.ActionAt(58); got != (Action{Kind: ActGit, Section: "stage-merge"}) {
 		t.Errorf("stage merge %+v", got)
 	}
-	// During a merge Commit is Commit Merge; a rebase's, Continue.
+	// During a merge Commit is Commit Merge: git's message, or the box's;
+	// a rebase's, Continue.
 	m.SCM.Op = gitops.OpMerge
 	sc = Render(m, 60, 0, NoItem)
 	if got := click("Commit Merge", 0); got != (Action{Kind: ActGitPopup, Section: "continue"}) {
 		t.Errorf("commit merge %+v", got)
 	}
+	m.Commit.Text = []rune("Merge the fix")
+	sc = Render(m, 60, 0, NoItem)
+	if got := click("Commit Merge", 0); got != (Action{Kind: ActCommit}) {
+		t.Errorf("commit merge with a message %+v", got)
+	}
+	m.Commit.Text = nil
 	m.SCM.Op = gitops.OpRebase
 	if text := screenText(Render(m, 50, 0, NoItem)); !strings.Contains(text, "✅ Continue") {
 		t.Errorf("continue:\n%s", text)

@@ -61,6 +61,10 @@ type sidebar struct {
 
 	emptyAt time.Time // when this sidebar last opened a "No agents" pane
 
+	box     CommitBox // the Git view's commit message box (D65)
+	boxDir  string    // the project its message is for
+	boxSeen string    // the message its file had, as last read or written
+
 	geom  Geom          // the pane and window as last seen (a drag changes only the width)
 	saveT *time.Timer   // saves a dragged width when the drag rests
 	save  chan struct{} // ... by sending here
@@ -101,9 +105,12 @@ func Run(ctx context.Context, o Options) error {
 		restore = nil
 	}
 	// Alternate screen, no cursor, SGR mouse reports for presses and every
-	// motion (the hover, D31).
-	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h")
-	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?1003l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
+	// motion (the hover, D31); the focus coming and going, and pastes in
+	// one piece (the commit box, D65).
+	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h\x1b[?1004h\x1b[?2004h")
+	defer func() {
+		_, _ = io.WriteString(o.Out, "\x1b[?2004l\x1b[?1004l\x1b[?1003l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l")
+	}()
 
 	_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", o.Pane, OptRole, RoleSidebar},
 		tmux.Cmd{"set-option", "-p", "-t", o.Pane, OptPID, strconv.Itoa(os.Getpid())},
@@ -210,11 +217,15 @@ func Run(ctx context.Context, o Options) error {
 			gather, paint := false, false
 			for _, ev := range evs {
 				// The pointer moving and a right-click (its menu) change
-				// nothing to gather; a click's action gathers when it runs.
-				switch ev.Kind {
-				case EvMove, EvRightClick:
-				case EvClick:
-					paint = true // the row it selected
+				// nothing to gather; a click's action gathers when it runs;
+				// typing into the commit box changes only the box.
+				typing := s.box.Focused && (ev.Kind == EvKey || ev.Kind == EvPaste)
+				switch {
+				case ev.Kind == EvMove || ev.Kind == EvRightClick:
+				case ev.Kind == EvClick || ev.Kind == EvFocus || typing:
+					paint = true // the row it selected; the box
+				case ev.Kind == EvPaste:
+					// Pasted outside the box: nothing.
 				default:
 					gather = true
 				}
@@ -267,6 +278,7 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 	}
 	m.Tick, m.Scroll = s.model.Tick, s.scroll
 	s.model, s.win = m, w
+	s.syncBox(ctx)
 	s.keepVisible()
 	s.draw()
 	return false
@@ -274,7 +286,7 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 
 // draw renders the cached model.
 func (s *sidebar) draw() {
-	s.model.Selected, s.model.Tip = s.selected, ""
+	s.model.Selected, s.model.Tip, s.model.Commit = s.selected, "", s.box
 	s.screen = Render(s.model, s.win.Width, s.win.Height, s.sel)
 	it := s.screen.HoverAt(s.hx, s.hy, s.win.Width)
 	tip := ""
@@ -290,8 +302,8 @@ func (s *sidebar) draw() {
 		s.model.Tip = tip
 		s.screen = Render(s.model, s.win.Width, s.win.Height, s.sel)
 	}
-	if it != NoItem && it != s.sel {
-		Paint(s.screen, it, hoverBg, s.win.Width)
+	if it != NoItem && it != s.sel && s.screen.ActionOf(it).Kind != ActCommitBox {
+		Paint(s.screen, it, hoverBg, s.win.Width) // the box keeps its field's look
 	}
 	f := Frame(s.screen, s.win.Width, s.win.Height)
 	if f == s.lastFrame {
@@ -315,11 +327,11 @@ func isMenu(k ActionKind) bool {
 // waits reports whether a click's action waits OpenAfter (see there).
 func (s *sidebar) waits(ctx context.Context, a Action) bool {
 	switch a.Kind {
-	case ActCommit, ActRename, ActFileOp:
+	case ActRename, ActFileOp:
 		return true // the command prompt
 	case ActSCM:
 		return a.Section == "ask" || !s.t.MenuTakesMouse(ctx)
-	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm, ActSuggest:
+	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm:
 		return !s.t.MenuTakesMouse(ctx)
 	case ActOpenFile:
 		return s.htmlAsk(a) && !s.t.MenuTakesMouse(ctx) // a menu: how to open it (D51)
@@ -413,6 +425,14 @@ func (s *sidebar) keepWidth(ctx context.Context) bool {
 
 // handle reacts to one key or click.
 func (s *sidebar) handle(ctx context.Context, ev Event) {
+	if ev.Kind == EvFocus {
+		s.box.Away = ev.Key == "out" // no cursor in the box while the pane has no focus
+		return
+	}
+	if s.box.Focused && (ev.Kind == EvKey || ev.Kind == EvPaste) {
+		s.boxKey(ctx, ev)
+		return
+	}
 	if ev.Kind == EvMove {
 		s.moved(ev.X, ev.Y)
 		return
@@ -518,6 +538,11 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.sel = NoItem
 		s.noTip = s.screen.HoverAt(ev.X, ev.Y, s.win.Width) // a click hides a button's label, as the editor's tooltip
 		a := s.screen.Lines[row].ActionAt(ev.X - 1)
+		if a.Kind == ActCommitBox {
+			s.boxClick(a, ev.X)
+			return
+		}
+		s.box.Focused = false // a click elsewhere: the cursor leaves the box
 		switch a.Kind {
 		case ActOpenFile, ActToggleDir:
 			s.selected = a.Path
@@ -786,20 +811,16 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.confirmDiscard(ctx, client, a)
 		return
 	case ActCommit:
-		s.spawn(s.scmArgs(client, "ask", "commit"))
+		s.commitBox()
+		return
+	case ActCommitBox:
+		s.focusBox(false) // Enter on it (the keyboard selection)
 		return
 	case ActSettings:
 		args := []string{"__settings", "menu"}
 		if client != "" {
 			args = append(args, "--client", client)
 		}
-		if s.model.Target != "" {
-			args = append(args, "--pane", s.model.Target)
-		}
-		s.spawn(args)
-		return
-	case ActSuggest:
-		args := s.gitArgs("suggest", client, false)
 		if s.model.Target != "" {
 			args = append(args, "--pane", s.model.Target)
 		}
@@ -1091,5 +1112,106 @@ func EmptyOpts(target, cwd string) []tmux.Cmd {
 		opt("-u", "@imux_agent"), opt("-u", "@imux_start"), opt("-u", "@imux_trail"),
 		opt("-u", "@imux_flag"), opt("-u", "@imux_fallback"), opt("-u", "@imux_name"),
 		opt("-u", OptState), opt("-u", OptStateAt), opt("-u", OptDoneAt),
+	}
+}
+
+// focusBox puts the cursor at the end of the commit box (warn: the hint
+// asks for a message).
+func (s *sidebar) focusBox(warn bool) {
+	s.box.Focused, s.box.Away, s.box.Warn = true, false, warn
+	s.box.Cursor = len(s.box.Text)
+	s.sel = NoItem
+}
+
+// boxClick puts the cursor in the commit box where it was clicked (x, the
+// sidebar's column): a's Section is the row's "from:to" of the text.
+func (s *sidebar) boxClick(a Action, x int) {
+	f, t, _ := strings.Cut(a.Section, ":")
+	from, _ := strconv.Atoi(f)
+	to, _ := strconv.Atoi(t)
+	s.box.Focused, s.box.Away = true, false
+	s.box.place(from, to, x-1-railW-2) // after the margin and the field's padding
+}
+
+// boxKey types a key into the commit box (D65); Enter does what Commit
+// does, Esc and Tab leave the box.
+func (s *sidebar) boxKey(ctx context.Context, ev Event) {
+	res, changed := s.box.Key(ev)
+	if changed {
+		s.saveBox()
+	}
+	switch res {
+	case boxSubmit:
+		m := s.model
+		m.Commit = s.box
+		if _, a := commitButton(m); s.box.Ask == "" && a.Kind != ActCommit {
+			s.box.Focused = false
+			s.do(ctx, a) // Continue a rebase, cherry-pick or revert; a merge with git's message
+			return
+		}
+		s.commitBox()
+	case boxLeave:
+		s.box.Focused, s.box.Ask, s.box.Warn = false, "", false
+	}
+}
+
+// commitBox commits with the commit box's message (`imux __scm ask`: the
+// commit a menu asked for, else Commit's); with none, the cursor goes in
+// and the hint asks for it.
+func (s *sidebar) commitBox() {
+	if s.box.Empty() {
+		s.focusBox(true)
+		return
+	}
+	ask := s.box.Ask
+	if _, ok := CommitAsks[ask]; !ok {
+		ask = "commit"
+	}
+	s.box.Focused, s.box.Ask, s.box.Warn = false, "", false
+	s.saveBox() // the file holds the message the commit reads
+	s.spawn(s.scmArgs(s.win.Client, "ask", ask))
+}
+
+// saveBox writes the commit box's message to its project's file, for the
+// project's other sidebars and the commit.
+func (s *sidebar) saveBox() {
+	if s.boxDir == "" {
+		s.boxDir = s.model.CWD
+	}
+	msg := s.box.Message()
+	if SetCommitDraft(s.boxDir, msg) == nil {
+		s.boxSeen = msg
+	}
+}
+
+// syncBox reads the commit box's message again, as the Git view redraws:
+// another sidebar typed it, or a commit used it and it is gone. A menu's
+// commit with no message (OptCommitAsk) puts the cursor in the box, its
+// hint naming the commit (D65).
+func (s *sidebar) syncBox(ctx context.Context) {
+	ask := s.win.CommitAsk
+	if ask != "" {
+		_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-p", "-u", "-t", s.o.Pane, OptCommitAsk})
+	}
+	if s.model.View != ViewChanges || s.model.SCM == nil || s.model.CWD == "" {
+		return
+	}
+	dir := s.model.CWD
+	msg := CommitDraft(dir)
+	switch {
+	case dir != s.boxDir:
+		s.box, s.boxDir, s.boxSeen = CommitBox{Text: []rune(msg)}, dir, msg
+		s.box.Cursor = len(s.box.Text)
+	case msg != s.boxSeen:
+		s.box.Text, s.boxSeen = []rune(msg), msg
+		s.box.clamp()
+		if msg == "" {
+			s.box.Ask, s.box.Warn = "", false // committed
+		}
+	}
+	if _, ok := CommitAsks[ask]; ok {
+		s.focusBox(true)
+		s.box.Ask = ask
+		_, _ = s.t.Run(ctx, tmux.Cmd{"select-pane", "-t", s.o.Pane})
 	}
 }

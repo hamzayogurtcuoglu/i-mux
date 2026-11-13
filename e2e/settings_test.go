@@ -16,7 +16,7 @@ import (
 // TestSettings (T29.4, T57.1): 🔧 on the rail opens Settings; a row opens
 // the menu of its values (D50), a choice changes the config file and
 // Settings opens again with the new value; the sidebar redraws with the new
-// icons; the commit-agent menu sets the agent.
+// icons; no row for the removed ✨ commit messages (D65).
 func TestSettings(t *testing.T) {
 	h := newH(t, sidebarConfig)
 	agent, bar := h.startWithSidebar()
@@ -51,16 +51,8 @@ func TestSettings(t *testing.T) {
 	if load().Handoff.OnArrival != "continue" {
 		t.Fatal("on_arrival not written")
 	}
-	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
-	c.Write("m")
-	c.waitScreenAfter(h, mark, "Commit messages by", 5*time.Second)
-	time.Sleep(300 * time.Millisecond)
-	mark = c.Mark()
-	c.Write("x") // Codex
-	c.waitScreenAfter(h, mark, "Commit messages by: Codex CLI", 5*time.Second)
-	if load().Git.CommitAgent != "codex" {
-		t.Fatal("commit_agent not written")
+	if strings.Contains(stripANSI(c.Output()[mark:]), "Commit messages") {
+		t.Error("a Settings row for the removed ✨ commit messages")
 	}
 	time.Sleep(300 * time.Millisecond)
 	mark = c.Mark()

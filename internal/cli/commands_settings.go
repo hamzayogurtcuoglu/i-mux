@@ -47,7 +47,6 @@ type settingKey struct {
 
 var settingKeys = map[string]settingKey{
 	"icons":        {"tmux", "icons", []string{"auto", "nerd", "emoji"}, true},
-	"commit_agent": {"git", "commit_agent", append([]string{"auto"}, config.AgentIDs...), true},
 	"on_arrival":   {"handoff", "on_arrival", []string{"wait", "continue"}, true},
 	"on_limit":     {"", "on_limit", []string{"ask", "auto", "off"}, true},
 	"completion":   {"completion", "enabled", []string{"on", "off"}, false},

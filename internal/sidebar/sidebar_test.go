@@ -55,6 +55,10 @@ func TestParse(t *testing.T) {
 		// arriving waits for the rest.
 		{"a\x1b[200~x\ry\x1b[201~b", true, []Event{{Key: "a"}, {Kind: EvPaste, Key: "paste", Text: "x\ry"}, {Key: "b"}}, ""},
 		{"\x1b[200~half\r", true, nil, "\x1b[200~half\r"},
+		// The commit box's keys (D65): Ctrl+J (a line feed) is an Enter
+		// that says so, Alt+Enter is one key; focus in and out.
+		{"\r\n\x1b\r", true, []Event{{Key: "enter"}, {Key: "enter", Text: "\n"}, {Key: "alt-enter"}}, ""},
+		{"\x1b[I\x1b[O\x1b[1;2O", true, []Event{{Kind: EvFocus, Key: "in"}, {Kind: EvFocus, Key: "out"}}, ""},
 		// UTF-8 characters, and one cut in the middle.
 		{"Masaüstü", true, []Event{{Key: "M"}, {Key: "a"}, {Key: "s"}, {Key: "a"}, {Key: "ü"}, {Key: "s"}, {Key: "t"}, {Key: "ü"}}, ""},
 		{"a\xc3", false, []Event{{Key: "a"}}, "\xc3"},
@@ -637,7 +641,7 @@ func TestChangesView(t *testing.T) {
 	text := screenText(sc)
 	t.Logf("\n%s", text)
 	for _, want := range []string{
-		"SOURCE CONTROL", "🔄", "🌿 main ▾", "↑1 ↓0", "🔃", "✅ Commit…", "▾ STAGED CHANGES  1", "M  a.go", "+3 −1",
+		"SOURCE CONTROL", "🔄", "🌿 main ▾", "↑1 ↓0", "🔃", "Message (Enter to commit)", "✅ Commit", "▾ STAGED CHANGES  1", "M  a.go", "+3 −1",
 		"▾ CHANGES  2", "M  b.go", "U  c.txt", "▾ HISTORY  1", "feat: login", "2h", "▌  🔀",
 	} {
 		if !strings.Contains(text, want) {
@@ -679,7 +683,7 @@ func TestChangesView(t *testing.T) {
 	if a := lineEnd("CHANGES  2").ActionAt(39); a != (Action{Kind: ActGit, Section: "stage-all"}) {
 		t.Errorf("stage all %+v", a)
 	}
-	if a := at("Commit…", 0); a.Kind != ActCommit {
+	if a := at("✅ Commit", 0); a.Kind != ActCommit {
 		t.Errorf("commit %+v", a)
 	}
 	if a := at("🌿 main", 0); a != (Action{Kind: ActSCM, Section: "pick", Path: "checkout"}) {

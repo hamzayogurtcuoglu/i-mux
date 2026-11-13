@@ -43,14 +43,14 @@ func TestSettingsMenu(t *testing.T) {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|m Commit messages by: Auto (the pane's agent)|" +
+	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
 	}
 	for key, which := range map[string]string{
 		"e": "editor", "n": "notify", "d": "notify_sound", "v": "paste_images", "i": "icons",
-		"m": "commit-agent", "w": "on_arrival", "l": "on_limit",
+		"w": "on_arrival", "l": "on_limit",
 	} {
 		if c := cmdOf(m, key); !strings.Contains(c, "__settings menu "+which+" --pane %1 --client c1") {
 			t.Errorf("%s: %q does not open the %s menu", key, c, which)
@@ -79,7 +79,7 @@ func TestSettingsMenu(t *testing.T) {
 	f.replies[""] = ""
 	// Values change the rows; with AI completion on, Copilot's sign-in.
 	w.Cfg.Completion.Enabled = true
-	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival, w.Cfg.Git.CommitAgent = "emoji", "off", "continue", "opencode"
+	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival = "emoji", "off", "continue"
 	m = w.SettingsMenu("%1", "")
 	got = ""
 	for _, it := range m.Items {
@@ -87,7 +87,7 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	for _, want := range []string{
 		"e Editor: Neovim + Copilot|s Sign in to GitHub Copilot…|",
-		"i Icons: Emoji|", "m Commit messages by: OpenCode|", "w After a handoff the new agent: continues at once|",
+		"i Icons: Emoji|", "w After a handoff the new agent: continues at once|",
 		"l When an agent hits its limit: do nothing|",
 	} {
 		if !strings.Contains(got, want) {
@@ -95,21 +95,8 @@ func TestSettingsMenu(t *testing.T) {
 		}
 	}
 
-	sub := w.CommitAgentMenu("%1", "")
-	if sub.Title != "Commit messages by" || !strings.HasPrefix(sub.Items[0].Name, "  Auto") {
-		t.Fatalf("submenu %+v", sub.Items)
-	}
-	var marked []string
-	for _, it := range sub.Items {
-		if strings.HasPrefix(it.Name, "● ") {
-			marked = append(marked, it.Name)
-		}
-	}
-	if len(marked) != 0 { // opencode is not installed in testWS
-		t.Errorf("marked %v", marked)
-	}
-	if !strings.Contains(sub.Items[1].Cmd, "__settings set commit_agent claude") {
-		t.Errorf("agent row %+v", sub.Items[1])
+	if strings.Contains(got, "Commit messages") {
+		t.Errorf("a row for the removed ✨ commit messages (D65):\n%s", got)
 	}
 }
 

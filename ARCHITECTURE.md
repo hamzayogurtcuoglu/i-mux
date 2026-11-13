@@ -1399,10 +1399,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   (`imux __diff --staged|--worktree`). Buttons: + stage (`git add --`), − unstage (`git restore
   --staged --`), ↶ discard (confirm; `git restore --worktree --` or, untracked, `git clean -f
   --`); on the titles: all of them. Commit…: `command-prompt` → `imux __git commit`
-  (`git commit -m`; nothing staged → `git add -A` first). ⇅ Sync / ↑ Push / ↓ Pull: a popup
-  running git with its output, ending on "press Enter". ⎇ branch: a menu of local branches
-  (checkout) and "New branch…". HISTORY: `git log -n 15`; a click shows the commit
-  (`git show --stat --patch`). Every action refreshes the view at once.
+  (`git commit -m`; nothing staged → `git add -A` first; since v0.55 the message box, D65).
+  ⇅ Sync / ↑ Push / ↓ Pull: a popup running git with its output, ending on "press Enter".
+  ⎇ branch: a menu of local branches (checkout) and "New branch…". HISTORY: `git log -n 15`; a
+  click shows the commit (`git show --stat --patch`). Every action refreshes the view at once.
 - **Editing:** a file click in the explorer or Enter on a search result opens the editor in a
   popup at the line: `editor` in the config, else micro (on the PATH, or the one i-mux got: D45),
   $VISUAL, $EDITOR, nano, vim (`+set mouse=a`). micro gets `-scrollbar true` (a `┃` at the
@@ -2226,7 +2226,7 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
 ```
  SOURCE CONTROL                 ⟳ ⋯
  ⎇ main ▾  ↑1 ↓0             ⏬ ⏫ 🔃
- ░ Message (Enter to commit on… ░
+ ░ Message (Enter to commit)    ░
  [        ✓ Commit         ]  ▾
  ▾ MERGE CHANGES  1               +
    !  api.go  internal
@@ -2321,8 +2321,7 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
 ```
 
 - **Where:** between the branch row and the Commit button, the view's whole width; empty, it
-  shows VS Code's hint: "Message (Enter to commit on 'main')" (detached: "Message (Enter to
-  commit)").
+  shows a hint as VS Code's does: "Message (Enter to commit)" (the branch is on the row above).
 - **Typing:** a click puts the cursor where it was clicked (Enter on the box, with the keyboard
   selection, at the end); the sidebar's pane takes the keys while the cursor is in it, and its
   other keys (1–5, q, …) are typed. ← → Home End (Ctrl+A, Ctrl+E) move; ↑ ↓ go a line up or
@@ -2335,7 +2334,8 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
   ask <commit…>`. With a message in the box it commits at once with it (`imux __git commit
   --draft`, the same mode, amend, sign-off, push or sync as before); the amend items with an
   empty box keep the last message (`--no-edit`). With none, the box asks for it: the cursor goes
-  in and its hint, in yellow, names the command ("Commit & Push: type its message, then Enter");
+  in and its hint, in yellow, names the command ("Message (Commit & Push)"; Commit with none:
+  "Type a message, then Enter");
   only without a sidebar to ask does the command prompt ask (as before). A commit leaves the box
   empty; one that fails keeps the message.
 - **Kept while it is written:** `~/.imux/commit/<hash of the project folder>.txt` (0600), written

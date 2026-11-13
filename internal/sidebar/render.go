@@ -37,11 +37,11 @@ const (
 	ActSearch                 // the project search popup
 	ActGit                    // run git action Section on Path (Status "?" = untracked)
 	ActGitConfirm             // ask, then run git action Section (discards)
-	ActCommit                 // ask for a commit message and commit
+	ActCommit                 // commit the commit box's message, or ask for one in the box (D65)
 	ActGitPopup               // run git action Section in a popup (push, pull, sync, show Path)
 	ActFileMenu               // the menu of file Path (edit, view, VS Code)
 	ActRefresh                // redraw
-	ActSuggest                // an agent writes a commit message (D29)
+	ActCommitBox              // the commit box: the cursor goes in, at Section's row ("from:to" of its text) where clicked (D65)
 	ActSettings               // the Settings menu
 	ActGoto                   // Go to File (the editor's Ctrl+P)
 	ActSkillNew               // the New skill dialog: an agent writes a skill, or a blank SKILL.md (D32)

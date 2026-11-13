@@ -6,6 +6,27 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-11-13
+
+### Added
+
+- **Source Control has VS Code's commit message box.** Above the Commit button a box says
+  "Message (Enter to commit)": click it and write the message there, as in VS Code, instead of
+  in the prompt at the bottom of the screen. It wraps and grows up to six rows; **Enter**
+  commits, **Ctrl+J** (or Alt+Enter, where the terminal lets it through) starts a new line, and
+  **Esc** leaves the box with the message kept. Commit with nothing typed puts the cursor in the
+  box. The commit items of ▾ and ⋯ › Commit (Commit & Push, Commit & Sync, Commit Staged, Commit
+  All, the signed-off ones) commit its message too; with none, the box asks for it and its hint
+  names the command ("Message (Commit & Push)"). Amend with an empty box keeps the last commit's
+  message. While it is written, the message is kept per project in `~/.imux/commit/`: every
+  sidebar of the project shows it, a restart keeps it, and a commit made with it clears it.
+
+### Removed
+
+- **✨ AI commit messages.** The ✨ button, the Settings row "Commit messages by" and the
+  `[git] commit_agent` / `commit_model` keys are gone; a config that still has them loads
+  without a warning.
+
 ## [0.54.0] - 2026-11-13
 
 ### Added

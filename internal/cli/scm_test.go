@@ -3,20 +3,39 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
 
-// TestSCMAsks (T63.3): a prompt's label is translated and safe in
+// TestSCMAsks (T63.3, T70.2): a prompt's label is translated and safe in
 // command-prompt's -p (comma-separated, a format: no "," "#" or "%"), and
-// its answer goes to one place.
+// its answer goes to one place. Every commit but an amend (which keeps the
+// last message) can ask its message in the commit box, and the box knows
+// no other.
 func TestSCMAsks(t *testing.T) {
 	defer i18n.SetLocale("en")
+	for op, a := range asks {
+		_, inBox := sidebar.CommitAsks[op]
+		amend := slices.Contains(a.git, "--amend")
+		if commit := len(a.git) > 0 && a.git[0] == "commit"; commit && !amend != inBox || !commit && inBox {
+			t.Errorf("%s: in the box's asks %v", op, inBox)
+		}
+	}
+	for op, key := range sidebar.CommitAsks {
+		if _, ok := asks[op]; !ok || !i18n.Has(key) {
+			t.Errorf("the box asks for %s (%s): no such commit or text", op, key)
+		}
+	}
 	for _, loc := range []string{"en", "tr"} {
 		i18n.SetLocale(loc)
 		for op, a := range asks {
+			if slices.Contains(a.git, "--amend") {
+				continue // never asked: an empty box keeps the last message
+			}
 			if l := i18n.T(a.label); l == a.label || strings.ContainsAny(l, ",#%") {
 				t.Errorf("%s %s: label %q", loc, op, l)
 			}

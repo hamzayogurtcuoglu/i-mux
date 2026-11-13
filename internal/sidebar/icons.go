@@ -8,7 +8,7 @@ type Icons struct {
 	Pull, Push, Sync, Commit      string
 	Branch, Open, Closed          string // Open / Closed: a section's or folder's arrow
 	Edit, History, Search         string
-	Suggest                       string // an agent writes the commit message
+	Suggest                       string // ✨: the Skills' new skill and a skill's menu
 	GoTo                          string // Go to File
 	More                          string // ⋯ More Actions
 	Publish                       string // publish a branch with no upstream

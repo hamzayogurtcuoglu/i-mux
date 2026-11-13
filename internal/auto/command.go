@@ -75,9 +75,9 @@ type Invocation struct {
 }
 
 // Command builds the headless command line of cli (binary bin) for def:
-// the headless flag first, as the ✨ commit messages (D29) do. Claude,
-// Copilot and Antigravity stream their steps as JSON lines, which the
-// run's output view shows as they come (ParseOutput).
+// the headless flag first. Claude, Copilot and Antigravity stream their
+// steps as JSON lines, which the run's output view shows as they come
+// (ParseOutput).
 func Command(cli session.AgentID, bin string, d Def, model, prompt string, readOnly bool, outFile, uuid string) (Invocation, error) {
 	native := Native(d, cli)
 	opt := func(flag, v string) []string {

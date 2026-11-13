@@ -82,7 +82,7 @@ jstr() {
 	awk 'BEGIN { ORS = "" } { gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); gsub(/\t/, "\\t"); if (NR > 1) printf "\\n"; print }'
 }
 
-# Print mode (commit message suggestions, D29): claude -p, codex exec,
+# Print mode (the Jobs view's headless runs, D61): claude -p, codex exec,
 # copilot -p, agy -p, opencode run. Each logs A-headless-n.argv (and
 # .stdin for claude and codex) and replies "feat: fake A commit message n"
 # ($IMUX_FAKE_LOG/A.headless-reply replaces it) the way that agent does;

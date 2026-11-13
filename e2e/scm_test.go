@@ -14,8 +14,9 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestSourceControl (T22.5): in the 🔀 view a click on a file's ➕ stages
-// it, Commit… asks for a message and commits, ⏪ asks and discards a new file.
+// TestSourceControl (T22.5, T70.4): in the 🔀 view a click on a file's ➕
+// stages it, a message typed in the box above Commit and Enter commit it,
+// ⏪ asks and discards a new file.
 func TestSourceControl(t *testing.T) {
 	h := newH(t, sidebarConfig)
 	if _, err := exec.LookPath("git"); err != nil {
@@ -80,22 +81,25 @@ func TestSourceControl(t *testing.T) {
 		t.Fatalf("staged %q", out)
 	}
 
-	// Commit… → message → committed (only the staged file).
+	// The message typed in the box above Commit, Enter: committed (only
+	// the staged file), the box empty again (D65).
 	time.Sleep(500 * time.Millisecond)
-	x, y = h.rowOf(bar, "Commit…")
-	mark := c.Mark()
+	x, y = h.rowOf(bar, "Message (Enter to commit)")
 	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "Commit message:", 5*time.Second)
-	c.Write("add two\r")
+	time.Sleep(300 * time.Millisecond)
+	c.Write("add two")
+	h.rowOf(bar, "add two")
+	c.Write("\r")
 	h.waitFor("commit", 5*time.Second, func() bool {
 		return strings.Contains(git("log", "--oneline", "-n", "1"), "add two")
 	})
+	h.rowOf(bar, "Message (Enter to commit)")
 	h.rowOf(bar, "add two") // in HISTORY
 
 	// ↶ on new.txt asks, then deletes it.
 	time.Sleep(500 * time.Millisecond)
 	_, y = h.rowOf(bar, "U  new.txt")
-	mark = c.Mark()
+	mark := c.Mark()
 	c.Click(0, col(6), y) // ⏪, left of ➕
 	c.waitScreenAfter(h, mark, "cannot be undone", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)

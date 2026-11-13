@@ -88,16 +88,6 @@ max_message_bytes = 16384
 # Messages per minute per sending pane (stops agent ping-pong loops).
 rate_per_minute   = 20
 
-[git]
-# Who writes a suggested commit message (✨ in Source Control): "auto" = the
-# agent of the pane the sidebar follows (else the first installed), or one of
-# claude, antigravity, copilot, codex, opencode. It gets the changes once,
-# without its UI; nothing is committed until you choose Commit.
-commit_agent      = "auto"
-# Model for commit_agent when it names an agent ("" = that agent's default),
-# e.g. "haiku" for claude or "groq/llama-3.3-70b-versatile" for opencode.
-commit_model      = ""
-
 [notify]
 # A notification when an agent finishes (after working 10 s or more) or asks
 # you something, unless you are looking at it: macOS's notification center,
