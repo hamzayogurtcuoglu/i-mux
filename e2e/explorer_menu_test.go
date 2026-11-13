@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,9 +17,10 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
-// explorerH starts a project with files, the sidebar's explorer open, a
-// fake editor, and an attached client.
-func explorerH(t *testing.T) (*H, *Client, string) {
+// explorerH starts a project with files (and the extra ones, paths in the
+// project), the sidebar's explorer open, a fake editor, and an attached
+// client.
+func explorerH(t *testing.T, extra ...string) (*H, *Client, string) {
 	t.Helper()
 	ed := filepath.Join(t.TempDir(), "fake-editor")
 	testutil.WriteFile(t, ed, []byte("#!/bin/sh\necho \"EDIT $*\"\nread x\n"))
@@ -28,6 +31,9 @@ func explorerH(t *testing.T) (*H, *Client, string) {
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "src", "app.go"), []byte("package app\n"))
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "README.md"), []byte("hello\n"))
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "my #notes.md"), []byte("notes\n"))
+	for _, p := range extra {
+		testutil.WriteFile(t, filepath.Join(h.Homes.Project, p), []byte("x\n"))
+	}
 	_, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
@@ -225,4 +231,171 @@ func TestExplorerMenus(t *testing.T) {
 		s := h.screen(bar)
 		return strings.Contains(s, "▸ 📁 src") && strings.Contains(s, "▸ 📁 sub")
 	})
+}
+
+// TestExplorerTitle (T68.4): the explorer's title has VS Code's buttons and
+// ⋯, and says what the button under the pointer does. Dot files show only
+// after ⋯ → Show Hidden Files (a click on it), .git never; config.toml keeps
+// the choice and a new tab's explorer follows it; choosing it again hides
+// them. New Folder… asks for a name, Refresh shows a file written
+// elsewhere at once, Collapse Folders closes the open folders.
+func TestExplorerTitle(t *testing.T) {
+	h, c, bar := explorerH(t, ".github/workflows/ci.yml", ".env", ".git/HEAD")
+	p := h.Homes.Project
+	cfg := filepath.Join(h.Homes.Imux, "config.toml")
+	saved := func(v string) bool {
+		return regexp.MustCompile(`(?m)^show_hidden\s*=\s*` + v + `$`).MatchString(h.readFile(cfg))
+	}
+	gitRow := func(s string) bool {
+		for _, l := range strings.Split(s, "\n") {
+			if strings.HasSuffix(strings.TrimRight(l, " "), " .git") {
+				return true
+			}
+		}
+		return false
+	}
+	// The title's line ends with ⋯; a button's place on it.
+	button := func(glyph string) (int, int) { return h.buttonOf(bar, "⋯", glyph) }
+	if l := h.lineOf(bar, "⋯"); !strings.Contains(l, "EXPLORER · proj") || !strings.Contains(l, "📝  📁  🔄  ⊟  ⋯") {
+		t.Fatalf("title %q", l)
+	}
+	if s := h.screen(bar); strings.Contains(s, ".env") || strings.Contains(s, ".github") || gitRow(s) {
+		t.Fatalf("hidden files shown at first:\n%s", s)
+	}
+
+	// The pointer on New Folder…: its label in the title, then the title
+	// again once the pointer is on the tree.
+	x, y := button("📁")
+	c.Write(sgrMouse(35, x+1, y, 'M'))
+	h.waitFor("New Folder… in the title", 5*time.Second, func() bool { return strings.Contains(h.lineOf(bar, "⋯"), "New Folder…") })
+	tx, ty := h.rowOf(bar, "README.md")
+	c.Write(sgrMouse(35, tx+2, ty, 'M'))
+	h.waitFor("the title back", 5*time.Second, func() bool { return strings.Contains(h.lineOf(bar, "⋯"), "EXPLORER · proj") })
+
+	// ⋯, then a click on Show Hidden Files (Go to File…, Search…, a line,
+	// then it): tmux's menu has its first item right below the clicked row,
+	// i-mux's popup menu (before tmux 3.5) a title row first.
+	time.Sleep(500 * time.Millisecond)
+	x, y = button("⋯")
+	mark := c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "Show Hidden Files", 5*time.Second)
+	time.Sleep(600 * time.Millisecond) // past the popup's first 400 ms
+	item := y + 4
+	if !h.menuMouse() {
+		item++
+	}
+	c.Write(sgrMouse(35, x+4, item, 'M'))
+	time.Sleep(100 * time.Millisecond)
+	c.Click(0, x+4, item)
+	h.waitFor("dot files shown", 5*time.Second, func() bool {
+		s := h.screen(bar)
+		return strings.Contains(s, "▸ 📁 .github") && strings.Contains(s, ".env")
+	})
+	if gitRow(h.screen(bar)) {
+		t.Errorf(".git shown:\n%s", h.screen(bar))
+	}
+	h.waitFor("show_hidden saved", 5*time.Second, func() bool { return saved("true") })
+
+	// A new tab's sidebar starts from the config: its explorer shows them.
+	agentPane := ""
+	for _, l := range strings.Split(h.mustTmux("list-panes", "-a", "-F", "#{pane_id} #{@imux_agent}"), "\n") {
+		if f := strings.Fields(l); len(f) == 2 && f[1] == "claude" {
+			agentPane = f[0]
+		}
+	}
+	h.mustImux("tab", "codex", "--pane", agentPane)
+	h.run("codex", 1)
+	bar2 := ""
+	h.waitFor("the new tab's sidebar", 10*time.Second, func() bool {
+		for _, l := range strings.Split(h.mustTmux("list-panes", "-a", "-F", "#{pane_id} #{@imux_role}"), "\n") {
+			if f := strings.Fields(l); len(f) == 2 && f[1] == "sidebar" && f[0] != bar {
+				bar2 = f[0]
+			}
+		}
+		return bar2 != ""
+	})
+	h.mustTmux("set-option", "-w", "-t", h.paneOpt(bar2, "#{window_id}"), "@imux_view", "explorer")
+	h.mustImux("__sidebar-refresh")
+	h.waitFor("the new tab's explorer with .env", 10*time.Second, func() bool { return strings.Contains(h.screen(bar2), ".env") })
+	h.mustTmux("select-window", "-t", agentPane)
+
+	// ⋯ → Search… and ⋯ → Go to File… (by their keys) find them too; ⋯
+	// shows ✓ now.
+	more := func(key, want string) {
+		t.Helper()
+		time.Sleep(500 * time.Millisecond)
+		x, y := button("⋯")
+		mark := c.Mark()
+		c.Click(0, x, y)
+		c.waitScreenAfter(h, mark, "✓ Show Hidden Files", 5*time.Second)
+		time.Sleep(600 * time.Millisecond)
+		mark = c.Mark()
+		c.Write(key)
+		c.waitScreenAfter(h, mark, want, 5*time.Second)
+		time.Sleep(300 * time.Millisecond)
+	}
+	testutil.WriteFile(t, filepath.Join(p, ".env"), []byte("dotneedle=1\n"))
+	more("/", "Search in proj")
+	mark = c.Mark()
+	c.Write("dotneedle")
+	c.waitScreenAfter(h, mark, "1 results in 1 files", 5*time.Second)
+	c.Write("\x1b")
+	more("p", "Go to File · proj")
+	mark = c.Mark()
+	c.Write("ciyml")
+	c.waitScreenAfter(h, mark, "1 files", 5*time.Second)
+	c.Write("\x1b")
+
+	// Show Hidden Files again (its key) hides them.
+	more("h", "")
+	h.waitFor("dot files hidden again", 5*time.Second, func() bool {
+		s := h.screen(bar)
+		return !strings.Contains(s, ".env") && !strings.Contains(s, ".github")
+	})
+	h.waitFor("show_hidden off", 5*time.Second, func() bool { return saved("false") })
+
+	// New Folder…: the command prompt, then the folder, shown.
+	time.Sleep(500 * time.Millisecond)
+	x, y = button("📁")
+	mark = c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "New folder name", 5*time.Second)
+	c.Write("made\r")
+	h.waitFor("the new folder", 5*time.Second, func() bool {
+		fi, err := os.Stat(filepath.Join(p, "made"))
+		return err == nil && fi.IsDir()
+	})
+	h.rowOf(bar, "📁 made")
+
+	// Refresh: a file written elsewhere shows at once, not at the
+	// sidebar's next gather (every 3 s while shown): right after one, the
+	// file, then the click.
+	pid, _ := strconv.Atoi(h.paneOpt(bar, "#{@imux_sidebar_pid}"))
+	gathers := func() int {
+		n := 0
+		for _, r := range h.records() {
+			if r.Pid == pid && slices.Contains(r.Args, "list-clients") {
+				n++
+			}
+		}
+		return n
+	}
+	x, y = button("🔄")
+	time.Sleep(500 * time.Millisecond)
+	n := gathers()
+	h.waitFor("a gather", 5*time.Second, func() bool { return gathers() > n })
+	testutil.WriteFile(t, filepath.Join(p, "zz-outside.txt"), []byte("x\n"))
+	c.Click(0, x, y)
+	h.waitFor("the new file", 1500*time.Millisecond, func() bool { return strings.Contains(h.screen(bar), "zz-outside.txt") })
+
+	// Collapse Folders closes the open folders.
+	time.Sleep(500 * time.Millisecond)
+	x, y = h.rowOf(bar, "▸ 📁 src")
+	c.Click(0, x, y)
+	h.rowOf(bar, "▾ 📂 src")
+	time.Sleep(500 * time.Millisecond)
+	x, y = button("⊟")
+	c.Click(0, x, y)
+	h.waitFor("src closed", 5*time.Second, func() bool { return strings.Contains(h.screen(bar), "▸ 📁 src") })
 }

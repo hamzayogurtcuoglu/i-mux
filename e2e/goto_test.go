@@ -11,9 +11,9 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestGoToFile (T35.2): Ctrl+P in an agent's pane opens Go to File in the
-// project; a few letters and ":line" find the file, Enter opens it in the
-// editor at that line; the explorer's 📄 opens it too.
+// TestGoToFile (T35.2, T68.4): Ctrl+P in an agent's pane opens Go to File
+// in the project; a few letters and ":line" find the file, Enter opens it in
+// the editor at that line; the explorer's ⋯ → Go to File… opens it too.
 func TestGoToFile(t *testing.T) {
 	h, c, bar := explorerH(t)
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "docs", "guide #1.md"), []byte("x\n"))
@@ -40,10 +40,14 @@ func TestGoToFile(t *testing.T) {
 	c.Write("\r")
 	time.Sleep(500 * time.Millisecond)
 
-	// The explorer's 📄, and a name with "#" and a space.
-	x, y := h.rowOf(bar, "📄")
+	// The explorer's ⋯ → Go to File…, and a name with "#" and a space.
+	x, y := h.buttonOf(bar, "⋯", "⋯")
 	mark = c.Mark()
 	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "Go to File…", 5*time.Second)
+	time.Sleep(600 * time.Millisecond) // past the popup's first 400 ms
+	mark = c.Mark()
+	c.Write("p")
 	c.waitScreenAfter(h, mark, "Go to File · proj", 5*time.Second)
 	time.Sleep(200 * time.Millisecond)
 	mark = c.Mark()

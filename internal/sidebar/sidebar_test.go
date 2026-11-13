@@ -349,27 +349,39 @@ func TestRender(t *testing.T) {
 
 // The Explorer view: the tree with folders first, open folders listed
 // inside, git colors and folder marks; files and folders act on click.
+// Hidden files show only when asked (D63); .git, the system's files and
+// the skip list never.
 func TestExplorer(t *testing.T) {
 	i18n.SetLocale("en")
 	root := t.TempDir()
-	for _, d := range []string{"src/auth", "node_modules/x", ".git", "docs"} {
+	for _, d := range []string{"src/auth", "node_modules/x", ".git", "docs", ".github/workflows", ".vscode", "CVS"} {
 		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, f := range []string{"src/auth/redirect.ts", "src/main.ts", "README.md", ".env", "docs/a.md"} {
+	for _, f := range []string{
+		"src/auth/redirect.ts", "src/main.ts", "README.md", ".env", "docs/a.md",
+		".github/workflows/ci.yml", ".vscode/settings.json", ".gitlab-ci.yml", ".DS_Store", "Thumbs.db",
+	} {
 		if err := os.WriteFile(filepath.Join(root, f), nil, 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
-	changes := []ChangeRow{{Status: "M", Path: "src/auth/redirect.ts"}, {Status: "?", Path: "README.md"}}
-	tree := BuildTree(root, map[string]bool{"src": true}, changes)
-	var names []string
-	for _, r := range tree {
-		names = append(names, strings.Repeat(">", r.Depth)+r.Name+r.Git)
+	changes := []ChangeRow{{Status: "M", Path: "src/auth/redirect.ts"}, {Status: "?", Path: "README.md"}, {Status: "?", Path: ".github/"}}
+	names := func(tree []TreeRow) string {
+		var out []string
+		for _, r := range tree {
+			out = append(out, strings.Repeat(">", r.Depth)+r.Name+r.Git)
+		}
+		return strings.Join(out, " ")
 	}
-	if strings.Join(names, " ") != "docs src* >auth* >main.ts README.md?" {
-		t.Fatalf("tree %v", names)
+	open := map[string]bool{"src": true, ".github": true}
+	if got := names(BuildTree(root, open, changes, true)); got != ".github* >workflows .vscode docs src* >auth* >main.ts .env .gitlab-ci.yml README.md?" {
+		t.Errorf("hidden files shown: %s", got)
+	}
+	tree := BuildTree(root, open, changes, false)
+	if got := names(tree); got != "docs src* >auth* >main.ts README.md?" {
+		t.Fatalf("tree %s", got)
 	}
 	m := model()
 	m.View, m.Tree = ViewExplorer, tree
@@ -383,7 +395,7 @@ func TestExplorer(t *testing.T) {
 	sc := Render(m, 41, 12, NoItem)
 	text := screenText(sc)
 	t.Logf("\n%s", text)
-	for _, want := range []string{"EXPLORER · acme-api", "🔍", "▸ 📁 docs", "▾ 📂 src", "│ ▸ 📁 auth", "│   🟦 main.ts", "  📖 README.md", "▌  📁"} {
+	for _, want := range []string{"EXPLORER · a", "▸ 📁 docs", "▾ 📂 src", "│ ▸ 📁 auth", "│   🟦 main.ts", "  📖 README.md", "▌  📁"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("explorer lacks %q", want)
 		}
@@ -408,16 +420,199 @@ func TestExplorer(t *testing.T) {
 	if a := find("main.ts"); a != (Action{Kind: ActOpenFile, Path: "src/main.ts"}) {
 		t.Errorf("file %+v", a)
 	}
-	if a := find("🔍"); a.Kind != ActView && a.Kind != ActSearch {
-		t.Errorf("search %+v", a)
-	}
-	if a := find("📄"); a.Kind != ActGoto {
-		t.Errorf("go to file %+v", a)
-	}
 	// Scrolling keeps the title and moves the list.
 	m.Scroll = 2
 	if text := screenText(Render(m, 41, 3, NoItem)); !strings.Contains(text, "EXPLORER") || !strings.Contains(text, "auth") || strings.Contains(text, "docs") {
 		t.Errorf("scrolled:\n%s", text)
+	}
+}
+
+// TestExplorerTitle (T68.2): the explorer's title has VS Code's buttons
+// (New File…, New Folder…, Refresh, Collapse Folders) and ⋯ at every
+// width, the text cut first; Go to File and Search only where the title
+// keeps room, the VS Code buttons going into ⋯ from the right when narrow;
+// rows keep their width in both themes; a button's label takes the title's
+// place, the buttons where they were.
+func TestExplorerTitle(t *testing.T) {
+	i18n.SetLocale("en")
+	vscode := []Action{
+		{Kind: ActFileOp, Section: OpNewFile},
+		{Kind: ActFileOp, Section: OpNewFolder},
+		{Kind: ActRefresh},
+		{Kind: ActCollapse},
+	}
+	dots := Action{Kind: ActFileMenu, Section: MenuMore}
+	nav := []Action{{Kind: ActGoto}, {Kind: ActSearch}}
+	ops := []string{OpNewFile, OpNewFolder, OpRefresh, OpCollapse}
+	// The title's buttons right of the rail, and its text.
+	title := func(sc Screen) ([]Cell, string) {
+		l := sc.Lines[0]
+		var btns []Cell
+		text := ""
+		for _, c := range l.Cells {
+			switch {
+			case c.X < railW:
+			case c.Action.Kind == ActNone:
+				text = Plain(c.Text)
+			default:
+				btns = append(btns, c)
+			}
+		}
+		return btns, text
+	}
+	for _, theme := range []string{IconsEmoji, IconsNerd} {
+		m := model()
+		m.View, m.Icons, m.Project = ViewExplorer, theme, "sil-simulator"
+		m.Tree = []TreeRow{{Path: ".github", Name: ".github", Dir: true}, {Path: ".env", Name: ".env"}}
+		navFrom := map[string]int{IconsEmoji: 51, IconsNerd: 46}[theme]
+		for w := config.MinSidebarWidth; w <= config.MaxSidebarWidth; w++ {
+			sc := Render(m, w, 6, NoItem)
+			for _, l := range sc.Lines {
+				if n := DisplayWidth(Plain(l.Text)); n != w {
+					t.Errorf("%s %d: %d columns: %q", theme, w, n, Plain(l.Text))
+				}
+			}
+			btns, text := title(sc)
+			_, more := explorerButtons(m.icons(), w-railW)
+			var got []Action
+			for _, c := range btns {
+				got = append(got, c.Action)
+				if c.W < 3 || c.Tip == "" {
+					t.Errorf("%s %d: button %q is %d columns, label %q", theme, w, Plain(c.Text), c.W, c.Tip)
+				}
+			}
+			shown := len(vscode) - len(more)
+			want := append(append([]Action{}, vscode[:shown]...), dots)
+			if w >= navFrom {
+				want = append(append([]Action{}, nav...), want...)
+			}
+			if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(more, ops[shown:]) && len(more) > 0 {
+				t.Errorf("%s %d: buttons %v, in ⋯ %v", theme, w, got, more)
+			}
+			if ic := m.icons(); shown < len(vscode) {
+				next := []string{ic.NewFile, ic.NewFolder, ic.Refresh, ic.Collapse}[shown]
+				if DisplayWidth(text)-(DisplayWidth(next)+2) >= titleMin {
+					t.Errorf("%s %d: %q in ⋯ beside a %d-column title", theme, w, next, DisplayWidth(text))
+				}
+			}
+			if w == 43 && (shown != 4 || !strings.HasPrefix(text, " EXPLORER · sil")) {
+				t.Errorf("%s at the default width: %q, %d of VS Code's buttons", theme, text, shown)
+			}
+		}
+		// The label of a button in the title's place; the buttons stay.
+		before, _ := title(Render(m, 43, 6, NoItem))
+		m.Tip = "New Folder…"
+		sc := Render(m, 43, 6, NoItem)
+		after, text := title(sc)
+		if text != " New Folder…"+strings.Repeat(" ", DisplayWidth(text)-12) || strings.Contains(Plain(sc.Lines[0].Text), "EXPLORER") {
+			t.Errorf("%s: the label in the title: %q", theme, text)
+		}
+		if !reflect.DeepEqual(before, after) {
+			t.Errorf("%s: the label moved the buttons", theme)
+		}
+	}
+	// The editor's icons: new-file, new-folder, refresh, collapse-all, ellipsis.
+	m := model()
+	m.View, m.Icons = ViewExplorer, IconsNerd
+	line := Plain(Render(m, 43, 6, NoItem).Lines[0].Text)
+	if !strings.HasSuffix(line, " \uea7f  \uea80  \ueb37  \ueac5  \uea7c ") {
+		t.Errorf("nerd title %q", line)
+	}
+}
+
+// TestExplorerTitleLabel (T68.2): the sidebar shows the label of the title
+// button under the pointer, or of the one the keyboard selected, in the
+// title, as the editor's tooltip; elsewhere the title is the title. A
+// click hides the label until the pointer leaves the button.
+func TestExplorerTitleLabel(t *testing.T) {
+	i18n.SetLocale("en")
+	m := model()
+	m.View = ViewExplorer
+	m.Tree = []TreeRow{{Path: "src", Name: "src", Dir: true}}
+	var out strings.Builder
+	s := &sidebar{o: Options{Out: &out}, model: m, win: Window{Width: 43, Height: 8}, sel: NoItem, noTip: NoItem, clicks: make(chan Action, 4)}
+	s.draw()
+	at := func(kind ActionKind) (Item, int) {
+		for j, c := range s.screen.Lines[0].Cells {
+			if c.Action.Kind == kind {
+				return Item{Row: 0, Cell: j}, c.X + 2
+			}
+		}
+		t.Fatalf("no %v button", kind)
+		return NoItem, 0
+	}
+	head := func() string { return Plain(s.screen.Lines[0].Text) }
+	_, x := at(ActCollapse)
+	s.hover(x, 1)
+	if !strings.Contains(head(), " Collapse Fold") || strings.Contains(head(), "EXPLORER") || !strings.Contains(s.screen.Lines[0].Text, hoverBg) {
+		t.Errorf("pointer on Collapse: %q", head())
+	}
+	s.hover(10, 3) // on the tree
+	if !strings.Contains(head(), "EXPLORER") {
+		t.Errorf("pointer off the title: %q", head())
+	}
+	s.hover(x, 1)
+	s.handle(context.Background(), Event{Kind: EvClick, X: x, Y: 1})
+	s.draw()
+	if !strings.Contains(head(), "EXPLORER") {
+		t.Errorf("clicked, the label stays: %q", head())
+	}
+	if a := <-s.clicks; a.Kind != ActCollapse {
+		t.Errorf("the click ran %+v", a)
+	}
+	s.hover(10, 3)
+	s.hover(x, 1)
+	if !strings.Contains(head(), " Collapse Fold") {
+		t.Errorf("back on Collapse after a click: %q", head())
+	}
+	s.hover(0, 0)
+	s.sel, _ = at(ActFileMenu)
+	s.draw()
+	if !strings.Contains(head(), " More Actions…") {
+		t.Errorf("⋯ selected: %q", head())
+	}
+}
+
+// TestExplorerTitleActions (T68.2): New File… and New Folder… run the root
+// menu's operation in the selected folder (a selected file's folder), else
+// in the project's, with no path in their command; Collapse Folders closes
+// every folder and scrolls up; Refresh reads the git status anew.
+func TestExplorerTitleActions(t *testing.T) {
+	ctx := context.Background()
+	r := &cmdRunner{}
+	reads := 0
+	src := &Source{
+		Now:      time.Now,
+		Expanded: map[string]bool{"src": true, "src/auth": true},
+		Git:      func(context.Context, string) gitinfo.Info { reads++; return gitinfo.Info{} },
+	}
+	s := &sidebar{
+		t: &tmux.Client{Bin: "tmux", Runner: r}, o: Options{Source: src, Self: "true"}, sel: NoItem, win: Window{Client: "/dev/pts/3"},
+		model: Model{CWD: "/home/test/p", Target: "%1", Tree: []TreeRow{
+			{Path: "src", Name: "src", Dir: true, Open: true}, {Path: "src/a.go", Name: "a.go", Depth: 1}, {Path: "README.md", Name: "README.md"},
+		}},
+	}
+	for sel, want := range map[string]string{
+		"": "/home/test/p", "src": "/home/test/p/src", "src/a.go": "/home/test/p/src", "README.md": "/home/test/p",
+		"src/gone.go": "/home/test/p", // not in the tree
+	} {
+		s.selected, r.calls = sel, nil
+		s.do(ctx, Action{Kind: ActFileOp, Section: OpNewFolder})
+		if got := strings.Join(r.calls, "\n"); !strings.Contains(got, "set-option -g @imux_file "+want+" ;") || !strings.Contains(got, "set-option -g @imux_file_root /home/test/p") {
+			t.Errorf("selected %q: %s", sel, got)
+		}
+	}
+	s.scroll, s.model.Scroll = 7, 7
+	s.do(ctx, Action{Kind: ActCollapse})
+	if len(src.Expanded) != 0 || s.scroll != 0 || s.model.Scroll != 0 {
+		t.Errorf("collapsed: %v, scroll %d", src.Expanded, s.scroll)
+	}
+	src.gitInfoTTL(ctx, "/home/test/p", time.Hour)
+	src.gitInfoTTL(ctx, "/home/test/p", time.Hour)
+	s.do(ctx, Action{Kind: ActRefresh})
+	src.gitInfoTTL(ctx, "/home/test/p", time.Hour)
+	if reads != 2 {
+		t.Errorf("git read %d times, want 2 (once more after Refresh)", reads)
 	}
 }
 
@@ -588,6 +783,12 @@ func TestClickAtOnce(t *testing.T) {
 		{Action{Kind: ActNewAgent}, menus},
 		{Action{Kind: ActSettings}, menus},
 		{Action{Kind: ActRename}, true}, // the command prompt
+		// The explorer's title (D63): New File… asks on the command
+		// prompt; Collapse acts at once; ⋯ is a menu.
+		{Action{Kind: ActFileOp, Section: OpNewFile}, true},
+		{Action{Kind: ActCollapse}, false},
+		{Action{Kind: ActRefresh}, false},
+		{Action{Kind: ActFileMenu, Section: MenuMore}, menus},
 	} {
 		s.screen = Screen{Lines: []Line{{Text: "row", Action: c.a}}}
 		s.lastClick = time.Time{}
@@ -1254,6 +1455,36 @@ func TestFileMenus(t *testing.T) {
 	items := FileMenuItems("/bin/imux", "", "", st)
 	if got := names(items); got != "New File…|New Folder…|-|Find in Folder…|-|Paste|-|Copy Path|-|Collapse Folders" {
 		t.Errorf("root menu %s", got)
+	}
+	// The title's ⋯ (D63): Go to File, Search and the hidden files' switch,
+	// ✓ while they show; the buttons that did not fit come first.
+	ops := func(items []string) string {
+		var out []string
+		for i := 2; i < len(items); i += 3 {
+			if items[i-2] == "" {
+				i -= 2
+				continue
+			}
+			_, op, _ := strings.Cut(items[i], "__file ")
+			out = append(out, strings.Fields(op)[0])
+		}
+		return strings.Join(out, " ")
+	}
+	st = MenuState{Kind: MenuMore, Path: "/home/u/p", Agent: true, Clip: true}
+	items = FileMenuItems("/bin/imux", "/dev/ttys1", "%3", st)
+	if got, op := names(items), ops(items); got != "Go to File…|Search…|-|  Show Hidden Files" || op != "goto search show-hidden" {
+		t.Errorf("⋯ menu %s (%s)", got, op)
+	}
+	st.Hidden, st.More = true, []string{OpRefresh, OpCollapse}
+	items = FileMenuItems("/bin/imux", "/dev/ttys1", "%3", st)
+	if got, op := names(items), ops(items); got != "Refresh Explorer|Collapse Folders|-|Go to File…|Search…|-|✓ Show Hidden Files" ||
+		op != "refresh collapse goto search hide-hidden" {
+		t.Errorf("⋯ menu, narrow, hidden files shown: %s (%s)", got, op)
+	}
+	for _, it := range items {
+		if strings.Contains(it, "__file") && !strings.Contains(it, "--client /dev/ttys1 --pane %3") {
+			t.Errorf("⋯ command without its client and pane: %s", it)
+		}
 	}
 	// A click on an HTML file asks how to open it (D51).
 	html := HTMLMenuItems("/bin/imux", "/dev/ttys1", "%3")
