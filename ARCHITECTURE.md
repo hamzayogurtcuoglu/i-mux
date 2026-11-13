@@ -141,6 +141,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D61 | **A Scheduler view runs the project's own agents and skills, now or on a schedule** (added 2026-11-12, v0.51, at the user's request): a rail tab lists the project's agent definitions (`.claude/agents`, `.github/agents`, `.opencode/agent`, `.agents/agents`, and the personal ones in `~/.claude/agents` and `~/.copilot/agents`) and its skills; 🚀 opens one Run panel where the installed CLI, the model, the time (now, a preset, or one typed) and the access are chosen already, and Enter runs it. i-mux runs it headless with the CLI's own flags (`claude -p --agent`, `copilot -p --agent`, `agy -p`, `codex exec`, `opencode run`), streaming where the CLI can, in the project, while i-mux is open (the watcher); a run's output opens live (each tool call, the answer; `s` stops it); the view shows each one's last report, state and next run, and notifies when a run has news or fails. i-mux does not write agents. | The user wanted scheduled and batch agents without filling forms or writing prompts: the agent or skill already written says what to do, so the user only confirms when, which CLI and which model, in one place. A run that only printed at its end looked like it had not worked, hence the live output. The agent CLIs already run headless (✨ commit messages, D29), and the watcher already lives exactly as long as i-mux. |
 | D62 | **The rail tab is named Jobs, and the separate Skills tab on the rail is gone** (added 2026-11-12, v0.52, at the user's request; refines D32 and D61): the ⏰ view on the activity rail is called **Jobs** (`İşler` in Turkish; title `JOBS` / `İŞLER`, key `5`), and the separate **🧩 Skills** icon on the rail is removed because Jobs already lists and triggers the project's skills alongside its agents. | "Schedule" sounded like a calendar timer only, while the view also triggers agents and skills on demand and runs them headless in batch mode. With skills already listed inside Jobs, a separate Skills tab on the rail duplicated them. |
 | D63 | **The explorer's title has VS Code's buttons, and its ⋯ shows hidden files** (added 2026-11-13, v0.53, at the user's request): New File…, New Folder…, Refresh Explorer and Collapse Folders are buttons in the Files view's title, as in VS Code's explorer, with ⋯ (More Actions) after them; its menu holds Go to File… and **Show Hidden Files** (✓ while on; `[explorer] show_hidden`, off by default). The button under the pointer shows its label in the title. Go to File keeps its button only where the title has room; Search has none there (v0.53.1: the rail's 🔍 opens it). With hidden files shown, names starting with a dot (`.github`, `.gitlab-ci.yml`, `.vscode`, `.env`) show in the explorer, and search and Go to File look into hidden folders outside git repositories too; `.git`, `.svn`, `.hg`, `CVS`, `.DS_Store`, `Thumbs.db` and the explorer's skip list (`node_modules` …) never show. | The user wanted his projects' dot files in the explorer, and VS Code's title actions. Hidden stays the default, so a tree keeps its look until asked, and with the setting off nothing changes: search and Go to File keep finding what they found before (git's list has the dot files it tracks, such as `.github/…`). Six buttons and a title do not fit the default 43 columns everywhere, so VS Code's four and ⋯ come first and Go to File goes into ⋯ when there is no room, as VS Code's toolbars overflow; the rail already has Search, so the title does not repeat it (the user's request). The setting is saved as Settings saves its rows, so it survives restarts and every sidebar follows at once. |
+| D64 | **The diff viewer marks the changes beside its scroll bar, as VS Code's diff editor does** (added 2026-11-13, v0.54, at the user's request): two lanes left of the pager's scroll bar map the whole file, red where lines were removed and green where lines were added (a line replaced has both); a click on a mark goes to that change, `]` and `[` go to the next and previous one, around the ends, and the bottom row says which ("change 2 of 5"). The whole file stays, as before (D26). | The user had to scroll through a whole file to find its changes; VS Code's diff editor shows where they are beside the scroll bar and goes there on a click. Two lanes, as VS Code's diff overview ruler has, say removed and added apart without a third color, and side by side a replaced line shows in both. |
 
 ## 4. Components
 
@@ -1365,7 +1366,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   (`imux __diff`): `git diff -U<all> HEAD` of the file (an untracked file is all added) drawn with
   line numbers, removed lines on a red background and added ones on green; side by side when the
   popup is at least 120 columns wide, otherwise one column; the pager (D42) starts at the first
-  change, the file's name and +/− counts stay on top.
+  change, the file's name and +/− counts stay on top; beside the scroll bar, the changes' marks
+  (v0.54, D64, "Scroll bars").
 
 #### Sidebar v7: bigger rail, source control, editing (v0.16)
 
@@ -1789,6 +1791,15 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   sideways (long lines are cut, not wrapped); `/` searches (plain text, the line's colors kept
   around the match), n N the next and previous match, around the ends; `v` edits the file
   (the file viewer); q Esc close. Tabs are every fourth column.
+- **The diff's changes beside the bar** (v0.54, D64), as VS Code's diff overview ruler:
+  `pager.Marks` gives each line its mark (removed, added, both); two columns left of the bar map
+  the whole text, row r of them lines r·total/view up to (r+1)·total/view: `▐` in red where one of
+  those lines was removed, `▌` in green where one was added, so a replaced line shows both, side
+  by side. A click on a row with a mark goes to the first change in it (the start of its run of
+  marked lines, three lines above it shown, as the diff opens); on a row without one, as on the
+  bar. `]` and `[` go to the next and previous change, around the ends, with "change 2 of 5" on
+  the bottom row, whose hint says so. Only with a bar (the text longer than the screen); the diff
+  is drawn two columns narrower for them. Other pagers have no marks.
 - **Search, drawn:** the title with the search icon and a **⊟ Collapse all** / **⊞ Expand all**
   button; `❯ query` and the count; a file row is its fold arrow, its icon (the explorer's, D35),
   its name in bold, its folder dimmed and the number of matches in a grey pill; a match row is
