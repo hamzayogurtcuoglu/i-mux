@@ -215,3 +215,16 @@ bin = "/usr/local/bin/gemini"
 		}
 	}
 }
+
+// A config from a version with the ✨ commit messages (the Settings menu
+// wrote their agent) loads with no warning: every imux command would print
+// it (T70.3).
+func TestRemovedKeysQuiet(t *testing.T) {
+	_, warns, err := Parse([]byte("[git]\ncommit_agent = \"claude\"\ncommit_model = \"haiku\"\n"))
+	if err != nil || len(warns) != 0 {
+		t.Fatalf("err %v, warnings %q", err, warns)
+	}
+	if _, warns, _ := Parse([]byte("[git]\ncommit_agnet = \"claude\"\n")); len(warns) != 1 {
+		t.Fatalf("a mistyped key: warnings %q", warns)
+	}
+}
