@@ -106,7 +106,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D26 | **The sidebar gets an activity bar like an editor's** (added 2026-11-08, v0.15, at the user's request): a 3-column rail of view icons (Agents, Explorer, Search, Source Control; Limits and Help at the bottom). Explorer is the project's file tree; Search and diffs open in wide popups; a diff shows the whole file with the changes highlighted, side by side when wide. | The user wanted the editor's way of looking at a project (files, search, changes) next to the agents, without leaving the terminal. A narrow sidebar is enough to choose; reading happens in popups that use the whole window. |
 | D27 | **The sidebar's source control works like an editor's** (added 2026-11-08, v0.16): staged and unstaged changes, per-file stage / unstage / discard, stage / unstage / discard all, commit (a prompt; with nothing staged it stages everything first), push / pull / sync with ahead and behind counts, branch checkout and creation, and the recent history. Git runs in the project folder; discards ask first; network commands run in a popup so their output and any password prompt show. Files open in an editor (micro, $VISUAL/$EDITOR, nano, vim with the mouse on) or VS Code. | The user asked for the editor's source control "with every feature", and to edit files, not only read them. imux stays a thin layer over git and the user's editor: no git library, no editor of its own. |
 | D28 | **OpenCode is the fifth agent** (added 2026-11-08, v0.18, at the user's request; taken out in v0.19, back in v0.20: its `/connect` adds an NVIDIA or Groq key without an account): an open-source coding CLI that works with any model endpoint (OpenAI-compatible APIs, Anthropic, Ollama, NVIDIA's and Groq's free tiers ...). imux supports it like the others: launch with a session id imux chooses, native resume, sessions read for handoffs, the picker and limits. | The user wants to code with free or self-hosted endpoints too. Writing an agent of our own would be a separate project (§17 Q32); OpenCode already does it well, so the cheap path is to support it. |
-| D29 | **Commit messages are written by the user's own agents, run once without a UI** (added 2026-11-08, v0.23, at the user's request): the ✨ button in Source Control sends the changes to the agent of the pane the sidebar follows (or `git.commit_agent`) in its print mode and offers the reply; it never commits by itself. | Like the editor's "generate commit message", without an API or key of imux's own: the user's plans and keys (Claude, Codex, Copilot, Antigravity, or OpenCode with a free NVIDIA / Groq key) already pay for it. |
+| D29 | **Commit messages are written by the user's own agents, run once without a UI** (added 2026-11-08, v0.23, at the user's request): the ✨ button in Source Control sends the changes to the agent of the pane the sidebar follows (or `git.commit_agent`) in its print mode and offers the reply; it never commits by itself. **Removed in v0.55 (D65).** | Like the editor's "generate commit message", without an API or key of imux's own: the user's plans and keys (Claude, Codex, Copilot, Antigravity, or OpenCode with a free NVIDIA / Groq key) already pay for it. |
 | D31 | **The sidebar draws backgrounds for hover and selection, and asks for every mouse motion** (added 2026-11-08, v0.30, at the user's request): a row or button under the pointer gets a background, the selected explorer row another; explorer menus follow the editor's. | The user could not tell which row the pointer or a menu was on. The "foreground colors only" rule (any theme keeps its background) gives way where the editor itself uses backgrounds; the sidebar's text colors already assume a dark theme. Motion reports cost a redraw only when the item under the pointer changes. |
 | D30 | **AI completion in the editor is Neovim with GitHub's copilot.vim, in a profile i-mux manages** (added 2026-11-08, v0.25, at the user's request): when Settings turns it on, file edits open `nvim` with `NVIM_APPNAME=imux-nvim`; i-mux writes that profile's `init.lua` (mouse, Ctrl+S / Ctrl+Q, Tab accepts) and keeps copilot.vim in it. | Inline suggestions are an editor feature, and i-mux edits in an external terminal editor. Neovim with the official plugin gives the editor's Copilot suggestions with the user's Copilot plan; micro has no such plugin; our own editor would be a project of its own. A separate profile leaves the user's own Neovim setup untouched. |
 | D32 | **Project skills live in `.agents/skills/`, are linked into `.claude/skills/` for Claude Code, and are written by the active agent** (added 2026-11-09, v0.36, at the user's request): a **🧩 Skills** view on the activity rail lists the project's `<name>/SKILL.md` skills across every CLI's folder, shows which of the five agents see each one (`✻▲◉◎▣`) and any front-matter problem (`⚠`), links `.agents/skills/` into `.claude/skills/` so one skill works in all five CLIs, and has **✨ Write with Agent…** to send a structured skill-authoring prompt to the active agent pane (since v0.37, D33: one **✨ New skill…** button and dialog). | Antigravity, Codex, Copilot CLI and OpenCode read `.agents/skills/`, while Claude Code, Copilot CLI and OpenCode read `.claude/skills/`: keeping the canonical folder in `.agents/skills/` with a relative symlink in `.claude/skills/` covers all five CLIs without copies drifting apart. Letting the active agent write or improve a skill uses its full repo access and requires no separate LLM client. |
@@ -142,6 +142,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D62 | **The rail tab is named Jobs, and the separate Skills tab on the rail is gone** (added 2026-11-12, v0.52, at the user's request; refines D32 and D61): the ⏰ view on the activity rail is called **Jobs** (`İşler` in Turkish; title `JOBS` / `İŞLER`, key `5`), and the separate **🧩 Skills** icon on the rail is removed because Jobs already lists and triggers the project's skills alongside its agents. | "Schedule" sounded like a calendar timer only, while the view also triggers agents and skills on demand and runs them headless in batch mode. With skills already listed inside Jobs, a separate Skills tab on the rail duplicated them. |
 | D63 | **The explorer's title has VS Code's buttons, and its ⋯ shows hidden files** (added 2026-11-13, v0.53, at the user's request): New File…, New Folder…, Refresh Explorer and Collapse Folders are buttons in the Files view's title, as in VS Code's explorer, with ⋯ (More Actions) after them; its menu holds Go to File… and **Show Hidden Files** (✓ while on; `[explorer] show_hidden`, off by default). The button under the pointer shows its label in the title. Go to File keeps its button only where the title has room; Search has none there (v0.53.1: the rail's 🔍 opens it). With hidden files shown, names starting with a dot (`.github`, `.gitlab-ci.yml`, `.vscode`, `.env`) show in the explorer, and search and Go to File look into hidden folders outside git repositories too; `.git`, `.svn`, `.hg`, `CVS`, `.DS_Store`, `Thumbs.db` and the explorer's skip list (`node_modules` …) never show. | The user wanted his projects' dot files in the explorer, and VS Code's title actions. Hidden stays the default, so a tree keeps its look until asked, and with the setting off nothing changes: search and Go to File keep finding what they found before (git's list has the dot files it tracks, such as `.github/…`). Six buttons and a title do not fit the default 43 columns everywhere, so VS Code's four and ⋯ come first and Go to File goes into ⋯ when there is no room, as VS Code's toolbars overflow; the rail already has Search, so the title does not repeat it (the user's request). The setting is saved as Settings saves its rows, so it survives restarts and every sidebar follows at once. |
 | D64 | **The diff viewer marks the changes beside its scroll bar, as VS Code's diff editor does** (added 2026-11-13, v0.54, at the user's request): two lanes left of the pager's scroll bar map the whole file, red where lines were removed and green where lines were added (a line replaced has both); a click on a mark goes to that change, `]` and `[` go to the next and previous one, around the ends, and the bottom row says which ("change 2 of 5"). The whole file stays, as before (D26). | The user had to scroll through a whole file to find its changes; VS Code's diff editor shows where they are beside the scroll bar and goes there on a click. Two lanes, as VS Code's diff overview ruler has, say removed and added apart without a third color, and side by side a replaced line shows in both. |
+| D65 | **The commit message is typed in a box above Commit, as in VS Code; the ✨ agent-written messages are gone** (added 2026-11-13, v0.55, at the user's request; undoes D29): the Git view has VS Code's message box between the branch row and the Commit button. A click (or Enter on it) puts the cursor in it; what is typed is the message (it wraps and grows to six rows); Enter commits, Ctrl+J or Alt+Enter starts a new line, Esc leaves it. Commit and the commit items of ▾ and ⋯ take its message; with none, the box asks for one (its hint names the command) instead of the command prompt. While it is written the message is kept per project in `~/.imux/commit/`, so every sidebar of the project shows it and a restart keeps it; a commit made with it removes it. ✨, `[git] commit_agent` and `commit_model` (ignored when an old config still has them), the Settings row "Commit messages by" and `internal/commitmsg` are removed. | The user found the prompt at the bottom of the screen awkward and asked for VS Code's box, where the message is written in place, and asked to remove the AI commit messages. A file, not a tmux option, holds the message: it reaches `imux __git commit` without going through a command line (D58), outlives the sidebar's restart on an upgrade, and is shared by a project's sidebars as VS Code shares a repository's input. |
 
 ## 4. Components
 
@@ -1486,7 +1487,6 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
  Editor: micro                    e        ● Auto        1
  Notifications: On                n          Nerd Font   2
  Icons: Auto                      i   →      Emoji       3
- Commit messages by: Auto         m
  After a handoff the new agent: … w
  When an agent hits its limit: …  l
  ──────────────
@@ -1499,8 +1499,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   changes `~/.imux/config.toml` (written from the commented default when missing; only that
   key's line changes, comments stay) and opens Settings again. Rows: Editor, Notifications
   (On / Off), Notification sound, Paste images with Ctrl+V, Icons (Auto / Nerd Font / Emoji),
-  Commit messages by (Auto / the installed agents), After a handoff the new agent (waits for you
-  / continues at once), When an agent hits its limit (ask me / switch on its own / do nothing).
+  After a handoff the new agent (waits for you / continues at once), When an agent hits its limit
+  (ask me / switch on its own / do nothing). (Commit messages by, v0.23 to v0.54, went with ✨,
+  D65.)
   The values have keys 1, 2, 3…; `imux __settings menu <row>` opens one.
 - **Editor:** **Auto** (`editor = ""`: micro, `$VISUAL`, `$EDITOR`, nano; the row says which),
   **micro** (got first when missing: `imux editor use micro` in a popup, D45), **nano**,
@@ -1850,7 +1851,7 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   (the longest row, the items and the title; tmux keeps it on the screen). On tmux 3.3 and 3.4
   the chain starts with `display-message -d 1 -c <client> ''`: a status-line message freezes the
   client's terminal, and those versions then draw none of a popup's output until it goes (one
-  shown with `-d 0`, such as "✨ Writing a commit message…", stays until a key). tmux 3.2 draws a
+  shown with `-d 0` stays until a key). tmux 3.2 draws a
   popup through the freeze, and needs it there.
 - **The popup:** the title (bold) and ✕ on the first row, then the items: the name, its key on
   the right (dim), disabled items dim, separators as a line. The item under the pointer is
@@ -2133,50 +2134,6 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   `sound`; default on). The e2e tests turn them off unless a test turns them on with a
   `command` that logs.
 
-#### Commit message suggestions (v0.23, D29)
-
-```
- ✅ Commit…                      ✨        ✨ → "Writing a commit message with Claude Code…"
-                                             → menu:  feat: add OpenCode round-trip tests
-                                                      Commit                       c
-                                                      Edit before committing…      e
-                                                      Write another                r
-                                                      Cancel                       q
-```
-
-- **Button:** ✨ right of Commit… (codicon sparkle U+EC10; emoji ✨). It runs `imux __git suggest
-  --cwd D --client C --pane P` in the background.
-- **Agent:** `git.commit_agent = "auto"` (default) takes the agent of the pane the sidebar follows,
-  else the first installed in `order`; or one agent by name. `git.commit_model` (default "")
-  passes a model when `commit_agent` names an agent (`haiku` for Claude,
-  `groq/llama-3.3-70b-versatile` for OpenCode ...).
-- **Changes sent:** the staged changes (`git diff --cached --stat` and the patch); with nothing
-  staged, what Commit would commit: the work tree (`git diff`) plus untracked files (names, and
-  text under 8 KB). The patch is cut at 48 KB, secrets are redacted (§8.5), and the last 10
-  commit subjects show the style.
-- **Prompt:** one line, at most 72 characters, imperative, in the style of the recent subjects
-  (a `feat:` / `fix:` prefix when they use one), the message only.
-- **Runs** in an empty temporary folder (the agent cannot touch the project; its session does not
-  join the project's history) with the agent's resolved PATH, at most 120 s:
-  - Claude: `claude -p --no-session-persistence --tools "" [--model M] <instructions>`, changes on
-    stdin;
-  - Codex: `codex exec --skip-git-repo-check --sandbox read-only --color never
-    --output-last-message F [-m M] -`, prompt on stdin;
-  - Copilot: `copilot -p <prompt> -s --no-color [--model M]` (one premium request);
-  - Antigravity: `agy -p <prompt> [--model M]`;
-  - OpenCode: `opencode run --archived --title "imux commit message" [-m M] <prompt>` (the reply on
-    stdout; `--archived` keeps it out of its session list).
-- **Reply:** ANSI and code fences stripped; the first line that is not a lead-in ("Here is ...:")
-  without quotes or backticks, at most 200 characters.
-- **Offer:** the message goes to `@imux_git` and a menu shows it: Commit (`__git commit
-  --from-option`), Edit before committing… (the editor in a popup on a file holding it; lines
-  starting with `#` are dropped; empty cancels), Write another, Cancel. Never committed without
-  the user's key press.
-- **First use:** a menu asks once whether the changes may be sent to that agent ("Yes, do not ask
-  again" stores the notice `commit_suggest_ok`).
-- **Feedback:** "Writing a commit message with X…" until the menu opens; a failure shows the
-  agent's last error line; no changes: "Nothing to commit".
-
 #### Agent bar
 
 Each region is marked with `#[range=user|imux:<x>]`. A left click fires `MouseDown1Status`, and
@@ -2269,7 +2226,8 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
 ```
  SOURCE CONTROL                 ⟳ ⋯
  ⎇ main ▾  ↑1 ↓0             ⏬ ⏫ 🔃
- [        ✓ Commit…        ] ▾ ✨
+ ░ Message (Enter to commit on… ░
+ [        ✓ Commit         ]  ▾
  ▾ MERGE CHANGES  1               +
    !  api.go  internal
  ▾ STAGED CHANGES  1              −
@@ -2317,19 +2275,18 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
   branch from…, Checkout detached…, then the branches, the remote branches (a local branch
   tracking it is made, or switched to) and the tags (detached). What was typed is the new
   branch's name to start from.
-- **Asking:** names and messages on the command prompt (`@imux_git`, as Commit…), the amend's
-  pre-filled with the last subject (left as it is: the whole message is kept); what cannot be
-  undone asks in a menu first.
+- **Asking:** names on the command prompt (`@imux_git`); the commit message in the box above
+  Commit (v0.55, D65; "The commit message box"); what cannot be undone asks in a menu first.
 - **Where git runs:** local actions at once, with a message; network ones (pull, push, fetch,
   sync, publish, clone, deleting a remote branch or tag) and the ones that may stop on a conflict
   (merge, rebase, pull (rebase), cherry-pick, revert, continue) in a popup showing git's output
   (with `--progress`, as it goes to a pipe too), ending on "press Enter". Every command i-mux runs
   from the view, with its exit and what git said (a progress line as it ended), goes to
   `~/.imux/git.log` (the last 256 KB); Show Git Output pages it.
-- **Commit button:** "✓ Commit…"; while a merge is under way "✓ Commit Merge" (`git commit
-  --no-edit`); during a rebase, cherry-pick or revert "✓ Continue" (`--continue`,
-  `GIT_EDITOR=true`, in a popup). ▾ next to it: Commit, Commit (Amend), Commit & Push, Commit &
-  Sync (the commit, then the push or sync popup).
+- **Commit button:** "✓ Commit" commits the box's message; while a merge is under way "✓ Commit
+  Merge" (the box's message, else `git commit --no-edit`); during a rebase, cherry-pick or revert
+  "✓ Continue" (`--continue`, `GIT_EDITOR=true`, in a popup). ▾ next to it: Commit, Commit
+  (Amend), Commit & Push, Commit & Sync (the commit, then the push or sync popup).
 - **Branch row:** a click opens Checkout to…; with no upstream ☁ Publish takes Sync's place.
 - **Sections:** MERGE CHANGES (conflicted files; + stages them: resolved), STAGED CHANGES,
   CHANGES. Letters as VS Code's: U untracked (green), ! conflict (red), M, A, D, R. Files list as a
@@ -2352,6 +2309,44 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
 - Menu commands carry no repository data: the folder is in `@imux_scm_cwd` (set by the sidebar
   as it opens a menu), a file in `@imux_file`, a commit in `@imux_scm_commit` (a hash); Quick Pick
   items are argv. A branch named `$(…)` or `#H` stays a name.
+
+#### The commit message box (v0.55, D65)
+
+```
+ SOURCE CONTROL                 ⟳ ⋯
+ ⎇ main ▾  ↑1 ↓0             ⏬ ⏫ 🔃
+▎ fix: keep the sidebar's width    ░     ← the box (VS Code's input): lighter, with ▎
+▎ when a client attaches█          ░       before it, while it takes the keys; it wraps
+ [        ✓ Commit         ]  ▾            and grows to six rows
+```
+
+- **Where:** between the branch row and the Commit button, the view's whole width; empty, it
+  shows VS Code's hint: "Message (Enter to commit on 'main')" (detached: "Message (Enter to
+  commit)").
+- **Typing:** a click puts the cursor where it was clicked (Enter on the box, with the keyboard
+  selection, at the end); the sidebar's pane takes the keys while the cursor is in it, and its
+  other keys (1–5, q, …) are typed. ← → Home End (Ctrl+A, Ctrl+E) move; ↑ ↓ go a line up or
+  down; Backspace, Delete, Ctrl+U (to the start of the line), Ctrl+W (the word before) delete; a
+  paste goes in as it is (the sidebar turns bracketed paste on). **Enter** does what the Commit
+  button does; **Ctrl+J** or **Alt+Enter** starts a new line (a body under the subject); **Esc**
+  or Tab leaves the box, the message kept, and so does a click elsewhere. The pane losing focus
+  (focus events, `focus-events on`) hides the cursor until it is back.
+- **Committing:** Commit, Enter, and every commit item of ▾ and of ⋯ › Commit run `imux __scm
+  ask <commit…>`. With a message in the box it commits at once with it (`imux __git commit
+  --draft`, the same mode, amend, sign-off, push or sync as before); the amend items with an
+  empty box keep the last message (`--no-edit`). With none, the box asks for it: the cursor goes
+  in and its hint, in yellow, names the command ("Commit & Push: type its message, then Enter");
+  only without a sidebar to ask does the command prompt ask (as before). A commit leaves the box
+  empty; one that fails keeps the message.
+- **Kept while it is written:** `~/.imux/commit/<hash of the project folder>.txt` (0600), written
+  as it is typed: every sidebar of the project shows it (each reads it again as it redraws), a
+  sidebar's restart (an upgrade) keeps it, and `imux __git commit
+  --draft` reads it, so the message is never in a tmux or shell command line (D58). A commit
+  made with it deletes it (unless it was changed meanwhile). A menu reaches its sidebar through
+  the sidebar pane's option `@imux_commit_ask` (a fixed word: which commit), which the sidebar
+  reads at its next redraw.
+- **Code:** `internal/sidebar/commitbox.go` (the box: editing, wrapping, drawing, the file);
+  `internal/cli/commands_scm.go` (`ask` for the commit items); `__git commit --draft`.
 
 #### Scheduler / Jobs (v0.51, D61; named Jobs in v0.52, D62)
 
@@ -2445,7 +2440,7 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
   holds the lock: the watcher and the panel's start at once may both start one, and the second,
   which waited for the first's lock, is not due any more. A sidebar's `Running` check holds the
   lock for a moment, so a run tries it for 200 ms.
-- **The command line** (the headless flag first, as ✨ commit messages, D29):
+- **The command line** (the headless flag first):
   - Claude: `claude -p --output-format stream-json --verbose --session-id <uuid> [--agent <name>]
     [--model M] --dangerously-skip-permissions` (read only: `--permission-mode dontAsk`);
   - Copilot: `copilot -p <prompt> [--agent <name>] [--model M] --allow-all --output-format json
@@ -2875,6 +2870,7 @@ sequenceDiagram
 | `schedules.toml` (+ `schedules.lock`) | 0600 | the Scheduler view (flock + atomic rename); the user may edit it | what runs when: project, agent or skill, CLI, model, time, access (D61) |
 | `auto/<id>/` | 0700 | `imux __auto exec` | a schedule's runs: `runs.json` (the last 20, with their command line), `<start>.log` each (the CLI's output, line by line), `current.json` and `run.lock` while one runs |
 | `models.json` | 0600 | the Scheduler's Run panel | each agent CLI's models, for a day (D61) |
+| `commit/<hash>.txt` | 0600 | the Git view's commit message box (atomic rename) | a project's commit message while it is written; gone once committed (D65) |
 | tmux socket | tmux-managed | tmux | `$TMUX_TMPDIR/tmux-<uid>/imux` (dir 0700) |
 
 Read-only access (never written): `~/.claude/projects`, `~/.gemini/{projects.json,tmp}`,
