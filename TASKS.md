@@ -997,6 +997,38 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M68: The explorer's title like VS Code's, and hidden files (added 2026-11-13)
+
+User request (through the sil-simulator session): files starting with "." do not show in the
+explorer; add a "…" there with "Show Hidden Files", worded as it should be, and VS Code's title
+buttons (New File, New Folder, Refresh, Collapse Folders); keep the look.
+
+- [x] **T68.1 Hidden files** · S
+  - AC: D63, §9.3 "Explorer title and hidden files": `[explorer] show_hidden` (off by default):
+    off, names starting with "." stay out of the explorer as before; on, they show; search and Go
+    to File find what they found before (git's list), and look into hidden folders outside git
+    while it is on; `.git`, `.svn`, `.hg`, `CVS`, `.DS_Store`, `Thumbs.db` never, and the skip
+    list stays out of the tree; every sidebar lists its tree again at once; `docs/CONFIG.md`; unit
+    tests (the tree off and on, search's files in a repository and outside one).
+- [x] **T68.2 The title's buttons** · M
+  - AC: New File… and New Folder… (in the selected folder, else the project's), Refresh
+    Explorer (the git status read anew), Collapse Folders and ⋯, codicons with the editor's icons
+    and emoji otherwise; Go to File and Search as buttons only while the title has room, else in
+    ⋯; the hovered (or keyboard-selected) button's label in the title; a right-click on the title
+    opens the root menu; unit tests (layout and actions in both themes at every width, the label,
+    which clicks wait).
+- [x] **T68.3 The ⋯ menu** · S
+  - AC: Go to File…, Search…, the buttons that do not fit and Show Hidden Files with ✓ while on,
+    at the button; `imux __file` operations, no path in a command (D58), that save the setting as
+    Settings does; unit tests.
+- [x] **T68.4 End to end** · S
+  - AC: e2e: a dot file is absent at first; ⋯ → a click on Show Hidden Files shows it and `.git`
+    stays hidden; config.toml keeps it and a new tab's explorer shows it; off again hides it;
+    New Folder… makes a folder through its prompt; Refresh shows a file written outside i-mux;
+    Collapse Folders closes the open folders; ⋯ → Go to File… opens Go to File.
+- [x] **T68.5 Docs** · XS
+  - AC: README and README.tr; CHANGELOG.
+
 ## M67: Jobs on the rail, without a separate Skills tab (added 2026-11-12)
 
 User request: rename the Schedule tab to Jobs (since it also triggers skills and agents on demand

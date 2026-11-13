@@ -140,6 +140,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D60 | **No native Windows: the psmux port is removed** (added 2026-11-12, v0.50, at the user's request; undoes the port merged in #2, M62): i-mux runs on macOS and Linux, and on Windows in WSL. Gone: the psmux adapter and the `sysx`, `winx` and `pwshshim` packages, `install.ps1` and the PowerShell scripts, the Windows builds, release archives and CI jobs, `make test-windows`, the `key@windows` variants of messages, and `golang.org/x/sys` (D13 and D15 are as before the port). What came after the port stays, without its Windows parts: Source Control (D58) and `make ci` (D59). | The user decided i-mux need not run natively on Windows: WSL already runs it with tmux, while the port needed a psmux built from source (3.4.0 stops running i-mux's keys) and its own CI job and checks. Reverting the merge brings back the code the port had changed, as it was. |
 | D61 | **A Scheduler view runs the project's own agents and skills, now or on a schedule** (added 2026-11-12, v0.51, at the user's request): a rail tab lists the project's agent definitions (`.claude/agents`, `.github/agents`, `.opencode/agent`, `.agents/agents`, and the personal ones in `~/.claude/agents` and `~/.copilot/agents`) and its skills; 🚀 opens one Run panel where the installed CLI, the model, the time (now, a preset, or one typed) and the access are chosen already, and Enter runs it. i-mux runs it headless with the CLI's own flags (`claude -p --agent`, `copilot -p --agent`, `agy -p`, `codex exec`, `opencode run`), streaming where the CLI can, in the project, while i-mux is open (the watcher); a run's output opens live (each tool call, the answer; `s` stops it); the view shows each one's last report, state and next run, and notifies when a run has news or fails. i-mux does not write agents. | The user wanted scheduled and batch agents without filling forms or writing prompts: the agent or skill already written says what to do, so the user only confirms when, which CLI and which model, in one place. A run that only printed at its end looked like it had not worked, hence the live output. The agent CLIs already run headless (✨ commit messages, D29), and the watcher already lives exactly as long as i-mux. |
 | D62 | **The rail tab is named Jobs, and the separate Skills tab on the rail is gone** (added 2026-11-12, v0.52, at the user's request; refines D32 and D61): the ⏰ view on the activity rail is called **Jobs** (`İşler` in Turkish; title `JOBS` / `İŞLER`, key `5`), and the separate **🧩 Skills** icon on the rail is removed because Jobs already lists and triggers the project's skills alongside its agents. | "Schedule" sounded like a calendar timer only, while the view also triggers agents and skills on demand and runs them headless in batch mode. With skills already listed inside Jobs, a separate Skills tab on the rail duplicated them. |
+| D63 | **The explorer's title has VS Code's buttons, and its ⋯ shows hidden files** (added 2026-11-13, v0.53, at the user's request): New File…, New Folder…, Refresh Explorer and Collapse Folders are buttons in the Files view's title, as in VS Code's explorer, with ⋯ (More Actions) after them; its menu holds Go to File…, Search… and **Show Hidden Files** (✓ while on; `[explorer] show_hidden`, off by default). The button under the pointer shows its label in the title. Go to File and Search keep their buttons only where the title has room. With hidden files shown, names starting with a dot (`.github`, `.gitlab-ci.yml`, `.vscode`, `.env`) show in the explorer, and search and Go to File look into hidden folders outside git repositories too; `.git`, `.svn`, `.hg`, `CVS`, `.DS_Store`, `Thumbs.db` and the explorer's skip list (`node_modules` …) never show. | The user wanted his projects' dot files in the explorer, and VS Code's title actions. Hidden stays the default, so a tree keeps its look until asked, and with the setting off nothing changes: search and Go to File keep finding what they found before (git's list has the dot files it tracks, such as `.github/…`). Seven buttons and a title do not fit the default 43 columns, so VS Code's four and ⋯ come first and the rest go into ⋯, as VS Code's toolbars overflow. The setting is saved as Settings saves its rows, so it survives restarts and every sidebar follows at once. |
 
 ## 4. Components
 
@@ -1348,7 +1349,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Rail:** 3 columns; the active view is marked (`▌` and a background). The view of a sidebar is
   kept in the window option `@imux_view`. Default width 38 (rail 3 + 35).
 - **Explorer:** the target pane's project folder as a tree: folders first, then files, by name;
-  hidden entries and `.git`, `node_modules` and similar left out; folders open and close on click
+  hidden entries and `.git`, `node_modules` and similar left out (v0.53: ⋯ → Show Hidden Files
+  shows the hidden ones, D63); folders open and close on click
   (kept per sidebar); files changed in git are colored (modified yellow, added / untracked green,
   deleted red) and their folders too. A file opens in a popup viewer: `bat` when installed
   (`--style=numbers,changes`), else the file with line numbers, in i-mux's pager (D42). Long
@@ -1356,7 +1358,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Search** (`imux __search`, popup 90%): a query line; results as you type (150 ms), grouped by
   file with line numbers and the match highlighted; smart case (uppercase in the query makes it
   case-sensitive); files from `git ls-files` (tracked and untracked, not ignored) or a walk with
-  the explorer's skip list; text files under 2 MB; at most 2 000 matches. Enter opens the file
+  the explorer's skip list, its hidden folders only while Show Hidden Files is on (v0.53, D63);
+  text files under 2 MB; at most 2 000 matches. Enter opens the file
   at the line in the viewer. Drawn as in D42, "Scroll bars".
 - **Source Control:** every changed file with +/− lines; a click opens the diff viewer
   (`imux __diff`): `git diff -U<all> HEAD` of the file (an untracked file is all added) drawn with
@@ -1452,8 +1455,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   (unstage), discard U+EAE2, refresh U+EB37, arrow down / up U+EA9A / U+EAA1 (pull / push), sync
   U+EA77, check U+EAB2 (Commit), git branch U+E725, chevron down / right U+EAB4 / U+EAB6 (sections
   and folders), edit U+EA73 (Rename), history U+EA82 (History), search U+EA6D (the explorer's).
+  v0.53 (D63), the explorer's title: new-file U+EA7F, new-folder U+EA80, collapse-all U+EAC5.
 - `emoji`: ➕ ➖ ⏪ 🔄 ⏬ ⏫ 🔃 ✅ 🌿 📝 📜 🔍, which every font draws at full size (2 columns; the width
-  table counts these BMP emoji as wide); folds keep ▾ ▸.
+  table counts these BMP emoji as wide); folds keep ▾ ▸. The explorer's title (D63): 📝 New
+  File…, 📁 New Folder…, 🔄 Refresh, ⊟ Collapse Folders (the search popup's sign), ⋯.
 - The tab bar's × takes 3 columns (" × "), like its +.
 
 #### Pinned conversations (v0.24)
@@ -1662,6 +1667,62 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   - Every change redraws the sidebars and reveals the result: `@imux_reveal` (a counter and the
     path) makes each sidebar of that project open the folders above it and select it.
 
+#### Explorer title and hidden files (v0.53, D63)
+
+```
+ EXPLORER · sil… 📝  📁  🔄  ⊟  ⋯      New File…, New Folder…, Refresh, Collapse, ⋯
+ ▸ 📁 .github             ┌──── EXPLORER ────────┐
+ ▸ 📁 src                 │ Go to File…        p │
+   🔑 .env                │ Search…            / │
+   📖 README.md           │──────────────────────│
+                          │ ✓ Show Hidden Files h│
+                          └──────────────────────┘
+```
+
+- **The title:** the view's name and the project, then VS Code's title actions as buttons (§9.3
+  "Buttons"): **New File…**, **New Folder…**, **Refresh Explorer** and **Collapse Folders**, and
+  **⋯** (More Actions) at the right end. `nerd`: codicons new-file U+EA7F, new-folder U+EA80,
+  refresh U+EB37, collapse-all U+EAC5, ellipsis U+EA7C; `emoji`: 📝 📁 🔄 ⊟ ⋯. The text is cut
+  ("…") before a button goes. Go to File (📄, go-to-file U+EA94) and Search (🔍) come before
+  them only while the text keeps 16 columns (a sidebar of 46 columns with the editor's icons, 51
+  with emoji; the default is 43); otherwise they are in ⋯ only. In a narrower sidebar VS Code's
+  buttons go into ⋯ from the right, Collapse first, once the text would keep fewer than 6
+  columns; ⋯ always stays. A right-click anywhere on the title opens the root menu.
+- **Labels:** while the pointer is on a title button (or the keyboard selects it), its label
+  takes the place of the title's text, as VS Code shows a tooltip: New File…, New Folder…,
+  Refresh Explorer, Collapse Folders, More Actions…, Go to File…, Search…. A click hides it
+  until the pointer leaves the button, as a tooltip goes. The frame is drawn again only when
+  the item under the pointer changes (D31).
+- **New File… / New Folder…:** the root menu's operations (`imux __file new-file|new-folder`: the
+  command prompt, then the new entry revealed and selected, a new file opened in the editor), in
+  the selected folder (a selected file's folder) when the selected row is in the tree, else in the
+  project folder, as VS Code does. `@imux_file` holds that folder; no path goes into a command
+  (D58). The click waits `OpenAfter`, as for any command prompt.
+- **Refresh Explorer:** gathers again at once with the project's git status read anew (the cached
+  one dropped), so a file written elsewhere shows with its color without waiting for the
+  3-second refresh (`FreshEvery`).
+- **Collapse Folders:** closes every open folder of this explorer and scrolls to the top, at once
+  (the menus' Collapse Folders, as before, closes them in every sidebar of the project).
+- **⋯ (More Actions):** a menu titled EXPLORER at the button (i-mux's popup menu before tmux 3.5,
+  D54): the title buttons that do not fit, **Go to File…** and **Search…** (the project), then
+  **Show Hidden Files**, `✓ ` before it while on. Its commands are `imux __file
+  new-file|new-folder|refresh|collapse|goto|search|show-hidden|hide-hidden`; the narrow
+  sidebar's Refresh reaches every sidebar of the project through `@imux_reveal`.
+- **Hidden files:** names starting with "." are left out by default, as before. **Show Hidden
+  Files** (`[explorer] show_hidden = true`) shows them: `.github`, `.gitlab-ci.yml`, `.vscode`,
+  `.env`. Always left out, as VS Code's `files.exclude` defaults: `.git`, `.svn`, `.hg`, `CVS`,
+  `.DS_Store`, `Thumbs.db` (`folders.Hidden`); the explorer's skip list (`node_modules`,
+  `vendor`, `dist`, `build`, `target`, `venv`, `__pycache__` …) stays out of the tree as before.
+- **Search and Go to File** find what they found before while it is off: in a repository git's
+  list (tracked and untracked, not ignored), dot files such as `.github/…` included, as it always
+  had them; outside one, a walk that finds hidden files but does not enter hidden folders. On,
+  the walk enters hidden folders too. The always hidden names are left out of both lists, and the
+  explorer's skip list out of the walk.
+- **Saved like a setting:** choosing the item writes `show_hidden` into config.toml (`config.Set`,
+  as Settings' rows are saved) and signals every sidebar; each reads the changed config and lists
+  its tree again, so every explorer follows at once and the choice survives restarts. Search and
+  Go to File read it when they open.
+
 #### Clicks at once (v0.39.1, D36; v0.40, D39)
 
 - **At once:** a click runs its action as soon as the sidebar reads the press: a view on the rail
@@ -1859,12 +1920,14 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **What:** the editor's Quick Open: type a few letters of a file's name, Enter opens it in the
   editor. A popup (`imux __goto`, 80% × 70%) in the project folder.
 - **Opening it:** `Ctrl+P` in any pane (`[tmux] quick_open_key_root = "C-p"`; `""` for none), and
-  a button in the explorer's title next to 🔍. The key runs `imux __goto --pane P --client C`,
+  the explorer's title: ⋯ → Go to File… (v0.53, D63; a 📄 button next to 🔍 where the title has
+  room). The key runs `imux __goto --pane P --client C`,
   which finds the pane's project folder (on the sidebar: its target pane's) and opens the popup
   there. Cmd+P cannot work: macOS terminals keep it (Print). Ctrl+P is taken from the program in
   the pane (a shell's and OpenCode's previous command; ↑ does the same there).
 - **The list:** the project's files as search lists them (`git ls-files -co --exclude-standard`,
-  else a walk with the explorer's skip list). Empty query: the files changed last first.
+  else a walk with the explorer's skip list), the walk's hidden folders only while Show Hidden
+  Files is on (D63). Empty query: the files changed last first.
 - **Matching:** the query's letters in order, not necessarily together (`sbrnd` finds
   `internal/sidebar/render.go`); case-insensitive unless the query has a capital; spaces split it
   into parts that must all match. Ranking: letters in the file's name over its folders,
