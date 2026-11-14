@@ -146,6 +146,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D66 | **Fixes from the codebase audit: skills are managed from Jobs, every Jobs row has ⋯, the keyboard scrolls the sidebar's lists, and a broken config does not stop the watcher** (added 2026-11-14, v0.56, at the user's request; refines D62): the Jobs view gets the Skills view's authoring back, **✨ New skill…** in its title (a right-click on its title or empty space offers New skill… and Blank SKILL.md…), a skill with a front-matter problem is marked `⚠` with the problem under its name, and a skill's ⋯ menu adds **Add to Agent**, **Improve with Agent**, **Share with all agents** (when it is not shared) and **Delete skill…**; ⋯ shows on every row, not only once an item has a schedule or ran; the removed Skills view's code goes. ↑/↓ (j/k, Tab) scroll the Explorer, Source Control and Jobs lists when the selection reaches the edge of what is shown, and the wheel stops at the end of a list. A `config.toml` saved with an error leaves the watcher running with the config it has (the error goes to `watch.log`). Every git path i-mux reads is UTF-8 and unquoted (`-z`, `core.quotePath=false`), and the diff viewer and search take no git lock. | After v0.52 removed the Skills tab, New skill, the validation marks and a skill's actions could not be reached any more; Jobs already lists the skills, so they belong there. An item without a schedule had no visible menu, only a right-click nobody knew of. The keyboard could only reach the rows on screen, and the wheel scrolled past the end so that scrolling back up did nothing at first. A typo saved in the config made the restarted watcher exit until the next imux command. Paths with non-ASCII letters (Turkish ones) showed `+0 -0` and lost their git colors because git quoted them. |
 | D67 | **Panes are moved, resized and found from the keyboard, and the help is searchable** (added 2026-11-14, v0.57, at the user's request): `prefix H/J/K/L` swaps the active pane with its neighbor on that side (never with a sidebar, never around the window's edge; the focus stays on the pane that moved); `prefix r` enters a resize mode where `h j k l` or the arrows resize the active pane (Shift: 10 cells at a time) until `Esc`, `Enter` or any other key; `prefix ?` (and the sidebar's `?` and the rail's Help) open the keys as a Quick Pick: typing filters them, Enter runs the chosen one, and the keys shown are the ones the config binds. Optional root keys without the prefix (`tmux.direct_pane_keys`, off): `Ctrl+←↑→↓` move to the pane there, `Ctrl+Alt+←↑→↓` split that way after asking which agent. | Moving panes and finding a key took the mouse or tmux's own unlisted keys; the help was a fixed list that could not be searched nor run, and named keys the config may have changed. The keys without the prefix stay off by default: shells and agents' inputs use Ctrl+←/→ to jump words, and macOS uses Ctrl+arrows for its Spaces. |
 | D68 | **Color themes, and light/dark following the terminal** (added 2026-11-14, v0.58, at the user's request): every color i-mux draws comes from one palette of named colors (`accent`, `panel_bg`, `sidebar_bg`, `active_row_bg`, `selection_bg`, `surface0`, `surface1`, `surface_dim`, `overlay0`, `overlay1`, `text`, `subtext0`, `mauve`, `green`, `yellow`, `red`, `blue`, `teal`, `peach`): the sidebar, the pager and diff viewer, the menus, Quick Picks and popups, and tmux's tab bar, borders, messages and popups. `[theme] name` picks one of 18 built-in themes (default `catppuccin`, Catppuccin Mocha; `terminal` uses the terminal's own ANSI colors), `[theme.custom]` overrides single colors, and `auto_switch` follows the terminal's light or dark background with `light_name` / `dark_name` (each a theme's light or dark sibling when unset), with `[theme.custom.light]` / `[theme.custom.dark]` on top. Settings has a Theme row (choosing one there turns `auto_switch` off) and a row for following the terminal. | i-mux's colors were fixed 256-color codes for a dark terminal: on a light one its gray text and dark bars were hard to read, and nothing could be changed. One palette with well-known themes, the terminal's own colors among them, keeps every part of the UI in step. |
+| D69 | **Themes reviewed: i-mux's own look is the default again, and every theme reads on any terminal** (added 2026-11-14, v0.58.1, at the user's request; refines D68): a theme named `i-mux` is the look from before themes, exactly, and the default; the panes i-mux draws are on the theme's own background and text color, painted by the pane itself; built-in themes are adjusted until text, secondary text, hints and state colors keep their contrast on every background i-mux draws them on (WCAG AA for text); `terminal` draws what is quieter in bright black. | With the terminal's background showing through, a dark theme's near-white text was invisible on a light terminal, and a light theme's dark text on a dark one; some schemes' own colors (Tokyo Night Day's blue text, Solarized Light's and Kanagawa Lotus's faint selection) did not read on their own backgrounds; `terminal`'s gray hints vanished on a light terminal; and Catppuccin as the default changed everyone's look unasked. |
 
 ## 4. Components
 
@@ -1541,18 +1542,38 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - It applies at once: commands read the config each time; sidebars and the watcher reload it
   when its modification time changes.
 
-#### Themes (v0.58, D68)
+#### Themes (v0.58, D68; review v0.58.1, D69)
 
-- **Palette:** `internal/theme` holds 18 built-in palettes of 19 named colors each (the names of
-  D68): `catppuccin` (Mocha, the default) and `catppuccin-latte`, `tokyo-night` and
+- **Palette:** `internal/theme` holds 19 built-in palettes of 19 named colors each (the names of
+  D68): `i-mux` (the default: i-mux's own 256 colors from before themes, D69), `catppuccin`
+  (Mocha) and `catppuccin-latte`, `tokyo-night` and
   `tokyo-night-day`, `gruvbox` and `gruvbox-light`, `one-dark` and `one-light`, `solarized` and
   `solarized-light`, `kanagawa` and `kanagawa-lotus`, `rose-pine` and `rose-pine-dawn`, and
   `dracula`, `nord`, `vesper` and `terminal`. Names are matched lowercased with spaces and `_` as
   `-`, with aliases (`catppuccin-mocha`, `latte`, `light`, `tokyonight`, `gruvbox-dark`,
-  `onedark`, `rosepine`, `dawn`, …); an unknown one is warned about and `catppuccin` (or
+  `onedark`, `rosepine`, `dawn`, `classic`, …); an unknown one is warned about and `i-mux` (or
   `catppuccin-latte` for `light_name`) used. Each palette uses its scheme's published colors.
-  `sidebar_bg` is `reset` in every one (the terminal's background shows through); `terminal`
-  uses ANSI colors (blue, green, dark gray…), so it follows the terminal's own palette.
+  `terminal` uses ANSI colors (blue, green, and bright black for what is quieter: it reads on
+  light and dark terminals), so it follows the terminal's own palette. `i-mux` is the look from
+  before themes, exactly (the sidebar's every color, the tab bar's grays), and leaves tmux's own
+  borders, messages, popups and menus (their styles are unset); its light sibling, for
+  `auto_switch`, is `catppuccin-latte`.
+- **Legible everywhere (D69):** a built-in 24-bit theme is adjusted where it must be, after it
+  is read: the selection (1.3:1), fields (1.12:1), borders (1.3:1) and the current row (1.08:1)
+  are moved away from `panel_bg`; then text gets 4.5:1 (WCAG AA) on the panel, the selection,
+  the current row, the row under the pointer and the fields, secondary text 3:1, hints 2.2:1,
+  the accent 3:1 and the state colors 2.6:1, each moved toward black on a light panel or white
+  on a dark one only as far as it takes. Tints (a search match, the diff's red and green lines)
+  are made weaker until the text and marks on them keep their contrast. A unit test checks
+  every theme; a user's `[theme.custom]` colors are not changed.
+- **The theme's background:** a pane i-mux draws (the sidebar, the "No agents" pane) is on the
+  theme's `sidebar_bg`, or its `panel_bg` when that is `reset`, with its `text` as the default
+  color: every row starts with them and every reset in it comes back to them, so its text reads
+  whatever the terminal's background is (a dark theme's light text on a light terminal was
+  white on white). The pane paints them itself rather than with a tmux `window-style`: tmux
+  answers a pane's OSC 11 question with the pane's style when it has one, which would hide the
+  terminal's light or dark. `i-mux` and `terminal` stay on the terminal's colors. The tab bar
+  is on `panel_bg` too. The agents' panes are never painted: what an agent shows is its own.
 - **Config:** `[theme] name`, `auto_switch` (false), `light_name`, `dark_name`;
   `[theme.custom]` sets any of the 19 colors, `[theme.custom.light]` / `[theme.custom.dark]` only
   in that mode; the order is the theme, then `custom`, then the mode's. The mode is the
@@ -1574,13 +1595,14 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   / `blue`, agents' marks `peach` / `blue` / `mauve` / `teal` / `text`, scroll bars `surface0`
   and `overlay0`, the commit box `surface0` (`surface1` with the cursor), the diff's lines
   `red` / `green` over a blend of them with `panel_bg` (256-color reds and greens with
-  `terminal`), its fillers `surface_dim`. tmux: the tab bar (`subtext0`, the current tab bold
-  `text` on `surface0`), the tab states, borders (`surface1`, the active one `accent`), messages
+  `terminal`), its fillers `surface_dim`, the item under the pointer halfway from the current
+  row's background to the selection's (`surface1` on 256 or ANSI colors). tmux: the tab bar on
+  `panel_bg` (`subtext0`, the current tab bold `text` on `surface0`), the tab states, borders (`surface1`, the active one `accent`), messages
   and the copy mode (`surface0`, `selection_bg`), menus (3.4+) and popups (3.3+) on `panel_bg`.
   The tab bar and agent bar read `@imux_c_<color>` options, so a change needs no new config.
   File icons keep their own colors (VS Code's).
 - **Colors on the wire:** 24-bit (`38;2;r;g;b`); `terminal`'s ANSI colors as 16-color codes.
-- **Settings:** **Theme: Catppuccin** opens the list of themes (● on the current; choosing
+- **Settings:** **Theme: i-mux** opens the list of themes (● on the current; choosing
   one sets `theme.name` and turns `auto_switch` off, as manual selection does), and **Follow the
   terminal's light/dark: Off** turns `auto_switch` on or off. It applies at once: popups read the
   config when they start, sidebars when it changes, and the watcher regenerates tmux's config.

@@ -997,6 +997,24 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M74: Themes reviewed (added 2026-11-14)
+
+User request: themes did not read (white text on a light terminal), and the default should be
+i-mux's look from before (D69).
+
+- [x] **T74.1 The i-mux theme** · S
+  - AC: `i-mux`, the default: the sidebar's colors and the tab bar's grays exactly as before
+    themes, tmux's own borders, messages, popups and menus (unset); `catppuccin-latte` as its
+    light sibling; unit tests (its escapes, the generated tmux.conf).
+- [x] **T74.2 The theme's background** · S
+  - AC: the sidebar and the "No agents" pane paint the theme's background and text color on
+    every row (no tmux style, so OSC 11 still tells the terminal's background); agents' panes
+    are never painted; e2e.
+- [x] **T74.3 Legible themes** · M
+  - AC: built-in themes adjusted for 4.5:1 text on every background, 3:1 secondary text, 2.2:1
+    hints, 2.5:1 accent and states, a visible selection; tints weaker where they must be; the
+    terminal theme's quiet colors in bright black; a test over every theme.
+
 ## M73: Color themes, and light/dark following the terminal (added 2026-11-14)
 
 User request: the roadmap's second planned feature: themes and automatic light/dark switching
