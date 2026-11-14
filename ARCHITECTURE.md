@@ -149,6 +149,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D69 | **Themes reviewed: i-mux's own look is the default again, and every theme reads on any terminal** (added 2026-11-14, v0.58.1, at the user's request; refines D68): a theme named `i-mux` is the look from before themes, exactly, and the default; the panes i-mux draws are on the theme's own background and text color, painted by the pane itself; built-in themes are adjusted until text, secondary text, hints and state colors keep their contrast on every background i-mux draws them on (WCAG AA for text); `terminal` draws what is quieter in bright black. | With the terminal's background showing through, a dark theme's near-white text was invisible on a light terminal, and a light theme's dark text on a dark one; some schemes' own colors (Tokyo Night Day's blue text, Solarized Light's and Kanagawa Lotus's faint selection) did not read on their own backgrounds; `terminal`'s gray hints vanished on a light terminal; and Catppuccin as the default changed everyone's look unasked. |
 | D70 | **A theme colors the whole window, the agents' panes too** (added 2026-11-14, v0.58.2, at the user's request; refines D68 and D69): with a theme on its own colors every pane is on the theme's panel and text color and its programs get the theme's 16 colors, as a terminal theme does; the borders are on the same panel. Following the terminal's light or dark live takes tmux 3.6+'s hooks, as a pane's OSC 11 question is then answered with the theme's background. | With only the sidebar and the tab bar in the theme, a light theme on a dark terminal split the window in two: a light sidebar beside dark agents. |
 | D71 | **Agents report their state through hooks** (added 2026-11-14, v0.59, at the user's request; the roadmap's "native agent hooks"): i-mux starts Claude Code with hooks (its `--settings` file, beside the status line) and Codex with a `notify` program (`-c notify=…`, unless the user's config has one), all running `imux __hook <agent>`, which writes the pane's `@imux_hook` (working, blocked, idle) and `@imux_hook_at`; the watcher takes it over its reading of the screen, which stays the fallback for every other agent and for what a hook does not say. Claude's hooks also tell the session it writes, so the pane's trail follows `/clear` and forks. The user's own settings files are not changed. `[hooks] enabled` (on) and a Settings row turn them off. | Reading the screen guessed: a redraw looked like work, a reworded prompt was missed, and "done" came a few seconds late. An agent that says what it does is exact. A terminal status escape (OSC 7501) cannot reach i-mux: tmux drops OSC sequences it does not know, so hooks call i-mux directly instead. After `/clear` the trail kept the session Claude was started with, and a handoff took the old conversation. |
+| D72 | **An agent starts in a worktree of its own, listed under its project** (added 2026-11-14, v0.60, at the user's request; the roadmap's "worktree workspaces"): the place menu of a new agent (Agents' +) has **🌿 In a new worktree…**: a branch name, then `<project>.worktrees/<branch>` (a new branch from HEAD, or the branch when it exists) opens as a project with that agent in it. A project that is a linked worktree shows under its repository's project in PROJECTS, and its menu has **Diff against <base>**, **Merge into <base>…** and **Remove worktree…** (`imux worktree new|diff|merge|remove`). | Two agents in one folder edit the same files and run each other's half-done code; a worktree each keeps them apart, and the steps around it (make it, start the agent, see what it did, merge it, clean up) were spread over the Git menu or missing. |
 
 ## 4. Components
 
@@ -1646,6 +1647,28 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   the hook, so a turn the user interrupted (Claude runs no hook then) ends as before. Panes
   without hooks, and all other agents, are read from the screen as before (D38, D55).
 - **Settings:** **Agent states from hooks: On** turns `hooks.enabled` off or on.
+
+#### Worktrees for agents (v0.60, D72)
+
+- **New:** a new agent's place menu (`PlaceMenu`: right, left, down, up, a new tab) ends with
+  **🌿 In a new worktree…** (`w`). It asks a branch name (`command-prompt`; the pane, client
+  and agent go through global options, as a prompt's template turns `%1` into the answer) and
+  runs `imux worktree new --from-option`: `gitops.WorktreePath` of the repository's main
+  worktree (`<project>.worktrees/<branch>`, made with a new branch from HEAD, or checking the
+  branch out when it exists), then `w.Start` of that agent there, shown on the client. The
+  CLI is `imux worktree new <branch> [agent]`, from a pane of the project.
+- **In PROJECTS:** a project whose folder is a linked worktree (its `git rev-parse
+  --git-common-dir` is not its own `.git`; asked once per folder and kept) shows right under
+  its repository's project when that is open, indented with 🌿 and its branch; one whose
+  repository is not open stays where it was.
+- **Its menu** (right-click, or a click on the current one) adds, after Go and Close: **Diff
+  against <base>** (a popup: `git diff --stat --patch <base>...<branch>` in the pager, the base
+  being the main worktree's current branch), **Merge into <base>…** (asked first; refused while
+  the worktree has uncommitted changes, which would stay behind; `git merge --no-edit <branch>`
+  in the main worktree, whose conflicts are resolved there, in its Git view) and **Remove
+  worktree…** (asked first; `git worktree remove`, asked again with `--force` when it has
+  changes; its project closes; the branch stays). The CLI is `imux worktree diff|merge|remove
+  [--session S]`.
 
 #### AI completion in the editor (v0.25, D30)
 
