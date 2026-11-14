@@ -47,6 +47,32 @@ bind -n M-v if-shell -F '#{@imux_agent}' "run-shell -b '/opt/imux/bin/imux __pas
 bind    b run-shell -b '/opt/imux/bin/imux sidebar toggle --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    v run-shell -b '/opt/imux/bin/imux __menu --split h --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    - run-shell -b '/opt/imux/bin/imux __menu --split v --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+# Panes from the keyboard (D67): swap with the pane on a side, the resize mode, the help.
+bind    H run-shell -b '/opt/imux/bin/imux __pane swap left --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    J run-shell -b '/opt/imux/bin/imux __pane swap down --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    K run-shell -b '/opt/imux/bin/imux __pane swap up --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    L run-shell -b '/opt/imux/bin/imux __pane swap right --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    r { switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize h { resize-pane -L 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize j { resize-pane -D 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize k { resize-pane -U 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize l { resize-pane -R 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize Left { resize-pane -L 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize Down { resize-pane -D 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize Up { resize-pane -U 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize Right { resize-pane -R 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize H { resize-pane -L 10 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize J { resize-pane -D 10 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize K { resize-pane -U 10 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize L { resize-pane -R 10 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize S-Left { resize-pane -L 10 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize S-Down { resize-pane -D 10 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize S-Up { resize-pane -U 10 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize S-Right { resize-pane -R 10 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
+bind -T imux-resize Escape { switch-client -T root ; display-message -d 1 '' }
+bind -T imux-resize Enter { switch-client -T root ; display-message -d 1 '' }
+bind -T imux-resize q { switch-client -T root ; display-message -d 1 '' }
+bind    '?' run-shell -b '/opt/imux/bin/imux __menu --keys --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # New tab (asks which agent) and the tab's name.
 bind    c run-shell -b '/opt/imux/bin/imux __menu --tab --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    , command-prompt -I '#{@imux_tab}' -p 'Tab name:' 'set-option -w @imux_tab "%%%"'
@@ -68,7 +94,7 @@ bind -n MouseDown1Pane if -F -t= '#{&&:#{==:#{@imux_role},sidebar},#{==:#{@imux_
 bind -n SecondClick1Pane if -F -t= '#{||:#{!=:#{@imux_role},sidebar},#{==:#{pane_id},#{@imux_press}}}' { send -M } {}
 bind -n DoubleClick1Pane if -F -t= '#{==:#{@imux_role},sidebar}' { send -M } { select-pane -t=; if -F '#{||:#{pane_in_mode},#{mouse_any_flag}}' { send -M } { copy-mode -H; send -X select-word; run -d0.3; send -X copy-pipe-and-cancel } }
 bind -n TripleClick1Pane if -F -t= '#{==:#{@imux_role},sidebar}' { if -F -t= '#{==:#{pane_id},#{@imux_press}}' { send -M } {} } { select-pane -t=; if -F '#{||:#{pane_in_mode},#{mouse_any_flag}}' { send -M } { copy-mode -H; send -X select-line; run -d0.3; send -X copy-pipe-and-cancel } }
-set -g  @imux_keys 'root C-\,root C-p,prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root MouseUp1StatusLeft,root MouseUp1StatusRight,root MouseUp1StatusDefault,root MouseDown3Border,root MouseDown1Pane,root SecondClick1Pane,root DoubleClick1Pane,root TripleClick1Pane,root C-v,root M-v'
+set -g  @imux_keys 'root C-\,root C-p,prefix a,prefix S,imux-resize h,imux-resize j,imux-resize k,imux-resize l,imux-resize Left,imux-resize Down,imux-resize Up,imux-resize Right,imux-resize H,imux-resize J,imux-resize K,imux-resize L,imux-resize S-Left,imux-resize S-Down,imux-resize S-Up,imux-resize S-Right,imux-resize Escape,imux-resize Enter,imux-resize q,prefix b,prefix v,prefix -,prefix r,prefix ?,prefix H,prefix J,prefix K,prefix L,prefix c,prefix ,,root MouseUp1StatusLeft,root MouseUp1StatusRight,root MouseUp1StatusDefault,root MouseDown3Border,root MouseDown1Pane,root SecondClick1Pane,root DoubleClick1Pane,root TripleClick1Pane,root C-v,root M-v'
 
 # Pane lifecycle and watcher.
 set-hook -g pane-died "run-shell -b '/opt/imux/bin/imux __pane-died #{pane_id} #{pane_dead_status} >/dev/null 2>&1 || true'"

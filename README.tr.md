@@ -155,6 +155,9 @@ görünümü değiştirir.
 | en üstteki, terminalin üstündeki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** · **⏻ Çık** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat · terminale dön ya da i-mux'u kapat |
 | projenin son agent'ını kapat | proje açık kalır ve **Agent yok** der: başlatmak için orada bir agent'ın tuşuna bas (ya da tıkla) veya AGENT'LAR yanındaki **+** |
 | `prefix b` | kenar paneli gizle ya da göster |
+| `prefix H` `J` `K` `L` | aktif pane'i o taraftakiyle (sol, alt, üst, sağ) yer değiştir |
+| `prefix r`, sonra `h` `j` `k` `l` ya da oklar (Shift: hızlı), `Esc` | aktif pane'i boyutlandır |
+| `prefix ?` (ya da kenar panelde `?`) | bütün tuşlar: birini bulmak için yaz, Enter çalıştırır |
 | `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` `e` | pane menüsü; Claude / Antigravity / Copilot / Codex / OpenCode'da sürdür |
 
 `prefix`, `Ctrl+b` demektir: bas, bırak, sonra tuşa bas.

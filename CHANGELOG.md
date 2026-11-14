@@ -6,6 +6,33 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-11-14
+
+### Added
+
+- **Swap panes from the keyboard.** `prefix H` / `J` / `K` / `L` swaps the active pane with the
+  one on its left, below, above or on its right, and the focus stays on the pane you moved. A
+  sidebar is never moved, and nothing goes around the window's edge.
+- **A resize mode.** `prefix r`, then `h` `j` `k` `l` or the arrows resize the active pane (with
+  Shift, 10 cells at a time) until `Esc`, `Enter` or `q`; any other key leaves the mode and does
+  what it does.
+- **Searchable help.** `prefix ?`, the sidebar's `?` and the rail's Help list every action with
+  its keys, as the keys are set in your config. Typing filters the list, and Enter runs the
+  action: a switch, a split, a swap, the resize mode and more.
+- **Keys without the prefix, if you want them.** With `tmux.direct_pane_keys = true`,
+  `Ctrl+arrows` move to the pane there and `Ctrl+Alt+arrows` split that way after asking which
+  agent. They are off by default: shells and agents use `Ctrl+←/→` to jump words, and macOS uses
+  `Ctrl+arrows` for its Spaces.
+- New settings: `tmux.swap_pane_keys`, `tmux.resize_key_prefix`, `tmux.help_key_prefix` and
+  `tmux.direct_pane_keys` (see docs/CONFIG.md). `prefix L`, `prefix r` and `prefix ?` were tmux's
+  own last session, redraw and key list; set a key to "" (or the swap keys to false) to keep
+  tmux's.
+
+### Fixed
+
+- **`prefix ,` (name the tab) is unbound when a reload changes it.** The list of bound keys is
+  joined with commas, and the comma key was read as two empty entries.
+
 ## [0.56.4] - 2026-11-14
 
 ### Fixed

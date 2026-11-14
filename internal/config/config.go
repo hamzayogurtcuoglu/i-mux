@@ -171,12 +171,22 @@ type Tmux struct {
 	SidebarKey       string `toml:"sidebar_key_prefix"`
 	SplitRightKey    string `toml:"split_right_key_prefix"`
 	SplitDownKey     string `toml:"split_down_key_prefix"`
-	Tabs             bool   `toml:"tabs"`
-	Icons            string `toml:"icons"` // auto | nerd | emoji
-	NewTabKey        string `toml:"new_tab_key_prefix"`
-	RenameTabKey     string `toml:"rename_tab_key_prefix"`
-	Mouse            bool   `toml:"mouse"`
-	HistoryLimit     int    `toml:"history_limit"`
+	// SwapPaneKeys binds prefix H/J/K/L: swap the active pane with the one
+	// on that side (D67).
+	SwapPaneKeys bool `toml:"swap_pane_keys"`
+	// ResizeKey is the prefix key of the resize mode; HelpKey the prefix key
+	// of the searchable help (D67). "" for none.
+	ResizeKey string `toml:"resize_key_prefix"`
+	HelpKey   string `toml:"help_key_prefix"`
+	// DirectPaneKeys binds Ctrl+arrows (move) and Ctrl+Alt+arrows (split)
+	// without the prefix (D67; off: shells and agents use Ctrl+←/→).
+	DirectPaneKeys bool   `toml:"direct_pane_keys"`
+	Tabs           bool   `toml:"tabs"`
+	Icons          string `toml:"icons"` // auto | nerd | emoji
+	NewTabKey      string `toml:"new_tab_key_prefix"`
+	RenameTabKey   string `toml:"rename_tab_key_prefix"`
+	Mouse          bool   `toml:"mouse"`
+	HistoryLimit   int    `toml:"history_limit"`
 }
 
 // Config is the effective configuration.
@@ -295,6 +305,9 @@ func Default() *Config {
 			SidebarKey:       "b",
 			SplitRightKey:    "v",
 			SplitDownKey:     "-",
+			SwapPaneKeys:     true,
+			ResizeKey:        "r",
+			HelpKey:          "?",
 			Tabs:             true,
 			Icons:            "auto",
 			NewTabKey:        "c",

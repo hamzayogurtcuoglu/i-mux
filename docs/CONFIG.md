@@ -59,6 +59,10 @@ line number.
 | `tmux.sidebar_key_prefix` | `"b"` | prefix + key shows or hides the sidebar. |
 | `tmux.split_right_key_prefix` | `"v"` | prefix + key splits the active pane (asks which agent to start). |
 | `tmux.split_down_key_prefix` | `"-"` |  |
+| `tmux.swap_pane_keys` | `true` | prefix + H J K L swaps the active pane with the one on that side (never a sidebar, never around the window's edge); the pane keeps the focus. |
+| `tmux.resize_key_prefix` | `"r"` | prefix + key enters the resize mode: h j k l or the arrows resize the active pane (Shift: 10 at a time) until Esc, Enter or any other key. "" for none. |
+| `tmux.help_key_prefix` | `"?"` | prefix + key opens the keys as a searchable list: type to filter, Enter runs one (the sidebar's ? and the rail's Help open it too). "" for none. |
+| `tmux.direct_pane_keys` | `false` | Ctrl+arrows move to the pane there and Ctrl+Alt+arrows split that way, without the prefix. Off by default: shells and agents use Ctrl+Left/Right to jump words, and macOS uses Ctrl+arrows for its Spaces. |
 | `tmux.icons` | `"auto"` | Icons of the sidebar's rail: "nerd" = the editor's icons (needs a Nerd Font in the terminal: imux font install puts one there), "emoji", or "auto" = nerd when the terminal's font is a Nerd Font (Terminal.app, iTerm2, VS Code, Windows Terminal) or it brings the symbols (Ghostty, WezTerm, kitty), else emoji. |
 | `tmux.tabs` | `true` | Tab bar at the top: each tab (tmux window) with its name and state, and a + that opens a new tab with the agent you pick. |
 | `tmux.new_tab_key_prefix` | `"c"` | prefix + key opens a new tab (asks which agent); prefix + key names the tab. |
@@ -255,6 +259,19 @@ sidebar_key_prefix = "b"
 # prefix + key splits the active pane (asks which agent to start).
 split_right_key_prefix = "v"
 split_down_key_prefix  = "-"
+# prefix + H J K L swaps the active pane with the one on that side (never a
+# sidebar, never around the window's edge); the pane keeps the focus.
+swap_pane_keys    = true
+# prefix + key enters the resize mode: h j k l or the arrows resize the active
+# pane (Shift: 10 at a time) until Esc, Enter or any other key. "" for none.
+resize_key_prefix = "r"
+# prefix + key opens the keys as a searchable list: type to filter, Enter runs
+# one (the sidebar's ? and the rail's Help open it too). "" for none.
+help_key_prefix   = "?"
+# Ctrl+arrows move to the pane there and Ctrl+Alt+arrows split that way, without
+# the prefix. Off by default: shells and agents use Ctrl+Left/Right to jump words,
+# and macOS uses Ctrl+arrows for its Spaces.
+direct_pane_keys  = false
 # Icons of the sidebar's rail: "nerd" = the editor's icons (needs a Nerd Font in
 # the terminal: imux font install puts one there), "emoji", or "auto" = nerd when
 # the terminal's font is a Nerd Font (Terminal.app, iTerm2, VS Code, Windows

@@ -151,14 +151,27 @@ func (w *WS) ToggleSidebar(ctx context.Context, pane, mode string) (bool, error)
 func (w *WS) RefreshSidebars(ctx context.Context) { sidebar.RefreshAll(ctx, w.T) }
 
 // SplitMenu asks which agent the new pane next to p starts with.
-func (w *WS) SplitMenu(p *Pane, client string, horizontal bool) *Menu {
+func (w *WS) SplitMenu(p *Pane, client string, horizontal, before bool) *Menu {
 	dir, title := "-v", i18n.T("split.down")
 	if horizontal {
 		dir, title = "-h", i18n.T("split.right")
 	}
+	args := func(id string) []string {
+		a := []string{"split", id, dir}
+		if before { // left or up (Ctrl+Alt+← ↑, D67)
+			a = append(a, "--before")
+		}
+		return append(a, uiTarget(p.ID, client)...)
+	}
+	if before {
+		title = i18n.T("split.up")
+		if horizontal {
+			title = i18n.T("split.left")
+		}
+	}
 	m := &Menu{Title: title}
 	for _, a := range agent.Ordered(w.Cfg) {
-		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: w.ui(append([]string{"split", string(a.ID), dir}, uiTarget(p.ID, client)...)...)}
+		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: w.ui(args(string(a.ID))...)}
 		if !w.Installed(a.ID) {
 			it.Name += " " + i18n.T("menu.not_installed")
 			it.Disabled, it.Key = true, ""
@@ -169,7 +182,7 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal bool) *Menu {
 	}
 	m.Items = append(m.Items, Separator(), MenuItem{
 		Name: i18n.T("menu.terminal"), Key: "t",
-		Cmd: w.ui(append([]string{"split", ShellAgent, dir}, uiTarget(p.ID, client)...)...),
+		Cmd: w.ui(args(ShellAgent)...),
 	})
 	return m
 }
@@ -179,7 +192,7 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal bool) *Menu {
 // agents" pane the agent starts in its place.
 func (w *WS) NewAgentMenu(p *Pane, client string) *Menu {
 	if p.IsEmpty() {
-		return w.SplitMenu(p, client, true)
+		return w.SplitMenu(p, client, true, false)
 	}
 	m := &Menu{Title: i18n.T("new_agent.title")}
 	for _, a := range agent.Ordered(w.Cfg) {
@@ -272,23 +285,6 @@ func (w *WS) TabMenu(p *Pane, client string) *Menu {
 		Name: i18n.T("menu.terminal"), Key: "t",
 		Cmd: w.ui(append([]string{"tab", ShellAgent}, uiTarget(p.ID, client)...)...),
 	})
-	return m
-}
-
-// KeysMenu lists the keys (help).
-func (w *WS) KeysMenu() *Menu {
-	m := &Menu{Title: i18n.T("keys.title")}
-	keys := []string{"keys.menu", "keys.goto", "keys.switch", "keys.split", "keys.sidebar", "keys.sessions", "keys.tabs", "keys.panes", "keys.in_sidebar"}
-	if w.Cfg == nil || w.Cfg.Paste.Images {
-		keys = append(keys, "keys.paste") // bound only then (tmux.GenerateConf)
-	}
-	for _, k := range append(keys, "", "keys.prefix") {
-		if k == "" {
-			m.Items = append(m.Items, Separator())
-			continue
-		}
-		m.Items = append(m.Items, MenuItem{Name: i18n.T(k), Disabled: true})
-	}
 	return m
 }
 

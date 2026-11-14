@@ -73,9 +73,56 @@ func TestGenerateConfOptions(t *testing.T) {
 	if last := lines[len(lines)-1]; !strings.HasPrefix(last, "source-file -q ") || !strings.Contains(last, "tmux.local.conf") {
 		t.Fatalf("last line %q", last)
 	}
-	if ks := BoundKeys(in); strings.Join(ks, ",") != "root C-p,prefix a,prefix S,prefix b,prefix v,prefix -,prefix c,prefix ,,root C-v,root M-v" {
+	resize := "imux-resize h,imux-resize j,imux-resize k,imux-resize l,imux-resize Left,imux-resize Down,imux-resize Up,imux-resize Right," +
+		"imux-resize H,imux-resize J,imux-resize K,imux-resize L,imux-resize S-Left,imux-resize S-Down,imux-resize S-Up,imux-resize S-Right," +
+		"imux-resize Escape,imux-resize Enter,imux-resize q,"
+	if ks := BoundKeys(in); strings.Join(ks, ",") != "root C-p,prefix a,prefix S,"+resize+"prefix b,prefix v,prefix -,prefix r,prefix ?,prefix H,prefix J,prefix K,prefix L,prefix c,prefix ,,root C-v,root M-v" {
 		t.Fatalf("BoundKeys %q", ks)
 	}
+	// A reload reads them back, "prefix ," (a comma key) too.
+	back := ParseBoundKeys(strings.Join(BoundKeys(in), ","))
+	if len(back) != len(BoundKeys(in)) || back[len(back)-3] != [2]string{"prefix", ","} || back[3] != [2]string{"imux-resize", "h"} {
+		t.Fatalf("ParseBoundKeys %q", back)
+	}
+	// D67: prefix H J K L swap, prefix r the resize mode, prefix ? the help;
+	// the keys without the prefix only when asked for.
+	for _, want := range []string{
+		"bind    H run-shell -b '/opt/imux/bin/imux __pane swap left --pane #{pane_id}",
+		"bind    L run-shell -b '/opt/imux/bin/imux __pane swap right",
+		"bind    r { switch-client -T imux-resize ; display-message -d 0 ",
+		"bind -T imux-resize h { resize-pane -L 2 ; switch-client -T imux-resize ; ",
+		"bind -T imux-resize S-Up { resize-pane -U 10 ; ",
+		"bind -T imux-resize Escape { switch-client -T root ",
+		"bind    '?' run-shell -b '/opt/imux/bin/imux __menu --keys --pane",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("pane keys: missing %q", want)
+		}
+	}
+	if strings.Contains(got, "bind -n C-Left") {
+		t.Error("keys without the prefix while direct_pane_keys is off")
+	}
+	in.Cfg.Tmux.DirectPaneKeys, in.Cfg.Tmux.SwapPaneKeys, in.Cfg.Tmux.ResizeKey, in.Cfg.Tmux.HelpKey = true, false, "", ""
+	direct := GenerateConf(in)
+	for _, want := range []string{
+		"bind -n C-Left select-pane -L", "bind -n C-Down select-pane -D",
+		"bind -n C-M-Left run-shell -b '/opt/imux/bin/imux __menu --split h --before --pane",
+		"bind -n C-M-Down run-shell -b '/opt/imux/bin/imux __menu --split v --pane",
+		"bind -n C-M-Up run-shell -b '/opt/imux/bin/imux __menu --split v --before --pane",
+	} {
+		if !strings.Contains(direct, want) {
+			t.Errorf("direct keys: missing %q", want)
+		}
+	}
+	for _, gone := range []string{"__pane swap", "imux-resize", "__menu --keys"} {
+		if strings.Contains(direct, gone) {
+			t.Errorf("turned off but bound: %q", gone)
+		}
+	}
+	if ks := strings.Join(BoundKeys(in), ","); !strings.Contains(ks, "root C-Left,root C-M-Left") || strings.Contains(ks, "imux-resize") || strings.Contains(ks, "prefix H") {
+		t.Errorf("BoundKeys with direct keys: %s", ks)
+	}
+	in.Cfg.Tmux.DirectPaneKeys, in.Cfg.Tmux.SwapPaneKeys, in.Cfg.Tmux.ResizeKey, in.Cfg.Tmux.HelpKey = false, true, "r", "?"
 	// Images off: Ctrl+V and Alt+V are the panes' again.
 	in.Cfg.Paste.Images = false
 	if got := GenerateConf(in); strings.Contains(got, "__paste-image") || strings.Contains(strings.Join(BoundKeys(in), ","), "C-v") {

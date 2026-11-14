@@ -24,7 +24,7 @@ func init() {
 	})
 	register(&command{
 		Name:    "__menu",
-		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v | --keys | --limits | --changes | --tab | --project S | --close-project S | --close-tab | --agent | --close-agent]",
+		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v [--before] | --keys | --limits | --changes | --tab | --project S | --close-project S | --close-tab | --agent | --close-agent]",
 		Summary: "cmd.internal",
 		Hidden:  true,
 		Run:     runMenu,
@@ -63,6 +63,7 @@ func runMenu(e *Env, args []string) error {
 	pinF := fs.Bool("pin", false, "the picker for pinning conversations")
 	sessionF := fs.String("session", "", "menu for one conversation (<agent>:<id>)")
 	splitF := fs.String("split", "", "ask which agent a new pane starts with: h (right) or v (down)")
+	beforeF := fs.Bool("before", false, "with --split: left or up instead")
 	newF := fs.Bool("new", false, "ask which agent a new pane starts with, then where")
 	placeF := fs.String("place", "", "ask where agent (or shell) opens: right, left, down, up or a new tab")
 	keysF := fs.Bool("keys", false, "show the keys")
@@ -97,7 +98,7 @@ func runMenu(e *Env, args []string) error {
 	case *limitsF:
 		return w.ShowLimits(client)
 	case *keysF:
-		m = w.KeysMenu()
+		return w.ShowKeys(ctx, p, client)
 	case *tabF:
 		m = w.TabMenu(p, client)
 	case *projectF != "":
@@ -131,7 +132,7 @@ func runMenu(e *Env, args []string) error {
 			return nil
 		}
 	case *splitF != "":
-		m = w.SplitMenu(p, client, *splitF == "h")
+		m = w.SplitMenu(p, client, *splitF == "h", *beforeF)
 	case *newF:
 		m = w.NewAgentMenu(p, client)
 	case *placeF != "":

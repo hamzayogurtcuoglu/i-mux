@@ -157,6 +157,9 @@ them) switches its view.
 | the **tab bar** at the top, over the terminal · its **+** (or `prefix c`) · **×** · **⏻ Exit** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab · back to the terminal, or quit i-mux |
 | close a project's last agent | the project stays open and says **No agents**: press an agent's key (or click it) there, or **+** next to AGENTS, to start one |
 | `prefix b` | hide or show the sidebar |
+| `prefix H` `J` `K` `L` | swap the active pane with the one on that side (left, down, up, right) |
+| `prefix r`, then `h` `j` `k` `l` or the arrows (Shift: faster), `Esc` | resize the active pane |
+| `prefix ?` (or `?` in the sidebar) | every key: type to find one, Enter runs it |
 | `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode |
 
 `prefix` is `Ctrl+b`: press it, release, then press the key.

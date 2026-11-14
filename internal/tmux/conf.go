@@ -125,6 +125,56 @@ func RunShell(self string, args ...string) string {
 
 func runShell(self string, args ...string) string { return RunShell(self, args...) }
 
+// SwapKeys are prefix H/J/K/L: swap the active pane with the one on that
+// side (`imux __pane swap <dir>`, D67).
+var SwapKeys = []struct{ Key, Dir string }{
+	{"H", "left"}, {"J", "down"}, {"K", "up"}, {"L", "right"},
+}
+
+// DirectKeys are the arrows of the keys without the prefix
+// (tmux.direct_pane_keys): Ctrl moves to the pane there, Ctrl+Alt splits
+// that way after asking which agent (D67).
+var DirectKeys = []struct{ Arrow, Flag, Split string }{
+	{"Left", "-L", "h"}, {"Down", "-D", "v"}, {"Up", "-U", "v"}, {"Right", "-R", "h"},
+}
+
+// ResizeTable is the key table of the resize mode (prefix r, D67).
+const ResizeTable = "imux-resize"
+
+// resizeKeys resize the active pane in the resize mode: h j k l and the
+// arrows by 2 cells, Shift by 10.
+var resizeKeys = []struct {
+	key, flag string
+	n         int
+}{
+	{"h", "-L", 2},
+	{"j", "-D", 2},
+	{"k", "-U", 2},
+	{"l", "-R", 2},
+	{"Left", "-L", 2},
+	{"Down", "-D", 2},
+	{"Up", "-U", 2},
+	{"Right", "-R", 2},
+	{"H", "-L", 10},
+	{"J", "-D", 10},
+	{"K", "-U", 10},
+	{"L", "-R", 10},
+	{"S-Left", "-L", 10},
+	{"S-Down", "-D", 10},
+	{"S-Up", "-U", 10},
+	{"S-Right", "-R", 10},
+}
+
+// resizeDone leave the resize mode (any other key leaves it too, and does
+// what it does).
+var resizeDone = []string{"Escape", "Enter", "q"}
+
+// ResizeMode is the tmux command that enters the resize mode, saying so on
+// the status line until the next key.
+func ResizeMode() string {
+	return "switch-client -T " + ResizeTable + " ; display-message -d 0 " + Quote(EscapeMessage(i18n.T("resize.mode")))
+}
+
 // BoundKeys lists the "table key" pairs the config binds, so a reload can
 // unbind keys that a changed config no longer uses.
 func BoundKeys(in *ConfInput) []string {
@@ -142,7 +192,25 @@ func BoundKeys(in *ConfInput) []string {
 	if t.PickerKeyPrefix != "" {
 		ks = append(ks, "prefix "+t.PickerKeyPrefix)
 	}
-	keys := []string{t.SidebarKey, t.SplitRightKey, t.SplitDownKey}
+	keys := []string{t.SidebarKey, t.SplitRightKey, t.SplitDownKey, t.ResizeKey, t.HelpKey}
+	if t.SwapPaneKeys {
+		for _, sw := range SwapKeys {
+			keys = append(keys, sw.Key)
+		}
+	}
+	if t.ResizeKey != "" {
+		for _, r := range resizeKeys {
+			ks = append(ks, ResizeTable+" "+r.key)
+		}
+		for _, k := range resizeDone {
+			ks = append(ks, ResizeTable+" "+k)
+		}
+	}
+	if t.DirectPaneKeys {
+		for _, d := range DirectKeys {
+			ks = append(ks, "root C-"+d.Arrow, "root C-M-"+d.Arrow)
+		}
+	}
 	if t.Tabs {
 		keys = append(keys, t.NewTabKey, t.RenameTabKey)
 	}
@@ -261,6 +329,35 @@ func GenerateConf(in *ConfInput) string {
 	if k := cfg.Tmux.SplitDownKey; k != "" {
 		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--split", "v", pane))
 	}
+	w("# Panes from the keyboard (D67): swap with the pane on a side, the resize mode, the help.")
+	if cfg.Tmux.SwapPaneKeys {
+		for _, sw := range SwapKeys {
+			w("bind    %s %s", Quote(sw.Key), runShell(in.Self, "__pane", "swap", sw.Dir, pane))
+		}
+	}
+	if k := cfg.Tmux.ResizeKey; k != "" {
+		w("bind    %s { %s }", Quote(k), ResizeMode())
+		for _, r := range resizeKeys {
+			w("bind -T %s %s { resize-pane %s %d ; %s }", ResizeTable, Quote(r.key), r.flag, r.n, ResizeMode())
+		}
+		for _, k := range resizeDone {
+			w("bind -T %s %s { switch-client -T root ; display-message -d 1 '' }", ResizeTable, Quote(k))
+		}
+	}
+	if k := cfg.Tmux.HelpKey; k != "" {
+		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--keys", pane))
+	}
+	if cfg.Tmux.DirectPaneKeys {
+		w("# Without the prefix: Ctrl+arrows move to the pane there, Ctrl+Alt+arrows split that way.")
+		for _, d := range DirectKeys {
+			w("bind -n C-%s select-pane %s", d.Arrow, d.Flag)
+			args := []string{"__menu", "--split", d.Split}
+			if d.Arrow == "Left" || d.Arrow == "Up" {
+				args = append(args, "--before")
+			}
+			w("bind -n C-M-%s %s", d.Arrow, runShell(in.Self, append(args, pane)...))
+		}
+	}
 	if cfg.Tmux.Tabs {
 		w("# New tab (asks which agent) and the tab's name.")
 		if k := cfg.Tmux.NewTabKey; k != "" {
@@ -347,6 +444,26 @@ func WriteConf(path, content string, write func(string, []byte) error) (bool, er
 	return true, nil
 }
 
+// ParseBoundKeys reads @imux_keys (BoundKeys joined by ","): its table and
+// key pairs. A key that is a comma ("prefix ," names a tab) is read as one,
+// not as an empty key and an empty entry.
+func ParseBoundKeys(v string) [][2]string {
+	parts := strings.Split(strings.TrimSpace(v), ",")
+	var out [][2]string
+	for i := 0; i < len(parts); i++ {
+		tk := parts[i]
+		if strings.HasSuffix(tk, " ") && i+1 < len(parts) && parts[i+1] == "" {
+			tk, i = tk+",", i+1
+		}
+		table, key, ok := strings.Cut(strings.TrimLeft(tk, " "), " ")
+		if !ok || key == "" {
+			continue
+		}
+		out = append(out, [2]string{table, key})
+	}
+	return out
+}
+
 // Reload makes a running server pick up path: keys bound by the previous
 // config are unbound first (they may have changed), then the file is
 // sourced. A server that is not running is not an error.
@@ -359,12 +476,8 @@ func (c *Client) Reload(ctx context.Context, path string) error {
 		return err
 	}
 	var cmds []Cmd
-	for _, tk := range strings.Split(strings.TrimSpace(out), ",") {
-		table, key, ok := strings.Cut(strings.TrimSpace(tk), " ")
-		if !ok || key == "" {
-			continue
-		}
-		cmds = append(cmds, Cmd{"unbind-key", "-q", "-T", table, key})
+	for _, tk := range ParseBoundKeys(out) {
+		cmds = append(cmds, Cmd{"unbind-key", "-q", "-T", tk[0], tk[1]})
 	}
 	cmds = append(cmds, Cmd{"source-file", path})
 	_, err = c.Run(ctx, cmds...)
