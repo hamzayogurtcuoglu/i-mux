@@ -997,6 +997,18 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M75: The whole window in the theme (added 2026-11-14)
+
+User request: changing the theme left the agents' panes in the terminal's colors beside a
+themed sidebar (D70).
+
+- [x] **T75.1 Panes in the theme** · S
+  - AC: a theme on its own colors sets `window-style` / `window-active-style` to its panel and
+    text, `pane-colours[0-15]` (tmux 3.3+) to its 16 colors, the borders on its panel; `i-mux`
+    and `terminal` unset them; the sidebar asks OSC 11 only while the panes are on the
+    terminal's colors; unit tests; e2e (the panes' style, the terminal's DEC 2031 report on
+    tmux 3.6+, back to i-mux).
+
 ## M74: Themes reviewed (added 2026-11-14)
 
 User request: themes did not read (white text on a light terminal), and the default should be

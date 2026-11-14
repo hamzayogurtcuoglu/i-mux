@@ -147,6 +147,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D67 | **Panes are moved, resized and found from the keyboard, and the help is searchable** (added 2026-11-14, v0.57, at the user's request): `prefix H/J/K/L` swaps the active pane with its neighbor on that side (never with a sidebar, never around the window's edge; the focus stays on the pane that moved); `prefix r` enters a resize mode where `h j k l` or the arrows resize the active pane (Shift: 10 cells at a time) until `Esc`, `Enter` or any other key; `prefix ?` (and the sidebar's `?` and the rail's Help) open the keys as a Quick Pick: typing filters them, Enter runs the chosen one, and the keys shown are the ones the config binds. Optional root keys without the prefix (`tmux.direct_pane_keys`, off): `Ctrl+←↑→↓` move to the pane there, `Ctrl+Alt+←↑→↓` split that way after asking which agent. | Moving panes and finding a key took the mouse or tmux's own unlisted keys; the help was a fixed list that could not be searched nor run, and named keys the config may have changed. The keys without the prefix stay off by default: shells and agents' inputs use Ctrl+←/→ to jump words, and macOS uses Ctrl+arrows for its Spaces. |
 | D68 | **Color themes, and light/dark following the terminal** (added 2026-11-14, v0.58, at the user's request): every color i-mux draws comes from one palette of named colors (`accent`, `panel_bg`, `sidebar_bg`, `active_row_bg`, `selection_bg`, `surface0`, `surface1`, `surface_dim`, `overlay0`, `overlay1`, `text`, `subtext0`, `mauve`, `green`, `yellow`, `red`, `blue`, `teal`, `peach`): the sidebar, the pager and diff viewer, the menus, Quick Picks and popups, and tmux's tab bar, borders, messages and popups. `[theme] name` picks one of 18 built-in themes (default `catppuccin`, Catppuccin Mocha; `terminal` uses the terminal's own ANSI colors), `[theme.custom]` overrides single colors, and `auto_switch` follows the terminal's light or dark background with `light_name` / `dark_name` (each a theme's light or dark sibling when unset), with `[theme.custom.light]` / `[theme.custom.dark]` on top. Settings has a Theme row (choosing one there turns `auto_switch` off) and a row for following the terminal. | i-mux's colors were fixed 256-color codes for a dark terminal: on a light one its gray text and dark bars were hard to read, and nothing could be changed. One palette with well-known themes, the terminal's own colors among them, keeps every part of the UI in step. |
 | D69 | **Themes reviewed: i-mux's own look is the default again, and every theme reads on any terminal** (added 2026-11-14, v0.58.1, at the user's request; refines D68): a theme named `i-mux` is the look from before themes, exactly, and the default; the panes i-mux draws are on the theme's own background and text color, painted by the pane itself; built-in themes are adjusted until text, secondary text, hints and state colors keep their contrast on every background i-mux draws them on (WCAG AA for text); `terminal` draws what is quieter in bright black. | With the terminal's background showing through, a dark theme's near-white text was invisible on a light terminal, and a light theme's dark text on a dark one; some schemes' own colors (Tokyo Night Day's blue text, Solarized Light's and Kanagawa Lotus's faint selection) did not read on their own backgrounds; `terminal`'s gray hints vanished on a light terminal; and Catppuccin as the default changed everyone's look unasked. |
+| D70 | **A theme colors the whole window, the agents' panes too** (added 2026-11-14, v0.58.2, at the user's request; refines D68 and D69): with a theme on its own colors every pane is on the theme's panel and text color and its programs get the theme's 16 colors, as a terminal theme does; the borders are on the same panel. Following the terminal's light or dark live takes tmux 3.6+'s hooks, as a pane's OSC 11 question is then answered with the theme's background. | With only the sidebar and the tab bar in the theme, a light theme on a dark terminal split the window in two: a light sidebar beside dark agents. |
 
 ## 4. Components
 
@@ -1573,7 +1574,15 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   white on white). The pane paints them itself rather than with a tmux `window-style`: tmux
   answers a pane's OSC 11 question with the pane's style when it has one, which would hide the
   terminal's light or dark. `i-mux` and `terminal` stay on the terminal's colors. The tab bar
-  is on `panel_bg` too. The agents' panes are never painted: what an agent shows is its own.
+  is on `panel_bg` too.
+- **The whole window (v0.58.2, D70):** with a theme on its own colors every pane is on its
+  `panel_bg` and `text` (tmux's `window-style` and `window-active-style`), the agents' and
+  terminals' too, and their programs get the theme's 16 colors (`pane-colours`, tmux 3.3+):
+  black `surface1`, red, green, yellow, blue, magenta `mauve`, cyan `teal` in both intensities,
+  white `subtext0` (so a program's white reads on a light theme), bright black `overlay0`,
+  bright white `text`. The borders are drawn on `panel_bg`. What a program draws in its own
+  24-bit colors stays as it draws it (an agent's own theme: Claude Code's `/theme`). `i-mux`
+  and `terminal` unset these, so the panes are the terminal's again.
 - **Config:** `[theme] name`, `auto_switch` (false), `light_name`, `dark_name`;
   `[theme.custom]` sets any of the 19 colors, `[theme.custom.light]` / `[theme.custom.dark]` only
   in that mode; the order is the theme, then `custom`, then the mode's. The mode is the
@@ -1585,10 +1594,13 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   `dark_name` otherwise (an unknown background is dark). The global option `@imux_appearance`
   holds what is known: tmux 3.6+ runs the `client-light-theme` / `client-dark-theme` hooks when
   the terminal changes (DEC mode 2031, or tmux's guess from the background), which run
-  `imux __theme appearance light|dark`; and a sidebar asks the terminal's background with OSC 11
-  when it starts and on each safety refresh (tmux 3.4+ answers it with the client's color),
-  light when its Rec. 601 luma (299 R + 587 G + 114 B) is at least half. A change sets the
-  option, sets tmux's styles again and redraws the sidebars.
+  `imux __theme appearance light|dark`; and, while the panes are on the terminal's colors
+  (`i-mux`, `terminal`), a sidebar asks the terminal's background with OSC 11 when it starts
+  and on each safety refresh (tmux 3.4+ answers it with the client's color), light when its
+  Rec. 601 luma (299 R + 587 G + 114 B) is at least half. With panes on a theme's colors tmux
+  answers OSC 11 with the theme's own background, so the sidebar does not ask: following the
+  terminal live takes tmux 3.6+ (D70). A change sets the option, sets tmux's styles again and
+  redraws the sidebars.
 - **Where the colors go:** text `text`, titles bold `text`, secondary text `subtext0`, hints
   `overlay0`, the selected row `selection_bg`, the current agent's row `active_row_bg`,
   buttons, links, the focus mark and typed matches `accent`, states `green` / `yellow` / `red`
