@@ -1034,6 +1034,11 @@ User request: fix the bugs of ROADMAP.md's audit that hold, and any other found 
     second one; a folder pasted into a folder of its own whose name starts with `..` is
     refused, not copied into itself until the path is too long; the agent bus's Deliver and
     Discard quote the parked file's path for sh (an i-mux home with a space); unit tests.
+- [x] **T71.9 A third look** · S
+  - AC: a link to a folder is a folder in the explorer (listed with them, opens in place); in
+    the pager, n and N go through the matches on the last page and around the ends; a
+    Settings change saves into a config.toml without a last line break, and a Windows line
+    end stays; unit tests.
 
 ## M70: The commit message box like VS Code's, no AI commit messages (added 2026-11-13)
 

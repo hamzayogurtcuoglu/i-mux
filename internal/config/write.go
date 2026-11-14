@@ -89,7 +89,10 @@ func setLine(src, section, key, value string) string {
 		}
 		if m := keyRe.FindString(l); m != "" {
 			nl := ""
-			if strings.HasSuffix(l, "\n") {
+			switch {
+			case strings.HasSuffix(l, "\r\n"):
+				nl = "\r\n" // a Windows editor's line end kept
+			case strings.HasSuffix(l, "\n"):
 				nl = "\n"
 			}
 			lines[i] = m + value + nl
@@ -100,19 +103,27 @@ func setLine(src, section, key, value string) string {
 		}
 	}
 	line := key + " = " + value + "\n"
+	// insert puts the line before lines[at]: the line above it ended first
+	// (a file saved without a last line break, as VS Code saves it).
+	insert := func(at int) {
+		if at > 0 && !strings.HasSuffix(lines[at-1], "\n") {
+			lines[at-1] += "\n"
+		}
+		lines = append(lines[:at], append([]string{line}, lines[at:]...)...)
+	}
 	switch {
 	case section == "" && firstHeader >= 0:
 		at := firstHeader
 		if last >= 0 {
 			at = last + 1
 		}
-		lines = append(lines[:at], append([]string{line}, lines[at:]...)...)
+		insert(at)
 	case section == "" || last >= 0:
 		at := len(lines)
 		if last >= 0 {
 			at = last + 1
 		}
-		lines = append(lines[:at], append([]string{line}, lines[at:]...)...)
+		insert(at)
 	default:
 		out := strings.Join(lines, "")
 		if out != "" && !strings.HasSuffix(out, "\n") {

@@ -36,6 +36,17 @@ func TestSetLine(t *testing.T) {
 	if got := setLine("[a]\n# x = 1\n", "a", "x", "2"); got != "[a]\n# x = 1\nx = 2\n" {
 		t.Errorf("commented key: %q", got)
 	}
+	// A file saved without a last line break: a new key goes on a line of
+	// its own (top level too); a Windows line end stays.
+	for _, c := range []struct{ src, section, want string }{
+		{"[tmux]\nsidebar = true", "tmux", "[tmux]\nsidebar = true\nnotify = false\n"},
+		{"on_limit = \"ask\"", "", "on_limit = \"ask\"\nnotify = false\n"},
+		{"[tmux]\r\nnotify = true\r\n", "tmux", "[tmux]\r\nnotify = false\r\n"},
+	} {
+		if got := setLine(c.src, c.section, "notify", "false"); got != c.want {
+			t.Errorf("%q: %q, want %q", c.src, got, c.want)
+		}
+	}
 }
 
 func TestSet(t *testing.T) {

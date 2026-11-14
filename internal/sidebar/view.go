@@ -69,27 +69,42 @@ func BuildTree(root string, open map[string]bool, changes []ChangeRow, showHidde
 	var out []TreeRow
 	var walk func(rel string, depth int)
 	walk = func(rel string, depth int) {
-		ents, err := os.ReadDir(filepath.Join(root, rel))
+		des, err := os.ReadDir(filepath.Join(root, rel))
 		if err != nil {
 			return
 		}
+		// A link to a folder is a folder (as in VS Code): .claude/skills'
+		// links to .agents/skills, a monorepo's linked packages.
+		type entry struct {
+			name string
+			dir  bool
+		}
+		ents := make([]entry, len(des))
+		for i, e := range des {
+			ents[i] = entry{e.Name(), e.IsDir()}
+			if e.Type()&os.ModeSymlink != 0 {
+				if fi, err := os.Stat(filepath.Join(root, rel, e.Name())); err == nil {
+					ents[i].dir = fi.IsDir()
+				}
+			}
+		}
 		sort.SliceStable(ents, func(i, j int) bool {
-			di, dj := ents[i].IsDir(), ents[j].IsDir()
+			di, dj := ents[i].dir, ents[j].dir
 			if di != dj {
 				return di
 			}
-			return strings.ToLower(ents[i].Name()) < strings.ToLower(ents[j].Name())
+			return strings.ToLower(ents[i].name) < strings.ToLower(ents[j].name)
 		})
 		for _, e := range ents {
 			if len(out) >= maxTree {
 				return
 			}
-			n := e.Name()
-			if folders.Hidden(n, e.IsDir(), showHidden) {
+			n := e.name
+			if folders.Hidden(n, e.dir, showHidden) {
 				continue
 			}
 			p := filepath.Join(rel, n)
-			row := TreeRow{Path: p, Name: n, Depth: depth, Dir: e.IsDir(), Git: status[p]}
+			row := TreeRow{Path: p, Name: n, Depth: depth, Dir: e.dir, Git: status[p]}
 			if row.Dir {
 				row.Open = open[p]
 				if dirty[p] {

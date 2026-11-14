@@ -388,6 +388,19 @@ func TestExplorer(t *testing.T) {
 	if got := names(tree); got != "docs src* >auth* >main.ts README.md?" {
 		t.Fatalf("tree %s", got)
 	}
+	// A link to a folder is a folder, listed with them and opened like one;
+	// a link to a file, or to nothing, is a file.
+	for name, to := range map[string]string{"linked": "src/auth", "readme-link": "README.md", "dangling": "gone"} {
+		if err := os.Symlink(to, filepath.Join(root, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := names(BuildTree(root, map[string]bool{"linked": true}, nil, false)); got != "docs linked >redirect.ts src dangling readme-link README.md" {
+		t.Errorf("links: %s", got)
+	}
+	for _, l := range []string{"linked", "readme-link", "dangling"} {
+		_ = os.Remove(filepath.Join(root, l))
+	}
 	m := model()
 	m.View, m.Tree = ViewExplorer, tree
 	for _, w := range []int{25, 38} {

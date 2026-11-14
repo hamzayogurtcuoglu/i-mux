@@ -6,6 +6,19 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.56.2] - 2026-11-14
+
+### Fixed
+
+- **Links to folders in the explorer** are folders: listed with them and opened in place, as
+  VS Code shows them (such as the `.claude/skills` links i-mux makes), instead of files that
+  open nothing.
+- **n and N in the diff viewer and file viewer** go through every match. On the last page they
+  stopped at the first match below its top and never went around to the first one.
+- **Settings save into a config.toml without a last line break** (as VS Code saves it): a new
+  setting was written on the end of the last line and the change failed with "expected value
+  but found …". A line ending in `\r\n` keeps it when its value changes.
+
 ## [0.56.1] - 2026-11-14
 
 ### Fixed

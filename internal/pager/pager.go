@@ -86,6 +86,9 @@ type Pager struct {
 	// The change last gone to (its index + 1; 0: none yet) and the top
 	// then: ] [ go on from it while the text has not moved since.
 	changeAt, changeTop int
+	// The match last gone to, the same way for n N: on the last page the
+	// top stays while the matches below it are gone through.
+	matchAt, matchTop int
 }
 
 // DefaultLiveEvery is how often Live is asked while more is to come.
@@ -111,7 +114,7 @@ func (p *Pager) refresh(w int, now time.Time) {
 	p.liveW, p.liveAt = w, now
 	p.plain = nil
 	if p.query != "" {
-		p.matches = p.matches[:0]
+		p.matches, p.matchAt = p.matches[:0], 0
 		for i := range p.Lines {
 			if strings.Contains(p.plainLine(i), p.query) {
 				p.matches = append(p.matches, i)
@@ -411,7 +414,7 @@ func (p *Pager) Key(k string) bool {
 
 // search finds q's lines and goes to the first one from the top shown on.
 func (p *Pager) search(q string) {
-	p.query, p.matches = q, nil
+	p.query, p.matches, p.matchAt = q, nil, 0
 	if q == "" {
 		return
 	}
@@ -434,24 +437,30 @@ func (p *Pager) next(d int) {
 	if len(p.matches) == 0 {
 		return
 	}
+	n := len(p.matches)
 	i := -1
-	for k, n := range p.matches {
-		if d > 0 && n > p.Top && i < 0 {
-			i = k
-		}
-		if d < 0 && n < p.Top {
-			i = k
+	if p.matchAt > 0 && p.matchAt <= n && p.Top == p.matchTop {
+		i = (p.matchAt - 1 + d + n) % n // on from the one gone to last
+	} else {
+		for k, line := range p.matches {
+			if d > 0 && line > p.Top && i < 0 {
+				i = k
+			}
+			if d < 0 && line < p.Top {
+				i = k
+			}
 		}
 	}
 	if i < 0 {
 		i = 0
 		if d < 0 {
-			i = len(p.matches) - 1
+			i = n - 1
 		}
 	}
 	p.Top = p.matches[i]
-	p.note = i18n.T("pager.match", i+1, len(p.matches), strconv.Quote(p.query))
+	p.note = i18n.T("pager.match", i+1, n, strconv.Quote(p.query))
 	p.clamp()
+	p.matchAt, p.matchTop = i+1, p.Top
 }
 
 // Mouse applies a wheel turn, a click or drag on the bar, or a click on the

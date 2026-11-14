@@ -179,6 +179,22 @@ func TestPagerSearch(t *testing.T) {
 	if p.Top != 98-8 && p.Top != 90 { // around: the last match, clamped to the end
 		t.Errorf("around the top at %d", p.Top)
 	}
+	// On the last page n goes through the matches the top cannot reach,
+	// then around to the first.
+	p.Top = 0
+	p.search("line 9")
+	var notes []string
+	for range 11 {
+		p.Key("n")
+		notes = append(notes, strings.Fields(p.note)[0])
+	}
+	if got := strings.Join(notes, " "); got != "2 3 4 5 6 7 8 9 10 11 1" || p.Top != 8 {
+		t.Errorf("n on the last page: %s, top %d", got, p.Top)
+	}
+	p.Key("N")
+	if !strings.HasPrefix(p.note, "11 of 11") || p.Top != 90 {
+		t.Errorf("N around the end: %q, top %d", p.note, p.Top)
+	}
 }
 
 func TestText(t *testing.T) {
