@@ -112,7 +112,7 @@ func Run(ctx context.Context, o Options) error {
 	// one piece (the commit box, D65).
 	// The terminal's light or dark (D68): reported when it changes (DEC
 	// 2031, tmux 3.6+), and its background asked (OSC 11, tmux 3.4+).
-	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h\x1b[?1004h\x1b[?2004h\x1b[?2031h"+askBackground)
+	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h\x1b[?1004h\x1b[?2004h\x1b[?2031h"+askBackground())
 	defer func() {
 		_, _ = io.WriteString(o.Out, "\x1b[?2031l\x1b[?2004l\x1b[?1004l\x1b[?1003l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l")
 	}()
@@ -176,7 +176,7 @@ func Run(ctx context.Context, o Options) error {
 				upgrade()
 			case syscall.SIGWINCH:
 				s.lastFrame = "" // the pane was resized: draw it whole
-				_, _ = io.WriteString(o.Out, askBackground)
+				_, _ = io.WriteString(o.Out, askBackground())
 				if s.keepWidth(ctx) {
 					s.draw() // its edge dragged: the same model, wider or narrower
 					continue
@@ -189,7 +189,7 @@ func Run(ctx context.Context, o Options) error {
 			continue
 		case <-tick.C:
 			upgrade()
-			_, _ = io.WriteString(o.Out, askBackground)
+			_, _ = io.WriteString(o.Out, askBackground())
 		case <-fresh.C:
 			if !s.win.Visible {
 				continue // nobody sees it; a switch to it signals a redraw
@@ -296,9 +296,16 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 	return false
 }
 
-// askBackground asks the terminal for its background (OSC 11); tmux 3.4+
-// answers with the client's.
-const askBackground = "\x1b]11;?\x1b\\"
+// askBackground asks the terminal for its background (OSC 11; tmux 3.4+
+// answers with the client's), while the panes are on the terminal's
+// colors: on a theme's, tmux answers with the theme's own (D70), and tmux
+// 3.6+'s hooks tell the terminal's light or dark instead.
+func askBackground() string {
+	if base, _, _ := theme.PaneBase(theme.Current()); base != "" {
+		return ""
+	}
+	return "\x1b]11;?\x1b\\"
+}
 
 // terminalTheme takes the terminal's answer: its background's light or
 // dark (OSC 11), or its report (DEC 2031). A change is noted for every

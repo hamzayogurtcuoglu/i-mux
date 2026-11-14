@@ -54,6 +54,9 @@ set -g  @imux_c_blue colour75
 set -g  @imux_c_teal colour152
 set -g  @imux_c_peach colour173
 set -g  status-style bg=default,fg=colour245
+set -gu window-style
+set -gu window-active-style
+set -gu pane-colours
 set -gu pane-border-style
 set -gu pane-active-border-style
 set -gu message-style

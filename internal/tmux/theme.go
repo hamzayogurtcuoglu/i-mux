@@ -1,6 +1,13 @@
 package tmux
 
-import "github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+import (
+	"strconv"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+)
+
+// OptPaneColors is tmux's palette option for the panes' programs (3.3+).
+const OptPaneColors = "pane-colours" //nolint:misspell // tmux's spelling
 
 // OptAppearance is the terminal's light or dark ("light", "dark", "" not
 // known), global (D68).
@@ -42,10 +49,30 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 		}
 		return out
 	}
-	// The tab bar on the theme's panel, as the sidebar (theme.PaneBase).
-	style("status-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Subtext0.Tmux())
-	style("pane-border-style", "fg="+p.Surface1.Tmux())
-	style("pane-active-border-style", "fg="+p.Accent.Tmux())
+	// The whole window in the theme (D70): every pane (the agents' too) on
+	// its panel and text color with its 16 colors, as a terminal theme
+	// would, the borders and the tab bar on the same panel. A theme on the
+	// terminal's colors (terminal) leaves the panes theirs.
+	if base, _, _ := theme.PaneBase(p); base != "" {
+		pane := "bg=" + p.PanelBg.Tmux() + ",fg=" + p.Text.Tmux()
+		style("window-style", pane)
+		style("window-active-style", pane)
+		if v.AtLeast(3, 3) {
+			for i, c := range ANSIColors(p) {
+				out = append(out, Cmd{"set-option", "-g", OptPaneColors + "[" + strconv.Itoa(i) + "]", c.Tmux()})
+			}
+		}
+		style("status-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Subtext0.Tmux())
+		style("pane-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
+		style("pane-active-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Accent.Tmux())
+	} else {
+		for _, o := range paneUnset(v) {
+			out = append(out, Cmd{"set-option", "-gu", o})
+		}
+		style("status-style", "bg=default,fg="+p.Subtext0.Tmux())
+		style("pane-border-style", "fg="+p.Surface1.Tmux())
+		style("pane-active-border-style", "fg="+p.Accent.Tmux())
+	}
 	style("message-style", "bg="+p.Surface0.Tmux()+",fg="+p.Text.Tmux())
 	style("message-command-style", "bg="+p.Surface0.Tmux()+",fg="+p.Text.Tmux())
 	style("mode-style", "bg="+p.SelectionBg.Tmux()+",fg="+p.Text.Tmux())
@@ -63,7 +90,7 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 
 // classicUnset are the styles the i-mux theme leaves to tmux.
 func classicUnset(v Version) []string {
-	out := []string{"pane-border-style", "pane-active-border-style", "message-style", "message-command-style", "mode-style"}
+	out := append(paneUnset(v), "pane-border-style", "pane-active-border-style", "message-style", "message-command-style", "mode-style")
 	if v.AtLeast(3, 3) {
 		out = append(out, "popup-style", "popup-border-style")
 	}
@@ -71,4 +98,27 @@ func classicUnset(v Version) []string {
 		out = append(out, "menu-style", "menu-selected-style", "menu-border-style")
 	}
 	return out
+}
+
+// paneUnset are the panes' colors a theme on the terminal's leaves to it.
+func paneUnset(v Version) []string {
+	out := []string{"window-style", "window-active-style"}
+	if v.AtLeast(3, 3) {
+		out = append(out, OptPaneColors)
+	}
+	return out
+}
+
+// ANSIColors are the 16 colors the panes' programs get with a theme (D70):
+// red, green, yellow, blue, magenta and cyan are the theme's, in both
+// intensities; "white" is its secondary text and bright white its text, so
+// a program's white reads on a light theme too; black and bright black are
+// its border and hint grays.
+func ANSIColors(p theme.Palette) []theme.Color {
+	six := []theme.Color{p.Red, p.Green, p.Yellow, p.Blue, p.Mauve, p.Teal}
+	out := []theme.Color{p.Surface1}
+	out = append(out, six...)
+	out = append(out, p.Subtext0, p.Overlay0)
+	out = append(out, six...)
+	return append(out, p.Text)
 }

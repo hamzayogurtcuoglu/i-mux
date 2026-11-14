@@ -6,6 +6,19 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.58.2] - 2026-11-14
+
+### Fixed
+
+- **A theme colors the whole window.** Only the sidebar and the tab bar took the theme, so a
+  light theme on a dark terminal showed a light sidebar beside dark agents. Every pane, the
+  agents' and terminals' too, is now on the theme's background and text color, its programs get
+  the theme's 16 colors (tmux 3.3 or later), and the borders are on the same background, as with
+  a terminal theme. What an agent draws in its own colors stays its own (Claude Code: `/theme`).
+  i-mux and Terminal keep your terminal's colors.
+- Following the terminal's light/dark live takes tmux 3.6 or later: with the panes in a
+  theme's colors, an older tmux cannot tell i-mux the terminal's background.
+
 ## [0.58.1] - 2026-11-14
 
 ### Changed

@@ -22,7 +22,10 @@ func TestThemeOptions(t *testing.T) {
 	got := join(ThemeOptions(theme.Builtin("nord"), v("3.4")))
 	for _, want := range []string{
 		"@imux_c_accent #88c0d0", "@imux_c_peach #d08770", "@imux_c_sidebar_bg default",
-		"status-style bg=#272c36,fg=#d8dee9", "pane-active-border-style fg=#88c0d0", "pane-border-style fg=#434c5e",
+		"status-style bg=#272c36,fg=#d8dee9", "pane-active-border-style bg=#272c36,fg=#88c0d0", "pane-border-style bg=#272c36,fg=#434c5e",
+		// Every pane in the theme (D70), with its 16 colors.
+		"window-style bg=#272c36,fg=#eceff4", "window-active-style bg=#272c36,fg=#eceff4",
+		OptPaneColors + "[1] #bf616a", OptPaneColors + "[4] #81a1c1", OptPaneColors + "[7] #d8dee9", OptPaneColors + "[15] #eceff4",
 		"message-style bg=#3b4252,fg=#eceff4", "mode-style bg=#434c5e,fg=#eceff4",
 		"popup-style bg=#272c36,fg=#eceff4", "menu-style bg=#272c36,fg=#eceff4", "menu-selected-style bg=#434c5e,fg=#eceff4",
 	} {
@@ -30,13 +33,18 @@ func TestThemeOptions(t *testing.T) {
 			t.Errorf("lacks %q:\n%s", want, got)
 		}
 	}
-	if old := join(ThemeOptions(theme.Builtin("nord"), v("3.2a"))); strings.Contains(old, "popup-") || strings.Contains(old, "menu-") {
+	if old := join(ThemeOptions(theme.Builtin("nord"), v("3.2a"))); strings.Contains(old, "popup-") || strings.Contains(old, "menu-") || strings.Contains(old, OptPaneColors) {
 		t.Errorf("3.2 gets popup or menu styles:\n%s", old)
 	}
 	if mid := join(ThemeOptions(theme.Builtin("nord"), v("3.3a"))); !strings.Contains(mid, "popup-style") || strings.Contains(mid, "menu-style") {
 		t.Errorf("3.3:\n%s", mid)
 	}
-	if term := join(ThemeOptions(theme.Builtin("terminal"), v("3.4"))); !strings.Contains(term, "@imux_c_accent blue") || !strings.Contains(term, "status-style bg=default,fg=brightblack") {
+	if old := join(ThemeOptions(theme.Builtin("nord"), v("3.2a"))); strings.Contains(old, OptPaneColors) || !strings.Contains(old, "window-style") {
+		t.Errorf("3.2: pane colors (3.3+), or no pane colors:\n%s", old)
+	}
+	// The terminal theme leaves the panes the terminal's colors.
+	if term := join(ThemeOptions(theme.Builtin("terminal"), v("3.4"))); !strings.Contains(term, "@imux_c_accent blue") || !strings.Contains(term, "status-style bg=default,fg=brightblack") ||
+		strings.Contains(term, "window-style bg") || !strings.Contains(term, "window-style") || !strings.Contains(term, OptPaneColors) {
 		t.Errorf("terminal:\n%s", term)
 	}
 	// The i-mux theme: the tab bar's gray as before, tmux's own borders,
@@ -52,8 +60,8 @@ func TestThemeOptions(t *testing.T) {
 			unset++
 		}
 	}
-	if unset != 10 {
-		t.Errorf("classic unsets %d styles, want 10", unset)
+	if unset != 13 {
+		t.Errorf("classic unsets %d styles, want 13", unset)
 	}
 	// The tab bar reads the options, so a change needs no new config.
 	if f := TabFormat(false); !strings.Contains(f, "#[fg=#{@imux_c_subtext0}]") || strings.Contains(f, "fg=c") {
