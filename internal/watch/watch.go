@@ -215,6 +215,23 @@ func (d *Daemon) Loop(ctx context.Context) error {
 	}
 }
 
+// configChanged reports a config at path changed since *mod that loads: the
+// watcher restarts to take it. One that does not load (a typo saved) is
+// logged and the watcher goes on with the config it has, until the file
+// is saved again (D66): a restart would exit on it and stay down.
+func configChanged(path string, mod *time.Time, logger *log.Logger) bool {
+	m := config.ModTime(path)
+	if m.Equal(*mod) {
+		return false
+	}
+	*mod = m
+	if _, _, err := config.Load(path); err != nil {
+		logger.Printf("config: %v; going on with the last good one", err)
+		return false
+	}
+	return true
+}
+
 // ErrUpgraded ends Loop when the imux binary was replaced.
 var ErrUpgraded = errors.New("imux binary replaced")
 
@@ -257,8 +274,9 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	logger.Printf("started (poll %v, idle %v)", poll, idle)
 	stamp := selfexec.Take()
-	cfgMod := config.ModTime(paths.Config())
-	changed := func() bool { return stamp.Changed() || !config.ModTime(paths.Config()).Equal(cfgMod) }
+	cfgPath := paths.Config()
+	cfgMod := config.ModTime(cfgPath)
+	changed := func() bool { return stamp.Changed() || configChanged(cfgPath, &cfgMod, logger) }
 	d := &Daemon{T: tc, Tick: tk, PollInterval: poll, IdleInterval: idle, Log: logger, Wake: wake, Stop: stop, Upgraded: changed}
 	err = d.Loop(context.Background())
 	if errors.Is(err, ErrUpgraded) {

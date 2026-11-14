@@ -167,7 +167,6 @@ type Model struct {
 	SCMView   string          // "tree" or "" (a list): @imux_scm_view
 	SCMSort   string          // "name", "status" or "" (the path): @imux_scm_sort
 	SCMClosed map[string]bool // folded folders of the tree ("side:path"), per sidebar
-	Skills    []skills.Skill  // the project's Agent Skills (Skills view)
 	Auto      []AutoItem      // the project's agents and skills with their schedules (Scheduler view)
 	AutoRoot  string          // the Scheduler's project root
 	// AutoRunning counts the scheduled runs going on, in every project (the
@@ -384,7 +383,9 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	scmView, scmSort := "", ""
 	if rows := tmux.Rows(sec["me"], 20); len(rows) > 0 {
 		scmView, scmSort, win.CommitAsk = rows[0][17], rows[0][18], rows[0][19]
-		if v := rows[0][9]; v == ViewExplorer || v == ViewChanges || v == ViewSkills || v == ViewAuto {
+		if v := rows[0][9]; v == "skills" {
+			view = ViewAuto // the Skills view went into Jobs (v0.56, D66)
+		} else if v == ViewExplorer || v == ViewChanges || v == ViewAuto {
 			view = v
 		}
 		closed, program = rows[0][10] == "1", rows[0][11]
@@ -652,11 +653,6 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 			m.SCM = st
 		}
 	}
-	if m.View == ViewSkills && cwd != "" {
-		root := skills.Root(cwd)
-		skills.Sync(root)
-		m.Skills = skills.List(root)
-	}
 	gatherAuto(&m, cwd, skills.Root)
 	return m, win, nil
 }
@@ -699,9 +695,22 @@ func ParseStatus(lines []string) []ChangeRow {
 		if _, after, ok := strings.Cut(path, " -> "); ok {
 			path = after
 		}
-		out = append(out, ChangeRow{Status: st, Path: strings.Trim(path, `"`)})
+		out = append(out, ChangeRow{Status: st, Path: unquotePath(path)})
 	}
 	return out
+}
+
+// unquotePath undoes git's quoting of a path ("a\"b", "\303\274.go": C
+// escapes, octal bytes), which core.quotePath=false leaves only for names
+// with quotes, backslashes or control characters.
+func unquotePath(p string) string {
+	if len(p) >= 2 && p[0] == '"' && p[len(p)-1] == '"' {
+		if u, err := strconv.Unquote(p); err == nil {
+			return u
+		}
+		return strings.Trim(p, `"`)
+	}
+	return p
 }
 
 // numstat returns the added and removed lines per changed file of dir
@@ -718,7 +727,7 @@ func (s *Source) numstat(ctx context.Context, dir string, ttl time.Duration) map
 	if run == nil {
 		run = gitNumstat
 	}
-	num := ParseNumstat(run(ctx, dir))
+	num := gitops.ParseNumstat(run(ctx, dir))
 	s.mu.Lock()
 	c = s.git[dir]
 	c.num, c.numAt = num, s.Now()
@@ -730,12 +739,12 @@ func (s *Source) numstat(ctx context.Context, dir string, ttl time.Duration) map
 	return num
 }
 
-// gitNumstat runs git diff --numstat HEAD in dir (2 s at most), taking no
+// gitNumstat runs git diff --numstat -z HEAD in dir (2 s at most), taking no
 // lock (gitops.NoLocksArgs): an action run meanwhile would find it.
 func gitNumstat(ctx context.Context, dir string) string {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	args := append(append([]string{"-C", dir}, gitops.NoLocksArgs...), "diff", "--numstat", "HEAD")
+	args := append(append([]string{"-C", dir}, gitops.NoLocksArgs...), "diff", "--numstat", "-z", "HEAD")
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Env = append(os.Environ(), gitops.NoLocksEnv...)
 	out, err := cmd.Output()
@@ -743,33 +752,6 @@ func gitNumstat(ctx context.Context, dir string) string {
 		return ""
 	}
 	return string(out)
-}
-
-// ParseNumstat reads `git diff --numstat` output: "12\t3\tpath"; binary
-// files ("-\t-") count 0; a rename "a => b" (or "{a => b}/c") keeps the new path.
-func ParseNumstat(out string) map[string][2]int {
-	m := map[string][2]int{}
-	for _, l := range strings.Split(out, "\n") {
-		f := strings.SplitN(l, "\t", 3)
-		if len(f) != 3 {
-			continue
-		}
-		a, _ := strconv.Atoi(f[0])
-		r, _ := strconv.Atoi(f[1])
-		path := f[2]
-		if i := strings.Index(path, "{"); i >= 0 {
-			if j := strings.Index(path[i:], "}"); j > 0 {
-				inner := path[i+1 : i+j]
-				if _, after, ok := strings.Cut(inner, " => "); ok {
-					path = strings.ReplaceAll(path[:i]+after+path[i+j+1:], "//", "/")
-				}
-			}
-		} else if _, after, ok := strings.Cut(path, " => "); ok {
-			path = after
-		}
-		m[path] = [2]int{a, r}
-	}
-	return m
 }
 
 // ShowHidden reports whether the explorer shows names starting with a dot

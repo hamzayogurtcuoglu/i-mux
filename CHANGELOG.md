@@ -6,6 +6,41 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-11-14
+
+### Added
+
+- **Skills are written and managed from Jobs again.** Since the Skills tab left the rail
+  (v0.52), New skill, the front-matter warnings and a skill's actions could not be reached.
+  Now **✨** in the Jobs title opens the New skill dialog (a right-click on the title or the
+  view's empty space offers New skill… and Blank SKILL.md…), a skill whose front matter has a
+  problem is marked **⚠** with the problem under its name, and a skill's **⋯** menu has **Add to
+  Agent**, **Improve with Agent**, **Share with all agents** and **Delete skill…**.
+- **↑/↓ scroll the sidebar's lists.** In Files, Git and Jobs, the keyboard selection moving
+  past the last (or first) row shown scrolls the list instead of jumping back to the top of the
+  screen, so every row of a long list can be reached without the mouse.
+
+### Fixed
+
+- **MERGE CHANGES folds** when its title is clicked, as the other sections do.
+- **Skills are linked for Claude Code again.** A skill in `.agents/skills` gets its
+  `.claude/skills` link while Jobs shows; nothing made it since the Skills tab went.
+- **Every Jobs row has ⋯.** An agent or skill that was never scheduled or run had no menu
+  button, only a right-click.
+- **Line counts of files with non-ASCII names.** A changed file named with Turkish letters (or
+  with quotes) showed `+0 -0` in Git and the Agents view, and lost its color in the explorer:
+  git quoted its name. Every path is now read as it is.
+- **The wheel stops at the end of a list.** Scrolling down past the last row went on counting,
+  so scrolling back up did nothing for a few turns.
+- **A config saved with an error no longer stops the watcher.** It restarted to read the new
+  config and exited on the error, leaving agent states and sidebars without updates until the
+  next imux command; it now logs the error to `watch.log` and keeps the config it has.
+- **The diff viewer and search take no git lock**, so they never get in the way of a commit an
+  agent makes meanwhile.
+- **Discard on an untracked folder** passes `-d`, as Discard All does.
+- **The help (`?`)** names OpenCode's `e`, the sidebar's `4 git` and `5 jobs` keys, and
+  Ctrl+V / Alt+V for pasting an image into an agent.
+
 ## [0.55.0] - 2026-11-13
 
 ### Added

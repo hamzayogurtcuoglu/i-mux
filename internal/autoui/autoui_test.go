@@ -27,13 +27,16 @@ func testCtx() Ctx {
 
 func allMenus(c Ctx) map[string]*workspace.Menu {
 	return map[string]*workspace.Menu{
-		"scheduled": ItemMenu(c, Item{ID: id, Name: evilName, Record: true, Scheduled: true, Runs: 3, Continue: true}),
-		"new":       ItemMenu(c, Item{ID: id, Name: evilName}),
-		"by-hand":   ItemMenu(c, Item{ID: id, Name: evilName, Record: true, Runs: 1, Continue: true}),
-		"running":   ItemMenu(c, Item{ID: id, Name: evilName, Record: true, Scheduled: true, Running: true, Runs: 1, Paused: true, Continue: true}),
-		"gone":      ItemMenu(c, Item{ID: id, Name: evilName, Record: true, Scheduled: true, Gone: true, Runs: 2}),
-		"remove":    ConfirmRemove(c, id, evilName, true),
-		"forget":    ConfirmRemove(c, id, evilName, false),
+		"scheduled":  ItemMenu(c, Item{ID: id, Name: evilName, Record: true, Scheduled: true, Runs: 3, Continue: true}),
+		"new":        ItemMenu(c, Item{ID: id, Name: evilName}),
+		"by-hand":    ItemMenu(c, Item{ID: id, Name: evilName, Record: true, Runs: 1, Continue: true}),
+		"running":    ItemMenu(c, Item{ID: id, Name: evilName, Record: true, Scheduled: true, Running: true, Runs: 1, Paused: true, Continue: true}),
+		"gone":       ItemMenu(c, Item{ID: id, Name: evilName, Record: true, Scheduled: true, Gone: true, Runs: 2}),
+		"skill":      ItemMenu(c, Item{ID: id, Name: evilName, Skill: true}),
+		"shared":     ItemMenu(c, Item{ID: id, Name: evilName, Skill: true, Shared: true, Record: true, Runs: 1}),
+		"gone-skill": ItemMenu(c, Item{ID: id, Name: evilName, Skill: true, Record: true, Scheduled: true, Gone: true}),
+		"remove":     ConfirmRemove(c, id, evilName, true),
+		"forget":     ConfirmRemove(c, id, evilName, false),
 	}
 }
 
@@ -98,12 +101,15 @@ func TestMenusCarryNoData(t *testing.T) {
 func TestItemMenus(t *testing.T) {
 	i18n.SetLocale("en")
 	for name, want := range map[string]string{
-		"scheduled": "Run…|Output|History…|Continue in a pane|-|Change schedule…|Pause|-|Open definition|Remove schedule…",
-		"new":       "Run…|-|Schedule…|-|Open definition",
-		"by-hand":   "Run…|Output|Continue in a pane|-|Schedule…|-|Open definition|Forget runs…",
-		"running":   "Stop|Output|-|Change schedule…|Resume|-|Open definition|Remove schedule…",
-		"gone":      "Output|History…|-|Remove schedule…",
-		"remove":    "-Its runs and their output go too.|-|Remove|Cancel",
+		"scheduled":  "Run…|Output|History…|Continue in a pane|-|Change schedule…|Pause|-|Open definition|Remove schedule…",
+		"new":        "Run…|-|Schedule…|-|Open definition",
+		"by-hand":    "Run…|Output|Continue in a pane|-|Schedule…|-|Open definition|Forget runs…",
+		"running":    "Stop|Output|-|Change schedule…|Resume|-|Open definition|Remove schedule…",
+		"gone":       "Output|History…|-|Remove schedule…",
+		"skill":      "Run…|-|Schedule…|-|Open definition|-|Add to Agent|Improve with Agent|Share with all agents (.agents/skills)|Delete skill…",
+		"shared":     "Run…|Output|-|Schedule…|-|Open definition|Forget runs…|-|Add to Agent|Improve with Agent|Delete skill…",
+		"gone-skill": "Remove schedule…",
+		"remove":     "-Its runs and their output go too.|-|Remove|Cancel",
 	} {
 		names, _ := shown(allMenus(testCtx())[name])
 		if got := strings.Join(names, "|"); got != want {
@@ -117,6 +123,16 @@ func TestItemMenus(t *testing.T) {
 		"History…":         "__auto pick history 0123456789ab",
 		"Output":           "__auto log 0123456789ab",
 		"Remove schedule…": "__auto confirm remove 0123456789ab",
+	} {
+		if !strings.Contains(cmds[label], want) {
+			t.Errorf("%s: %s", label, cmds[label])
+		}
+	}
+	_, cmds = shown(allMenus(testCtx())["skill"])
+	for label, want := range map[string]string{
+		"Add to Agent":       "__auto skill add 0123456789ab",
+		"Improve with Agent": "__auto skill improve 0123456789ab",
+		"Delete skill…":      "__auto skill delete 0123456789ab",
 	} {
 		if !strings.Contains(cmds[label], want) {
 			t.Errorf("%s: %s", label, cmds[label])

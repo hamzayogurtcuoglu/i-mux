@@ -18,7 +18,6 @@ const (
 	ViewExplorer = "explorer"
 	ViewSearch   = "search" // a popup: the rail opens it, the view stays
 	ViewChanges  = "changes"
-	ViewSkills   = "skills"   // the project's Agent Skills (D32)
 	ViewAuto     = "schedule" // the Scheduler: the project's agents and skills on a schedule (D61)
 	OptView      = "@imux_view"
 	// OptClosed is "1" while the panel is closed (§9.3 "Closing the side
@@ -161,6 +160,16 @@ func treeRow(r TreeRow, w int, ic Icons, theme string, selected bool) Line {
 	return Line{Text: text, Action: a}
 }
 
+// withList puts rows [scroll, scroll+n) of list under head (scrolled) and
+// says which part of it shows.
+func withList(head, list []Line, scroll, n, w int) ([]Line, ListView) {
+	lv := ListView{Start: len(head), Len: len(list)}
+	if n > 0 && len(list) > n {
+		lv.N, lv.Top = n, min(max(scroll, 0), len(list)-n)
+	}
+	return append(head, scrolled(list, scroll, n, w)...), lv
+}
+
 // scrolled keeps rows [scroll, scroll+n) of list (scroll clamped), with a
 // scroll bar in the last of the w columns when the list does not fit: a
 // click on it scrolls there (§9.3 "Scroll bars").
@@ -246,7 +255,7 @@ func explorerButtons(ic Icons, w int) (btns []Cell, more []string) {
 // renderExplorer is the Explorer view: a title with the project, VS Code's
 // buttons and ⋯ (the label of the button under the pointer in its place
 // while it is there, D63), then the project's tree.
-func renderExplorer(m Model, w, h int) []Line {
+func renderExplorer(m Model, w, h int) ([]Line, ListView) {
 	btns, _ := explorerButtons(m.icons(), w)
 	text, style := " "+i18n.T("sidebar.explorer")+" · "+m.Project, title
 	if m.Tip != "" {
@@ -264,7 +273,7 @@ func renderExplorer(m Model, w, h int) []Line {
 	if h > 0 {
 		n = h - 1
 	}
-	return append(out, scrolled(rows, m.Scroll, n, w)...)
+	return withList(out, rows, m.Scroll, n, w)
 }
 
 // buttons lays out a row: a main cell (the rest of the width) and the

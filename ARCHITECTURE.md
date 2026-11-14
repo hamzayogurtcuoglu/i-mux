@@ -2401,6 +2401,8 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
   says what 🚀 does; an empty view says where definitions go. Key `5` opens the view.
 - **Skills from Jobs** (v0.56, D66): **✨** in the title opens the New skill dialog (§ "Skills");
   a right-click on the title or the view's empty space offers New skill… and Blank SKILL.md….
+  While the view shows, `skills.Sync` links `.agents/skills` into `.claude/skills` (D32), as the
+  Skills view did.
 - **🚀: the Run panel** (one popup, no chain of menus, no form): everything is chosen already,
   and Enter runs it.
 

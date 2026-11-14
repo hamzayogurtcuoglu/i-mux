@@ -12,15 +12,15 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestSkillsView (M40, M42): the Skills view lists project skills with their
-// agent badges and problems, and shares a single-agent skill with all agents.
-// Its one ✨ New skill… button opens the New skill dialog: a blank SKILL.md
-// is named there and opened in the editor; this pane's agent gets i-mux's
-// skill-writing guide pasted; an agent chosen for a new pane starts beside
-// it, named, with the guide and the description as its first message. A
-// skill's menu sends an improve prompt to the active agent and deletes the
-// skill with its link.
-func TestSkillsView(t *testing.T) {
+// TestSkillsInJobs (M40, M42, T71.5): Jobs lists project skills, and a
+// skill's ⋯ menu shares a single-agent skill with all agents. ✨ New skill…
+// in its title opens the New skill dialog: a blank SKILL.md is named there
+// and opened in the editor; this pane's agent gets i-mux's skill-writing
+// guide pasted; an agent chosen for a new pane starts beside it, named,
+// with the guide and the description as its first message. A skill's menu
+// sends an improve prompt to the active agent and deletes the skill with
+// its link. A sidebar left at the removed Skills view shows Jobs.
+func TestSkillsInJobs(t *testing.T) {
 	ed := filepath.Join(t.TempDir(), "fake-editor")
 	testutil.WriteFile(t, ed, []byte("#!/bin/sh\necho \"EDIT $*\"\nread x\n"))
 	if err := os.Chmod(ed, 0o755); err != nil {
@@ -39,11 +39,8 @@ func TestSkillsView(t *testing.T) {
 	h.mustTmux("set-option", "-w", "-t", bar, "@imux_view", "skills")
 	_, _, _ = h.imux("__sidebar", "--signal")
 	h.rowOf(bar, "claude-only")
-	if s := h.screen(bar); !strings.Contains(s, "✻·◉·▣") || !strings.Contains(s, "Helps with local migrations.") {
-		t.Fatalf("skills screen:\n%s", s)
-	}
-	if s := h.lineOf(bar, "New skill…"); strings.Contains(s, "➕") {
-		t.Fatalf("a second button next to New skill…: %q", s)
+	if s := h.screen(bar); !strings.Contains(s, "JOBS") || !strings.Contains(s, "Helps with local migrations.") {
+		t.Fatalf("skills in Jobs:\n%s", s)
 	}
 
 	// Share with all agents moves it into .agents/skills and links .claude/skills.
@@ -53,13 +50,11 @@ func TestSkillsView(t *testing.T) {
 	c.Click(2, x, y)
 	c.waitScreenAfter(h, mark, "Share with all agents", 5*time.Second)
 	time.Sleep(200 * time.Millisecond)
-	c.Write("s")
+	c.Write("g")
 	h.waitFor("shared with all agents", 5*time.Second, func() bool {
-		return strings.Contains(h.screen(bar), "✻▲◉◎▣")
+		_, err := os.Stat(filepath.Join(p, ".agents", "skills", "claude-only", "SKILL.md"))
+		return err == nil
 	})
-	if _, err := os.Stat(filepath.Join(p, ".agents", "skills", "claude-only", "SKILL.md")); err != nil {
-		t.Fatalf("not in .agents/skills: %v", err)
-	}
 	if target, err := os.Readlink(filepath.Join(p, ".claude", "skills", "claude-only")); err != nil || !strings.HasSuffix(target, "claude-only") {
 		t.Fatalf("claude link: %q %v", target, err)
 	}
@@ -67,10 +62,10 @@ func TestSkillsView(t *testing.T) {
 	// ✨ New skill… asks who writes the skill.
 	newSkill := func() {
 		t.Helper()
-		x, y := h.rowOf(bar, "New skill…")
 		time.Sleep(400 * time.Millisecond)
+		x, y := h.buttonOf(bar, "JOBS", "✨")
 		mark := c.Mark()
-		c.Click(0, x, y)
+		c.Click(0, x+1, y)
 		c.waitScreenAfter(h, mark, "Who should write it?", 5*time.Second)
 		time.Sleep(200 * time.Millisecond)
 	}
@@ -147,7 +142,7 @@ func TestSkillsView(t *testing.T) {
 	time.Sleep(400 * time.Millisecond)
 	mark = c.Mark()
 	c.Click(2, x, y)
-	c.waitScreenAfter(h, mark, "Delete", 5*time.Second)
+	c.waitScreenAfter(h, mark, "Delete skill…", 5*time.Second)
 	time.Sleep(200 * time.Millisecond)
 	c.Write("d")
 	c.waitScreenAfter(h, mark, "Delete 'release-notes'?", 5*time.Second)

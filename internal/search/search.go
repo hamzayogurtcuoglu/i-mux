@@ -44,6 +44,7 @@ func Files(ctx context.Context, dir string, showHidden bool) []string {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", "-C", dir, "ls-files", "-co", "--exclude-standard", "-z")
+	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0") // a read: never .git/index.lock
 	if out, err := cmd.Output(); err == nil {
 		var files []string
 		for _, f := range strings.Split(string(out), "\x00") {

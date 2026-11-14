@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -438,20 +439,13 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		return
 	}
 	if ev.Kind == EvScroll {
-		n := len(s.model.Tree)
-		if s.model.View == ViewChanges && s.model.SCM != nil {
-			n = len(s.model.scmRows(40))
-		}
-		if s.model.View == ViewSkills {
-			n = len(s.model.Skills) * 2
-		}
-		if s.model.View == ViewAuto {
-			n = len(s.model.autoRows(40))
-		}
+		// From the top the list was drawn with (the model's may be past
+		// it), between its first row and its last page.
+		l := s.screen.List
 		if ev.Key == "up" {
-			s.scroll = max(s.scroll-3, 0)
+			s.scroll = max(l.Top-3, 0)
 		} else {
-			s.scroll = min(s.scroll+3, max(n-1, 0))
+			s.scroll = min(l.Top+3, l.MaxTop())
 		}
 		s.model.Scroll = s.scroll
 		s.draw()
@@ -466,11 +460,6 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		var menu Action
 		switch a := s.screen.Lines[row].ActionAt(ev.X - 1); a.Kind {
 		case ActOpenFile:
-			if s.model.View == ViewSkills && a.Status != "" {
-				menu = Action{Kind: ActSkillMenu, Path: a.Status}
-				s.selected = a.Status
-				break
-			}
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFile}
 			s.selected = a.Path
 		case ActSkillMenu:
@@ -482,15 +471,15 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
 			s.selected = a.Path
 		case ActNone, ActSearch, ActRefresh, ActSkillNew, ActGoto, ActFileOp, ActCollapse, ActFileMenu:
-			// The explorer's or skills' empty space and title, its buttons
-			// included.
+			// The explorer's or Jobs' empty space and title, its buttons
+			// included: the explorer's menu, or New skill… (D66).
 			if s.model.Closed || ev.X <= railW {
 				return
 			}
 			switch s.model.View {
 			case ViewExplorer:
 				menu = Action{Kind: ActFileMenu, Section: MenuRoot}
-			case ViewSkills:
+			case ViewAuto:
 				menu = Action{Kind: ActSkillMenu}
 			default:
 				return
@@ -622,8 +611,19 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 	}
 }
 
-// move steps the keyboard selection over the rows that have an action.
+// move steps the keyboard selection over the rows that have an action. On
+// the view's list it goes along the list and scrolls it at the edge of what
+// shows; at the list's end, or off it, it goes around the screen.
 func (s *sidebar) move(d int) {
+	for range s.screen.List.Len + 1 {
+		moved, scrolled := s.listMove(d)
+		if moved {
+			return
+		}
+		if !scrolled {
+			break
+		}
+	}
 	rows := s.screen.Items()
 	if len(rows) == 0 {
 		return
@@ -643,6 +643,33 @@ func (s *sidebar) move(d int) {
 		at = (at + d + len(rows)) % len(rows)
 	}
 	s.sel = rows[at]
+}
+
+// listMove moves the selection, when it is on the list, to the list's next
+// row on screen in direction d (moved), else scrolls the list one row
+// (scrolled) with the selection on the same row of the list.
+func (s *sidebar) listMove(d int) (moved, scrolled bool) {
+	l := s.screen.List
+	rows := s.screen.Items()
+	on := func(it Item) bool { return it.Cell != 0 && l.Holds(it.Row) } // cell 0: the rail
+	at := slices.Index(rows, s.sel)
+	if at < 0 || l.N < 2 || !on(rows[at]) {
+		return false, false
+	}
+	for i := at + d; i >= 0 && i < len(rows); i += d {
+		if on(rows[i]) {
+			s.sel = rows[i]
+			return true, false
+		}
+	}
+	top := l.Top + d
+	if top < 0 || top > l.MaxTop() {
+		return false, false
+	}
+	s.scroll, s.model.Scroll = top, top
+	s.sel.Row -= d
+	s.screen = Render(s.model, s.win.Width, s.win.Height, s.sel)
+	return false, true
 }
 
 func (s *sidebar) focusTarget(ctx context.Context) {
@@ -849,7 +876,7 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 	case ActFold:
 		// Fold or unfold a section in every sidebar (@imux_fold, global).
 		var names []string
-		for _, n := range []string{SecProjects, SecAgents, SecChanges, SecStaged, SecUnstaged, SecHistory, SecAutoScheduled, SecAutoAgents, SecAutoSkills} {
+		for _, n := range foldable {
 			if f := s.model.Fold[n]; f != (n == a.Section) {
 				names = append(names, n)
 			}

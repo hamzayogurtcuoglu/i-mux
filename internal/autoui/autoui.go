@@ -84,11 +84,14 @@ type Item struct {
 	Runs      int
 	Continue  bool // its last run left a conversation to continue
 	Gone      bool // its definition is not there any more
+	Skill     bool // a skill: its menu has the skill's actions (D66)
+	Shared    bool // a skill every agent sees already
 }
 
 // ItemMenu is an item's menu (⋯ or a right-click): Run… (the Run panel)
 // or Stop, its output and runs, Continue in a pane, its schedule, Pause or
-// Resume, Open definition, and Remove.
+// Resume, Open definition, and Remove; a skill's actions (D66): Add to
+// Agent, Improve with Agent, Share with all agents and Delete skill….
 func ItemMenu(c Ctx, x Item) *workspace.Menu {
 	id := x.ID
 	var items []item
@@ -132,6 +135,15 @@ func ItemMenu(c Ctx, x Item) *workspace.Menu {
 			label = "auto.menu_remove"
 		}
 		items = append(items, it("x", label, c.Cmd("confirm", "remove", id)))
+	}
+	if x.Skill && !x.Gone {
+		items = append(items, sep(),
+			it("a", "file.add_to_agent", c.Cmd("skill", "add", id)),
+			it("i", "skills.improve", c.Cmd("skill", "improve", id)))
+		if !x.Shared {
+			items = append(items, it("g", "skills.share", c.Cmd("skill", "share", id)))
+		}
+		items = append(items, it("d", "auto.menu_delete_skill", c.Cmd("skill", "delete", id)))
 	}
 	return &workspace.Menu{Title: x.Name, Items: items}
 }

@@ -105,13 +105,14 @@ func TestAutoView(t *testing.T) {
 	for _, k := range []string{
 		"run aaaaaaaaaaaa", "log aaaaaaaaaaaa", "menu aaaaaaaaaaaa", "stop bbbbbbbbbbbb", "log bbbbbbbbbbbb",
 		"menu eeeeeeeeeeee", "log dddddddddddd", "menu dddddddddddd", "run ffffffffffff", "run 111111111111",
+		"menu ffffffffffff", "menu 111111111111", // ⋯ on every row (D66)
 	} {
 		if !want[k] {
 			t.Errorf("no %q action; have %v", k, want)
 		}
 	}
-	if want["run eeeeeeeeeeee"] || want["run bbbbbbbbbbbb"] || want["menu ffffffffffff"] {
-		t.Errorf("🚀 on a running or gone item, or ⋯ on one never run: %v", want)
+	if want["run eeeeeeeeeeee"] || want["run bbbbbbbbbbbb"] {
+		t.Errorf("🚀 on a running or gone item: %v", want)
 	}
 	if !m.autoRunning() || !m.Animated() {
 		t.Error("a run going on does not turn the spinner")
@@ -201,6 +202,10 @@ func TestAutoItems(t *testing.T) {
 	gatherAuto(&m, filepath.Join(root, "sub"), func(string) string { return root })
 	if m.AutoRoot != root || len(m.Auto) != 3 || m.AutoRunning != 1 {
 		t.Errorf("gathered %q %d %d", m.AutoRoot, len(m.Auto), m.AutoRunning)
+	}
+	// Jobs links the project's skills for Claude, as the Skills view did (D32, D66).
+	if target, err := os.Readlink(filepath.Join(root, ".claude", "skills", "notes")); err != nil || target != filepath.Join("..", "..", ".agents", "skills", "notes") {
+		t.Errorf("notes not linked for Claude: %q %v", target, err)
 	}
 	m = Model{View: ViewAgents}
 	gatherAuto(&m, root, func(string) string { return root })

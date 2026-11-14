@@ -83,7 +83,7 @@ func runAuto(e *Env, args []string) error {
 	verb, rest := pos[0], pos[1:]
 	name := ""
 	switch verb {
-	case "menu", "pick", "confirm":
+	case "menu", "pick", "confirm", "skill":
 		if len(rest) == 0 {
 			return autoUsage()
 		}
@@ -252,6 +252,8 @@ func (a *autoCmd) do(verb, name, id string) error {
 		return a.open(id)
 	case "continue":
 		return a.cont(id)
+	case "skill":
+		return a.skill(name, id)
 	}
 	t := a.find(id)
 	switch verb {
@@ -329,8 +331,37 @@ func (a *autoCmd) item(t target) autoui.Item {
 	_, running := auto.Running(t.id)
 	x := autoui.Item{ID: t.id, Name: t.name(), Record: t.has, Scheduled: t.scheduled(), Running: running, Runs: len(runs), Gone: !t.found}
 	x.Paused = t.has && t.sched.Paused
+	x.Skill = t.found && t.def.Kind == auto.KindSkill
+	x.Shared = x.Skill && t.def.Shared
 	x.Continue = len(runs) > 0 && canContinue(runs[0])
 	return x
+}
+
+// skill runs a skill's action from its Jobs menu (D66): `imux __skill op`
+// on the skill, the project and the pane, given as the sidebar's skill
+// menus give them (the @imux_skill* options).
+func (a *autoCmd) skill(op, id string) error {
+	switch op {
+	case "add", "improve", "share", "delete":
+	default:
+		return autoUsage()
+	}
+	t := a.find(id)
+	if !t.found || t.def.Kind != auto.KindSkill {
+		return a.gone(t)
+	}
+	if _, err := a.w.T.Run(a.ctx,
+		tmux.Cmd{"set-option", "-g", sidebar.OptSkill, filepath.Dir(t.def.File)},
+		tmux.Cmd{"set-option", "-g", sidebar.OptSkillRoot, t.root},
+		tmux.Cmd{"set-option", "-g", sidebar.OptSkillPane, a.c.Pane}); err != nil {
+		return err
+	}
+	args := []string{op}
+	if a.c.Client != "" {
+		args = append(args, "--client", a.c.Client)
+	}
+	_ = runSkill(a.e, args) // it says what failed
+	return nil
 }
 
 // canContinue reports a run whose conversation an agent pane can go on

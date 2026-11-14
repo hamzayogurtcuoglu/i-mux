@@ -36,6 +36,8 @@ type Def struct {
 	Owner       session.AgentID // the CLI whose kind of definition it is ("" for any)
 	Personal    bool            // in the user's home: for every project
 	Model       string          // the model its front matter names
+	Problem     string          // a skill's front-matter problem (skills.Prob...)
+	Shared      bool            // a skill in .agents/skills, linked for Claude: every agent sees it
 }
 
 // agentPlace is a folder of agent definitions.
@@ -131,7 +133,7 @@ func List(root, home string) []Def {
 		}
 		agents = append(agents, Def{
 			ID: ID(root, sk.Path()), Kind: KindSkill, Name: sk.Name, Description: oneLine(sk.Description),
-			File: sk.Path(), Place: sk.Place,
+			File: sk.Path(), Place: sk.Place, Problem: sk.Problem, Shared: sk.Shared,
 		})
 	}
 	return agents

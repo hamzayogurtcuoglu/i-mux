@@ -280,7 +280,7 @@ func commitButton(m Model) (string, Action) {
 }
 
 // renderChanges is the Source Control view, like VS Code's (D27, D58).
-func renderChanges(m Model, w, h int) []Line {
+func renderChanges(m Model, w, h int) ([]Line, ListView) {
 	ic := m.icons()
 	refresh := button(ic.Refresh, muted, Action{Kind: ActRefresh})
 	more := button(ic.More, muted, scmAction("menu", "more"))
@@ -297,7 +297,7 @@ func renderChanges(m Model, w, h int) []Line {
 				Line{Text: compose([]Cell{initRepo}, w), Cells: []Cell{initRepo}},
 				Line{Text: compose([]Cell{clone}, w), Cells: []Cell{clone}})
 		}
-		return out
+		return out, ListView{}
 	}
 	out := []Line{buttons(w, Cell{Text: title + fit(" "+i18n.T("sidebar.source_control"), w-refresh.W-more.W) + reset}, refresh, more)}
 
@@ -342,7 +342,7 @@ func renderChanges(m Model, w, h int) []Line {
 	if h > 0 {
 		n = h - len(out)
 	}
-	return append(out, scrolled(m.scmRows(w), m.Scroll, n, w)...)
+	return withList(out, m.scmRows(w), m.Scroll, n, w)
 }
 
 // scmRows are the view's scrolling rows: MERGE CHANGES, STAGED CHANGES,

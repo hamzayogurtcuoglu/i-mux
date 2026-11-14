@@ -1,6 +1,7 @@
 package sidebar
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -210,5 +211,35 @@ func TestSourceControlNoRepo(t *testing.T) {
 	l, x = lineWith(t, sc, "Clone Repository…")
 	if got := l.ActionAt(x); got != scmAction("ask", "clone") {
 		t.Errorf("clone %+v", got)
+	}
+}
+
+// TestEveryFoldIsFoldable (T71.1): every section title of every view folds
+// when clicked (MERGE CHANGES did not), and a folded MERGE CHANGES hides
+// its files.
+func TestEveryFoldIsFoldable(t *testing.T) {
+	i18n.SetLocale("en")
+	seen := map[string]bool{}
+	for _, m := range []Model{model(), scmModel(), autoModel()} {
+		for _, l := range Render(m, 60, 0, NoItem).Lines {
+			for _, c := range l.Cells {
+				if c.Action.Kind == ActFold {
+					seen[c.Action.Section] = true
+				}
+			}
+		}
+	}
+	if !seen[SecMerge] {
+		t.Fatal("no MERGE CHANGES title")
+	}
+	for name := range seen {
+		if !slices.Contains(foldable, name) {
+			t.Errorf("section %q does not fold", name)
+		}
+	}
+	m := scmModel()
+	m.Fold = map[string]bool{SecMerge: true}
+	if text := screenText(Render(m, 60, 0, NoItem)); strings.Contains(text, "api.go") || !strings.Contains(text, "▸ MERGE CHANGES") {
+		t.Errorf("folded MERGE CHANGES:\n%s", text)
 	}
 }

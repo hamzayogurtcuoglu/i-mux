@@ -278,7 +278,11 @@ func (w *WS) TabMenu(p *Pane, client string) *Menu {
 // KeysMenu lists the keys (help).
 func (w *WS) KeysMenu() *Menu {
 	m := &Menu{Title: i18n.T("keys.title")}
-	for _, k := range []string{"keys.menu", "keys.goto", "keys.switch", "keys.split", "keys.sidebar", "keys.sessions", "keys.tabs", "keys.panes", "keys.in_sidebar", "", "keys.prefix"} {
+	keys := []string{"keys.menu", "keys.goto", "keys.switch", "keys.split", "keys.sidebar", "keys.sessions", "keys.tabs", "keys.panes", "keys.in_sidebar"}
+	if w.Cfg == nil || w.Cfg.Paste.Images {
+		keys = append(keys, "keys.paste") // bound only then (tmux.GenerateConf)
+	}
+	for _, k := range append(keys, "", "keys.prefix") {
 		if k == "" {
 			m.Items = append(m.Items, Separator())
 			continue

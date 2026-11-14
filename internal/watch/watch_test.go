@@ -1,17 +1,20 @@
 package watch
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -134,5 +137,43 @@ func TestLoopWakesAndStops(t *testing.T) {
 	}
 	if !Attached("1\n0\n") || Attached("1\n") || Attached("") {
 		t.Fatal("Attached")
+	}
+}
+
+// TestConfigChanged (T71.6): a config saved with an error does not restart
+// the watcher (the restarted one would exit on it); saved again, fixed, it
+// does; an unchanged file never does.
+func TestConfigChanged(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	var logged bytes.Buffer
+	logger := log.New(&logged, "", 0)
+	save := func(text string, at time.Time) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(path, at, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Now()
+	save("locale = \"en\"\n", now.Add(-time.Hour))
+	mod := config.ModTime(path)
+	if configChanged(path, &mod, logger) {
+		t.Fatal("unchanged config restarts")
+	}
+	save("locale = \"en\n[broken\n", now.Add(-time.Minute))
+	if configChanged(path, &mod, logger) {
+		t.Fatal("a broken config restarts the watcher")
+	}
+	if !strings.Contains(logged.String(), "config:") {
+		t.Errorf("not logged: %q", logged.String())
+	}
+	if configChanged(path, &mod, logger) {
+		t.Fatal("the broken config is looked at again and again")
+	}
+	save("locale = \"tr\"\n", now)
+	if !configChanged(path, &mod, logger) {
+		t.Fatal("a fixed config does not restart the watcher")
 	}
 }

@@ -165,3 +165,70 @@ func TestParse(t *testing.T) {
 		t.Fatalf("detached %+v", st)
 	}
 }
+
+// TestParseNumstat (T71.3): `git diff --numstat -z`: paths as they are, a
+// binary file, a rename (its new path).
+func TestParseNumstat(t *testing.T) {
+	got := ParseNumstat("12\t3\tsrc/a.go\x00-\t-\timg.png\x004\t0\t\x00old.go\x00new.go\x001\t1\tğüş \"q\".go\x00bad\x00")
+	want := map[string][2]int{"src/a.go": {12, 3}, "img.png": {0, 0}, "new.go": {4, 0}, `ğüş "q".go`: {1, 1}}
+	if len(got) != len(want) {
+		t.Fatalf("%v", got)
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Fatalf("%q: %v (all %v)", k, got[k], got)
+		}
+	}
+}
+
+// TestNonASCIIPaths (T71.3): files with Turkish letters, spaces and quotes
+// in their names get their line counts, staged, unstaged and renamed.
+func TestNonASCIIPaths(t *testing.T) {
+	ctx := context.Background()
+	dir := repo(t)
+	tr, q := "ğüşıöç dosya.go", `q"t.go`
+	write(t, dir, tr, "a\n")
+	write(t, dir, q, "a\n")
+	if err := StageAll(ctx, dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Commit(ctx, dir, "names"); err != nil {
+		t.Fatal(err)
+	}
+	write(t, dir, tr, "a\nb\nc\n")
+	write(t, dir, q, "b\n")
+	if err := Stage(ctx, dir, q); err != nil {
+		t.Fatal(err)
+	}
+	st, err := Read(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Changes) != 1 || st.Changes[0].Path != tr || st.Changes[0].Added != 2 {
+		t.Fatalf("changes %+v", st.Changes)
+	}
+	if len(st.Staged) != 1 || st.Staged[0].Path != q || st.Staged[0].Added != 1 || st.Staged[0].Removed != 1 {
+		t.Fatalf("staged %+v", st.Staged)
+	}
+}
+
+// TestDiscardUntrackedFolder (T71.3): Discard on "?? folder/" removes the
+// folder with what is in it.
+func TestDiscardUntrackedFolder(t *testing.T) {
+	ctx := context.Background()
+	dir := repo(t)
+	if err := os.MkdirAll(filepath.Join(dir, "new", "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, dir, "new/sub/x.txt", "x")
+	st, _ := Read(ctx, dir)
+	if names(st.Changes) != "? new/" {
+		t.Fatalf("status %s", names(st.Changes))
+	}
+	if err := Discard(ctx, dir, true, st.Changes[0].Path); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "new")); !os.IsNotExist(err) {
+		t.Fatal("untracked folder not removed")
+	}
+}

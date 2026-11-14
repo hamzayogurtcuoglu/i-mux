@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
@@ -738,8 +739,22 @@ func screenText(sc Screen) string {
 }
 
 func TestParseStatus(t *testing.T) {
-	got := ParseStatus([]string{" M src/a.go", "A  b.go", "?? notes.md", "R  old.go -> new.go", "MM both.go", `?? "with space.md"`, "x"})
-	want := []ChangeRow{{Status: "M", Path: "src/a.go"}, {Status: "A", Path: "b.go"}, {Status: "?", Path: "notes.md"}, {Status: "R", Path: "new.go"}, {Status: "M", Path: "both.go"}, {Status: "?", Path: "with space.md"}}
+	got := ParseStatus([]string{
+		" M src/a.go", "A  b.go", "?? notes.md", "R  old.go -> new.go", "MM both.go", `?? "with space.md"`, "x",
+		` M "q\"t.go"`, ` M "\303\274 \305\237.go"`, " M ğüşıöç.go", `R  "a\"b" -> "\303\274.go"`,
+	})
+	want := []ChangeRow{
+		{Status: "M", Path: "src/a.go"},
+		{Status: "A", Path: "b.go"},
+		{Status: "?", Path: "notes.md"},
+		{Status: "R", Path: "new.go"},
+		{Status: "M", Path: "both.go"},
+		{Status: "?", Path: "with space.md"},
+		{Status: "M", Path: `q"t.go`},
+		{Status: "M", Path: "ü ş.go"},
+		{Status: "M", Path: "ğüşıöç.go"},
+		{Status: "R", Path: "ü.go"},
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("%+v", got)
 	}
@@ -1016,14 +1031,6 @@ func TestFold(t *testing.T) {
 	}
 }
 
-func TestParseNumstat(t *testing.T) {
-	got := ParseNumstat("12\t3\tsrc/a.go\n-\t-\timg.png\n4\t0\told.go => new.go\n1\t1\tsrc/{x => y}/z.go\nbad\n")
-	want := map[string][2]int{"src/a.go": {12, 3}, "img.png": {0, 0}, "new.go": {4, 0}, "src/y/z.go": {1, 1}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("%v", got)
-	}
-}
-
 // TestGitNumstatTakesNoLock (T65.3): the explorer's counts, read every few
 // seconds, leave the index alone (git diff would rewrite it under
 // .git/index.lock) and still count a change.
@@ -1071,7 +1078,7 @@ func TestGitNumstatTakesNoLock(t *testing.T) {
 		t.Skip("this git's diff does not rewrite the index: nothing to check")
 	}
 	before = stale(2 * time.Hour)
-	if got := ParseNumstat(gitNumstat(context.Background(), dir)); !reflect.DeepEqual(got, map[string][2]int{"b.txt": {1, 0}}) {
+	if got := gitops.ParseNumstat(gitNumstat(context.Background(), dir)); !reflect.DeepEqual(got, map[string][2]int{"b.txt": {1, 0}}) {
 		t.Fatalf("numstat %v", got)
 	}
 	if after, _ := os.Stat(index); !os.SameFile(before, after) {
@@ -1175,11 +1182,11 @@ func TestClosedPanel(t *testing.T) {
 func TestButtonSizes(t *testing.T) {
 	i18n.SetLocale("en")
 	for _, theme := range []string{IconsEmoji, IconsNerd} {
-		for _, view := range []string{ViewAgents, ViewExplorer, ViewChanges, ViewSkills} {
+		for _, view := range []string{ViewAgents, ViewExplorer, ViewChanges, ViewAuto} {
 			m := model()
 			m.Icons, m.View = theme, view
 			m.Tree = []TreeRow{{Path: "src", Name: "src", Dir: true}, {Path: "src/a.go", Name: "a.go", Depth: 1, Git: "M"}}
-			m.Skills = []skills.Skill{{Name: "release-notes", Folder: "release-notes", Description: "Writes release notes.", Dir: "/home/test/acme-api/.agents/skills/release-notes", Shared: true}}
+			m.Auto = []AutoItem{{Def: auto.Def{ID: "111111111111", Kind: auto.KindSkill, Name: "release-notes", Description: "Writes release notes."}}}
 			m.SCM = &gitops.Status{
 				Branch: "main", Upstream: "origin/main",
 				Staged:  []gitops.Change{{Status: "M", Path: "a.go", Added: 3}},
@@ -1511,70 +1518,46 @@ func TestFileMenus(t *testing.T) {
 	}
 }
 
-// TestSkillsViewAndMenu (M40, M42): the Skills view shows the empty hint, one
-// full-width ✨ New skill… button, the skills with their agent badges and
-// problems, and the skill menus carry no path or pane id in their commands.
-func TestSkillsViewAndMenu(t *testing.T) {
+// TestSkillsInJobs (M40, M42, T71.5): Jobs' title has ✨ New skill…, a
+// skill with a front-matter problem says it (⚠), and the skill menus
+// carry no path or pane id in their commands.
+func TestSkillsInJobs(t *testing.T) {
 	i18n.SetLocale("en")
 	m := model()
-	m.View = ViewSkills
-	sc := Render(m, 41, 30, NoItem)
-	text := screenText(sc)
-	for _, want := range []string{"SKILLS · acme-api", "✨ New skill…", "No skills in this project", ".agents/skills/<id>/SKILL.md", "Click ✨ above to write one"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("empty skills view lacks %q:\n%s", want, text)
-		}
+	m.View = ViewAuto
+	m.Auto = []AutoItem{
+		{Def: auto.Def{ID: "111111111111", Kind: auto.KindSkill, Name: "release-notes", Description: "Writes release notes."}},
+		{Def: auto.Def{ID: "222222222222", Kind: auto.KindSkill, Name: "draft", Description: "Drafts", Problem: skills.ProbNoDesc}},
 	}
-	// One button, the panel's whole width: no second (➕) button next to it.
-	for _, l := range sc.Lines {
-		if !strings.Contains(Plain(l.Text), "New skill…") {
-			continue
-		}
-		for x := railW; x < 41; x++ {
-			if a := l.ActionAt(x); a.Kind != ActSkillNew {
-				t.Errorf("column %d of the New skill row: %+v", x, a)
-			}
-		}
-	}
-
-	all := map[session.AgentID]bool{session.Claude: true, session.Antigravity: true, session.Copilot: true, session.Codex: true, session.OpenCode: true}
-	some := map[session.AgentID]bool{session.Claude: true, session.Copilot: true, session.OpenCode: true}
-	m.Skills = []skills.Skill{
-		{Name: "release-notes", Folder: "release-notes", Description: "Writes release notes.", Dir: "/home/test/acme-api/.agents/skills/release-notes", Shared: true, Agents: all},
-		{Name: "draft", Folder: "draft", Dir: "/home/test/acme-api/.claude/skills/draft", Problem: skills.ProbNoDesc, Agents: some},
-	}
-	m.Selected = "/home/test/acme-api/.agents/skills/release-notes"
-	sc = Render(m, 41, 30, NoItem)
-	text = screenText(sc)
-	for _, want := range []string{"SKILLS · 2", "● release-notes", "✻▲◉◎▣", "Writes release notes.", "⚠ draft", "✻·◉·▣", "Missing 'description'"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("skills view lacks %q:\n%s", want, text)
-		}
-	}
-	var sawOpen, sawMenu, sawNew, sawSel bool
-	for _, l := range sc.Lines {
-		if strings.Contains(Plain(l.Text), "release-notes") && strings.Contains(l.Text, selectBg) {
-			sawSel = true
-		}
-		for x := railW; x < 41; x++ {
-			switch a := l.ActionAt(x); a.Kind {
-			case ActOpenFile:
-				if a.Path == ".agents/skills/release-notes/SKILL.md" {
-					sawOpen = true
-				}
-			case ActSkillMenu:
-				if a.Path == "/home/test/acme-api/.agents/skills/release-notes" {
-					sawMenu = true
-				}
-			case ActSkillNew:
+	for _, mm := range []Model{m, model()} {
+		mm.View = ViewAuto
+		sc := Render(mm, 41, 30, NoItem)
+		l, x := lineWith(t, sc, "JOBS")
+		var sawNew bool
+		for ; x < 41; x++ {
+			if l.ActionAt(x).Kind == ActSkillNew {
 				sawNew = true
 			}
 		}
+		if !sawNew {
+			t.Errorf("no ✨ New skill… in the title:\n%s", screenText(sc))
+		}
 	}
-	if !sawOpen || !sawMenu || !sawNew || !sawSel {
-		t.Errorf("actions open=%v menu=%v new=%v sel=%v", sawOpen, sawMenu, sawNew, sawSel)
+	sc := Render(m, 41, 30, NoItem)
+	text := screenText(sc)
+	for _, want := range []string{"✨", "release-notes", "Writes release notes.", "draft", "⚠ Missing 'description'"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("Jobs lacks %q:\n%s", want, text)
+		}
 	}
-
+	if strings.Contains(text, "Drafts") {
+		t.Errorf("the description instead of the problem:\n%s", text)
+	}
+	// The label of ✨ in the title while the pointer is on it.
+	m.Tip = "New skill…"
+	if l, _ := lineWith(t, Render(m, 41, 30, NoItem), "New skill…"); !strings.Contains(l.Text, tipStyle) {
+		t.Error("the tip is not drawn as one")
+	}
 	names := func(items []string) string {
 		var out []string
 		for i := 0; i < len(items); {

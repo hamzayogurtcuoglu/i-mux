@@ -73,8 +73,8 @@ func TestScheduler(t *testing.T) {
 	h.rowOf(bar, "Watches the simulator's tags")
 	h.rowOf(bar, "Writes release notes")
 	h.rowOf(bar, "🚀 run now or on a schedule")
-	if l := h.lineOf(bar, "JOBS"); strings.Contains(l, "✨") {
-		t.Errorf("a button to write agents: %q", l)
+	if l := h.lineOf(bar, "JOBS"); !strings.Contains(l, "✨") {
+		t.Errorf("no ✨ New skill… in the title: %q", l) // D66
 	}
 	// press clicks glyph on the line with text and waits for want.
 	press := func(text, glyph, want string) {

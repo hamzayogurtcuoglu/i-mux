@@ -118,7 +118,20 @@ var NoItem = Item{Row: -1, Cell: -1}
 // Screen is a rendered sidebar.
 type Screen struct {
 	Lines []Line
+	List  ListView // the view's scrolling list; zero when it has none or it all shows
 }
+
+// ListView is the part of a view's list on screen: rows [Top, Top+N) of
+// its Len rows, from screen row Start (§9.3 "Scroll bars").
+type ListView struct {
+	Start, N, Top, Len int
+}
+
+// Holds reports whether screen row r shows a row of the list.
+func (l ListView) Holds(r int) bool { return l.N > 0 && r >= l.Start && r < l.Start+l.N }
+
+// MaxTop is the last top row: the list's last page.
+func (l ListView) MaxTop() int { return max(l.Len-l.N, 0) }
 
 // Items returns what the keyboard can select, top to bottom.
 func (s Screen) Items() []Item {
@@ -332,6 +345,10 @@ const (
 	SecAgents   = "agents"
 	SecChanges  = "changes"
 )
+
+// foldable are the sections a click on their title folds, in every view
+// (@imux_fold keeps the folded ones).
+var foldable = []string{SecProjects, SecAgents, SecChanges, SecMerge, SecStaged, SecUnstaged, SecHistory, SecAutoScheduled, SecAutoAgents, SecAutoSkills}
 
 // header is a section title that folds the section on click, with an
 // optional count and a "+" button on the right.
@@ -779,19 +796,18 @@ func Render(m Model, w, h int, sel Item) Screen {
 	}
 	cw := w - railW
 	var content []Line
+	var list ListView
 	switch m.View {
 	case ViewExplorer:
-		content = renderExplorer(m, cw, h)
+		content, list = renderExplorer(m, cw, h)
 	case ViewChanges:
-		content = renderChanges(m, cw, h)
-	case ViewSkills:
-		content = renderSkills(m, cw, h)
+		content, list = renderChanges(m, cw, h)
 	case ViewAuto:
-		content = renderAuto(m, cw, h)
+		content, list = renderAuto(m, cw, h)
 	default:
 		content = renderAgents(m, cw, h)
 	}
-	sc := Screen{Lines: withRail(content, m, w, h)}
+	sc := Screen{Lines: withRail(content, m, w, h), List: list}
 	highlight(sc, sel, w)
 	return sc
 }

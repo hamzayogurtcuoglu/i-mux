@@ -9,6 +9,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/skills"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 )
 
@@ -92,13 +93,14 @@ func AutoRunning(ss []auto.Schedule) int {
 }
 
 // gatherAuto reads the Scheduler's state: the runs going on, and in its
-// view the project's definitions.
+// view the project's definitions, its skills linked for Claude first.
 func gatherAuto(m *Model, cwd string, root func(string) string) {
 	ss, _ := auto.Load()
 	m.AutoRunning = AutoRunning(ss)
 	if m.View == ViewAuto && cwd != "" {
 		home, _ := os.UserHomeDir()
 		m.AutoRoot = root(cwd)
+		skills.Sync(m.AutoRoot) // .agents/skills linked into .claude/skills for Claude (D32)
 		m.Auto = AutoItems(m.AutoRoot, home, ss, m.Now)
 	}
 }
@@ -163,7 +165,7 @@ func autoClick(it AutoItem) Action {
 }
 
 // autoButtons are an item's buttons: 🚀 (the Run panel), 🛑 while it
-// runs, and ⋯ (its menu) once it has a schedule or ran.
+// runs, and ⋯ (its menu), on every item (D66).
 func autoButtons(it AutoItem, ic Icons) []Cell {
 	id := it.Def.ID
 	var btns []Cell
@@ -173,10 +175,7 @@ func autoButtons(it AutoItem, ic Icons) []Cell {
 	case !it.Gone:
 		btns = append(btns, button(ic.Run, cyan, Action{Kind: ActAuto, Section: "run", Path: id}))
 	}
-	if it.Sched != nil {
-		btns = append(btns, button(ic.More, muted, Action{Kind: ActAutoMenu, Path: id}))
-	}
-	return btns
+	return append(btns, button(ic.More, muted, Action{Kind: ActAutoMenu, Path: id}))
 }
 
 // runLine is an item's run going on, or its last run: its state, when,
@@ -248,13 +247,20 @@ func (m Model) scheduledRows(it AutoItem, w int, ic Icons) []Line {
 }
 
 // defRows draw an agent or a skill without a time: its name and buttons,
-// then its run going on, its last run, or its description.
+// then its run going on, its last run, a skill's front-matter problem (⚠,
+// D66), or its description.
 func (m Model) defRows(it AutoItem, w int, ic Icons) []Line {
 	click := autoClick(it)
-	out := []Line{autoName(it, w, ic, "", click, autoButtons(it, ic)...)}
+	style := ""
+	if it.Def.Problem != "" {
+		style = yellow
+	}
+	out := []Line{autoName(it, w, ic, style, click, autoButtons(it, ic)...)}
 	switch {
 	case it.Running || it.Last != nil:
 		out = append(out, m.runLine(it, w, click))
+	case it.Def.Problem != "":
+		out = append(out, Line{Text: "     " + yellow + fit("⚠ "+skillProblem(it.Def.Problem), max(w-6, 1)) + reset + " ", Action: click})
 	case it.Def.Description != "":
 		out = append(out, Line{Text: "     " + muted + fit(it.Def.Description, max(w-6, 1)) + reset + " ", Action: click})
 	}
@@ -312,20 +318,27 @@ func (m Model) autoRows(w int) []Line {
 	return rows
 }
 
-// renderAuto is the Scheduler view: its title with refresh, then its rows.
-func renderAuto(m Model, w, h int) []Line {
+// renderAuto is the Scheduler view: its title with ✨ New skill… (D66) and
+// refresh (the label of the one under the pointer in its place), then its
+// rows.
+func renderAuto(m Model, w, h int) ([]Line, ListView) {
 	ic := m.icons()
+	newSkill := button(ic.Suggest, cyan, Action{Kind: ActSkillNew})
+	newSkill.Tip = i18n.T("skills.new_button")
 	refresh := button(ic.Refresh, muted, Action{Kind: ActRefresh})
-	head := i18n.T("sidebar.scheduler")
+	head, style := " "+i18n.T("sidebar.scheduler"), title
 	if m.Project != "" {
 		head += " · " + m.Project
 	}
-	out := []Line{buttons(w, Cell{Text: title + fit(" "+head, w-refresh.W) + reset}, refresh)}
+	if m.Tip != "" {
+		head, style = " "+m.Tip, tipStyle
+	}
+	out := []Line{buttons(w, Cell{Text: style + fit(head, w-newSkill.W-refresh.W) + reset}, newSkill, refresh)}
 	n := 0
 	if h > 0 {
 		n = h - len(out)
 	}
-	return append(out, scrolled(m.autoRows(w), m.Scroll, n, w)...)
+	return withList(out, m.autoRows(w), m.Scroll, n, w)
 }
 
 // autoRunning reports a run going on in the view (its spinner turns).

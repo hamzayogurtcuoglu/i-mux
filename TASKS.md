@@ -1001,33 +1001,33 @@ slow (about a second).
 
 User request: fix the bugs of ROADMAP.md's audit that hold, and any other found on the way (D66).
 
-- [ ] **T71.1 MERGE CHANGES folds** · XS
+- [x] **T71.1 MERGE CHANGES folds** · XS
   - AC: a click on MERGE CHANGES folds and unfolds it (one list of the foldable sections);
     unit test.
-- [ ] **T71.2 Help keys** · XS
+- [x] **T71.2 Help keys** · XS
   - AC: the help popup names `e` (OpenCode), the sidebar's `5 jobs` and `4 git`, and Ctrl+V /
     Alt+V pasting an image; English and Turkish.
-- [ ] **T71.3 Git paths and locks** · S
+- [x] **T71.3 Git paths and locks** · S
   - AC: the line counts of Source Control and the Agents view's changes use `--numstat -z`
     (one parser), so non-ASCII and quoted names get theirs; the Agents view's changes and the
     explorer's colors read unquoted UTF-8 paths (`core.quotePath=false`, an escaped name
     unquoted); the diff viewer's `git diff` and search's `git ls-files` take no lock; Discard of
     an untracked file or folder passes `-d`, as Discard All does; unit tests with a
     Turkish and a quoted file name, and an untracked folder.
-- [ ] **T71.4 Sidebar scrolling** · M
+- [x] **T71.4 Sidebar scrolling** · M
   - AC: `Screen.List`; the wheel stops at the last page, from the top the list was drawn with;
     ↑/↓ scroll the Explorer, Source Control and Jobs lists at the edge of what is shown; unit
     tests.
-- [ ] **T71.5 Skills from Jobs** · M
+- [x] **T71.5 Skills from Jobs** · M
   - AC: ⋯ on every Jobs row; ✨ New skill… in the title, a right-click on the title or empty
     space offers New skill… and Blank SKILL.md…; `⚠` and the problem on a skill's row; a
     skill's menu adds Add to Agent, Improve with Agent, Share with all agents and Delete skill…
     (`__auto skill`); the Skills view's code is removed (a stored `skills` view opens Jobs);
     unit tests.
-- [ ] **T71.6 A broken config keeps the watcher** · S
+- [x] **T71.6 A broken config keeps the watcher** · S
   - AC: a config change restarts the watcher only when the new one loads; an error is logged
     and the watcher goes on; unit test.
-- [ ] **T71.7 Docs** · XS
+- [x] **T71.7 Docs** · XS
   - AC: CHANGELOG; README and README.tr where they name the keys.
 
 ## M70: The commit message box like VS Code's, no AI commit messages (added 2026-11-13)

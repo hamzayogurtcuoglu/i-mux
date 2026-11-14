@@ -63,10 +63,11 @@ func git(ctx context.Context, dir string, args ...string) (string, error) {
 // git diff refresh the index as a side effect and write it back under
 // .git/index.lock; git diff does even with GIT_OPTIONAL_LOCKS=0, unless
 // diff.autoRefreshIndex is off. Every read i-mux runs in the background
-// passes both.
+// passes both. core.quotePath=false keeps non-ASCII paths as they are
+// (UTF-8) where a read has no -z.
 var (
 	NoLocksEnv  = []string{"GIT_OPTIONAL_LOCKS=0"}
-	NoLocksArgs = []string{"-c", "diff.autoRefreshIndex=false"}
+	NoLocksArgs = []string{"-c", "diff.autoRefreshIndex=false", "-c", "core.quotePath=false"}
 )
 
 // gitOut runs git in dir with env added and returns its stdout and stderr;
@@ -97,8 +98,8 @@ func Read(ctx context.Context, dir string) (*Status, error) {
 		return nil, err
 	}
 	st := ParseStatus(out)
-	staged, _ := git(ctx, dir, "diff", "--cached", "--numstat")
-	work, _ := git(ctx, dir, "diff", "--numstat")
+	staged, _ := git(ctx, dir, "diff", "--cached", "--numstat", "-z")
+	work, _ := git(ctx, dir, "diff", "--numstat", "-z")
 	addCounts(st.Staged, ParseNumstat(staged))
 	addCounts(st.Changes, ParseNumstat(work))
 	if gd, err := git(ctx, dir, "rev-parse", "--absolute-git-dir"); err == nil {
@@ -211,26 +212,26 @@ func parseBranch(st *Status, h string) {
 	}
 }
 
-// ParseNumstat reads `git diff --numstat`: added and removed lines per path
-// (binary files count 0; a rename keeps the new path).
+// ParseNumstat reads `git diff --numstat -z`: added and removed lines per
+// path (binary files count 0; a rename keeps the new path). With -z git
+// writes paths as they are, never quoted: "12\t3\tpath\0", and a rename
+// "4\t0\t\0old\0new\0".
 func ParseNumstat(out string) map[string][2]int {
 	m := map[string][2]int{}
-	for _, l := range strings.Split(out, "\n") {
-		f := strings.SplitN(l, "\t", 3)
-		if len(f) != 3 {
+	f := strings.Split(out, "\x00")
+	for i := 0; i < len(f); i++ {
+		p := strings.SplitN(f[i], "\t", 3)
+		if len(p) != 3 {
 			continue
 		}
-		a, _ := strconv.Atoi(f[0])
-		r, _ := strconv.Atoi(f[1])
-		path := f[2]
-		if i := strings.Index(path, "{"); i >= 0 {
-			if j := strings.Index(path[i:], "}"); j > 0 {
-				if _, after, ok := strings.Cut(path[i+1:i+j], " => "); ok {
-					path = strings.ReplaceAll(path[:i]+after+path[i+j+1:], "//", "/")
-				}
+		a, _ := strconv.Atoi(p[0])
+		r, _ := strconv.Atoi(p[1])
+		path := p[2]
+		if path == "" { // a rename: its old path, then its new one
+			if i+2 >= len(f) {
+				break
 			}
-		} else if _, after, ok := strings.Cut(path, " => "); ok {
-			path = after
+			path, i = f[i+2], i+2
 		}
 		m[path] = [2]int{a, r}
 	}
@@ -276,7 +277,8 @@ func UnstageAll(ctx context.Context, dir string) error {
 // untracked ones.
 func Discard(ctx context.Context, dir string, untracked bool, paths ...string) error {
 	if untracked {
-		_, err := run(ctx, dir, append([]string{"clean", "-f", "-q", "--"}, paths...)...)
+		// -d as DiscardAll: an untracked folder ("?? dir/") goes too.
+		_, err := run(ctx, dir, append([]string{"clean", "-f", "-d", "-q", "--"}, paths...)...)
 		return err
 	}
 	_, err := run(ctx, dir, append([]string{"restore", "--worktree", "--"}, paths...)...)

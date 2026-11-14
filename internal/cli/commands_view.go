@@ -14,6 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/diffview"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/pager"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/searchview"
@@ -118,8 +119,11 @@ func gitDiff(path, mode string) string {
 		bases = [][]string{{}}
 	}
 	for _, base := range bases {
-		args := append([]string{"diff", "--no-color", "--no-ext-diff", "-U1000000"}, base...)
-		out, err := exec.CommandContext(ctx, "git", append(args, "--", path)...).Output()
+		// No lock (gitops.NoLocks): an agent may commit meanwhile.
+		args := append(append(append([]string{}, gitops.NoLocksArgs...), "diff", "--no-color", "--no-ext-diff", "-U1000000"), base...)
+		cmd := exec.CommandContext(ctx, "git", append(args, "--", path)...)
+		cmd.Env = append(os.Environ(), gitops.NoLocksEnv...)
+		out, err := cmd.Output()
 		if err == nil {
 			return string(out)
 		}
