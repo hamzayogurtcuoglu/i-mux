@@ -145,6 +145,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D65 | **The commit message is typed in a box above Commit, as in VS Code; the ✨ agent-written messages are gone** (added 2026-11-13, v0.55, at the user's request; undoes D29): the Git view has VS Code's message box between the branch row and the Commit button. A click (or Enter on it) puts the cursor in it; what is typed is the message (it wraps and grows to six rows); Enter commits, Ctrl+J or Alt+Enter starts a new line, Esc leaves it. Commit and the commit items of ▾ and ⋯ take its message; with none, the box asks for one (its hint names the command) instead of the command prompt. While it is written the message is kept per project in `~/.imux/commit/`, so every sidebar of the project shows it and a restart keeps it; a commit made with it removes it. ✨, `[git] commit_agent` and `commit_model` (ignored when an old config still has them), the Settings row "Commit messages by" and `internal/commitmsg` are removed. | The user found the prompt at the bottom of the screen awkward and asked for VS Code's box, where the message is written in place, and asked to remove the AI commit messages. A file, not a tmux option, holds the message: it reaches `imux __git commit` without going through a command line (D58), outlives the sidebar's restart on an upgrade, and is shared by a project's sidebars as VS Code shares a repository's input. |
 | D66 | **Fixes from the codebase audit: skills are managed from Jobs, every Jobs row has ⋯, the keyboard scrolls the sidebar's lists, and a broken config does not stop the watcher** (added 2026-11-14, v0.56, at the user's request; refines D62): the Jobs view gets the Skills view's authoring back, **✨ New skill…** in its title (a right-click on its title or empty space offers New skill… and Blank SKILL.md…), a skill with a front-matter problem is marked `⚠` with the problem under its name, and a skill's ⋯ menu adds **Add to Agent**, **Improve with Agent**, **Share with all agents** (when it is not shared) and **Delete skill…**; ⋯ shows on every row, not only once an item has a schedule or ran; the removed Skills view's code goes. ↑/↓ (j/k, Tab) scroll the Explorer, Source Control and Jobs lists when the selection reaches the edge of what is shown, and the wheel stops at the end of a list. A `config.toml` saved with an error leaves the watcher running with the config it has (the error goes to `watch.log`). Every git path i-mux reads is UTF-8 and unquoted (`-z`, `core.quotePath=false`), and the diff viewer and search take no git lock. | After v0.52 removed the Skills tab, New skill, the validation marks and a skill's actions could not be reached any more; Jobs already lists the skills, so they belong there. An item without a schedule had no visible menu, only a right-click nobody knew of. The keyboard could only reach the rows on screen, and the wheel scrolled past the end so that scrolling back up did nothing at first. A typo saved in the config made the restarted watcher exit until the next imux command. Paths with non-ASCII letters (Turkish ones) showed `+0 -0` and lost their git colors because git quoted them. |
 | D67 | **Panes are moved, resized and found from the keyboard, and the help is searchable** (added 2026-11-14, v0.57, at the user's request): `prefix H/J/K/L` swaps the active pane with its neighbor on that side (never with a sidebar, never around the window's edge; the focus stays on the pane that moved); `prefix r` enters a resize mode where `h j k l` or the arrows resize the active pane (Shift: 10 cells at a time) until `Esc`, `Enter` or any other key; `prefix ?` (and the sidebar's `?` and the rail's Help) open the keys as a Quick Pick: typing filters them, Enter runs the chosen one, and the keys shown are the ones the config binds. Optional root keys without the prefix (`tmux.direct_pane_keys`, off): `Ctrl+←↑→↓` move to the pane there, `Ctrl+Alt+←↑→↓` split that way after asking which agent. | Moving panes and finding a key took the mouse or tmux's own unlisted keys; the help was a fixed list that could not be searched nor run, and named keys the config may have changed. The keys without the prefix stay off by default: shells and agents' inputs use Ctrl+←/→ to jump words, and macOS uses Ctrl+arrows for its Spaces. |
+| D68 | **Color themes, and light/dark following the terminal** (added 2026-11-14, v0.58, at the user's request): every color i-mux draws comes from one palette of named colors (`accent`, `panel_bg`, `sidebar_bg`, `active_row_bg`, `selection_bg`, `surface0`, `surface1`, `surface_dim`, `overlay0`, `overlay1`, `text`, `subtext0`, `mauve`, `green`, `yellow`, `red`, `blue`, `teal`, `peach`): the sidebar, the pager and diff viewer, the menus, Quick Picks and popups, and tmux's tab bar, borders, messages and popups. `[theme] name` picks one of 18 built-in themes (default `catppuccin`, Catppuccin Mocha; `terminal` uses the terminal's own ANSI colors), `[theme.custom]` overrides single colors, and `auto_switch` follows the terminal's light or dark background with `light_name` / `dark_name` (each a theme's light or dark sibling when unset), with `[theme.custom.light]` / `[theme.custom.dark]` on top. Settings has a Theme row (choosing one there turns `auto_switch` off) and a row for following the terminal. | i-mux's colors were fixed 256-color codes for a dark terminal: on a light one its gray text and dark bars were hard to read, and nothing could be changed. One palette with well-known themes, the terminal's own colors among them, keeps every part of the UI in step. |
 
 ## 4. Components
 
@@ -1539,6 +1540,48 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   any other turns AI completion off.
 - It applies at once: commands read the config each time; sidebars and the watcher reload it
   when its modification time changes.
+
+#### Themes (v0.58, D68)
+
+- **Palette:** `internal/theme` holds 18 built-in palettes of 19 named colors each (the names of
+  D68): `catppuccin` (Mocha, the default) and `catppuccin-latte`, `tokyo-night` and
+  `tokyo-night-day`, `gruvbox` and `gruvbox-light`, `one-dark` and `one-light`, `solarized` and
+  `solarized-light`, `kanagawa` and `kanagawa-lotus`, `rose-pine` and `rose-pine-dawn`, and
+  `dracula`, `nord`, `vesper` and `terminal`. Names are matched lowercased with spaces and `_` as
+  `-`, with aliases (`catppuccin-mocha`, `latte`, `light`, `tokyonight`, `gruvbox-dark`,
+  `onedark`, `rosepine`, `dawn`, …); an unknown one is warned about and `catppuccin` (or
+  `catppuccin-latte` for `light_name`) used. Each palette uses its scheme's published colors.
+  `sidebar_bg` is `reset` in every one (the terminal's background shows through); `terminal`
+  uses ANSI colors (blue, green, dark gray…), so it follows the terminal's own palette.
+- **Config:** `[theme] name`, `auto_switch` (false), `light_name`, `dark_name`;
+  `[theme.custom]` sets any of the 19 colors, `[theme.custom.light]` / `[theme.custom.dark]` only
+  in that mode; the order is the theme, then `custom`, then the mode's. A color is `#rgb`,
+  `#rrggbb`, `rgb(r,g,b)`, an ANSI name (`black`, `red`, …, `gray`, `darkgray`, `lightred`, …)
+  or `reset` / `default` / `none` / `transparent`; anything else is a config error at its line.
+- **Light or dark:** with `auto_switch`, the theme is `light_name` on a light terminal and
+  `dark_name` otherwise (an unknown background is dark). The global option `@imux_appearance`
+  holds what is known: tmux 3.6+ runs the `client-light-theme` / `client-dark-theme` hooks when
+  the terminal changes (DEC mode 2031, or tmux's guess from the background), which run
+  `imux __theme appearance light|dark`; and a sidebar asks the terminal's background with OSC 11
+  when it starts and on each safety refresh (tmux 3.4+ answers it with the client's color),
+  light when its Rec. 601 luma (299 R + 587 G + 114 B) is at least half. A change sets the
+  option, sets tmux's styles again and redraws the sidebars.
+- **Where the colors go:** text `text`, titles bold `text`, secondary text `subtext0`, hints
+  `overlay0`, the selected row `selection_bg`, the current agent's row `active_row_bg`,
+  buttons, links, the focus mark and typed matches `accent`, states `green` / `yellow` / `red`
+  / `blue`, agents' marks `peach` / `blue` / `mauve` / `teal` / `text`, scroll bars `surface0`
+  and `overlay0`, the commit box `surface0` (`surface1` with the cursor), the diff's lines
+  `red` / `green` over a blend of them with `panel_bg` (256-color reds and greens with
+  `terminal`), its fillers `surface_dim`. tmux: the tab bar (`subtext0`, the current tab bold
+  `text` on `surface0`), the tab states, borders (`surface1`, the active one `accent`), messages
+  and the copy mode (`surface0`, `selection_bg`), menus (3.4+) and popups (3.3+) on `panel_bg`.
+  The tab bar and agent bar read `@imux_c_<color>` options, so a change needs no new config.
+  File icons keep their own colors (VS Code's).
+- **Colors on the wire:** 24-bit (`38;2;r;g;b`); `terminal`'s ANSI colors as 16-color codes.
+- **Settings:** **Theme: Catppuccin** opens the list of themes (● on the current; choosing
+  one sets `theme.name` and turns `auto_switch` off, as manual selection does), and **Follow the
+  terminal's light/dark: Off** turns `auto_switch` on or off. It applies at once: popups read the
+  config when they start, sidebars when it changes, and the watcher regenerates tmux's config.
 
 #### AI completion in the editor (v0.25, D30)
 

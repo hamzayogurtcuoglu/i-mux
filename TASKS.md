@@ -997,6 +997,32 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M73: Color themes, and light/dark following the terminal (added 2026-11-14)
+
+User request: the roadmap's second planned feature: themes and automatic light/dark switching
+(D68).
+
+- [ ] **T73.1 Palettes** · M
+  - AC: `internal/theme`: 18 built-in palettes of the 19 named colors, names and aliases, light
+    and dark siblings, color parsing (`#rgb`, `#rrggbb`, `rgb()`, ANSI names, reset), the
+    resolution order (theme, custom, mode), appearance from a background color; unit tests.
+- [ ] **T73.2 Config** · S
+  - AC: `[theme]` and `[theme.custom]`, `[theme.custom.light|dark]`; an unknown name warns and
+    falls back, a bad color is an error at its line; CONFIG.md; unit tests.
+- [ ] **T73.3 The UI in the palette** · L
+  - AC: the sidebar, pager, diff viewer, menus, Quick Picks and the other popups draw with the
+    palette; tmux's tab bar, tab states, borders, messages, copy mode, menus and popups too
+    (`@imux_c_*` options and styles); unit tests (a theme's colors reach the output).
+- [ ] **T73.4 Light/dark** · M
+  - AC: `@imux_appearance` from the tmux 3.6+ hooks (`imux __theme appearance`) and from a
+    sidebar's OSC 11 query (its reply parsed, never read as keys); with `auto_switch` the theme
+    changes and applies at once; unit tests; e2e: the appearance changes the colors.
+- [ ] **T73.5 Settings** · S
+  - AC: a Theme row (its list; choosing turns `auto_switch` off) and a Follow the terminal row;
+    English and Turkish; unit tests.
+- [ ] **T73.6 Docs** · XS
+  - AC: README and README.tr, CHANGELOG.
+
 ## M72: Pane keys and a searchable help (added 2026-11-14)
 
 User request: the first item of the roadmap's planned features: move, swap and resize panes from
