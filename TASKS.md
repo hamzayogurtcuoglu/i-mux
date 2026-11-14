@@ -997,6 +997,30 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M72: Pane keys and a searchable help (added 2026-11-14)
+
+User request: the first item of the roadmap's planned features: move, swap and resize panes from
+the keyboard and search the keys (D67).
+
+- [ ] **T72.1 Swap panes** · S
+  - AC: `prefix H/J/K/L` (`tmux.swap_pane_keys`, on) run `imux __pane swap <dir>`: the
+    neighbour on that side by the panes' edges, nothing at the window's edge, never a sidebar;
+    the focus stays on the moved pane; unit tests (the neighbour, the sidebar, the edge).
+- [ ] **T72.2 Resize mode** · S
+  - AC: `prefix r` (`tmux.resize_key_prefix`) enters the `imux-resize` key table: `h j k l` and
+    arrows by 2, `H J K L` and Shift+arrows by 10, a status-line note; `Esc` / `Enter` / `q`
+    leave; its keys go in `@imux_keys`; unit test of the generated config; e2e: the pane's
+    width changes and Esc leaves.
+- [ ] **T72.3 Keys without the prefix** · XS
+  - AC: `tmux.direct_pane_keys` (off): `Ctrl+arrows` move between panes, `Ctrl+Alt+arrows`
+    open the split menu that way (`__menu --split h|v --before`); unit test.
+- [ ] **T72.4 Searchable help** · M
+  - AC: `prefix ?` (`tmux.help_key_prefix`), the sidebar's `?` and the rail's Help open a Quick
+    Pick of actions and their configured keys; typing filters; Enter runs the action; English
+    and Turkish; unit tests; e2e: typing filters and Enter runs a row.
+- [ ] **T72.5 Docs** · XS
+  - AC: CONFIG.md (generated), README and README.tr's keys, CHANGELOG.
+
 ## M71: Fixes from the codebase audit (added 2026-11-14)
 
 User request: fix the bugs of ROADMAP.md's audit that hold, and any other found on the way (D66).

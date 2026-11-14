@@ -144,6 +144,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D64 | **The diff viewer marks the changes beside its scroll bar, as VS Code's diff editor does** (added 2026-11-13, v0.54, at the user's request): two lanes left of the pager's scroll bar map the whole file, red where lines were removed and green where lines were added (a line replaced has both); a click on a mark goes to that change, `]` and `[` go to the next and previous one, around the ends, and the bottom row says which ("change 2 of 5"). The whole file stays, as before (D26). | The user had to scroll through a whole file to find its changes; VS Code's diff editor shows where they are beside the scroll bar and goes there on a click. Two lanes, as VS Code's diff overview ruler has, say removed and added apart without a third color, and side by side a replaced line shows in both. |
 | D65 | **The commit message is typed in a box above Commit, as in VS Code; the ✨ agent-written messages are gone** (added 2026-11-13, v0.55, at the user's request; undoes D29): the Git view has VS Code's message box between the branch row and the Commit button. A click (or Enter on it) puts the cursor in it; what is typed is the message (it wraps and grows to six rows); Enter commits, Ctrl+J or Alt+Enter starts a new line, Esc leaves it. Commit and the commit items of ▾ and ⋯ take its message; with none, the box asks for one (its hint names the command) instead of the command prompt. While it is written the message is kept per project in `~/.imux/commit/`, so every sidebar of the project shows it and a restart keeps it; a commit made with it removes it. ✨, `[git] commit_agent` and `commit_model` (ignored when an old config still has them), the Settings row "Commit messages by" and `internal/commitmsg` are removed. | The user found the prompt at the bottom of the screen awkward and asked for VS Code's box, where the message is written in place, and asked to remove the AI commit messages. A file, not a tmux option, holds the message: it reaches `imux __git commit` without going through a command line (D58), outlives the sidebar's restart on an upgrade, and is shared by a project's sidebars as VS Code shares a repository's input. |
 | D66 | **Fixes from the codebase audit: skills are managed from Jobs, every Jobs row has ⋯, the keyboard scrolls the sidebar's lists, and a broken config does not stop the watcher** (added 2026-11-14, v0.56, at the user's request; refines D62): the Jobs view gets the Skills view's authoring back, **✨ New skill…** in its title (a right-click on its title or empty space offers New skill… and Blank SKILL.md…), a skill with a front-matter problem is marked `⚠` with the problem under its name, and a skill's ⋯ menu adds **Add to Agent**, **Improve with Agent**, **Share with all agents** (when it is not shared) and **Delete skill…**; ⋯ shows on every row, not only once an item has a schedule or ran; the removed Skills view's code goes. ↑/↓ (j/k, Tab) scroll the Explorer, Source Control and Jobs lists when the selection reaches the edge of what is shown, and the wheel stops at the end of a list. A `config.toml` saved with an error leaves the watcher running with the config it has (the error goes to `watch.log`). Every git path i-mux reads is UTF-8 and unquoted (`-z`, `core.quotePath=false`), and the diff viewer and search take no git lock. | After v0.52 removed the Skills tab, New skill, the validation marks and a skill's actions could not be reached any more; Jobs already lists the skills, so they belong there. An item without a schedule had no visible menu, only a right-click nobody knew of. The keyboard could only reach the rows on screen, and the wheel scrolled past the end so that scrolling back up did nothing at first. A typo saved in the config made the restarted watcher exit until the next imux command. Paths with non-ASCII letters (Turkish ones) showed `+0 -0` and lost their git colors because git quoted them. |
+| D67 | **Panes are moved, resized and found from the keyboard, and the help is searchable** (added 2026-11-14, v0.57, at the user's request): `prefix H/J/K/L` swaps the active pane with its neighbour on that side (never with a sidebar, never around the window's edge; the focus stays on the pane that moved); `prefix r` enters a resize mode where `h j k l` or the arrows resize the active pane (Shift: 10 cells at a time) until `Esc`, `Enter` or any other key; `prefix ?` (and the sidebar's `?` and the rail's Help) open the keys as a Quick Pick: typing filters them, Enter runs the chosen one, and the keys shown are the ones the config binds. Optional root keys without the prefix (`tmux.direct_pane_keys`, off): `Ctrl+←↑→↓` move to the pane there, `Ctrl+Alt+←↑→↓` split that way after asking which agent. | Moving panes and finding a key took the mouse or tmux's own unlisted keys; the help was a fixed list that could not be searched nor run, and named keys the config may have changed. The keys without the prefix stay off by default: shells and agents' inputs use Ctrl+←/→ to jump words, and macOS uses Ctrl+arrows for its Spaces. |
 
 ## 4. Components
 
@@ -985,13 +986,31 @@ default 30 columns), running `imux __sidebar`:
 - **CONTINUE HERE IN:** the switch targets, as on the agent bar: click switches the target pane
   with context (limited agents ask first; missing ones show the install hint).
 - **Buttons:** Split right / Split down open a menu "New pane with: Claude / Antigravity / …" and
-  split the target pane; Sessions opens the session picker; Limits the limits popup; Keys a help
-  popup listing every key.
+  split the target pane; Sessions opens the session picker; Limits the limits popup; Keys the
+  keys as a searchable list that runs the chosen one (v0.57, "Help" below).
 - **Keyboard** (when the sidebar is focused): ↑/↓ select, Enter activates, `c a x p` continue in
   an agent, `v` / `-` split right / down, `s` sessions, `l` limits, `?` keys, Esc back to the
   target pane. After any action focus returns to the target pane.
 - **Global keys:** `prefix b` shows/hides the sidebars, `prefix v` / `prefix -` split the active
   pane after asking for the agent, on top of `Ctrl+\` and `prefix a`/`S`.
+- **Pane keys** (v0.57, D67): `prefix H/J/K/L` (`tmux.swap_pane_keys`) swap the active pane with
+  the one on that side: `imux __pane swap <left|down|up|right>` finds the neighbour from the
+  panes' edges (most rows or columns shared; none past the window's edge, where tmux's
+  `{left-of}` would go around), leaves a sidebar where it is (as the pane moved or as its
+  neighbour), and swaps with `swap-pane -d` so the focus stays on the moved pane. `prefix r`
+  (`tmux.resize_key_prefix`) switches the client to the `imux-resize` key table: `h j k l` and
+  the arrows `resize-pane` by 2 cells, `H J K L` and Shift+arrows by 10, each staying in the
+  table and saying so on the status line; `Esc`, `Enter` or `q` leave it, and any other key
+  leaves it and does what it does. With `tmux.direct_pane_keys` (off by default) the root
+  table also gets `C-Left/Down/Up/Right` (`select-pane -L/-D/-U/-R`) and `C-M-` arrows (the
+  split menu, `__menu --split h|v [--before]`). Every key goes in `@imux_keys`, so a reload
+  unbinds what the config no longer binds.
+- **Help** (v0.57, D67): `prefix ?` (`tmux.help_key_prefix`), the sidebar's `?` and the rail's
+  Help open the keys as a Quick Pick (`__menu --keys`): each row is an action with its keys
+  beside it, named from the config (a changed key shows as bound; one set to "" is left out),
+  in groups (i-mux, Panes, Tabs, Sidebar). Typing filters by the action's name; Enter runs it
+  (the pane menu, Go to File, a switch, a split, the sidebar, History, a new tab, a swap, the
+  resize mode); a row with nothing to run (the sidebar's own keys) only tells.
 - **Lifecycle:** created with every imux window (`split-window -hbf -l <width> -d`), marked
   `@imux_role=sidebar` and `remain-on-exit off`; it exits when it is the window's last pane, so
   closing the last agent closes the window. It keeps its width on resize (SIGWINCH →
