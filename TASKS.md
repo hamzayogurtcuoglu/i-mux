@@ -1001,18 +1001,18 @@ slow (about a second).
 
 User request: the roadmap's third planned feature: an agent in a worktree of its own (D72).
 
-- [ ] **T77.1 New worktree with an agent** · S
+- [x] **T77.1 New worktree with an agent** · S
   - AC: the place menu's 🌿 In a new worktree… asks a branch and opens `<project>.worktrees/
     <branch>` (new branch, or the existing one) as a project with the agent; `imux worktree
     new`; unit tests (the prompt); e2e.
-- [ ] **T77.2 Under its project** · S
+- [x] **T77.2 Under its project** · S
   - AC: a linked worktree's project shows under its repository's project, indented with 🌿;
     the main worktree found once per folder; unit tests.
-- [ ] **T77.3 Diff, merge, remove** · M
+- [x] **T77.3 Diff, merge, remove** · M
   - AC: the worktree project's menu has Diff against the base, Merge into it (asked; refused
     with uncommitted changes) and Remove worktree (asked; force asked again; the project
     closes); `imux worktree diff|merge|remove`; English and Turkish; unit tests; e2e.
-- [ ] **T77.4 Docs** · XS
+- [x] **T77.4 Docs** · XS
   - AC: README and README.tr, CHANGELOG.
 
 ## M76: Agents report their state through hooks (added 2026-11-14)

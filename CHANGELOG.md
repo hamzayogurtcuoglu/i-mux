@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-11-14
+
+### Added
+
+- **An agent in a worktree of its own.** The Agents **+** → an agent → **🌿 In a new worktree…**
+  asks a branch name and opens `<project>.worktrees/<branch>` (a new branch from HEAD, or the
+  branch when it exists) as a project with that agent in it, so two agents never edit the same
+  files or run each other's half-done code. It is listed under its project in PROJECTS, and its
+  menu has **Diff against main** (what the agent committed), **Merge into main…** (refused while
+  it has uncommitted changes) and **Remove worktree…** (its project closes; the branch stays).
+  From a terminal: `imux worktree new <branch> [agent]`, `imux worktree diff|merge|remove`.
+
 ## [0.59.0] - 2026-11-14
 
 ### Added

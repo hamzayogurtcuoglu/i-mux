@@ -125,11 +125,14 @@ func (p PaneRow) Display(shell string) string {
 // ProjectRow is one imux session: a project directory and its panes.
 type ProjectRow struct {
 	Session string
-	Name    string // directory name
-	Branch  string // "" outside git
-	Dirty   bool   // uncommitted changes
-	Current bool
-	Panes   []PaneRow
+	// Worktree: a linked worktree shown under its repository's project
+	// (D72).
+	Worktree bool
+	Name     string // directory name
+	Branch   string // "" outside git
+	Dirty    bool   // uncommitted changes
+	Current  bool
+	Panes    []PaneRow
 }
 
 // ChangeRow is one `git status --short` entry.
@@ -287,6 +290,11 @@ type Source struct {
 
 	mu  sync.Mutex
 	git map[string]gitCache
+	// mains is each project folder's repository's main worktree when the
+	// folder is a linked worktree ("" otherwise), asked once (D72).
+	mains map[string]string
+	// MainWorktree finds it; nil runs git (gitops.MainWorktree).
+	MainWorktree func(ctx context.Context, dir string) string
 }
 
 type gitCache struct {
@@ -607,6 +615,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		}
 		return a.Name < b.Name
 	})
+	order = s.nestWorktrees(ctx, order, bySession, cwdOf)
 	for _, name := range order {
 		pr := bySession[name]
 		if dir := cwdOf[name]; dir != "" && !pr.Current {
@@ -847,3 +856,78 @@ func (s *Source) nerdProgram(program string) bool {
 
 // NerdFontFor is termfont.NerdFont; tests replace it.
 var NerdFontFor = termfont.NerdFont
+
+// mainOf is dir's repository's main worktree when dir is a linked worktree
+// ("" otherwise), asked once per folder.
+func (s *Source) mainOf(ctx context.Context, dir string) string {
+	s.mu.Lock()
+	m, ok := s.mains[dir]
+	s.mu.Unlock()
+	if ok {
+		return m
+	}
+	find := s.MainWorktree
+	if find == nil {
+		find = gitops.MainWorktree
+	}
+	m = find(ctx, dir)
+	s.mu.Lock()
+	if s.mains == nil {
+		s.mains = map[string]string{}
+	}
+	s.mains[dir] = m
+	s.mu.Unlock()
+	return m
+}
+
+// nestWorktrees puts each project that is a linked worktree right under
+// its repository's project, when that is open (D72); the group of the
+// current project stays first.
+func (s *Source) nestWorktrees(ctx context.Context, order []string, rows map[string]*ProjectRow, cwdOf map[string]string) []string {
+	byDir := map[string]string{}
+	for _, name := range order {
+		byDir[filepath.Clean(cwdOf[name])] = name
+	}
+	parent := map[string]string{}
+	for _, name := range order {
+		if dir := cwdOf[name]; dir != "" {
+			if main := s.mainOf(ctx, dir); main != "" {
+				if p, ok := byDir[filepath.Clean(main)]; ok && p != name {
+					parent[name] = p
+					rows[name].Worktree = true
+				}
+			}
+		}
+	}
+	if len(parent) == 0 {
+		return order
+	}
+	children := map[string][]string{}
+	var roots []string
+	for _, name := range order {
+		if p, ok := parent[name]; ok {
+			children[p] = append(children[p], name)
+			continue
+		}
+		roots = append(roots, name)
+	}
+	// The current project's group first: a current worktree takes its
+	// repository's project to the top.
+	for i, r := range roots {
+		cur := rows[r].Current
+		for _, c := range children[r] {
+			cur = cur || rows[c].Current
+		}
+		if cur && i > 0 {
+			roots = append([]string{r}, append(roots[:i:i], roots[i+1:]...)...)
+			break
+		}
+	}
+	var out []string
+	for _, r := range roots {
+		cs := children[r]
+		sort.SliceStable(cs, func(i, j int) bool { return rows[cs[i]].Name < rows[cs[j]].Name })
+		out = append(append(out, r), cs...)
+	}
+	return out
+}

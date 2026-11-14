@@ -270,3 +270,49 @@ func TestReportHook(t *testing.T) {
 		t.Errorf("another agent's pane: %s", got)
 	}
 }
+
+// TestWorktreeMenus (T77.1, T77.3): an agent's place menu ends with In a
+// new worktree… (a terminal's does not), whose prompt keeps the pane out of
+// its template; a worktree project's menu items and confirmations.
+func TestWorktreeMenus(t *testing.T) {
+	i18n.SetLocale("en")
+	w, _, _ := testWS(t)
+	p := &Pane{ID: "%14"}
+	m := w.PlaceMenu(p, "c1", "codex")
+	last := m.Items[len(m.Items)-1]
+	if last.Key != "w" || last.Name != "🌿 In a new worktree…" {
+		t.Fatalf("place menu ends with %+v", last)
+	}
+	tmpl := last.Cmd[strings.LastIndex(last.Cmd, "command-prompt"):]
+	if !strings.Contains(last.Cmd, "set-option -g @imux_wt_pane %14") || !strings.Contains(last.Cmd, "set-option -g @imux_wt_agent codex") ||
+		strings.Contains(tmpl, "%14") || !strings.Contains(tmpl, "worktree new --from-option") || !strings.Contains(tmpl, "-t c1") {
+		t.Errorf("prompt %q", last.Cmd)
+	}
+	if m := w.PlaceMenu(p, "c1", ShellAgent); strings.Contains(m.Items[len(m.Items)-1].Name, "worktree") {
+		t.Error("a terminal in a worktree")
+	}
+	wt := Worktree{Path: "/r.worktrees/fix", Branch: "fix", Main: "/r", Base: "main"}
+	items := w.worktreeItems(wt, "r-ab12", "c1", "%1")
+	got := ""
+	for _, it := range items {
+		got += it.Key + " " + it.Name + " → " + it.Cmd + "\n"
+	}
+	for _, want := range []string{
+		"d Diff against main → display-popup -E -w 90% -h 90% -c c1 -d /r", "worktree diff --session r-ab12",
+		"m Merge into main… → ", "worktree ask merge --session r-ab12 --pane %1 --client c1", "r Remove worktree… → ", "worktree ask remove",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("items lack %q:\n%s", want, got)
+		}
+	}
+	for what, want := range map[string]string{
+		"merge":        "worktree merge --session r-ab12",
+		"remove":       "worktree remove --session r-ab12",
+		"remove-force": "worktree remove --force --session r-ab12",
+	} {
+		c := w.WorktreeConfirm(wt, what, "r-ab12", "c1", "%1")
+		if c.Title == "" || !strings.Contains(c.Items[0].Cmd, want) || c.Items[1].Key != "n" {
+			t.Errorf("%s: %+v", what, c)
+		}
+	}
+}

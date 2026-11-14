@@ -228,7 +228,7 @@ func (w *WS) PlaceMenu(p *Pane, client, id string) *Menu {
 		}
 		return w.ui(append(args, uiTarget(p.ID, client)...)...)
 	}
-	return &Menu{Title: i18n.T("place.title", name), Items: []MenuItem{
+	m := &Menu{Title: i18n.T("place.title", name), Items: []MenuItem{
 		{Name: i18n.T("place.right"), Key: "r", Cmd: split("-h", false)},
 		{Name: i18n.T("place.left"), Key: "l", Cmd: split("-h", true)},
 		{Name: i18n.T("place.down"), Key: "d", Cmd: split("-v", false)},
@@ -236,6 +236,11 @@ func (w *WS) PlaceMenu(p *Pane, client, id string) *Menu {
 		Separator(),
 		{Name: i18n.T("place.tab"), Key: "t", Cmd: w.ui(append([]string{"tab", id}, uiTarget(p.ID, client)...)...)},
 	}}
+	if id != ShellAgent {
+		// An agent of its own in a worktree of the project (D72).
+		m.Items = append(m.Items, Separator(), MenuItem{Name: i18n.T("place.worktree"), Key: "w", Cmd: w.WorktreePrompt(p.ID, client, id)})
+	}
+	return m
 }
 
 // ChangesMenu lists the target project's changed files (git status); each

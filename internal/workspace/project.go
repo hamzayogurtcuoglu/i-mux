@@ -18,6 +18,7 @@ import (
 // ProjectInfo is what the project menus say about a session.
 type ProjectInfo struct {
 	Session string
+	Dir     string // the project's folder
 	Name    string // folder name
 	Agents  int    // agent panes (sidebars and shells not counted)
 	Windows int
@@ -31,7 +32,7 @@ func (w *WS) Project(ctx context.Context, s string) (*ProjectInfo, error) {
 	}
 	pi := &ProjectInfo{Session: s}
 	for _, r := range tmux.Rows(out, 4) {
-		pi.Name = filepath.Base(r[0])
+		pi.Dir, pi.Name = r[0], filepath.Base(r[0])
 		pi.Windows, _ = strconv.Atoi(r[3])
 		if r[1] != sidebar.RoleSidebar && r[2] != "" {
 			pi.Agents++
@@ -58,6 +59,10 @@ func (w *WS) ProjectMenu(ctx context.Context, s, client, pane string) (*Menu, er
 		Name: i18n.T("project.close"), Key: "x",
 		Cmd: w.ui(append([]string{"__menu", "--close-project", s}, uiTarget(pane, client)...)...),
 	})
+	// A worktree project: what its agent did, merged back, removed (D72).
+	if wt, ok := WorktreeOf(ctx, pi.Dir); ok {
+		m.Items = append(m.Items, w.worktreeItems(wt, s, client, pane)...)
+	}
 	return m, nil
 }
 

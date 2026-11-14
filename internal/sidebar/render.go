@@ -418,7 +418,11 @@ func projectRow(pr ProjectRow, w, tick int) Line {
 		right, rw = append(right, t), rw+n
 	}
 	st, ok := rollup(pr.Panes)
-	room := func() int { return w - 5 - rw - 2 }
+	lead := 5 // " ", the avatar, " "
+	if pr.Worktree {
+		lead = 6 // "   🌿 ": under its repository's project (D72)
+	}
+	room := func() int { return w - lead - rw - 2 }
 	branch := pr.Branch
 	build := func(compact bool) {
 		right, rw = nil, 0
@@ -447,7 +451,10 @@ func projectRow(pr ProjectRow, w, tick int) Line {
 	}
 	nw := min(runes(name), max(room(), 1))
 	left := " " + avatar(pr.Name) + " " + style + fit(name, nw) + reset
-	text := spread(left, 5+nw, strings.Join(right, "")+" ", rw+1, w)
+	if pr.Worktree {
+		left = "   🌿 " + style + fit(name, nw) + reset
+	}
+	text := spread(left, lead+nw, strings.Join(right, "")+" ", rw+1, w)
 	a := Action{Kind: ActProject, Session: pr.Session}
 	if pr.Current {
 		return Line{Text: withBg(text), Action: Action{Kind: ActProjectMenu, Session: pr.Session}}
