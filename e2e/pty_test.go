@@ -96,13 +96,26 @@ func (c *Client) Output() string {
 	return c.out.String()
 }
 
-// Close kills the client.
+// Close kills the client. The master goes first and the wait is bounded: a
+// client killed while its terminal still holds output it wrote (macOS
+// waits for that to drain as the terminal closes) once hung the whole run
+// here until its 15-minute timeout.
 func (c *Client) Close() {
 	if c.cmd.Process != nil {
 		_ = c.cmd.Process.Kill()
-		_, _ = c.cmd.Process.Wait()
 	}
 	c.master.Close()
+	if c.cmd.Process != nil {
+		waited := make(chan struct{})
+		go func() {
+			_, _ = c.cmd.Process.Wait()
+			close(waited)
+		}()
+		select {
+		case <-waited:
+		case <-time.After(5 * time.Second):
+		}
+	}
 	select {
 	case <-c.done:
 	case <-time.After(time.Second):

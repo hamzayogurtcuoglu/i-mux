@@ -35,18 +35,29 @@ func (p *Provider) Agent() session.AgentID { return session.Claude }
 
 func (p *Provider) projects() string { return filepath.Join(p.root, "projects") }
 
-// EncodeCWD maps an absolute cwd to its project directory name: every
-// non-alphanumeric character becomes '-'.
+// EncodeCWD maps an absolute cwd to its project directory name as Claude
+// Code does (cwd.replace(/[^a-zA-Z0-9]/g, "-") in JavaScript): every
+// UTF-16 code unit that is not an ASCII letter or digit becomes '-', so
+// "ü" is one '-' (not one per UTF-8 byte) and a character past U+FFFF two.
+// A name longer than maxDirName is cut there and given a hash (dirsFor).
 func EncodeCWD(cwd string) string {
-	b := []byte(cwd)
-	for i, c := range b {
-		alnum := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
-		if !alnum {
-			b[i] = '-'
+	var b strings.Builder
+	for _, r := range cwd {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r > 0xFFFF:
+			b.WriteString("--") // a surrogate pair
+		default:
+			b.WriteByte('-')
 		}
 	}
-	return string(b)
+	return b.String()
 }
+
+// maxDirName is where Claude Code cuts a project directory name, adding
+// "-" and a hash of the cwd (not one i-mux computes).
+const maxDirName = 200
 
 // SessionPath returns where Claude writes session id for cwd.
 func (p *Provider) SessionPath(cwd, id string) string {
@@ -90,8 +101,24 @@ func (p *Provider) Find(ctx context.Context, q session.Query) ([]session.Ref, er
 			}
 		}
 	} else {
-		for _, f := range session.ListFiles(filepath.Join(p.projects(), EncodeCWD(q.CWD)), session.HasSuffix(".jsonl")) {
+		enc := EncodeCWD(q.CWD)
+		for _, f := range session.ListFiles(filepath.Join(p.projects(), enc), session.HasSuffix(".jsonl")) {
 			add(f, q.CWD)
+		}
+		if len(enc) > maxDirName {
+			// A long path's folder: its first maxDirName characters, then
+			// a hash; another path may start the same (a worktree), so
+			// each file's own cwd decides.
+			for _, dir := range p.projectDirs() {
+				if !strings.HasPrefix(filepath.Base(dir), enc[:maxDirName]+"-") {
+					continue
+				}
+				for _, f := range session.ListFiles(dir, session.HasSuffix(".jsonl")) {
+					if cwd := headCWD(f.Path); cwd != "" && session.SameDir(cwd, q.CWD) {
+						add(f, q.CWD)
+					}
+				}
+			}
 		}
 		if len(refs) == 0 {
 			p.fallbackScan(ctx, q, add)

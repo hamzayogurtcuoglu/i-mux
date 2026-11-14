@@ -1043,6 +1043,11 @@ User request: fix the bugs of ROADMAP.md's audit that hold, and any other found 
   - AC: sharing a scheduled skill moves its schedule and runs to the shared file's id (they
     were left behind, the watcher skipping every run as "definition gone"); a schedule's
     label keeps its seconds ("90s": every 1 min 30 s); unit tests.
+- [x] **T71.11 A fifth look** · S
+  - AC: Claude's project folder is found for a cwd with non-ASCII letters (one `-` per UTF-16
+    code unit, as Claude Code encodes it) and for one past 200 characters (its folders that
+    start with the first 200, each file's cwd checked); the e2e client's cleanup cannot hang
+    the run; unit tests.
 
 ## M70: The commit message box like VS Code's, no AI commit messages (added 2026-11-13)
 

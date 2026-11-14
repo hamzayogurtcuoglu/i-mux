@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.56.4] - 2026-11-14
+
+### Fixed
+
+- **Claude conversations in folders with non-ASCII names** (such as `~/Masaüstü/proje`) are
+  found by their folder again. i-mux named Claude Code's project folder with one `-` per UTF-8
+  byte where Claude Code writes one per character, so only a scan of the 200 newest
+  conversations could find them, and a handoff from an older one fell back to the terminal's
+  scrollback.
+- **Claude conversations of a project whose path is very long** are found in the folder Claude
+  Code cuts at 200 characters and marks with a hash.
+
 ## [0.56.3] - 2026-11-14
 
 ### Fixed

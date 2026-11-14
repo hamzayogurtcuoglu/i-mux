@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -79,8 +80,51 @@ func load(t *testing.T, ref session.Ref) *session.Session {
 }
 
 func TestEncodeCWD(t *testing.T) {
-	if got := EncodeCWD("/home/test/Documents/i-mux.v2"); got != "-home-test-Documents-i-mux-v2" {
-		t.Fatalf("got %q", got)
+	// As Claude Code's cwd.replace(/[^a-zA-Z0-9]/g, "-"): one '-' per UTF-16
+	// code unit, so "ü" is one and an emoji (a surrogate pair) two.
+	for in, want := range map[string]string{
+		"/home/test/Documents/i-mux.v2": "-home-test-Documents-i-mux-v2",
+		"/Users/test/Masaüstü/proje":    "-Users-test-Masa-st--proje",
+		"/home/test/şirket/İş 2":        "-home-test--irket--- 2",
+		"/home/test/notes 😀":            "-home-test-notes---",
+	} {
+		if got := EncodeCWD(in); got != strings.ReplaceAll(want, " ", "-") {
+			t.Errorf("EncodeCWD(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestFindLongPath: a cwd whose folder name is past 200 characters lives in
+// "<first 200>-<hash>"; Find finds it there, and not another path's file
+// in a folder that starts the same.
+func TestFindLongPath(t *testing.T) {
+	h := testutil.Isolate(t)
+	long := filepath.Join(h.Project, strings.Repeat("deep/", 45), "proj")
+	other := long + "-other"
+	enc := EncodeCWD(long)
+	if len(enc) <= maxDirName {
+		t.Fatalf("not long: %d", len(enc))
+	}
+	write := func(dir, id, cwd string) {
+		line, _ := json.Marshal(map[string]any{"type": "user", "cwd": cwd, "sessionId": id, "message": map[string]any{"role": "user", "content": "hi"}})
+		testutil.WriteFile(t, filepath.Join(h.Claude, "projects", dir, id+".jsonl"), append(line, '\n'))
+	}
+	write(enc[:maxDirName]+"-abc123", "mine", long)
+	write(enc[:maxDirName]+"-zzz999", "theirs", other)
+	// More newer sessions elsewhere than the cwd scan reads: the folder is
+	// found by its name, not by that scan.
+	old := time.Now().Add(-time.Hour)
+	for _, id := range []string{"mine", "theirs"} {
+		for _, d := range []string{"-abc123", "-zzz999"} {
+			_ = os.Chtimes(filepath.Join(h.Claude, "projects", enc[:maxDirName]+d, id+".jsonl"), old, old)
+		}
+	}
+	for i := range fallbackScanLimit + 1 {
+		write("-elsewhere", "s"+strconv.Itoa(i), "/elsewhere")
+	}
+	refs, err := New(session.Env{}).Find(context.Background(), session.Query{CWD: long})
+	if err != nil || len(refs) != 1 || refs[0].ID != "mine" {
+		t.Fatalf("refs %+v %v", refs, err)
 	}
 }
 

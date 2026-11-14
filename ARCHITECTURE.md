@@ -421,10 +421,15 @@ means a known unknown, tracked in §20.
 
 - **Store:** `~/.claude/projects/<encoded-cwd>/<sessionId>.jsonl`; respect `$CLAUDE_CONFIG_DIR`.
 - **Encoding** [verified for local paths]:
-  - `<encoded-cwd>` is the absolute cwd with every non-alphanumeric character replaced by `-`.
+  - `<encoded-cwd>` is the absolute cwd with every non-alphanumeric character replaced by `-`:
+    Claude Code's `cwd.replace(/[^a-zA-Z0-9]/g, "-")`, which works on UTF-16 code units, so
+    `ü` is one `-` and a character past U+FFFF two (not one per UTF-8 byte; v0.56.4).
   - All local project directory names match `^[A-Za-z0-9-]+$`; the longest is 166 characters.
-  - Long-path behavior is [unverified] (Q7). Fallback: scan project folders for recent files
-    whose first lines contain a matching `"cwd"`.
+  - A name longer than 200 characters is cut at 200 and followed by `-` and a hash of the cwd
+    (seen in Claude Code's code; the hash is not computed here): i-mux reads the folders that
+    start with those 200 characters and a `-`, keeping the files whose `"cwd"` is the project
+    (v0.56.4, Q7). Fallback: scan project folders for recent files whose first lines contain a
+    matching `"cwd"`.
   - Project folders may also contain `memory/` and `<uuid>/` subdirectories. Ignore them.
 - **Locating a pane's session:** i-mux launches Claude with `--session-id <uuid>`, so the path is
   known exactly. For sessions not started by i-mux (standalone handoff), take the newest
