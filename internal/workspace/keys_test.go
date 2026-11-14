@@ -1,11 +1,17 @@
 package workspace
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/agenthook"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/quickpick"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 )
 
@@ -188,5 +194,79 @@ func TestSetAppearance(t *testing.T) {
 	}
 	if changed, _ := run("bright"); changed {
 		t.Error("a bad appearance changed it")
+	}
+}
+
+// TestAgentHooks (T76.1): with hooks on, Claude's settings file has them
+// (and the status line when that is on), and Codex its notify program,
+// unless the user's Codex config has one.
+func TestAgentHooks(t *testing.T) {
+	w, _, _ := testWS(t)
+	w.Cfg.Hooks.Enabled = true
+	w.SetBins(map[session.AgentID]agent.Resolved{
+		"claude": {Agent: "claude", Installed: true, Path: "/opt/bin/claude"},
+		"codex":  {Agent: "codex", Installed: true, Path: "/opt/bin/codex"},
+	})
+	spec, _, err := w.Spec(Launch{Agent: session.Claude, CWD: "/p"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var file string
+	for _, a := range spec.Args {
+		if f, ok := strings.CutPrefix(a, "--settings="); ok {
+			file = f
+		}
+	}
+	b, _ := os.ReadFile(file)
+	if !strings.Contains(string(b), `"Stop":[{"hooks":[{"command":"/opt/imux/bin/imux __hook claude","type":"command"}]}]`) || strings.Contains(string(b), "statusLine") {
+		t.Fatalf("claude settings %q: %s", file, b)
+	}
+	spec, _, _ = w.Spec(Launch{Agent: session.Codex, CWD: "/p"})
+	if got := strings.Join(spec.Args, " "); !strings.HasPrefix(got, `-c notify=["/opt/imux/bin/imux","__hook","codex"]`) {
+		t.Fatalf("codex args %q", got)
+	}
+	_ = os.MkdirAll(agenthook.CodexHome(paths.UserHome()), 0o700)
+	_ = os.WriteFile(filepath.Join(agenthook.CodexHome(paths.UserHome()), "config.toml"), []byte("notify = [\"mine\"]\n"), 0o600)
+	spec, _, _ = w.Spec(Launch{Agent: session.Codex, CWD: "/p"})
+	if got := strings.Join(spec.Args, " "); strings.Contains(got, "notify") {
+		t.Errorf("the user's notify replaced: %q", got)
+	}
+	w.Cfg.Hooks.Enabled = false
+	if spec, _, _ := w.Spec(Launch{Agent: session.Claude, CWD: "/p"}); strings.Contains(strings.Join(spec.Args, " "), "--settings") {
+		t.Error("hooks off, status line off: still a settings file")
+	}
+}
+
+// TestReportHook (T76.2): the state on the pane that runs the agent, with
+// when; Claude's session into its current trail entry, not while a switch
+// holds the pane; another agent's pane is left alone.
+func TestReportHook(t *testing.T) {
+	w, f, _ := testWS(t)
+	trail := Trail{{Agent: session.Claude, Start: 1, SessionID: "old", File: "/t/old.jsonl"}}.String()
+	run := func(reply string, r agenthook.Report) string {
+		f.calls = nil
+		f.replies["display-message"] = reply
+		if err := w.ReportHook(t.Context(), "%3", session.Claude, r); err != nil {
+			t.Fatal(err)
+		}
+		var b strings.Builder
+		for _, c := range f.calls[1:] {
+			b.WriteString(strings.Join(c, " ") + "\n")
+		}
+		return b.String()
+	}
+	got := run("claude\t\t"+trail+"\n", agenthook.Report{State: agenthook.Blocked})
+	if !strings.Contains(got, "set-option -p -q -t %3 @imux_hook blocked") || !strings.Contains(got, "@imux_hook_at") || strings.Contains(got, "@imux_trail") {
+		t.Errorf("blocked:\n%s", got)
+	}
+	got = run("claude\t\t"+trail+"\n", agenthook.Report{State: agenthook.Idle, SessionID: "new", File: "/t/new.jsonl"})
+	if !strings.Contains(got, "@imux_trail") || !strings.Contains(got, `"id":"new"`) || !strings.Contains(got, "/t/new.jsonl") {
+		t.Errorf("after /clear: the trail not updated:\n%s", got)
+	}
+	if got := run("claude\t12345\t"+trail+"\n", agenthook.Report{SessionID: "new"}); got != "" {
+		t.Errorf("a switch holds the pane: %s", got)
+	}
+	if got := run("codex\t\t\n", agenthook.Report{State: agenthook.Working}); got != "" {
+		t.Errorf("another agent's pane: %s", got)
 	}
 }

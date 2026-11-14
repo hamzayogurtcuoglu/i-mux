@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/agenthook"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
@@ -278,10 +279,15 @@ func (w *WS) Spec(l Launch) (*launch.Spec, TrailEntry, error) {
 	if l.Handoff != "" && w.Cfg.Handoff.Deliver != "inline" {
 		argv = agent.ReadDirArgs(l.Agent, filepath.Dir(l.Handoff)) // the agent reads the file itself
 	}
-	if l.Agent == session.Claude && w.Cfg.Limits.ClaudeStatusline {
+	if l.Agent == session.Claude && (w.Cfg.Limits.ClaudeStatusline || w.Cfg.Hooks.Enabled) {
 		if p, err := w.claudeSettings(); err == nil {
 			argv = append(argv, "--settings="+p)
 		}
+	}
+	// Codex tells i-mux when a turn ends (D71), unless the user's own
+	// notify program would be replaced.
+	if l.Agent == session.Codex && w.Cfg.Hooks.Enabled && !agenthook.CodexHasNotify(agenthook.CodexHome(paths.UserHome())) {
+		argv = append(argv, agenthook.CodexArgs(w.Self)...)
 	}
 	argv = append(append(argv, ac.Args...), agent.Expand(tpl, vars)...)
 	te := TrailEntry{Agent: l.Agent, Start: w.Now().UnixMilli(), Handoff: l.Handoff, Resumed: l.ResumeID != ""}
@@ -478,8 +484,15 @@ var EnsureWatcher = func(w *WS) {}
 // status line that runs imux (D25). It is rewritten when imux moved.
 func (w *WS) claudeSettings() (string, error) {
 	p := paths.ClaudeSettings()
-	cmd := tmux.ShQuote(w.Self) + " __statusline claude"
-	b, err := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": cmd, "padding": 0}})
+	settings := map[string]any{}
+	if w.Cfg.Limits.ClaudeStatusline {
+		settings["statusLine"] = map[string]any{"type": "command", "command": tmux.ShQuote(w.Self) + " __statusline claude", "padding": 0}
+	}
+	if w.Cfg.Hooks.Enabled {
+		// Claude tells i-mux what it does (D71).
+		settings["hooks"] = agenthook.ClaudeHooks(tmux.ShQuote(w.Self) + " __hook claude")
+	}
+	b, err := json.Marshal(settings)
 	if err != nil {
 		return "", err
 	}

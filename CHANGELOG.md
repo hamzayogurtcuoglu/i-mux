@@ -6,6 +6,22 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-11-14
+
+### Added
+
+- **Agents tell i-mux what they do.** Claude Code and Codex started by i-mux report their state
+  through their hooks: a permission prompt is **Needs you** at once, the end of a turn is **Done**
+  at once, and a screen that only redraws no longer looks like work. i-mux adds the hooks when it
+  starts them (Claude's `--settings` file, Codex's `-c notify=…`); your own settings files are not
+  changed, and a Codex config with its own `notify` keeps it. Other agents are read from their
+  screen as before. Settings → **Agent states from their hooks** (`hooks.enabled`) turns it off.
+
+### Fixed
+
+- **A handoff after `/clear` in Claude Code takes the conversation you are in.** i-mux kept the
+  session Claude was started with; Claude's hooks now tell it the session it writes.
+
 ## [0.58.2] - 2026-11-14
 
 ### Fixed

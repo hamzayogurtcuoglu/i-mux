@@ -1002,18 +1002,18 @@ slow (about a second).
 User request: the roadmap's fifth planned feature, agents telling their state instead of the
 screen being read (D71).
 
-- [ ] **T76.1 Hooks at launch** · S
+- [x] **T76.1 Hooks at launch** · S
   - AC: Claude's `--settings` file has the hooks (with the status line when that is on);
     Codex gets `-c notify=…` unless its config has a `notify`; `[hooks] enabled`; unit tests.
-- [ ] **T76.2 `imux __hook`** · S
+- [x] **T76.2 `imux __hook`** · S
   - AC: Claude's events and Codex's notify map to working / blocked / idle on the pane named by
     `IMUX_PANE` when it runs that agent; Claude's session id and file go into the trail; no
     output, exit 0; unit tests.
-- [ ] **T76.3 The watcher takes them** · S
+- [x] **T76.3 The watcher takes them** · S
   - AC: `@imux_hook` decides blocked and idle at once, the busy line still wins, working
     lapses without it; other panes as before; unit tests; e2e: a permission hook shows Needs
     you, a stop hook Done.
-- [ ] **T76.4 Settings and docs** · XS
+- [x] **T76.4 Settings and docs** · XS
   - AC: a Settings row (English, Turkish); CONFIG.md; README; CHANGELOG.
 
 ## M75: The whole window in the theme (added 2026-11-14)

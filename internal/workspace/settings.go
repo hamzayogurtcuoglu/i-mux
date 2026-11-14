@@ -93,6 +93,7 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 		MenuItem{Name: i18n.T("settings.theme_auto", onOffLabel(cfg.Theme.AutoSwitch)), Key: "a", Cmd: menu("theme_auto")},
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
+		MenuItem{Name: i18n.T("settings.hooks", onOffLabel(cfg.Hooks.Enabled)), Key: "h", Cmd: menu("hooks")},
 		Separator(),
 		MenuItem{Name: i18n.T("settings.open"), Key: "o", Cmd: w.popupCmd("90%", "90%", "__settings", "edit")},
 	)
@@ -172,6 +173,8 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 		return w.ChoiceMenu(i18n.T("settings.arrival_title"), "on_arrival", arrivalValue(cfg.Handoff.OnArrival), cs, pane, client)
 	case "theme":
 		return w.ThemeMenu(pane, client)
+	case "hooks":
+		return w.ChoiceMenu(i18n.T("settings.hooks_title"), "hooks", onOffValue(cfg.Hooks.Enabled), onOff, pane, client)
 	case "theme_auto":
 		return w.ChoiceMenu(i18n.T("settings.theme_auto_title"), "theme_auto", onOffValue(cfg.Theme.AutoSwitch), onOff, pane, client)
 	case "on_limit":

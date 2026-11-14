@@ -120,6 +120,11 @@ func newH(t *testing.T, extraConfig string) *H {
 		// twice before it acts.
 		cfg.WriteString("[limits]\npoll_interval = \"200ms\"\nidle_interval = \"500ms\"\ngrace = \"0s\"\nclaude_statusline = false\n\n")
 	}
+	// The tests written before agent hooks (v0.59) check the agents' argv
+	// exactly; the ones for hooks set [hooks] themselves.
+	if !strings.Contains(tables, "[hooks]") {
+		cfg.WriteString("[hooks]\nenabled = false\n\n")
+	}
 	cfg.WriteString(tables)
 	testutil.WriteFile(t, filepath.Join(homes.Imux, "config.toml"), []byte(cfg.String()))
 	t.Cleanup(func() {

@@ -57,6 +57,7 @@ var settingKeys = map[string]settingKey{
 	"paste_images": {"paste", "images", []string{"on", "off"}, false},
 	"hidden_files": {"explorer", "show_hidden", []string{"on", "off"}, false}, // the explorer's ⋯ (D63)
 	"theme_auto":   {"theme", "auto_switch", []string{"on", "off"}, false},    // follow the terminal's light/dark (D68)
+	"hooks":        {"hooks", "enabled", []string{"on", "off"}, false},        // agents' states from their hooks (D71)
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane

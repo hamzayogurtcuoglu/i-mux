@@ -58,6 +58,7 @@ func testWS(t *testing.T) (*WS, *fakeTmux, *testutil.Homes) {
 	// Tests that check Claude's argv exactly; TestClaudeStatuslineSettings
 	// covers it.
 	w.Cfg.Limits.ClaudeStatusline = false
+	w.Cfg.Hooks.Enabled = false // TestAgentHooks covers them
 	w.SetBins(map[session.AgentID]agent.Resolved{
 		"claude":      {Agent: "claude", Installed: true, Path: "/opt/bin/claude", PathEnv: "/opt/bin:/usr/bin"},
 		"antigravity": {Agent: "antigravity", Installed: true, Path: "/opt/bin/agy", PathEnv: "/opt/bin:/usr/bin"},

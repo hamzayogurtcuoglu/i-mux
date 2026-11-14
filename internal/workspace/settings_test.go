@@ -44,12 +44,12 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	got := strings.Join(names, "|")
 	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|t Theme: i-mux|a Follow the terminal's light/dark: Off|" +
-		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
+		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me|h Agent states from their hooks: Off| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
 	}
 	for key, which := range map[string]string{
-		"e": "editor", "n": "notify", "d": "notify_sound", "v": "paste_images", "i": "icons", "t": "theme", "a": "theme_auto",
+		"e": "editor", "n": "notify", "d": "notify_sound", "v": "paste_images", "i": "icons", "t": "theme", "a": "theme_auto", "h": "hooks",
 		"w": "on_arrival", "l": "on_limit",
 	} {
 		if c := cmdOf(m, key); !strings.Contains(c, "__settings menu "+which+" --pane %1 --client c1") {

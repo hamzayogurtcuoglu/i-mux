@@ -160,6 +160,12 @@ const (
 	MaxSidebarWidth = 80
 )
 
+// Hooks is the [hooks] section (D71): agents started by i-mux report their
+// state (Claude Code's hooks, Codex's notify program).
+type Hooks struct {
+	Enabled bool `toml:"enabled"`
+}
+
 // Tmux is the [tmux] section.
 type Tmux struct {
 	MenuKeyRoot string `toml:"menu_key_root"`
@@ -210,6 +216,7 @@ type Config struct {
 	Web          Web               `toml:"web"`
 	Tmux         Tmux              `toml:"tmux"`
 	Theme        theme.Config      `toml:"theme"`
+	Hooks        Hooks             `toml:"hooks"`
 	Agents       map[string]*Agent `toml:"agents"`
 }
 
@@ -319,6 +326,7 @@ func Default() *Config {
 			HistoryLimit:     50000,
 		},
 		Theme:  theme.Config{Name: theme.Default},
+		Hooks:  Hooks{Enabled: true},
 		Agents: defaultAgents(),
 	}
 }

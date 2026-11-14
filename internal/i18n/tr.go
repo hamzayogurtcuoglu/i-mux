@@ -199,6 +199,8 @@ var tr = map[string]string{
 	"settings.theme_title":             "Tema",
 	"settings.theme_auto":              "Terminalin açık/koyu moduna uy: %s",
 	"settings.theme_auto_title":        "Terminalin açık/koyu moduna uy",
+	"settings.hooks":                   "Ajan durumları kancalarından: %s",
+	"settings.hooks_title":             "Ajan durumları kancalarından (Claude Code, Codex; yeni çalıştırmalar)",
 	"settings.font":                    "Simgeler için Nerd Font kur…",
 	"settings.icons_auto":              "Otomatik",
 	"settings.icons_nerd":              "Nerd Font",

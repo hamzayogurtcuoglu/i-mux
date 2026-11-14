@@ -198,6 +198,8 @@ var en = map[string]string{
 	"settings.theme_title":             "Theme",
 	"settings.theme_auto":              "Follow the terminal's light/dark: %s",
 	"settings.theme_auto_title":        "Follow the terminal's light/dark",
+	"settings.hooks":                   "Agent states from their hooks: %s",
+	"settings.hooks_title":             "Agent states from their hooks (Claude Code, Codex; new runs)",
 	"settings.font":                    "Install the Nerd Font for the icons…",
 	"settings.icons_auto":              "Auto",
 	"settings.icons_nerd":              "Nerd Font",

@@ -189,6 +189,13 @@ mouse             = true
 # Scrollback lines kept per pane.
 history_limit     = 50000
 
+[hooks]
+# Agents i-mux starts tell it what they do: Claude Code through its hooks, Codex
+# through its notify program (unless your Codex config has one). Their state in the
+# sidebar is then exact; other agents are read from their screen. Your own agent
+# settings files are not changed.
+enabled = true
+
 [theme]
 # The colors of the sidebar, popups, menus and tab bar: i-mux (its own colors, on the
 # terminal's background), catppuccin, catppuccin-latte, terminal (the terminal's own

@@ -27,6 +27,10 @@ type PaneRow struct {
 	// Unreaped: dead, but tmux has no exit status or signal for it yet,
 	// so the pane-died hook has not run (see reapNudge).
 	Unreaped bool
+	// Hook is the state the agent's hook last reported (D71), and HookAt
+	// when; "" without one.
+	Hook   string
+	HookAt time.Time
 }
 
 // Client is one attached client.
@@ -87,10 +91,11 @@ type Detector struct {
 	seen     map[string]map[string]bool // pane instance → matched lines
 	cooldown map[string]time.Time       // pane → no prompts until
 	nudges   map[string]int             // dead, unreaped pane → reap nudges sent
+	spent    map[string]time.Time       // pane → its hook (by time) the busy line has outdated
 }
 
 const (
-	listFormat   = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}\t#{pane_width}"
+	listFormat   = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}\t#{pane_width}\t#{@imux_hook}\t#{@imux_hook_at}"
 	clientFormat = "#{client_name}\t#{client_control_mode}\t#{client_session}\t#{client_activity}"
 )
 
@@ -132,8 +137,11 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	var panes, agents []PaneRow
 	nudge := false
 	nudges := map[string]int{}
-	for _, r := range tmux.Rows(sec["panes"], 8) {
-		p := PaneRow{ID: r[0], Agent: session.AgentID(r[1]), Dead: r[3] == "1", Session: r[5]}
+	for _, r := range tmux.Rows(sec["panes"], 10) {
+		p := PaneRow{ID: r[0], Agent: session.AgentID(r[1]), Dead: r[3] == "1", Session: r[5], Hook: r[8]}
+		if ms, err := strconv.ParseInt(r[9], 10, 64); err == nil && ms > 0 {
+			p.HookAt = time.UnixMilli(ms)
+		}
 		p.Unreaped = p.Dead && r[6] == ""
 		p.Height, _ = strconv.Atoi(r[4])
 		p.Width, _ = strconv.Atoi(r[7])
@@ -219,10 +227,77 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 			d.scan(ctx, p, screen, clients)
 		}
 	}
+	for _, p := range agents {
+		d.hooked(p)
+	}
 	if d.OnActivity != nil {
 		d.OnActivity(d.Now(), d.changed, d.asking)
 	}
 	return !detached, nil
+}
+
+// HookFresh is how long a hook's "working" counts without the agent's busy
+// line: a turn the user interrupted runs no hook (Claude), so it lapses.
+const HookFresh = WorkingFor
+
+// hooked takes what the agent's hook said over the screen's reading (D71):
+// blocked is a question at once, idle ends the work at once, working
+// counts while the busy line shows or HookFresh after the hook. The busy
+// line wins over blocked and idle (a permission granted; a new turn Codex
+// does not report). A hook from before this run is no news.
+func (d *Detector) hooked(p PaneRow) {
+	if p.Hook == "" || p.HookAt.Before(p.Start) {
+		return
+	}
+	if d.asking == nil {
+		d.asking = map[string]bool{}
+	}
+	if d.spent == nil {
+		d.spent = map[string]time.Time{}
+	}
+	// Once the busy line showed after a blocked or idle hook, the agent
+	// moved on (a permission granted, a turn Codex does not report): the
+	// screen decides until the next hook, so a pause between two tools is
+	// no new question.
+	if d.spent[p.ID].Equal(p.HookAt) {
+		return
+	}
+	if p.Hook != "working" && d.busy[p.ID] && d.changed[p.ID].After(p.HookAt) {
+		d.spent[p.ID] = p.HookAt
+		return
+	}
+	changed, asking := hookOverride(p.Hook, p.HookAt, d.Now(), d.changed[p.ID], d.asking[p.ID], d.busy[p.ID])
+	d.changed[p.ID], d.asking[p.ID] = changed, asking
+}
+
+// hookOverride is the pane's last-work time and question, given the hook's
+// state at hookAt, now, the screen's reading (changed, asking) and whether
+// the screen shows the agent's busy line.
+func hookOverride(state string, hookAt, now, changed time.Time, asking, busy bool) (time.Time, bool) {
+	quiet := now.Add(-WorkingFor) // a time that reads as no longer working
+	switch state {
+	case "working":
+		if busy || now.Sub(hookAt) < HookFresh {
+			return now, false
+		}
+	case "blocked":
+		if busy {
+			return now, false
+		}
+		if changed.After(quiet) {
+			changed = quiet
+		}
+		return changed, true
+	case "idle":
+		if busy && changed.After(hookAt) {
+			return now, false
+		}
+		if changed.After(quiet) {
+			changed = quiet
+		}
+		return changed, false
+	}
+	return changed, asking
 }
 
 // work reports whether a pane's changed screen is its agent at work. It is
@@ -333,6 +408,11 @@ func (d *Detector) prune(panes []PaneRow) {
 	for id := range d.cooldown {
 		if !live[id] {
 			delete(d.cooldown, id)
+		}
+	}
+	for id := range d.spent {
+		if !live[id] {
+			delete(d.spent, id)
 		}
 	}
 	for id := range d.changed {
