@@ -158,6 +158,10 @@ func TestParse(t *testing.T) {
 		names(st.Conflicts) != "U conflict.go" || st.NoCommits {
 		t.Fatalf("sides %q / %q / %q", names(st.Staged), names(st.Changes), names(st.Conflicts))
 	}
+	// A rename in the work tree (git add -N): its old path is no row.
+	if st := ParseStatus("## main\x00 R b.txt\x00a.txt\x00 M c.go\x00"); names(st.Changes) != "R b.txt, M c.go" || len(st.Staged) != 0 {
+		t.Fatalf("work-tree rename %q / %q", names(st.Changes), names(st.Staged))
+	}
 	if st := ParseStatus("## No commits yet on main\x00"); st.Branch != "main" || !st.NoCommits {
 		t.Fatalf("no commits %+v", st)
 	}

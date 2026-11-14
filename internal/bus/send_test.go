@@ -10,6 +10,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 func (f *fakeTmux) Spawn(bin string, args []string) error {
@@ -96,6 +97,17 @@ func TestSendConfirmAndDeliver(t *testing.T) {
 	}
 	if _, err := os.Stat(res.Pending); !os.IsNotExist(err) {
 		t.Fatal("parked file kept")
+	}
+	// A home folder with a space: the menu's commands quote the path for sh.
+	t.Setenv("IMUX_HOME", filepath.Join(t.TempDir(), "my home"))
+	f.calls = nil
+	res, err = b.Send(ctx, SendReq{From: "%1", FromAgent: "claude", Target: "%2", Msg: "again"})
+	if err != nil || !strings.Contains(res.Pending, "my home") {
+		t.Fatalf("confirm in a home with a space: %+v %v", res, err)
+	}
+	q := tmux.ShQuote(res.Pending)
+	if !f.has(tmux.RunShell("/opt/imux", "__deliver", q, "--pane", "%2")) || !f.has(tmux.RunShell("/opt/imux", "__deliver", q, "--discard")) {
+		t.Fatalf("path not quoted for sh: %q", f.calls)
 	}
 	// Only files in ~/.imux/bus can be delivered.
 	other := filepath.Join(paths.Home(), "state.json")

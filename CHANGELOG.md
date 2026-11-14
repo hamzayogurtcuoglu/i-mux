@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.56.1] - 2026-11-14
+
+### Fixed
+
+- **A file renamed in the work tree** (shown as ` R` after `git add -N`) no longer adds a
+  second, garbled row to Source Control made of its old name.
+- **Pasting a folder into one of its own folders whose name starts with `..`** (such as
+  `..cache`) is refused as pasting into itself, instead of copying the folder into itself
+  until the path is too long.
+- **The agent bus's Deliver and Discard** work when the i-mux home folder has a space in its
+  path: the parked message's path is quoted for the shell.
+
 ## [0.56.0] - 2026-11-14
 
 ### Added

@@ -16,6 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -144,7 +145,10 @@ func (b *Bus) confirm(ctx context.Context, p *workspace.Pane, req SendReq, text 
 	if err := paths.WriteFile(file, []byte(text)); err != nil {
 		return "", err
 	}
-	deliver := []string{"__deliver", file, "--pane", p.ID}
+	// UICommand joins its words for sh: the path is quoted (a home folder
+	// with a space).
+	q := tmux.ShQuote(file)
+	deliver := []string{"__deliver", q, "--pane", p.ID}
 	if req.NoEnter {
 		deliver = append(deliver, "--no-enter")
 	}
@@ -161,7 +165,7 @@ func (b *Bus) confirm(ctx context.Context, p *workspace.Pane, req SendReq, text 
 			{Name: clean.OneLine(req.Msg, 60), Disabled: true},
 			workspace.Separator(),
 			{Name: i18n.T("bus.deliver"), Key: "y", Cmd: b.W.UICommand(deliver...)},
-			{Name: i18n.T("bus.discard"), Key: "n", Cmd: b.W.UICommand("__deliver", file, "--discard")},
+			{Name: i18n.T("bus.discard"), Key: "n", Cmd: b.W.UICommand("__deliver", q, "--discard")},
 		},
 	}
 	client := b.W.ClientFor(ctx, p)

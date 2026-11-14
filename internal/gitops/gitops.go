@@ -155,8 +155,8 @@ func ParseStatus(out string) *Status {
 			continue
 		}
 		x, y, path := e[0], e[1], e[3:]
-		if x == 'R' || x == 'C' {
-			i++ // the old path follows
+		if x == 'R' || x == 'C' || y == 'R' || y == 'C' {
+			i++ // the old path follows (" R": a rename in the work tree, after git add -N)
 		}
 		if x == '?' && y == '?' {
 			st.Changes = append(st.Changes, Change{Status: "?", Path: path, Untracked: true})

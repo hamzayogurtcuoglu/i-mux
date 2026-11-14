@@ -136,7 +136,8 @@ func Paste(src, dir string, move bool) (string, error) {
 	}
 	if fi.IsDir() {
 		rel, err := filepath.Rel(src, dir)
-		if err == nil && (rel == "." || !strings.HasPrefix(rel, "..")) {
+		// Inside it: not ".." nor "../…" ("..cache" is a folder in it).
+		if err == nil && rel != ".." && !strings.HasPrefix(rel, "../") {
 			return "", ErrIntoItself
 		}
 	}

@@ -110,6 +110,13 @@ func TestFreeNameAndPaste(t *testing.T) {
 	if _, err := Paste(filepath.Join(d, "src"), filepath.Join(d, "src"), true); !errors.Is(err, ErrIntoItself) {
 		t.Fatalf("onto itself: %v", err)
 	}
+	// A folder in it whose name starts with "..": inside it too.
+	if err := os.MkdirAll(filepath.Join(d, "src", "..cache"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Paste(filepath.Join(d, "src"), filepath.Join(d, "src", "..cache"), false); !errors.Is(err, ErrIntoItself) {
+		t.Fatalf("into its ..cache: %v", err)
+	}
 	// "srcx" is not inside "src".
 	if err := os.MkdirAll(filepath.Join(d, "srcx"), 0o755); err != nil {
 		t.Fatal(err)

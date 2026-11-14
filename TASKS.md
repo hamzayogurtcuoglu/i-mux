@@ -1029,6 +1029,11 @@ User request: fix the bugs of ROADMAP.md's audit that hold, and any other found 
     and the watcher goes on; unit test.
 - [x] **T71.7 Docs** · XS
   - AC: CHANGELOG; README and README.tr where they name the keys.
+- [x] **T71.8 A second look** · S
+  - AC: a rename in the work tree (` R`, after `git add -N`) is one row, its old path no
+    second one; a folder pasted into a folder of its own whose name starts with `..` is
+    refused, not copied into itself until the path is too long; the agent bus's Deliver and
+    Discard quote the parked file's path for sh (an i-mux home with a space); unit tests.
 
 ## M70: The commit message box like VS Code's, no AI commit messages (added 2026-11-13)
 
