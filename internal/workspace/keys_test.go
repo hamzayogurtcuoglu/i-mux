@@ -6,6 +6,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/quickpick"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 )
 
 // rows are a pick's rows as "label = keys" with what they run.
@@ -151,5 +152,41 @@ func TestSplitMenuBefore(t *testing.T) {
 	}
 	if m := w.SplitMenu(&Pane{ID: "%1"}, "", false, false); m.Title != "Split down: new pane with…" || strings.Contains(m.Items[0].Cmd, "--before") {
 		t.Errorf("down: %q %q", m.Title, m.Items[0].Cmd)
+	}
+}
+
+// TestSetAppearance (T73.4): the terminal's light or dark is kept in
+// @imux_appearance; following it, tmux takes the other theme's colors at
+// once; the same appearance again does nothing.
+func TestSetAppearance(t *testing.T) {
+	defer theme.Set(theme.Builtin(theme.Default))
+	w, f, _ := testWS(t)
+	f.replies[""] = "tmux 3.4" // tmux -V
+	run := func(a string) (bool, string) {
+		f.calls = nil
+		changed, err := w.SetAppearance(t.Context(), a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var b strings.Builder
+		for _, c := range f.calls {
+			b.WriteString(strings.Join(c, " ") + "\n")
+		}
+		return changed, b.String()
+	}
+	f.replies["show-options"] = "dark\n"
+	if changed, calls := run("dark"); changed || strings.Contains(calls, "set-option") {
+		t.Errorf("the same appearance: %v\n%s", changed, calls)
+	}
+	changed, calls := run("light")
+	if !changed || !strings.Contains(calls, "set-option -g @imux_appearance light") || strings.Contains(calls, "@imux_c_accent") {
+		t.Errorf("not following: %v\n%s", changed, calls)
+	}
+	w.Cfg.Theme.AutoSwitch = true
+	if _, calls := run("light"); !strings.Contains(calls, "set-option -g @imux_c_accent #1e66f5") || !strings.Contains(calls, "menu-style") {
+		t.Errorf("following, light: not Latte's colors\n%s", calls)
+	}
+	if changed, _ := run("bright"); changed {
+		t.Error("a bad appearance changed it")
 	}
 }

@@ -1555,7 +1555,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   uses ANSI colors (blue, green, dark gray…), so it follows the terminal's own palette.
 - **Config:** `[theme] name`, `auto_switch` (false), `light_name`, `dark_name`;
   `[theme.custom]` sets any of the 19 colors, `[theme.custom.light]` / `[theme.custom.dark]` only
-  in that mode; the order is the theme, then `custom`, then the mode's. A color is `#rgb`,
+  in that mode; the order is the theme, then `custom`, then the mode's. The mode is the
+  terminal's light or dark when `auto_switch` is on (dark when not known), else the theme's own
+  kind: a dark theme keeps its dark colors on a light terminal. A color is `#rgb`,
   `#rrggbb`, `rgb(r,g,b)`, an ANSI name (`black`, `red`, …, `gray`, `darkgray`, `lightred`, …)
   or `reset` / `default` / `none` / `transparent`; anything else is a config error at its line.
 - **Light or dark:** with `auto_switch`, the theme is `light_name` on a light terminal and

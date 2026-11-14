@@ -12,18 +12,29 @@ import (
 	"syscall"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
 
+// Colors from the theme (D68), set again when it changes.
+var muted, faint, selBg, cyan string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		muted = s.Muted
+		faint = s.Faint
+		selBg = s.SelBg
+		cyan = s.Accent
+	})
+}
+
 const (
 	reset = "\x1b[0m"
 	bold  = "\x1b[1m"
-	muted = "\x1b[38;5;245m"
-	faint = "\x1b[38;5;240m"
-	selBg = "\x1b[48;5;236m"
-	cyan  = "\x1b[36m"
 )
 
 // Model is the picker's state.

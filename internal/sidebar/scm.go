@@ -253,7 +253,7 @@ func wideButton(label string, w int, a Action) Cell {
 	pad := max(w-2-DisplayWidth(label), 0)
 	return Cell{
 		W:      w,
-		Text:   " " + "\x1b[48;5;24m\x1b[38;5;255m" + strings.Repeat(" ", pad/2) + label + strings.Repeat(" ", pad-pad/2) + reset + " ",
+		Text:   " " + buttonStyle + strings.Repeat(" ", pad/2) + label + strings.Repeat(" ", pad-pad/2) + reset + " ",
 		Action: a,
 	}
 }

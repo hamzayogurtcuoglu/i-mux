@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -595,9 +597,9 @@ func (g *gitCall) popup(op string, args []string, hash string) error {
 	sidebar.RefreshAll(ctx, g.w.T)
 	fmt.Println()
 	if err != nil {
-		fmt.Println("\x1b[31m" + i18n.T("git.popup_failed") + "\x1b[0m")
+		fmt.Println(theme.S().Red + i18n.T("git.popup_failed") + "\x1b[0m")
 	} else {
-		fmt.Println("\x1b[32m" + i18n.T("git.popup_done") + "\x1b[0m")
+		fmt.Println(theme.S().Green + i18n.T("git.popup_done") + "\x1b[0m")
 	}
 	fmt.Print(i18n.T("limits.press_enter"))
 	_, _ = bufio.NewReader(os.Stdin).ReadString('\n')

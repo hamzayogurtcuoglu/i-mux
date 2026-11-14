@@ -7,7 +7,24 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 )
+
+// Colors from the theme (D68), set again when it changes.
+var dim, redBg, greenBg, redFg, greenFg, emptyBg string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		dim = s.Faint
+		redBg = s.RedBg
+		greenBg = s.GreenBg
+		redFg = s.Red
+		greenFg = s.Green
+		emptyBg = s.EmptyBg
+	})
+}
 
 // Kind of a row.
 const (
@@ -115,13 +132,7 @@ func Stats(lines []Line) (added, removed int) {
 }
 
 const (
-	reset   = "\x1b[0m"
-	dim     = "\x1b[38;5;243m"
-	redBg   = "\x1b[48;5;52m"
-	greenBg = "\x1b[48;5;22m"
-	redFg   = "\x1b[38;5;210m"
-	greenFg = "\x1b[38;5;114m"
-	emptyBg = "\x1b[48;5;235m"
+	reset = "\x1b[0m"
 )
 
 // clean expands tabs and drops control characters.

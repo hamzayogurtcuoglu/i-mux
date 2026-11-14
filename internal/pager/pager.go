@@ -18,18 +18,29 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
 
+// Colors from the theme (D68), set again when it changes.
+var faint, cyan, hit, markRed, markGreen string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		faint = s.Faint
+		cyan = s.Accent
+		hit = s.Hit
+		markRed = s.Red
+		markGreen = s.Green
+	})
+}
+
 const (
 	reset = "\x1b[0m"
-	faint = "\x1b[38;5;243m"
-	cyan  = "\x1b[36m"
-	hit   = "\x1b[48;5;94m\x1b[38;5;230m"
 	// The marks' lanes: removed lines and added ones.
-	markRed   = "\x1b[38;5;203m"
-	markGreen = "\x1b[38;5;77m"
 )
 
 // Mark is what a line changed, for the lanes beside the bar (D64).

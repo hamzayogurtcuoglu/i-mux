@@ -15,20 +15,34 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/search"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
 
+// Colors from the theme (D68), set again when it changes.
+var muted, faint, selBg, hit, text, lineNo, pill, pointer string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		muted = s.Muted
+		faint = s.Faint
+		selBg = s.SelBg
+		hit = s.Hit
+		text = s.Text
+		lineNo = s.Faint
+		pill = s.Pill
+		pointer = s.Accent
+	})
+}
+
 const (
 	reset = "\x1b[0m"
 	bold  = "\x1b[1m"
-	muted = "\x1b[38;5;247m"
-	faint = "\x1b[38;5;243m"
-	cyan  = "\x1b[36m"
-	selBg = "\x1b[48;5;236m"
-	hit   = "\x1b[48;5;94m\x1b[38;5;230m"
 )
 
 // Row is one line of the result list: a file header or a match.
@@ -181,14 +195,6 @@ func (m *Model) Key(k string) (choice *search.Match, done, changed bool) {
 }
 
 func fit(s string, w int) string { return sidebar.Fit(s, w) }
-
-// Colors of the result list.
-const (
-	text    = "\x1b[38;5;250m"
-	lineNo  = "\x1b[38;5;240m"
-	pill    = "\x1b[48;5;238m\x1b[38;5;252m"
-	pointer = "\x1b[36m"
-)
 
 // matchText draws a match's line in w columns: its text with the match
 // highlighted, scrolled to keep the match in view.

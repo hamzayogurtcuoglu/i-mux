@@ -43,13 +43,13 @@ func TestSettingsMenu(t *testing.T) {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|" +
+	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|t Theme: Catppuccin|a Follow the terminal's light/dark: Off|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
 	}
 	for key, which := range map[string]string{
-		"e": "editor", "n": "notify", "d": "notify_sound", "v": "paste_images", "i": "icons",
+		"e": "editor", "n": "notify", "d": "notify_sound", "v": "paste_images", "i": "icons", "t": "theme", "a": "theme_auto",
 		"w": "on_arrival", "l": "on_limit",
 	} {
 		if c := cmdOf(m, key); !strings.Contains(c, "__settings menu "+which+" --pane %1 --client c1") {
@@ -121,6 +121,7 @@ func TestSettingMenus(t *testing.T) {
 		{"icons", "Icons", "1 ● Auto|2   Nerd Font|3   Emoji", "__settings set icons emoji"},
 		{"on_arrival", "After a handoff the new agent", "1 ● waits for you|2   continues at once", "__settings set on_arrival continue"},
 		{"on_limit", "When an agent hits its limit", "1 ● ask me|2   switch on its own|3   do nothing", "__settings set on_limit off"},
+		{"theme_auto", "Follow the terminal's light/dark", "1   On|2 ● Off", "__settings set theme_auto off"},
 	} {
 		m := w.SettingMenu(c.which, "%1", "c1")
 		if m == nil || m.Title != c.title || rows(m) != c.rows {
@@ -247,5 +248,29 @@ func TestVSCodeBrowser(t *testing.T) {
 		if b, i := VSCodeBrowser(env(m)); b != "" || i != "" {
 			t.Errorf("%v: %q %q", m, b, i)
 		}
+	}
+}
+
+// TestThemeMenu (T73.5): the 18 themes with keys 1-9 then letters, ● on
+// the configured one (the default's for an unknown name); each sets it.
+func TestThemeMenu(t *testing.T) {
+	i18n.SetLocale("en")
+	w, _, _ := testWS(t)
+	m := w.ThemeMenu("%1", "c1")
+	if m.Title != "Theme" || len(m.Items) != 18 || m.Items[0].Name != "● Catppuccin" || m.Items[0].Key != "1" ||
+		m.Items[9].Key != "a" || m.Items[17].Name != "  Vesper" || m.Items[17].Key != "i" {
+		t.Fatalf("menu %+v", m.Items)
+	}
+	if !strings.Contains(m.Items[3].Cmd, "__settings set theme tokyo-night --pane %1 --client c1") {
+		t.Errorf("tokyo-night: %q", m.Items[3].Cmd)
+	}
+	w.Cfg.Theme.Name = "Rose Pine"
+	for _, it := range w.ThemeMenu("", "").Items {
+		if strings.HasPrefix(it.Name, "●") && it.Name != "● Rosé Pine" {
+			t.Errorf("current %q", it.Name)
+		}
+	}
+	if ThemeTitle("nope") != "Catppuccin" || ThemeTitle("tokyonight") != "Tokyo Night" {
+		t.Error("ThemeTitle")
 	}
 }

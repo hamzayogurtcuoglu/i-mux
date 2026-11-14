@@ -76,7 +76,7 @@ edge to make it wider or narrower: every tab takes the width, and i-mux remember
 (`tmux.sidebar_width`).
 
 **🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: your editor,
-notifications, icons, what a new agent does after a handoff, what happens
+notifications, icons, the color theme, what a new agent does after a handoff, what happens
 at a limit, and the config file. Enter or a click on a row opens a menu of its values (● marks the
 current one); pick one or press its number. **Versions and updates** there (or `imux versions`) lists i-mux, tmux
 and every agent CLI with its version and the command that updates it; press its letter to run it
@@ -84,6 +84,13 @@ right there. It says what an older tmux lacks and how to get a newer one on your
 **Editor → Neovim + Copilot** there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
+
+**Themes:** the sidebar, popups, menus and tab bar take their colors from a theme: Catppuccin (the
+default), Catppuccin Latte, Tokyo Night (and Day), Dracula, Nord, Gruvbox (and Light), One Dark and
+One Light, Solarized (and Light), Kanagawa (and Lotus), Rosé Pine (and Dawn), Vesper, or Terminal
+(your terminal's own colors). Settings → **Theme** picks one; **Follow the terminal's light/dark**
+switches between a theme's light and dark versions when your terminal does. Single colors can be
+changed in `[theme.custom]` (see [docs/CONFIG.md](docs/CONFIG.md)).
 
 **Web pages, live:** a click on an HTML file in the explorer asks how to open it: **Open in
 browser** (its own window, no tabs or address bar; Chrome's or Edge's, under WSL Windows' own),

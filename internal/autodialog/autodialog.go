@@ -14,6 +14,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -21,16 +23,25 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 )
 
+// Colors from the theme (D68), set again when it changes.
+var cyan, yellow, muted, faint, selBg, keptBg string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		cyan = s.Accent
+		yellow = s.Yellow
+		muted = s.Muted
+		faint = s.Faint
+		selBg = s.Selected
+		keptBg = s.Pill
+	})
+}
+
 const (
-	reset  = "\x1b[0m"
-	bold   = "\x1b[1m"
-	cyan   = "\x1b[36m"
-	yellow = "\x1b[33m"
-	muted  = "\x1b[38;5;247m"
-	faint  = "\x1b[38;5;240m"
+	reset = "\x1b[0m"
+	bold  = "\x1b[1m"
 	// The chosen chip of the row being changed, and of the other rows.
-	selBg  = "\x1b[48;5;24m\x1b[38;5;255m"
-	keptBg = "\x1b[48;5;238m\x1b[38;5;255m"
 )
 
 // CLI is an agent CLI the panel offers (an installed one).

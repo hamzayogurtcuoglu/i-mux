@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -60,7 +62,7 @@ func (h *H) barLine(bar, text string) string {
 // sidebar; a clicked file keeps the selection background.
 func TestExplorerHover(t *testing.T) {
 	h, c, bar := explorerH(t)
-	const hover, sel = "48;5;238", "48;5;24m"
+	hover, sel := hoverAndSelection()
 	x, y := h.rowOf(bar, "README.md")
 	c.Write(sgrMouse(35, x, y, 'M'))
 	h.waitFor("README.md lit", 5*time.Second, func() bool { return strings.Contains(h.barLine(bar, "README.md"), hover) })
@@ -202,7 +204,10 @@ func TestExplorerMenus(t *testing.T) {
 		t.Fatal("no new file")
 	}
 	h.rowOf(bar, "▾ 📂 sub")
-	h.waitFor("new.txt selected", 5*time.Second, func() bool { return strings.Contains(h.barLine(bar, "new.txt"), "48;5;24m") })
+	h.waitFor("new.txt selected", 5*time.Second, func() bool {
+		_, sel := hoverAndSelection()
+		return strings.Contains(h.barLine(bar, "new.txt"), sel)
+	})
 
 	// Cut, then Paste into another folder: moved.
 	h.menu(c, bar, "app.go", 0, 0)
@@ -395,4 +400,13 @@ func TestExplorerTitle(t *testing.T) {
 	x, y = button("⊟")
 	c.Click(0, x, y)
 	h.waitFor("src closed", 5*time.Second, func() bool { return strings.Contains(h.screen(bar), "▸ 📁 src") })
+}
+
+// hoverAndSelection are the backgrounds of the row under the pointer and
+// of the selected one in the default theme (D68), as capture-pane -e
+// writes them: the hover halfway from the current row's to the selection's.
+func hoverAndSelection() (hover, sel string) {
+	p := theme.Builtin(theme.Default)
+	bg := func(c theme.Color) string { return strings.TrimPrefix(c.Bg(), "\x1b[") }
+	return bg(theme.Blend(p.ActiveRowBg, p.SelectionBg, 0.5)), bg(p.SelectionBg)
 }

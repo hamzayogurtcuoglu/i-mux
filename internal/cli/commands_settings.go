@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/completion"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -54,6 +56,7 @@ var settingKeys = map[string]settingKey{
 	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},
 	"paste_images": {"paste", "images", []string{"on", "off"}, false},
 	"hidden_files": {"explorer", "show_hidden", []string{"on", "off"}, false}, // the explorer's ⋯ (D63)
+	"theme_auto":   {"theme", "auto_switch", []string{"on", "off"}, false},    // follow the terminal's light/dark (D68)
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane
@@ -107,6 +110,14 @@ func runSettings(e *Env, args []string) error {
 			}
 			return err
 		}
+		if pos[1] == "theme" || pos[1] == "theme_auto" {
+			// tmux's colors at once (D68); the sidebars below, the popups
+			// when they start.
+			if w, cfg, err := newWorkspace(e, false); err == nil {
+				_ = w.ApplyTheme(ctx, w.Palette(ctx))
+				_ = cfg
+			}
+		}
 		sidebar.RefreshAll(ctx, tmux.New(paths.TmuxConf()))
 		return showSettings(e, *paneF, *clientF, "")
 	case "menu":
@@ -131,8 +142,11 @@ func runSettings(e *Env, args []string) error {
 
 // setSetting writes one Settings row's value into config.toml.
 func setSetting(name, value string) error {
-	if name == "editor" {
+	switch name {
+	case "editor":
 		return setEditor(value)
+	case "theme":
+		return setTheme(value)
 	}
 	k, ok := settingKeys[name]
 	if !ok {
@@ -266,4 +280,20 @@ func signIn(e *Env, run func(string, ...string) error, done func()) error {
 	err := run(nvim, "+Copilot setup")
 	done()
 	return err
+}
+
+// setTheme saves the Theme row's choice (D68): the theme, and no more
+// following the terminal's light/dark, as a manual choice does.
+func setTheme(name string) error {
+	n, ok := theme.Canonical(name)
+	if !ok {
+		return fmt.Errorf("theme: unknown theme %q", name)
+	}
+	if err := paths.Ensure(); err != nil {
+		return err
+	}
+	if err := config.Set(paths.Config(), "theme", "name", config.Str(n)); err != nil {
+		return err
+	}
+	return config.Set(paths.Config(), "theme", "auto_switch", config.Bool(false))
 }

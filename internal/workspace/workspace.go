@@ -458,6 +458,9 @@ func (w *WS) EnsureConf(ctx context.Context) error {
 		Self: w.Self, Cfg: w.Cfg, Version: v, Terminal: tmux.DefaultTerminal(),
 		AgentBar: agentBar(w, v), LocalConf: paths.TmuxLocal(),
 	}
+	if w.Cfg.Theme.AutoSwitch {
+		in.Appearance = Appearance(ctx, w.T)
+	}
 	changed, err := tmux.WriteConf(paths.TmuxConf(), tmux.GenerateConf(in), paths.WriteFile)
 	if err != nil {
 		return err

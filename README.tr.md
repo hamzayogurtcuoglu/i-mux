@@ -70,7 +70,7 @@ Panelin kenarını sürükleyerek onu genişletir ya da daraltırsın: her sekme
 i-mux onu hatırlar (`tmux.sidebar_width`).
 
 Şeritteki **🔧 Ayar** (ya da `imux settings`, ya da kenar çubuğunda `,`) Ayarlar'ı açar:
-düzenleyicin, bildirimler, simgeler, geçişten sonra yeni ajanın ne
+düzenleyicin, bildirimler, simgeler, renk teması, geçişten sonra yeni ajanın ne
 yapacağı, limitte ne olacağı ve ayar dosyası. Bir satıra Enter ya da tıklama, değerlerinin menüsünü
 açar (● şu ankini gösterir); birini seç ya da numarasına bas. Oradaki **Sürümler ve güncellemeler** (ya da `imux
 versions`) i-mux'u, tmux'u ve her agent CLI'ını sürümü ve onu güncelleyen komutla listeler; harfine
@@ -80,6 +80,13 @@ gibi çalışır: oradan **Düzenleyici → Neovim + Copilot**'u seçince düzen
 Copilot eklentili Neovim'inde açılır (Tab
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
 GitHub Copilot'a bir kez giriş yaptırır.
+
+**Temalar:** kenar panel, açılır pencereler, menüler ve sekme çubuğu renklerini bir temadan alır:
+Catppuccin (varsayılan), Catppuccin Latte, Tokyo Night (ve Day), Dracula, Nord, Gruvbox (ve Light),
+One Dark ve One Light, Solarized (ve Light), Kanagawa (ve Lotus), Rosé Pine (ve Dawn), Vesper ya da
+Terminal (terminalinin kendi renkleri). Ayarlar → **Tema** birini seçer; **Terminalin açık/koyu
+moduna uy**, terminalin açık ya da koyuya geçince temanın açık ve koyu sürümleri arasında geçer. Tek
+tek renkler `[theme.custom]` içinde değiştirilebilir (bkz. [docs/CONFIG.md](docs/CONFIG.md)).
 
 **Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca nasıl açılacağını sorar: **Tarayıcıda
 aç** (kendi penceresinde, sekme ya da adres çubuğu olmadan; Chrome'un ya da Edge'in, WSL'de

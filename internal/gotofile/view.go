@@ -13,11 +13,27 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/search"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
+
+// Colors from the theme (D68), set again when it changes.
+var cyan, hit, muted, faint, selBg string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		cyan = s.Accent
+		hit = "\x1b[1m" + s.Yellow
+		muted = s.Muted
+		faint = s.Faint
+		selBg = s.SelBg
+	})
+}
 
 // Limit is the most rows the list shows.
 const Limit = 200
@@ -25,11 +41,6 @@ const Limit = 200
 const (
 	reset  = "\x1b[0m"
 	bold   = "\x1b[1m"
-	cyan   = "\x1b[36m"
-	hit    = "\x1b[1m\x1b[33m" // a matched letter
-	muted  = "\x1b[38;5;247m"
-	faint  = "\x1b[38;5;240m"
-	selBg  = "\x1b[48;5;24m"
 	header = 3 // title, query, rule
 )
 

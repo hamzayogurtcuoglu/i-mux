@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/completion"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/diffview"
@@ -86,7 +88,8 @@ func runDiff(e *Env, args []string) error {
 	w, _ := sidebar.Size(int(os.Stdout.Fd()))
 	rows, changes, first := diffview.Render(lines, w-1-pager.MarksW, w >= 120) // columns for the marks and the scroll bar
 	added, removed := diffview.Stats(lines)
-	header := []string{fmt.Sprintf(" \x1b[1m%s\x1b[0m   \x1b[32m+%d\x1b[0m \x1b[31m−%d\x1b[0m", path, added, removed), ""}
+	s := theme.S()
+	header := []string{fmt.Sprintf(" %s%s\x1b[0m   %s+%d\x1b[0m %s−%d\x1b[0m", s.Title, path, s.Green, added, s.Red, removed), ""}
 	p := &pager.Pager{Header: header, Lines: rows, Top: max(first-3, 0)} // a little context above the first change
 	if first >= 0 {
 		// The changes beside the scroll bar, as VS Code's diff editor (D64).
@@ -220,9 +223,9 @@ func runView(e *Env, args []string) error {
 	}
 	lines := pager.Text(string(b))
 	for i, l := range lines {
-		mark := "\x1b[38;5;243m"
+		mark := theme.S().Faint
 		if i+1 == *line {
-			mark = "\x1b[33m"
+			mark = theme.S().Yellow
 		}
 		lines[i] = fmt.Sprintf("%s%5d\x1b[0m  %s", mark, i+1, l)
 	}

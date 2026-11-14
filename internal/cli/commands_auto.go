@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/autodialog"
@@ -682,7 +684,7 @@ func (v *outputView) live(w int) ([]string, []string, bool) {
 		if more {
 			msg = i18n.T("auto.view.waiting")
 		}
-		lines = []string{" \x1b[38;5;243m" + msg + "\x1b[0m"}
+		lines = []string{" " + theme.S().Faint + msg + "\x1b[0m"}
 	}
 	if v.p != nil {
 		v.p.Hint = autoview.Hint(more)

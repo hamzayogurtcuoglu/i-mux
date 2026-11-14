@@ -8,15 +8,26 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
+
+// Colors from the theme (D68), set again when it changes.
+var faint, sepFg, selBg string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		faint = s.Faint
+		sepFg = s.Sep
+		selBg = s.Selected
+	})
+}
 
 const (
 	reset = "\x1b[0m"
 	bold  = "\x1b[1m"
-	faint = "\x1b[38;5;244m"
-	sepFg = "\x1b[38;5;240m"
-	selBg = "\x1b[48;5;24m\x1b[38;5;255m"
 	xMark = "✕" // closes the menu
 )
 

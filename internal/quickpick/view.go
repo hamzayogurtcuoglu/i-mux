@@ -10,17 +10,28 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gotofile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
 
+// Colors from the theme (D68), set again when it changes.
+var faint, sepFg, match, selBg string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		faint = s.Faint
+		sepFg = s.Sep
+		match = s.Match
+		selBg = s.Selected
+	})
+}
+
 const (
 	reset = "\x1b[0m"
 	bold  = "\x1b[1m"
-	faint = "\x1b[38;5;244m"
-	sepFg = "\x1b[38;5;240m"
-	match = "\x1b[1m\x1b[38;5;117m" // a typed letter in a label
-	selBg = "\x1b[48;5;24m\x1b[38;5;255m"
 	xMark = "✕"
 	head  = 3 // title, input and line above the list
 )

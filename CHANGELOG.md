@@ -6,6 +6,30 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-11-14
+
+### Added
+
+- **Color themes.** The sidebar, the pager and diff viewer, menus, Quick Picks, the other popups,
+  and tmux's tab bar, borders, messages and popups now draw with one palette from a theme. 18 are
+  built in: Catppuccin (Mocha, the new default) and Catppuccin Latte, Tokyo Night and Tokyo Night
+  Day, Dracula, Nord, Gruvbox and Gruvbox Light, One Dark and One Light, Solarized and Solarized
+  Light, Kanagawa and Kanagawa Lotus, Rosé Pine and Rosé Pine Dawn, Vesper, and Terminal, which
+  uses your terminal's own ANSI colors. Settings → **Theme** picks one.
+- **Light and dark following the terminal.** With `theme.auto_switch = true` (Settings → **Follow
+  the terminal's light/dark**) i-mux uses the theme's light version on a light terminal and its
+  dark version on a dark one, or `theme.light_name` / `theme.dark_name`. It asks the terminal for
+  its background (OSC 11), and with tmux 3.6 or later it switches the moment your terminal does.
+- **Your own colors.** `[theme.custom]` changes any of the 19 colors (`accent`, `panel_bg`,
+  `text`, `green`…), and `[theme.custom.light]` / `[theme.custom.dark]` in one mode only; a
+  color is `#rrggbb`, `#rgb`, `rgb(r,g,b)`, a name such as `blue`, or `reset`.
+
+### Changed
+
+- i-mux's colors are now 24-bit (the theme's); the Terminal theme keeps to the 16 ANSI colors.
+  The item under the pointer in the sidebar is a shade between the current row and the
+  selection, so it is never mistaken for the selection.
+
 ## [0.57.0] - 2026-11-14
 
 ### Added

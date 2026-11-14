@@ -70,6 +70,10 @@ line number.
 | `tmux.agent_bar` | `false` | Clickable agent bar (second status line), the older alternative to the sidebar. |
 | `tmux.mouse` | `true` | Mouse support (clicks on the agent bar, pane borders and menus). |
 | `tmux.history_limit` | `50000` | Scrollback lines kept per pane. |
+| `theme.name` | `"catppuccin"` | The colors of the sidebar, popups, menus and tab bar: catppuccin, catppuccin-latte, terminal (the terminal's own colors), tokyo-night, tokyo-night-day, dracula, nord, gruvbox, gruvbox-light, one-dark, one-light, solarized, solarized-light, kanagawa, kanagawa-lotus, rose-pine, rose-pine-dawn, vesper. Settings (⚙) → Theme picks one. |
+| `theme.auto_switch` | `false` | Follow the terminal's light or dark background: light_name on a light one, dark_name on a dark one ("" = name's light or dark sibling, e.g. catppuccin-latte). |
+| `theme.light_name` | `""` |  |
+| `theme.dark_name` | `""` |  |
 | `agents.claude.bin` | `""` | Binary to run; "" finds it on PATH (an absolute path or a name). |
 | `agents.claude.args` | `[]` | Arguments inserted before the template, e.g. ["--model", "opus"]. |
 | `agents.claude.new_args` | `["--session-id", "{uuid}", "{prompt}"]` | Template for a new session; the handoff goes in {prompt}. |
@@ -289,6 +293,25 @@ agent_bar         = false
 mouse             = true
 # Scrollback lines kept per pane.
 history_limit     = 50000
+
+[theme]
+# The colors of the sidebar, popups, menus and tab bar: catppuccin, catppuccin-latte,
+# terminal (the terminal's own colors), tokyo-night, tokyo-night-day, dracula, nord,
+# gruvbox, gruvbox-light, one-dark, one-light, solarized, solarized-light, kanagawa,
+# kanagawa-lotus, rose-pine, rose-pine-dawn, vesper. Settings (⚙) → Theme picks one.
+name        = "catppuccin"
+# Follow the terminal's light or dark background: light_name on a light one,
+# dark_name on a dark one ("" = name's light or dark sibling, e.g. catppuccin-latte).
+auto_switch = false
+light_name  = ""
+dark_name   = ""
+# [theme.custom] changes single colors of the theme, [theme.custom.light] and
+# [theme.custom.dark] only in that mode: accent, panel_bg, sidebar_bg,
+# active_row_bg, selection_bg, surface0, surface1, surface_dim, overlay0,
+# overlay1, text, subtext0, mauve, green, yellow, red, blue, teal, peach. A
+# color is "#rrggbb", "#rgb", "rgb(r,g,b)", a name such as "blue", or "reset".
+#   [theme.custom]
+#   accent = "#a6e3a1"
 
 # Per-agent settings. Placeholders in templates:
 #   {prompt} = the handoff (at most once), {id} = session id to resume, {uuid} = a new UUID.

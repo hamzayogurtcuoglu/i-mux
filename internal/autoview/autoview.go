@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -15,17 +17,26 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 )
 
+// Colors from the theme (D68), set again when it changes.
+var cyan, green, red, yel, muted, faint, spin, code string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		cyan = s.Accent
+		green = s.Green
+		red = s.Red
+		yel = s.Yellow
+		muted = s.Muted
+		faint = s.Faint
+		spin = s.Blue
+		code = s.Teal
+	})
+}
+
 const (
 	reset = "\x1b[0m"
 	bold  = "\x1b[1m"
-	cyan  = "\x1b[36m"
-	green = "\x1b[32m"
-	red   = "\x1b[31m"
-	yel   = "\x1b[33m"
-	muted = "\x1b[38;5;247m"
-	faint = "\x1b[38;5;243m"
-	spin  = "\x1b[38;5;75m"
-	code  = "\x1b[38;5;152m"
 )
 
 var spinner = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}

@@ -67,17 +67,12 @@ type Action struct {
 	Section string // ActFold: "projects", "agents" or "changes"
 }
 
-// ANSI styles. Only foreground colors and attributes, so any terminal theme
-// keeps its background.
+// ANSI attributes; the colors are the theme's (colors.go, D68).
 const (
-	reset  = "\x1b[0m"
-	bold   = "\x1b[1m"
-	dim    = "\x1b[2m"
-	rev    = "\x1b[7m"
-	green  = "\x1b[32m"
-	yellow = "\x1b[33m"
-	red    = "\x1b[31m"
-	cyan   = "\x1b[36m"
+	reset = "\x1b[0m"
+	bold  = "\x1b[1m"
+	dim   = "\x1b[2m"
+	rev   = "\x1b[7m"
 )
 
 // Line is one rendered row: its text with escapes, and its action. A row of
@@ -209,23 +204,6 @@ func fit(s string, w int) string {
 	return s + strings.Repeat(" ", w-n)
 }
 
-// 256-color styles of the v4 look. Backgrounds are used only for the
-// highlighted rows, the project avatars and the state pills.
-const (
-	muted     = "\x1b[38;5;247m"
-	faint     = "\x1b[38;5;244m"
-	title     = "\x1b[1m\x1b[38;5;252m"
-	selBg     = "\x1b[48;5;236m"
-	spinFg    = "\x1b[38;5;75m"
-	needPill  = "\x1b[48;5;58m\x1b[38;5;214m"
-	limitPill = "\x1b[48;5;52m\x1b[38;5;210m"
-	white     = "\x1b[38;5;255m"
-	tipStyle  = white // a button's label in its title (D63)
-)
-
-// avatarBg are the avatar colors; a project's comes from its name.
-var avatarBg = []int{30, 166, 68, 71, 98, 168, 136, 37}
-
 // spinner frames for working agents (narrow braille glyphs).
 var spinner = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
@@ -233,15 +211,15 @@ var spinner = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "
 func icon(a session.AgentID) (string, string) {
 	switch a {
 	case session.Claude:
-		return "✻", "\x1b[38;5;173m"
+		return "✻", agentFg[0]
 	case session.Antigravity:
-		return "▲", "\x1b[38;5;75m"
+		return "▲", agentFg[1]
 	case session.Codex:
-		return "◎", "\x1b[38;5;252m"
+		return "◎", agentFg[2]
 	case session.Copilot:
-		return "◉", "\x1b[38;5;141m"
+		return "◉", agentFg[3]
 	case session.OpenCode:
-		return "▣", "\x1b[38;5;215m"
+		return "▣", agentFg[4]
 	}
 	return "›", faint
 }
@@ -260,7 +238,8 @@ func avatar(name string) string {
 	for _, c := range name {
 		h = h*31 + uint32(c)
 	}
-	return "\x1b[48;5;" + strconv.Itoa(avatarBg[h%uint32(len(avatarBg))]) + "m" + white + bold + " " + letter + " " + reset
+	av := avatars[h%uint32(len(avatars))]
+	return av + bold + " " + letter + " " + reset
 }
 
 // age is the time since since: "<1m", "9m", "2h", "3d" ("" if unknown).
@@ -859,13 +838,6 @@ func highlight(sc Screen, sel Item, w int) {
 	cells[sel.Cell].Text = revd(cells[sel.Cell].Text)
 	l.Text = compose(cells, w)
 }
-
-// Backgrounds of the item under the pointer and of the explorer's selected
-// row (D31): the editor's hover grey and selection blue.
-const (
-	hoverBg  = "\x1b[48;5;238m"
-	selectBg = "\x1b[48;5;24m"
-)
 
 // onBg draws text on background bg (kept across its resets).
 func onBg(t, bg string) string { return bg + strings.ReplaceAll(t, reset, reset+bg) + reset }

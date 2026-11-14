@@ -54,12 +54,8 @@ const (
 	maxBoxRows = 6
 	// maxBoxRunes bounds a message (a long paste).
 	maxBoxRunes = 20000
-	// The box's backgrounds: VS Code's input field, a step lighter while
-	// the cursor is in it.
-	boxBg      = "\x1b[48;5;236m"
-	boxFocusBg = "\x1b[48;5;237m"
-	revOff     = "\x1b[27m"
-	fgDefault  = "\x1b[39m"
+	revOff      = "\x1b[27m"
+	fgDefault   = "\x1b[39m"
 )
 
 // What a key did in the box.

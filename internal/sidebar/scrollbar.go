@@ -5,13 +5,6 @@ import (
 	"unicode/utf8"
 )
 
-// Scroll bar cells: a thumb as tall as the part shown, on a track darker
-// than the text (§9.3 "Scroll bars").
-const (
-	barTrack = "\x1b[38;5;236m│" + reset
-	barThumb = "\x1b[38;5;245m┃" + reset
-)
-
 // ScrollBar is the right-edge column of a list of total rows of which view
 // rows show from top: one drawn cell per shown row, the thumb sized and
 // placed by what is shown. nil when everything fits.

@@ -11,6 +11,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 )
 
 // ClickMinVersion is the oldest tmux with `#[range=user|X]` style ranges and
@@ -23,12 +24,15 @@ var MinVersion = [2]int{3, 2}
 
 // ConfInput is everything the generated tmux.conf depends on.
 type ConfInput struct {
-	Self      string         // absolute path of the imux binary
-	Cfg       *config.Config // effective configuration
-	Version   Version        // tmux version of the server
-	Terminal  string         // default-terminal; "" = tmux-256color
-	AgentBar  string         // status-format[1]; "" = no agent bar
-	LocalConf string         // the user's tmux.local.conf, sourced last
+	// Appearance is the terminal's light or dark, for a theme that follows
+	// it ("" not known: dark).
+	Appearance string
+	Self       string         // absolute path of the imux binary
+	Cfg        *config.Config // effective configuration
+	Version    Version        // tmux version of the server
+	Terminal   string         // default-terminal; "" = tmux-256color
+	AgentBar   string         // status-format[1]; "" = no agent bar
+	LocalConf  string         // the user's tmux.local.conf, sourced last
 }
 
 // Clickable reports whether the status line (agent bar, tab bar) gets
@@ -97,12 +101,12 @@ func TabFormat(old bool) string {
 	// 3 columns, like the +.
 	return "#[align=left]" + pad + " " +
 		"#{W:" +
-		"#[range=window|#{window_index}]#[fg=colour245]" + tab + " #[norange default] ," +
-		"#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold]" + tab + "#[norange] " +
-		closeRange + "#[bg=colour236 fg=colour245 nobold] × #[norange default] " +
+		"#[range=window|#{window_index}]#[fg=" + colorRef("subtext0") + "]" + tab + " #[norange default] ," +
+		"#[range=window|#{window_index}]#[bg=" + colorRef("surface0") + " fg=" + colorRef("text") + " bold]" + tab + "#[norange] " +
+		closeRange + "#[bg=" + colorRef("surface0") + " fg=" + colorRef("overlay1") + " nobold] × #[norange default] " +
 		"}" +
-		tabRange + "#[fg=colour245] + #[norange default]" +
-		"#[align=right]" + quitRange + "#[fg=colour245] " + i18n.T("tabs.exit") + " #[norange default] "
+		tabRange + "#[fg=" + colorRef("subtext0") + "] + #[norange default]" +
+		"#[align=right]" + quitRange + "#[fg=" + colorRef("subtext0") + "] " + i18n.T("tabs.exit") + " #[norange default] "
 }
 
 // Silent is appended to every shell command imux's bindings, hooks and menu
@@ -285,7 +289,6 @@ func GenerateConf(in *ConfInput) string {
 	if cfg.Tmux.Tabs {
 		w("# Tab bar at the top: the session's windows, and + for a new tab.")
 		w("set -g  status-position top")
-		w("set -g  status-style %s", Quote("bg=default,fg=colour245"))
 		w("set -g  status-format[0] %s", Quote(TabFormat(in.oldTabClicks())))
 	} else {
 		w("set -g  status-position bottom")
@@ -296,6 +299,11 @@ func GenerateConf(in *ConfInput) string {
 		w("set -g  status-format[1] %s", Quote(in.AgentBar))
 	} else {
 		w("set -g  status on")
+	}
+	w("# The theme's colors (D68): the tab bar reads @imux_c_*; styles of the status line, borders,")
+	w("# messages, the copy mode, popups and menus.")
+	for _, c := range ThemeOptions(theme.Resolve(cfg.Theme, in.Appearance), in.Version) {
+		w("set -g  %s %s", c[2], Quote(c[3]))
 	}
 	w("")
 	w("# Pane menu, session picker.")
@@ -414,6 +422,11 @@ func GenerateConf(in *ConfInput) string {
 	w("# Pane lifecycle and watcher.")
 	w("set-hook -g pane-died %s", QuoteDouble(runShell(in.Self, "__pane-died", "#{pane_id}", "#{pane_dead_status}")))
 	w("set-hook -g client-attached %s", QuoteDouble(runShell(in.Self, "__watch", "ensure")))
+	if in.Version.AtLeast(3, 6) {
+		w("# The terminal turned light or dark (tmux 3.6+, DEC mode 2031): the theme may follow it (D68).")
+		w("set-hook -g client-light-theme %s", QuoteDouble(runShell(in.Self, "__theme", "appearance", "light")))
+		w("set-hook -g client-dark-theme %s", QuoteDouble(runShell(in.Self, "__theme", "appearance", "dark")))
+	}
 	if cfg.Tmux.Sidebar {
 		w("# Sidebars redraw when panes change (they sleep otherwise).")
 		for _, h := range []string{"pane-focus-in", "after-split-window", "after-kill-pane", "pane-exited", "window-pane-changed"} {

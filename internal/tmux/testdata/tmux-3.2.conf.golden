@@ -29,10 +29,36 @@ set -g  status-left-length 32
 set -gq @imux_status ''
 # Tab bar at the top: the session's windows, and + for a new tab.
 set -g  status-position top
-set -g  status-style bg=default,fg=colour245
-set -g  status-format[0] '#[align=left]#[range=window|#{window_index}]#{?window_zoomed_flag,,#{P:#{?#{==:#{@imux_role},sidebar},#{p/#{e|+:#{pane_width},1}/:},}}}#[norange] #{W:#[range=window|#{window_index}]#[fg=colour245] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, } #[norange default] ,#[range=window|#{window_index}]#[bg=colour236 fg=colour255 bold] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }#[norange] #[range=left]#[bg=colour236 fg=colour245 nobold] × #[norange default] }#[fg=colour245] + #[norange default]#[align=right]#[range=right]#[fg=colour245] ⏻ Exit #[norange default] '
+set -g  status-format[0] '#[align=left]#[range=window|#{window_index}]#{?window_zoomed_flag,,#{P:#{?#{==:#{@imux_role},sidebar},#{p/#{e|+:#{pane_width},1}/:},}}}#[norange] #{W:#[range=window|#{window_index}]#[fg=#{@imux_c_subtext0}] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, } #[norange default] ,#[range=window|#{window_index}]#[bg=#{@imux_c_surface0} fg=#{@imux_c_text} bold] #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }#[norange] #[range=left]#[bg=#{@imux_c_surface0} fg=#{@imux_c_overlay1} nobold] × #[norange default] }#[fg=#{@imux_c_subtext0}] + #[norange default]#[align=right]#[range=right]#[fg=#{@imux_c_subtext0}] ⏻ Exit #[norange default] '
 set -g  status 2
 set -g  status-format[1] '#[align=left] imux #[range=user|imux:menu]☰#[norange default]'
+# The theme's colors (D68): the tab bar reads @imux_c_*; styles of the status line, borders,
+# messages, the copy mode, popups and menus.
+set -g  @imux_c_accent '#89b4fa'
+set -g  @imux_c_panel_bg '#181825'
+set -g  @imux_c_sidebar_bg default
+set -g  @imux_c_active_row_bg '#1e1e2e'
+set -g  @imux_c_selection_bg '#313244'
+set -g  @imux_c_surface0 '#313244'
+set -g  @imux_c_surface1 '#45475a'
+set -g  @imux_c_surface_dim '#1e1e2e'
+set -g  @imux_c_overlay0 '#6c7086'
+set -g  @imux_c_overlay1 '#7f849c'
+set -g  @imux_c_text '#cdd6f4'
+set -g  @imux_c_subtext0 '#a6adc8'
+set -g  @imux_c_mauve '#cba6f7'
+set -g  @imux_c_green '#a6e3a1'
+set -g  @imux_c_yellow '#f9e2af'
+set -g  @imux_c_red '#f38ba8'
+set -g  @imux_c_blue '#89b4fa'
+set -g  @imux_c_teal '#94e2d5'
+set -g  @imux_c_peach '#fab387'
+set -g  status-style 'bg=default,fg=#a6adc8'
+set -g  pane-border-style 'fg=#45475a'
+set -g  pane-active-border-style 'fg=#89b4fa'
+set -g  message-style 'bg=#313244,fg=#cdd6f4'
+set -g  message-command-style 'bg=#313244,fg=#cdd6f4'
+set -g  mode-style 'bg=#313244,fg=#cdd6f4'
 
 # Pane menu, session picker.
 bind -n 'C-\' run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'

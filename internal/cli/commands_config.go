@@ -1,12 +1,16 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
 func init() {
@@ -26,8 +30,20 @@ func loadConfig(e *Env) (*config.Config, error) {
 	}
 	if cfg != nil {
 		i18n.Init(cfg.Locale)
+		applyTheme(cfg)
 	}
 	return cfg, err
+}
+
+// applyTheme makes the config's theme the palette this process draws with
+// (D68); following the terminal, it asks tmux whether it is light or dark
+// (@imux_appearance).
+func applyTheme(cfg *config.Config) {
+	appearance := ""
+	if cfg.Theme.AutoSwitch {
+		appearance = workspace.Appearance(context.Background(), tmux.New(paths.TmuxConf()))
+	}
+	theme.Set(theme.Resolve(cfg.Theme, appearance))
 }
 
 func runConfig(e *Env, args []string) error {

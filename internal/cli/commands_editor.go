@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -128,7 +130,7 @@ func offerMicro(cfg *config.Config, argv []string) bool {
 func askMicro(e *Env, cfg *config.Config, name string) {
 	icon := "📝"
 	if sidebar.IconTheme(cfg) == sidebar.IconsNerd {
-		icon = "\x1b[38;5;214m\uea73\x1b[0m" // codicon "edit"
+		icon = theme.S().Peach + "\uea73\x1b[0m" // codicon "edit"
 	}
 	m := &installview.Model{
 		Icon:  icon,

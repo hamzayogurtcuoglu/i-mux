@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 )
 
 // AgentIDs are the agents imux knows, in default order.
@@ -207,6 +209,7 @@ type Config struct {
 	Explorer     Explorer          `toml:"explorer"`
 	Web          Web               `toml:"web"`
 	Tmux         Tmux              `toml:"tmux"`
+	Theme        theme.Config      `toml:"theme"`
 	Agents       map[string]*Agent `toml:"agents"`
 }
 
@@ -315,6 +318,7 @@ func Default() *Config {
 			Mouse:            true,
 			HistoryLimit:     50000,
 		},
+		Theme:  theme.Config{Name: theme.Default},
 		Agents: defaultAgents(),
 	}
 }
@@ -420,6 +424,17 @@ func Parse(data []byte) (*Config, []string, error) {
 	if why, removed := RemovedAgents[cfg.DefaultAgent]; removed {
 		warnings = append(warnings, fmt.Sprintf("default_agent: %q ignored: %s", cfg.DefaultAgent, why))
 		cfg.DefaultAgent = ""
+	}
+	// Themes (D68): an unknown name is warned about and the default used;
+	// a bad color is an error at its line.
+	tw, key, terr := cfg.Theme.Check()
+	warnings = append(warnings, tw...)
+	if terr != nil {
+		_, last, _ := strings.Cut(strings.TrimPrefix(key, "theme.custom."), ".")
+		if last == "" {
+			last = strings.TrimPrefix(key, "theme.custom.")
+		}
+		return nil, warnings, &Error{Line: lineOf(data, last), Msg: key + ": " + terr.Error()}
 	}
 	if err := cfg.validate(data); err != nil {
 		return nil, warnings, err

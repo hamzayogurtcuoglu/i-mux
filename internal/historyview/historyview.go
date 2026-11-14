@@ -14,6 +14,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/histsearch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -21,16 +23,25 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
 )
 
+// Colors from the theme (D68), set again when it changes.
+var muted, faint, text, pointer, selBg, hit, pill string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		muted = s.Muted
+		faint = s.Faint
+		text = s.Text
+		pointer = s.Accent
+		selBg = s.SelBg
+		hit = s.Hit
+		pill = s.Pill
+	})
+}
+
 const (
-	reset   = "\x1b[0m"
-	bold    = "\x1b[1m"
-	muted   = "\x1b[38;5;247m"
-	faint   = "\x1b[38;5;243m"
-	text    = "\x1b[38;5;250m"
-	pointer = "\x1b[36m"
-	selBg   = "\x1b[48;5;236m"
-	hit     = "\x1b[48;5;94m\x1b[38;5;230m"
-	pill    = "\x1b[48;5;238m\x1b[38;5;252m"
+	reset = "\x1b[0m"
+	bold  = "\x1b[1m"
 )
 
 // Conv is one conversation of the list.

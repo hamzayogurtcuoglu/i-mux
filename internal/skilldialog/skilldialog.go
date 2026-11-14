@@ -15,20 +15,31 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/skills"
 )
 
+// Colors from the theme (D68), set again when it changes.
+var cyan, yellow, muted, faint, selBg string
+
+func init() {
+	theme.Watch(func(p theme.Palette) {
+		s := theme.StylesOf(p)
+		cyan = s.Accent
+		yellow = s.Yellow
+		muted = s.Muted
+		faint = s.Faint
+		selBg = s.SelBg
+	})
+}
+
 const (
 	reset    = "\x1b[0m"
 	bold     = "\x1b[1m"
-	cyan     = "\x1b[36m"
-	yellow   = "\x1b[33m"
-	muted    = "\x1b[38;5;247m"
-	faint    = "\x1b[38;5;240m"
-	selBg    = "\x1b[48;5;24m"
 	cursorOn = "\x1b[7m" // the text cursor: reverse video
 	cursorNo = "\x1b[27m"
 	maxRows  = 8 // the description box's most lines

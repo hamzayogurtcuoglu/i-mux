@@ -197,9 +197,10 @@ func TestTabState(t *testing.T) {
 		want  string
 	}{
 		{[]PaneRow{{State: StateIdle}, {State: StateDone}}, ""},
-		{[]PaneRow{{State: StateDone}, {State: StateWorking}}, "#[fg=colour75]●"},
-		{[]PaneRow{{State: StateWorking}, {State: StateBlocked}}, "#[fg=colour214]!"},
-		{[]PaneRow{{State: StateIdle, Limited: "15:00"}}, "#[fg=colour203]◆"},
+		// The theme's blue, yellow and red (D68; Catppuccin Mocha's).
+		{[]PaneRow{{State: StateDone}, {State: StateWorking}}, "#[fg=#89b4fa]●"},
+		{[]PaneRow{{State: StateWorking}, {State: StateBlocked}}, "#[fg=#f9e2af]!"},
+		{[]PaneRow{{State: StateIdle, Limited: "15:00"}}, "#[fg=#f38ba8]◆"},
 	} {
 		if got := TabState(c.panes); got != c.want {
 			t.Errorf("%+v: %q", c.panes, got)

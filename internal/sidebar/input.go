@@ -3,6 +3,7 @@ package sidebar
 import (
 	"bytes"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 )
@@ -19,6 +20,8 @@ const (
 	EvMove                        // the pointer moved to X, Y (X 0: it left the sidebar)
 	EvPaste                       // a bracketed paste: Text holds it, Key is "paste"
 	EvFocus                       // the pane gained (Key "in") or lost ("out") the focus (mode 1004)
+	EvColor                       // a terminal's OSC reply: Key its number ("11": the background), Text its value
+	EvTheme                       // the terminal turned light or dark (DEC 2031 / 996): Key "light" or "dark"
 )
 
 // Event is one key press or mouse click.
@@ -60,6 +63,31 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 				return evs, in[i:]
 			}
 			switch in[i+1] {
+			case ']':
+				// OSC: a terminal's reply (OSC 11: its background, D68), up
+				// to BEL or ST; never keys.
+				body := in[i+2:]
+				end := bytes.IndexAny(body, "\x07\x1b")
+				if end < 0 {
+					if len(body) > 512 {
+						return evs, nil // no reply is this long: drop it
+					}
+					return evs, in[i:]
+				}
+				n := 1
+				if body[end] == 0x1b {
+					if end+1 >= len(body) {
+						return evs, in[i:]
+					}
+					if body[end+1] == '\\' {
+						n = 2
+					}
+				}
+				if num, val, ok := strings.Cut(string(body[:end]), ";"); ok {
+					evs = append(evs, Event{Kind: EvColor, Key: num, Text: val})
+				}
+				i += 2 + end + n
+				continue
 			case '[':
 				if i+2 < len(in) && in[i+2] == '<' {
 					end := bytes.IndexAny(in[i+3:], "Mm")
@@ -99,6 +127,14 @@ func Parse(in []byte, final bool) ([]Event, []byte) {
 					return evs, in[i:]
 				}
 				switch in[j] {
+				case 'n':
+					// The terminal's light or dark (DEC 2031 / 996): ?997;1 dark, ?997;2 light.
+					switch string(in[i+2 : j]) {
+					case "?997;1":
+						evs = append(evs, Event{Kind: EvTheme, Key: "dark"})
+					case "?997;2":
+						evs = append(evs, Event{Kind: EvTheme, Key: "light"})
+					}
 				case 'I', 'O':
 					if j == i+2 { // focus in, focus out (a pane that asked for them)
 						k := "in"

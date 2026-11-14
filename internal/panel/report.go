@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff/clean"
@@ -213,12 +215,13 @@ func windowLine(name string, pct float64, resets, now time.Time) string {
 	const width = 20
 	p := min(max(pct, 0), 100)
 	full := int(p/100*width + 0.5)
-	color := "\x1b[32m" // green
+	s := theme.S()
+	color := s.Green
 	switch {
 	case p >= 90:
-		color = "\x1b[31m"
+		color = s.Red
 	case p >= 70:
-		color = "\x1b[33m"
+		color = s.Yellow
 	}
 	bar := color + strings.Repeat("█", full) + reset + dim + strings.Repeat("░", width-full) + reset
 	when := ""
@@ -237,11 +240,11 @@ func statusText(row Row, now time.Time) string {
 		if t.IsZero() {
 			t = row.Limit.ExpiresAt
 		}
-		return "\x1b[31m◆ " + i18n.T("limits.limited_until", textfmt.Clock(now, t)) + reset
+		return theme.S().Red + "◆ " + i18n.T("limits.limited_until", textfmt.Clock(now, t)) + reset
 	case row.Status == "warn":
-		return "\x1b[33m◐ " + i18n.T("limits.approaching") + reset
+		return theme.S().Yellow + "◐ " + i18n.T("limits.approaching") + reset
 	}
-	return "\x1b[32m●" + reset + " " + i18n.T("limits.ok")
+	return theme.S().Green + "●" + reset + " " + i18n.T("limits.ok")
 }
 
 func usageText(row Row, now time.Time) string {

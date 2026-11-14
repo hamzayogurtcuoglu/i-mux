@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
 
@@ -94,8 +96,9 @@ func (p *progress) draw() {
 	const width = 30
 	done := pct * width / 100
 	mb := func(n int64) float64 { return float64(n) / (1 << 20) }
-	fmt.Fprintf(p.out, "\r  %s \x1b[36m%s\x1b[38;5;238m%s\x1b[0m %3d%%  %s\x1b[K", i18n.T("fetch.downloading"),
-		strings.Repeat("━", done), strings.Repeat("─", width-done), pct, i18n.T("fetch.progress", mb(p.n), mb(p.total)))
+	s := theme.S()
+	fmt.Fprintf(p.out, "\r  %s %s%s%s%s\x1b[0m %3d%%  %s\x1b[K", i18n.T("fetch.downloading"), s.Accent,
+		strings.Repeat("━", done), s.Sep, strings.Repeat("─", width-done), pct, i18n.T("fetch.progress", mb(p.n), mb(p.total)))
 }
 
 // Check reports whether file's SHA-256 is want.

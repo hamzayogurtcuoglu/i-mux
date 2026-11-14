@@ -16,6 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
 )
@@ -59,6 +60,8 @@ type sidebar struct {
 	revealSeen bool
 	revealRow  string // a revealed path to scroll to
 	lastFrame  string // the frame last written
+	themed     bool   // the theme's background was set on the pane
+	asked      string // the light or dark this sidebar last reported (D68)
 
 	emptyAt time.Time // when this sidebar last opened a "No agents" pane
 
@@ -108,9 +111,11 @@ func Run(ctx context.Context, o Options) error {
 	// Alternate screen, no cursor, SGR mouse reports for presses and every
 	// motion (the hover, D31); the focus coming and going, and pastes in
 	// one piece (the commit box, D65).
-	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h\x1b[?1004h\x1b[?2004h")
+	// The terminal's light or dark (D68): reported when it changes (DEC
+	// 2031, tmux 3.6+), and its background asked (OSC 11, tmux 3.4+).
+	_, _ = io.WriteString(o.Out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1003h\x1b[?1006h\x1b[?1004h\x1b[?2004h\x1b[?2031h"+askBackground)
 	defer func() {
-		_, _ = io.WriteString(o.Out, "\x1b[?2004l\x1b[?1004l\x1b[?1003l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l")
+		_, _ = io.WriteString(o.Out, "\x1b[?2031l\x1b[?2004l\x1b[?1004l\x1b[?1003l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l")
 	}()
 
 	_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", o.Pane, OptRole, RoleSidebar},
@@ -172,6 +177,7 @@ func Run(ctx context.Context, o Options) error {
 				upgrade()
 			case syscall.SIGWINCH:
 				s.lastFrame = "" // the pane was resized: draw it whole
+				_, _ = io.WriteString(o.Out, askBackground)
 				if s.keepWidth(ctx) {
 					s.draw() // its edge dragged: the same model, wider or narrower
 					continue
@@ -184,6 +190,7 @@ func Run(ctx context.Context, o Options) error {
 			continue
 		case <-tick.C:
 			upgrade()
+			_, _ = io.WriteString(o.Out, askBackground)
 		case <-fresh.C:
 			if !s.win.Visible {
 				continue // nobody sees it; a switch to it signals a redraw
@@ -217,6 +224,10 @@ func Run(ctx context.Context, o Options) error {
 			evs, pending = Parse(append(pending, b...), true)
 			gather, paint := false, false
 			for _, ev := range evs {
+				if ev.Kind == EvColor || ev.Kind == EvTheme {
+					s.terminalTheme(ev) // the terminal's answer, no key
+					continue
+				}
 				// The pointer moving and a right-click (its menu) change
 				// nothing to gather; a click's action gathers when it runs;
 				// typing into the commit box changes only the box.
@@ -278,11 +289,65 @@ func (s *sidebar) redraw(ctx context.Context) bool {
 		}
 	}
 	m.Tick, m.Scroll = s.model.Tick, s.scroll
+	s.applyTheme(ctx, w)
 	s.model, s.win = m, w
 	s.syncBox(ctx)
 	s.keepVisible()
 	s.draw()
 	return false
+}
+
+// askBackground asks the terminal for its background (OSC 11); tmux 3.4+
+// answers with the client's.
+const askBackground = "\x1b]11;?\x1b\\"
+
+// terminalTheme takes the terminal's answer: its background's light or
+// dark (OSC 11), or its report (DEC 2031). A change is noted for every
+// sidebar (imux __theme appearance), which may change the theme (D68).
+func (s *sidebar) terminalTheme(ev Event) {
+	a := ""
+	switch ev.Kind {
+	case EvTheme:
+		a = ev.Key
+	case EvColor:
+		c, ok := theme.ParseOSCColor(ev.Text)
+		if ev.Key != "11" || !ok {
+			return
+		}
+		a = theme.AppearanceOf(c)
+	}
+	if a == "" || a == s.win.Appearance || a == s.asked {
+		return
+	}
+	s.asked = a
+	s.spawn([]string{"__theme", "appearance", a})
+}
+
+// applyTheme draws with the config's theme for the terminal's light or
+// dark (D68); the pane's background is the theme's sidebar_bg (reset: the
+// terminal's).
+func (s *sidebar) applyTheme(ctx context.Context, w Window) {
+	cfg := s.o.Source.Cfg
+	if cfg == nil {
+		return
+	}
+	a := ""
+	if cfg.Theme.AutoSwitch {
+		a = w.Appearance
+	}
+	p := theme.Resolve(cfg.Theme, a)
+	if !theme.Set(p) && s.themed {
+		return
+	}
+	s.themed, s.lastFrame = true, ""
+	if p.SidebarBg.IsReset() {
+		_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-p", "-u", "-t", s.o.Pane, "window-style"},
+			tmux.Cmd{"set-option", "-p", "-u", "-t", s.o.Pane, "window-active-style"})
+		return
+	}
+	bg := "bg=" + p.SidebarBg.Tmux()
+	_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", s.o.Pane, "window-style", bg},
+		tmux.Cmd{"set-option", "-p", "-t", s.o.Pane, "window-active-style", bg})
 }
 
 // draw renders the cached model.

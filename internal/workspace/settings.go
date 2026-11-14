@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -87,6 +89,8 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 		MenuItem{Name: i18n.T("settings.paste_images", onOffLabel(cfg.Paste.Images)), Key: "v", Cmd: menu("paste_images")},
 		MenuItem{Name: i18n.T("settings.icons", labels(iconsValue(cfg.Tmux.Icons))), Key: "i", Cmd: menu("icons")},
 		MenuItem{Name: i18n.T("settings.font"), Key: "f", Cmd: w.popupCmd("90%", "70%", "font", "install", "--popup")},
+		MenuItem{Name: i18n.T("settings.theme", ThemeTitle(cfg.Theme.Name)), Key: "t", Cmd: menu("theme")},
+		MenuItem{Name: i18n.T("settings.theme_auto", onOffLabel(cfg.Theme.AutoSwitch)), Key: "a", Cmd: menu("theme_auto")},
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
 		Separator(),
@@ -166,6 +170,10 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 	case "on_arrival":
 		cs := []Choice{{"wait", labels("wait")}, {"continue", labels("continue")}}
 		return w.ChoiceMenu(i18n.T("settings.arrival_title"), "on_arrival", arrivalValue(cfg.Handoff.OnArrival), cs, pane, client)
+	case "theme":
+		return w.ThemeMenu(pane, client)
+	case "theme_auto":
+		return w.ChoiceMenu(i18n.T("settings.theme_auto_title"), "theme_auto", onOffValue(cfg.Theme.AutoSwitch), onOff, pane, client)
 	case "on_limit":
 		var cs []Choice
 		for _, v := range []string{"ask", "auto", "off"} {
@@ -295,4 +303,39 @@ func limitLabel(v string) string {
 		return i18n.T("settings.limit_auto")
 	}
 	return labels(v)
+}
+
+// ThemeTitle is a theme's name as menus show it ("Catppuccin"); an unknown
+// one is the default's.
+func ThemeTitle(name string) string {
+	n, ok := theme.Canonical(name)
+	if !ok {
+		n = theme.Default
+	}
+	return theme.Titles[n]
+}
+
+// themeKeys are the theme menu's keys: 1-9, then letters.
+const themeKeys = "123456789abcdefghijklmnopq"
+
+// ThemeMenu lists the themes (D68), ● on the current one; choosing one sets
+// it and stops following the terminal's light/dark, as a manual choice does.
+func (w *WS) ThemeMenu(pane, client string) *Menu {
+	tgt := settingsTarget(pane, client)
+	cur, _ := theme.Canonical(w.Cfg.Theme.Name)
+	if cur == "" {
+		cur = theme.Default
+	}
+	m := &Menu{Title: i18n.T("settings.theme_title")}
+	for i, n := range theme.Names {
+		mark := "  "
+		if n == cur {
+			mark = "● "
+		}
+		m.Items = append(m.Items, MenuItem{
+			Name: mark + theme.Titles[n], Key: string(themeKeys[i]),
+			Cmd: w.ui(append([]string{"__settings", "set", "theme", n}, tgt...)...),
+		})
+	}
+	return m
 }
