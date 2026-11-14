@@ -2488,7 +2488,8 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
   definition, Remove schedule… or Forget runs… (asked first; its runs go too); for a skill then
   Add to Agent, Improve with Agent, Share with all agents (when it is not in `.agents/skills`
   and linked) and Delete skill… (`imux __auto skill <op> <id>` sets the `@imux_skill*` options
-  and runs `imux __skill <op>`, v0.56, D66). Every row has ⋯ (v0.56; before, only one with a
+  and runs `imux __skill <op>`, v0.56, D66). A shared skill's schedule and runs follow it to
+  its new id (`auto.Move`: the id is its file's, v0.56.3). Every row has ⋯ (v0.56; before, only one with a
   schedule or a run had it). 🚀 on an item opens the panel, 🛑 stops its run, a click shows its
   output (the panel before its first run).
 - **The rail's badge** counts the runs going on, as the Agents icon counts working agents.

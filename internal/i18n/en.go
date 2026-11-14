@@ -560,6 +560,7 @@ var en = map[string]string{
 	"auto.unit_m":                      "min",
 	"auto.unit_h":                      "h",
 	"auto.unit_d":                      "d",
+	"auto.unit_s":                      "s",
 	"auto.every":                       "every %s",
 	"auto.hourly":                      "hourly",
 	"auto.daily":                       "daily %s",

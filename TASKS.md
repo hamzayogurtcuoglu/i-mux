@@ -1039,6 +1039,10 @@ User request: fix the bugs of ROADMAP.md's audit that hold, and any other found 
     the pager, n and N go through the matches on the last page and around the ends; a
     Settings change saves into a config.toml without a last line break, and a Windows line
     end stays; unit tests.
+- [x] **T71.10 A fourth look** · S
+  - AC: sharing a scheduled skill moves its schedule and runs to the shared file's id (they
+    were left behind, the watcher skipping every run as "definition gone"); a schedule's
+    label keeps its seconds ("90s": every 1 min 30 s); unit tests.
 
 ## M70: The commit message box like VS Code's, no AI commit messages (added 2026-11-13)
 

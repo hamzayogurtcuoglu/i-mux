@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
@@ -102,6 +103,13 @@ func TestWhen(t *testing.T) {
 	}
 	if _, err := ParseWhen("10 saniye"); err != ErrTooOften {
 		t.Errorf("10 seconds: %v", err)
+	}
+	// The label keeps every unit: "90s" is not every minute.
+	i18n.SetLocale("en")
+	for in, want := range map[string]string{"90s": "every 1 min 30 s", "26h": "every 1 d 2 h", "5m": "every 5 min"} {
+		if w, _ := ParseWhen(in); w.Label() != want {
+			t.Errorf("Label(%q) = %q, want %q", in, w.Label(), want)
+		}
 	}
 }
 
@@ -260,6 +268,46 @@ func TestStore(t *testing.T) {
 	}
 	if _, err := os.Stat(Dir(d.ID)); !os.IsNotExist(err) {
 		t.Error("runs left")
+	}
+}
+
+// TestMove (T71.10): a shared skill's schedule follows its file to its new
+// id, with its runs; one the new file already has is kept.
+func TestMove(t *testing.T) {
+	testutil.Isolate(t)
+	now := time.Date(2026, 11, 14, 9, 0, 0, 0, time.UTC)
+	from, to := "/p/.claude/skills/notes/SKILL.md", "/p/.agents/skills/notes/SKILL.md"
+	old, moved := ID("/p", from), ID("/p", to)
+	d := Def{ID: old, Kind: KindSkill, Name: "notes", File: from}
+	if _, err := Change(old, &d, "/p", now, func(s *Schedule) { s.When = "1h" }); err != nil {
+		t.Fatal(err)
+	}
+	if err := addRun(old, Run{Start: now, Status: StatusOK}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Move("/p", from, to); err != nil {
+		t.Fatal(err)
+	}
+	ss, _ := Load()
+	if s, ok := Get(ss, moved); len(ss) != 1 || !ok || s.File != to || s.When != "1h" {
+		t.Fatalf("moved schedule %+v", ss)
+	}
+	if len(Runs(moved)) != 1 || len(Runs(old)) != 0 {
+		t.Errorf("runs: %d at the new id, %d at the old", len(Runs(moved)), len(Runs(old)))
+	}
+	// Nothing to move, or a schedule already at the new id: unchanged.
+	if err := Move("/p", from, to); err != nil {
+		t.Fatal(err)
+	}
+	d2 := Def{ID: old, Kind: KindSkill, Name: "notes", File: from}
+	if _, err := Change(old, &d2, "/p", now, func(s *Schedule) { s.When = "5m" }); err != nil {
+		t.Fatal(err)
+	}
+	if err := Move("/p", from, to); err != nil {
+		t.Fatal(err)
+	}
+	if ss, _ := Load(); len(ss) != 2 {
+		t.Errorf("a schedule at the new id was replaced: %+v", ss)
 	}
 }
 

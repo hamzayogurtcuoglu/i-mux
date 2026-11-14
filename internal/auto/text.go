@@ -25,6 +25,10 @@ func (w When) Label() string {
 		}
 		if n := d / time.Minute; n > 0 {
 			p = append(p, strconv.Itoa(int(n))+" "+i18n.T("auto.unit_m"))
+			d -= n * time.Minute
+		}
+		if n := d / time.Second; n > 0 { // "90s" runs every 1 min 30 s
+			p = append(p, strconv.Itoa(int(n))+" "+i18n.T("auto.unit_s"))
 		}
 		return i18n.T("auto.every", strings.Join(p, " "))
 	case w.Hourly:

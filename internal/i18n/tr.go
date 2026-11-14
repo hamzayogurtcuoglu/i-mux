@@ -561,6 +561,7 @@ var tr = map[string]string{
 	"auto.unit_m":                      "dk",
 	"auto.unit_h":                      "sa",
 	"auto.unit_d":                      "gün",
+	"auto.unit_s":                      "sn",
 	"auto.every":                       "her %s",
 	"auto.hourly":                      "saat başı",
 	"auto.daily":                       "her gün %s",

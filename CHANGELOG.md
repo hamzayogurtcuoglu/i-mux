@@ -6,6 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.56.3] - 2026-11-14
+
+### Fixed
+
+- **Sharing a scheduled skill keeps its schedule.** Share with all agents moves a skill to
+  `.agents/skills`, which gives it a new id: its schedule and runs stayed behind as a "gone"
+  row, and every scheduled run was skipped as "definition gone". They now move with it.
+- **A schedule's time shows its seconds** in Jobs: one saved as `90s` read "every 1 min".
+
 ## [0.56.2] - 2026-11-14
 
 ### Fixed

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -298,6 +299,10 @@ func (s *skillCtx) do(op string) error {
 		}
 		if err != nil {
 			return err
+		}
+		// Its schedule (Jobs) goes with it: the id is the file's.
+		if err := auto.Move(s.root, s.file(), filepath.Join(dst, skills.File)); err != nil {
+			s.say(i18n.T("file.failed", err.Error()))
 		}
 		_, _ = s.w.T.Run(ctx, tmux.Cmd{"set-option", "-g", sidebar.OptSkill, dst})
 		sidebar.RefreshAll(ctx, s.w.T)

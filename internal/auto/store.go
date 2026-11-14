@@ -154,6 +154,44 @@ func Change(id string, def *Def, project string, now time.Time, fn func(*Schedul
 	return out, err
 }
 
+// Move gives the schedule of the definition at file from in project the
+// definition's new file to (a skill shared into .agents/skills): its id is
+// the file's, so it follows the file, with its runs. Without it the schedule
+// would be gone, its definition missing at every run.
+func Move(project, from, to string) error {
+	oldID, newID := ID(project, from), ID(project, to)
+	if oldID == newID {
+		return nil
+	}
+	moved := false
+	err := Update(func(ss []Schedule) ([]Schedule, error) {
+		at := -1
+		for i := range ss {
+			switch ss[i].ID {
+			case newID:
+				return ss, nil // the new file has a schedule of its own
+			case oldID:
+				at = i
+			}
+		}
+		if at >= 0 {
+			ss[at].ID, ss[at].File, moved = newID, to, true
+		}
+		return ss, nil
+	})
+	if err != nil || !moved {
+		return err
+	}
+	// Its runs, unless one goes on (it writes where it started).
+	if l, err := lock(oldID); err == nil {
+		defer l.Close()
+		if _, err := os.Stat(Dir(newID)); os.IsNotExist(err) {
+			return os.Rename(Dir(oldID), Dir(newID))
+		}
+	}
+	return nil
+}
+
 // Remove deletes the schedule with id and its runs.
 func Remove(id string) error {
 	err := Update(func(ss []Schedule) ([]Schedule, error) {
