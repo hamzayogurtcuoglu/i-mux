@@ -143,6 +143,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D63 | **The explorer's title has VS Code's buttons, and its ⋯ shows hidden files** (added 2026-11-13, v0.53, at the user's request): New File…, New Folder…, Refresh Explorer and Collapse Folders are buttons in the Files view's title, as in VS Code's explorer, with ⋯ (More Actions) after them; its menu holds Go to File… and **Show Hidden Files** (✓ while on; `[explorer] show_hidden`, off by default). The button under the pointer shows its label in the title. Go to File keeps its button only where the title has room; Search has none there (v0.53.1: the rail's 🔍 opens it). With hidden files shown, names starting with a dot (`.github`, `.gitlab-ci.yml`, `.vscode`, `.env`) show in the explorer, and search and Go to File look into hidden folders outside git repositories too; `.git`, `.svn`, `.hg`, `CVS`, `.DS_Store`, `Thumbs.db` and the explorer's skip list (`node_modules` …) never show. | The user wanted his projects' dot files in the explorer, and VS Code's title actions. Hidden stays the default, so a tree keeps its look until asked, and with the setting off nothing changes: search and Go to File keep finding what they found before (git's list has the dot files it tracks, such as `.github/…`). Six buttons and a title do not fit the default 43 columns everywhere, so VS Code's four and ⋯ come first and Go to File goes into ⋯ when there is no room, as VS Code's toolbars overflow; the rail already has Search, so the title does not repeat it (the user's request). The setting is saved as Settings saves its rows, so it survives restarts and every sidebar follows at once. |
 | D64 | **The diff viewer marks the changes beside its scroll bar, as VS Code's diff editor does** (added 2026-11-13, v0.54, at the user's request): two lanes left of the pager's scroll bar map the whole file, red where lines were removed and green where lines were added (a line replaced has both); a click on a mark goes to that change, `]` and `[` go to the next and previous one, around the ends, and the bottom row says which ("change 2 of 5"). The whole file stays, as before (D26). | The user had to scroll through a whole file to find its changes; VS Code's diff editor shows where they are beside the scroll bar and goes there on a click. Two lanes, as VS Code's diff overview ruler has, say removed and added apart without a third color, and side by side a replaced line shows in both. |
 | D65 | **The commit message is typed in a box above Commit, as in VS Code; the ✨ agent-written messages are gone** (added 2026-11-13, v0.55, at the user's request; undoes D29): the Git view has VS Code's message box between the branch row and the Commit button. A click (or Enter on it) puts the cursor in it; what is typed is the message (it wraps and grows to six rows); Enter commits, Ctrl+J or Alt+Enter starts a new line, Esc leaves it. Commit and the commit items of ▾ and ⋯ take its message; with none, the box asks for one (its hint names the command) instead of the command prompt. While it is written the message is kept per project in `~/.imux/commit/`, so every sidebar of the project shows it and a restart keeps it; a commit made with it removes it. ✨, `[git] commit_agent` and `commit_model` (ignored when an old config still has them), the Settings row "Commit messages by" and `internal/commitmsg` are removed. | The user found the prompt at the bottom of the screen awkward and asked for VS Code's box, where the message is written in place, and asked to remove the AI commit messages. A file, not a tmux option, holds the message: it reaches `imux __git commit` without going through a command line (D58), outlives the sidebar's restart on an upgrade, and is shared by a project's sidebars as VS Code shares a repository's input. |
+| D66 | **Fixes from the codebase audit: skills are managed from Jobs, every Jobs row has ⋯, the keyboard scrolls the sidebar's lists, and a broken config does not stop the watcher** (added 2026-11-14, v0.56, at the user's request; refines D62): the Jobs view gets the Skills view's authoring back, **✨ New skill…** in its title (a right-click on its title or empty space offers New skill… and Blank SKILL.md…), a skill with a front-matter problem is marked `⚠` with the problem under its name, and a skill's ⋯ menu adds **Add to Agent**, **Improve with Agent**, **Share with all agents** (when it is not shared) and **Delete skill…**; ⋯ shows on every row, not only once an item has a schedule or ran; the removed Skills view's code goes. ↑/↓ (j/k, Tab) scroll the Explorer, Source Control and Jobs lists when the selection reaches the edge of what is shown, and the wheel stops at the end of a list. A `config.toml` saved with an error leaves the watcher running with the config it has (the error goes to `watch.log`). Every git path i-mux reads is UTF-8 and unquoted (`-z`, `core.quotePath=false`), and the diff viewer and search take no git lock. | After v0.52 removed the Skills tab, New skill, the validation marks and a skill's actions could not be reached any more; Jobs already lists the skills, so they belong there. An item without a schedule had no visible menu, only a right-click nobody knew of. The keyboard could only reach the rows on screen, and the wheel scrolled past the end so that scrolling back up did nothing at first. A typo saved in the config made the restarted watcher exit until the next imux command. Paths with non-ASCII letters (Turkish ones) showed `+0 -0` and lost their git colors because git quoted them. |
 
 ## 4. Components
 
@@ -1445,6 +1446,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   turned off, while `[tmux] sidebar` is on. A window missing one in two checks in a row (so a new
   tab, whose sidebar comes a moment later, is never doubled) gets it back (`imux sidebar on`).
   The watcher itself restarts on the next client attach or imux command.
+- **A broken config** (v0.56, D66): the watcher restarts when `config.toml` changes, but only once
+  the new one loads; one saved with an error is logged to `watch.log` and the watcher goes on
+  with the config it has, until the file is saved again.
 - **Installing a build:** `make install-local` builds and replaces `~/.local/bin/imux` the safe
   way (a new file, then `mv`); never `cp` or `go build -o` onto a running binary (CONTRIBUTING,
   AGENTS.md).
@@ -1786,6 +1790,13 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 - **Where:** the sidebar's Explorer, Source Control and Skills lists (`scrolled`: the bar is a cell
   whose action is `ActScroll`; the keyboard skips it); search; Go to File; the folder picker; the
   pager. A click on the bar scrolls there; in the pager a drag too (mouse mode 1002).
+- **The sidebar's lists and the keyboard** (v0.56, D66): `Render` reports the list it scrolled
+  (`Screen.List`: its first row on screen, the rows shown, the top row, the list's length). The
+  wheel moves the top three rows at a time between the first row and the last page, from the top
+  the list was drawn with, so scrolling back up moves at once. ↑/↓ (j/k, Tab, Shift+Tab) on a
+  list row go to the next row of the list on screen; at the edge of what is shown the list
+  scrolls a row and the selection follows into it; at the list's end the selection goes on
+  around the screen as before.
 - **The pager** (`internal/pager`, the diff, file, commit and limits viewers): a fixed header (the
   diff's file name and counts), the text, a footer with where you are ("31–45 of 120 (37%)") and
   the keys. ↑↓ j k Enter a line; PgUp PgDn space b f a page; Home End g G; ←→ h l eight columns
@@ -2023,8 +2034,9 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 
 #### Skills (v0.36, D32; the New skill dialog v0.37, D33)
 
-- **Where:** **🧩 Skills** on the activity rail (Nerd Font: `extensions` U+EAE6; key `5` in the
-  sidebar), view `skills`.
+- **Where:** since v0.56 (D66) in the ⏰ **Jobs** view: its title's ✨, its SKILLS rows (`⚠` and
+  the problem) and a skill's ⋯ menu. Until v0.52 a **🧩 Skills** view of its own on the rail;
+  its code is gone, and a sidebar left in it opens Jobs.
 - **Discovery and sharing:** `internal/skills` scans the project's skill folders from the git root
   (`.agents/skills`, `.claude/skills`, `.github/skills`, `.opencode/skills`, `.opencode/skill`,
   `.agent/skills`, `.codex/skills`). Canonical project skills live in `.agents/skills/<name>/SKILL.md`
@@ -2356,7 +2368,7 @@ what they do as they do it. The user writes nothing: what to do is in the agent 
 written (in the agent CLIs, or by hand; i-mux does not write agents).
 
 ```
- SCHEDULER · scc                         🔄
+ JOBS · scc                           ✨  🔄
  ▾ SCHEDULED  2
    ✻  sim-tag                      🚀  ⋯
      every 5 min · Claude · haiku → 12:10
@@ -2367,11 +2379,13 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
  ▾ AGENTS  2
    ◉  by-hand                      🚀  ⋯
      · 11:58 nothing new
-   ✻  release-helper  personal        🚀
+   ✻  release-helper  personal     🚀  ⋯
      Prepares a release
- ▾ SKILLS  1
-   🧩 release-notes                   🚀
+ ▾ SKILLS  2
+   🧩 release-notes                🚀  ⋯
      Writes release notes
+   🧩 Broken                       🚀  ⋯
+     ⚠ the name must match the folder
 ```
 
 - **What it lists** (the project root, as Skills): agents from `.claude/agents/*.md` (Claude
@@ -2382,8 +2396,11 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
   model and, on the right, its next run; under them the run going on, or the last run's state
   and first line (the news gets the row's whole width). The others stay among AGENTS and
   SKILLS, under their name their run going on or their last run (one run by hand), else their
-  description. With nothing scheduled a hint says what 🚀 does; an empty view says where
-  definitions go. Key `6` opens the view.
+  description; a skill with a front-matter problem (as the Skills view checked it, §
+  "Skills") has `⚠` and the problem in yellow instead (v0.56, D66). With nothing scheduled a hint
+  says what 🚀 does; an empty view says where definitions go. Key `5` opens the view.
+- **Skills from Jobs** (v0.56, D66): **✨** in the title opens the New skill dialog (§ "Skills");
+  a right-click on the title or the view's empty space offers New skill… and Blank SKILL.md….
 - **🚀: the Run panel** (one popup, no chain of menus, no form): everything is chosen already,
   and Enter runs it.
 
@@ -2466,8 +2483,12 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
 - **The item menu** (⋯ or right-click): Run… (the panel) / Stop, Output, History… (a Quick Pick
   of the runs), Continue in a pane (`imux split <cli> --from-session` for a run with a
   session), Schedule… or Change schedule… (the panel at its time), Pause / Resume, Open
-  definition, Remove schedule… or Forget runs… (asked first; its runs go too). 🚀 on an item
-  opens the panel, 🛑 stops its run, a click shows its output (the panel before its first run).
+  definition, Remove schedule… or Forget runs… (asked first; its runs go too); for a skill then
+  Add to Agent, Improve with Agent, Share with all agents (when it is not in `.agents/skills`
+  and linked) and Delete skill… (`imux __auto skill <op> <id>` sets the `@imux_skill*` options
+  and runs `imux __skill <op>`, v0.56, D66). Every row has ⋯ (v0.56; before, only one with a
+  schedule or a run had it). 🚀 on an item opens the panel, 🛑 stops its run, a click shows its
+  output (the panel before its first run).
 - **The rail's badge** counts the runs going on, as the Agents icon counts working agents.
 - Menu commands carry no names or paths (D58): a definition is a 12-hex-digit id (a hash of the
   project and the file) and the project is in `@imux_auto_cwd`. `imux __auto`: `run <id>
