@@ -148,6 +148,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D68 | **Color themes, and light/dark following the terminal** (added 2026-11-14, v0.58, at the user's request): every color i-mux draws comes from one palette of named colors (`accent`, `panel_bg`, `sidebar_bg`, `active_row_bg`, `selection_bg`, `surface0`, `surface1`, `surface_dim`, `overlay0`, `overlay1`, `text`, `subtext0`, `mauve`, `green`, `yellow`, `red`, `blue`, `teal`, `peach`): the sidebar, the pager and diff viewer, the menus, Quick Picks and popups, and tmux's tab bar, borders, messages and popups. `[theme] name` picks one of 18 built-in themes (default `catppuccin`, Catppuccin Mocha; `terminal` uses the terminal's own ANSI colors), `[theme.custom]` overrides single colors, and `auto_switch` follows the terminal's light or dark background with `light_name` / `dark_name` (each a theme's light or dark sibling when unset), with `[theme.custom.light]` / `[theme.custom.dark]` on top. Settings has a Theme row (choosing one there turns `auto_switch` off) and a row for following the terminal. | i-mux's colors were fixed 256-color codes for a dark terminal: on a light one its gray text and dark bars were hard to read, and nothing could be changed. One palette with well-known themes, the terminal's own colors among them, keeps every part of the UI in step. |
 | D69 | **Themes reviewed: i-mux's own look is the default again, and every theme reads on any terminal** (added 2026-11-14, v0.58.1, at the user's request; refines D68): a theme named `i-mux` is the look from before themes, exactly, and the default; the panes i-mux draws are on the theme's own background and text color, painted by the pane itself; built-in themes are adjusted until text, secondary text, hints and state colors keep their contrast on every background i-mux draws them on (WCAG AA for text); `terminal` draws what is quieter in bright black. | With the terminal's background showing through, a dark theme's near-white text was invisible on a light terminal, and a light theme's dark text on a dark one; some schemes' own colors (Tokyo Night Day's blue text, Solarized Light's and Kanagawa Lotus's faint selection) did not read on their own backgrounds; `terminal`'s gray hints vanished on a light terminal; and Catppuccin as the default changed everyone's look unasked. |
 | D70 | **A theme colors the whole window, the agents' panes too** (added 2026-11-14, v0.58.2, at the user's request; refines D68 and D69): with a theme on its own colors every pane is on the theme's panel and text color and its programs get the theme's 16 colors, as a terminal theme does; the borders are on the same panel. Following the terminal's light or dark live takes tmux 3.6+'s hooks, as a pane's OSC 11 question is then answered with the theme's background. | With only the sidebar and the tab bar in the theme, a light theme on a dark terminal split the window in two: a light sidebar beside dark agents. |
+| D71 | **Agents report their state through hooks** (added 2026-11-14, v0.59, at the user's request; the roadmap's "native agent hooks"): i-mux starts Claude Code with hooks (its `--settings` file, beside the status line) and Codex with a `notify` program (`-c notify=…`, unless the user's config has one), all running `imux __hook <agent>`, which writes the pane's `@imux_hook` (working, blocked, idle) and `@imux_hook_at`; the watcher takes it over its reading of the screen, which stays the fallback for every other agent and for what a hook does not say. Claude's hooks also tell the session it writes, so the pane's trail follows `/clear` and forks. The user's own settings files are not changed. `[hooks] enabled` (on) and a Settings row turn them off. | Reading the screen guessed: a redraw looked like work, a reworded prompt was missed, and "done" came a few seconds late. An agent that says what it does is exact. A terminal status escape (OSC 7501) cannot reach i-mux: tmux drops OSC sequences it does not know, so hooks call i-mux directly instead. After `/clear` the trail kept the session Claude was started with, and a handoff took the old conversation. |
 
 ## 4. Components
 
@@ -1618,6 +1619,33 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   one sets `theme.name` and turns `auto_switch` off, as manual selection does), and **Follow the
   terminal's light/dark: Off** turns `auto_switch` on or off. It applies at once: popups read the
   config when they start, sidebars when it changes, and the watcher regenerates tmux's config.
+
+#### Agent hooks (v0.59, D71)
+
+- **Launch:** with `[hooks] enabled` (the default), Claude Code's `--settings` file
+  (`~/.imux/claude-settings.json`, which also holds the status line) has hooks for
+  `SessionStart`, `UserPromptSubmit`, `Notification`, `Stop` and `SessionEnd`, each the command
+  `'<imux>' __hook claude`; Codex gets `-c notify=["<imux>","__hook","codex"]` unless its own
+  `config.toml` (in `$CODEX_HOME`, else `~/.codex`) has a `notify`. Nothing is written into the
+  agents' own settings; a new or resumed run picks the setting up. No hook on every tool call:
+  each one makes the agent wait for it.
+- **`imux __hook <agent>`** reads Claude's event (JSON on stdin) or Codex's (the last
+  argument), finds its pane by `IMUX_PANE` (only i-mux's runs have it; the pane's `@imux_agent`
+  must be that agent), writes `@imux_hook` and `@imux_hook_at` (unix ms) and prints nothing (a
+  hook's output can reach the agent). `UserPromptSubmit` is working; `Notification` asking for a
+  permission or an answer (`permission_prompt`, `elicitation_dialog`, or a message about
+  permission) is blocked; `Stop`, `SessionStart`, `SessionEnd` and Claude's 60-second
+  `idle_prompt` are idle; Codex's `agent-turn-complete` is idle. It always exits 0.
+- **Sessions:** on `SessionStart` and `UserPromptSubmit` Claude's `session_id` and
+  `transcript_path` become the pane's current trail entry's id and file (unless a switch holds
+  the pane): after `/clear` or a fork, a handoff takes the conversation Claude writes now.
+- **The watcher** reads `@imux_hook` with each pane (a hook older than the run is ignored) and
+  lets it decide: blocked is "Needs you" at once; idle ends the work at once (Done) — unless the
+  screen shows the agent's busy line (D55), which wins in both cases (a permission granted, a
+  new turn Codex does not report); working counts while the busy line shows or for 3 s after
+  the hook, so a turn the user interrupted (Claude runs no hook then) ends as before. Panes
+  without hooks, and all other agents, are read from the screen as before (D38, D55).
+- **Settings:** **Agent states from hooks: On** turns `hooks.enabled` off or on.
 
 #### AI completion in the editor (v0.25, D30)
 
