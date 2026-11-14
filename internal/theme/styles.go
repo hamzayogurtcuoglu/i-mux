@@ -56,6 +56,19 @@ func OnColor(c Color) string {
 
 // StylesOf are p's escapes.
 func StylesOf(p Palette) Styles {
+	s := stylesOf(p)
+	if p.Classic {
+		// i-mux's own look: the editor's selection blue with white, bold
+		// light blue for typed letters, a brown highlight for matches.
+		s.Selected = "\x1b[48;5;24m\x1b[38;5;255m"
+		s.Match = "\x1b[1m\x1b[38;5;117m"
+		s.Hit = "\x1b[48;5;94m\x1b[38;5;230m"
+		s.AccentBg = "\x1b[48;5;24m\x1b[38;5;255m"
+	}
+	return s
+}
+
+func stylesOf(p Palette) Styles {
 	return Styles{
 		Text:      p.Text.Fg(),
 		Title:     "\x1b[1m" + p.Text.Fg(),
@@ -75,9 +88,9 @@ func StylesOf(p Palette) Styles {
 		SelBg:     p.SelectionBg.Bg(),
 		ActiveBg:  p.ActiveRowBg.Bg(),
 		Pill:      p.Surface1.Bg() + p.Text.Fg(),
-		Hit:       Tint(p, p.Yellow, 0.35, "\x1b[48;5;94m") + p.Text.Fg(),
-		RedBg:     Tint(p, p.Red, 0.22, "\x1b[48;5;52m"),
-		GreenBg:   Tint(p, p.Green, 0.22, "\x1b[48;5;22m"),
+		Hit:       tintFor(p, p.Yellow, 0.35, "\x1b[48;5;94m", need{p.Text, 4.5}) + p.Text.Fg(),
+		RedBg:     tintFor(p, p.Red, 0.22, "\x1b[48;5;52m", need{p.Text, 4.5}, need{p.Red, 2.5}),
+		GreenBg:   tintFor(p, p.Green, 0.22, "\x1b[48;5;22m", need{p.Text, 4.5}, need{p.Green, 2.5}),
 		EmptyBg:   p.SurfaceDim.Bg(),
 		OnAccent:  OnColor(p.Accent),
 		AccentBg:  p.Accent.Bg() + OnColor(p.Accent),
@@ -87,3 +100,34 @@ func StylesOf(p Palette) Styles {
 
 // S are the current palette's styles.
 func S() Styles { return StylesOf(Current()) }
+
+// PaneBase is what a pane i-mux draws (the sidebar, the "No agents" pane)
+// starts each row with: the theme's background and text color, so every
+// row reads whatever the terminal's own background is; "" for a theme on
+// the terminal's colors (i-mux, terminal). The pane paints it itself, not
+// with a tmux style: tmux answers a pane's OSC 11 question with the pane's
+// style when it has one, not with the terminal's background.
+func PaneBase(p Palette) (base, fg, bg string) {
+	b := p.SidebarBg
+	if b.IsReset() {
+		b = p.PanelBg
+	}
+	if b.IsReset() || p.Classic {
+		return "", "", ""
+	}
+	fg = "\x1b[39m"
+	if !p.Text.IsReset() {
+		fg = p.Text.Fg()
+	}
+	return b.Bg() + fg, fg, b.Bg()
+}
+
+// HoverBg is the background of the item under the pointer: halfway from
+// the current row's to the selection's, so it is never taken for the
+// selection; surface1 on 256 or ANSI colors.
+func HoverBg(p Palette) Color {
+	if p.ActiveRowBg.IsRGB() && p.SelectionBg.IsRGB() {
+		return Blend(p.ActiveRowBg, p.SelectionBg, 0.5)
+	}
+	return p.Surface1
+}

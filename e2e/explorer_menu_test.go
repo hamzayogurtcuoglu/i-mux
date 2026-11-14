@@ -408,5 +408,5 @@ func TestExplorerTitle(t *testing.T) {
 func hoverAndSelection() (hover, sel string) {
 	p := theme.Builtin(theme.Default)
 	bg := func(c theme.Color) string { return strings.TrimPrefix(c.Bg(), "\x1b[") }
-	return bg(theme.Blend(p.ActiveRowBg, p.SelectionBg, 0.5)), bg(p.SelectionBg)
+	return bg(theme.HoverBg(p)), bg(p.SelectionBg)
 }

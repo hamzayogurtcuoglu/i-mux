@@ -34,6 +34,15 @@ func TestParseTerminalReplies(t *testing.T) {
 func TestPaletteColors(t *testing.T) {
 	defer theme.Set(theme.Builtin(theme.Default))
 	m := model()
+	// The default: i-mux's colors before themes, exactly.
+	var classic strings.Builder
+	for _, l := range Render(m, 41, 20, NoItem).Lines {
+		classic.WriteString(l.Text)
+	}
+	if c := classic.String(); !strings.Contains(c, "\x1b[1m\x1b[38;5;252m") || !strings.Contains(c, "\x1b[38;5;247m") || strings.Contains(c, "\x1b[38;2;") {
+		t.Errorf("not the classic colors:\n%q", c)
+	}
+	theme.Set(theme.Builtin("catppuccin"))
 	text := func() string {
 		var b strings.Builder
 		for _, l := range Render(m, 41, 20, NoItem).Lines {

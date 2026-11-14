@@ -6,6 +6,28 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.58.1] - 2026-11-14
+
+### Changed
+
+- **i-mux's own look is the default theme again.** A theme named **i-mux** has the colors from
+  before themes, exactly, and leaves tmux's own borders, menus and messages; the other 18 themes
+  are a choice in Settings → **Theme**. With **Follow the terminal's light/dark** on, i-mux uses
+  Catppuccin Latte on a light terminal.
+
+### Fixed
+
+- **Text that could not be read in some themes.** A dark theme's light text sat on a light
+  terminal's white background (and a light theme's dark text on a dark one), so it showed only
+  under the pointer or on the selected row. The sidebar and the "No agents" pane are now drawn on
+  the theme's own background and text color.
+- **Themes whose own colors did not read.** Tokyo Night Day's text, the selection in Solarized
+  Light and Kanagawa Lotus, search matches and the diff's lines in some themes were too faint;
+  every built-in theme now keeps readable contrast on every background i-mux draws it on (a test
+  checks each one). The Terminal theme's hints are bright black, which reads on light terminals.
+- **Following the terminal's light/dark with tmux 3.4 and 3.5.** The answer to the sidebar's
+  background question is the terminal's again, not the sidebar's own color.
+
 ## [0.58.0] - 2026-11-14
 
 ### Added

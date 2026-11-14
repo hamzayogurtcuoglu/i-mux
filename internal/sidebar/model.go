@@ -67,6 +67,15 @@ func TabState(panes []PaneRow) string {
 		return ""
 	}
 	p := theme.Current() // the option keeps a color, not a format (D68)
+	if p.Classic {
+		switch {
+		case st.State == StateBlocked:
+			return "#[fg=colour214]!"
+		case st.Limited != "":
+			return "#[fg=colour203]◆"
+		}
+		return "#[fg=colour75]●"
+	}
 	switch {
 	case st.State == StateBlocked:
 		return "#[fg=" + p.Yellow.Tmux() + "]!"

@@ -85,11 +85,12 @@ right there. It says what an older tmux lacks and how to get a newer one on your
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
 
-**Themes:** the sidebar, popups, menus and tab bar take their colors from a theme: Catppuccin (the
-default), Catppuccin Latte, Tokyo Night (and Day), Dracula, Nord, Gruvbox (and Light), One Dark and
+**Themes:** the sidebar, popups, menus and tab bar take their colors from a theme: i-mux (its own
+colors, the default), Catppuccin, Catppuccin Latte, Tokyo Night (and Day), Dracula, Nord, Gruvbox (and Light), One Dark and
 One Light, Solarized (and Light), Kanagawa (and Lotus), Rosé Pine (and Dawn), Vesper, or Terminal
 (your terminal's own colors). Settings → **Theme** picks one; **Follow the terminal's light/dark**
-switches between a theme's light and dark versions when your terminal does. Single colors can be
+switches between a theme's light and dark versions when your terminal does. A theme draws the
+sidebar on its own background, so it reads on any terminal; your agents' panes keep their colors. Single colors can be
 changed in `[theme.custom]` (see [docs/CONFIG.md](docs/CONFIG.md)).
 
 **Web pages, live:** a click on an HTML file in the explorer asks how to open it: **Open in

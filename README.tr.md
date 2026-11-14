@@ -82,10 +82,12 @@ Copilot eklentili Neovim'inde açılır (Tab
 GitHub Copilot'a bir kez giriş yaptırır.
 
 **Temalar:** kenar panel, açılır pencereler, menüler ve sekme çubuğu renklerini bir temadan alır:
-Catppuccin (varsayılan), Catppuccin Latte, Tokyo Night (ve Day), Dracula, Nord, Gruvbox (ve Light),
+i-mux (kendi renkleri, varsayılan), Catppuccin, Catppuccin Latte, Tokyo Night (ve Day), Dracula, Nord, Gruvbox (ve Light),
 One Dark ve One Light, Solarized (ve Light), Kanagawa (ve Lotus), Rosé Pine (ve Dawn), Vesper ya da
 Terminal (terminalinin kendi renkleri). Ayarlar → **Tema** birini seçer; **Terminalin açık/koyu
-moduna uy**, terminalin açık ya da koyuya geçince temanın açık ve koyu sürümleri arasında geçer. Tek
+moduna uy**, terminalin açık ya da koyuya geçince temanın açık ve koyu sürümleri arasında geçer.
+Tema kenar paneli kendi arka planında çizer, böylece her terminalde okunur; ajanlarının panelleri
+kendi renklerini korur. Tek
 tek renkler `[theme.custom]` içinde değiştirilebilir (bkz. [docs/CONFIG.md](docs/CONFIG.md)).
 
 **Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca nasıl açılacağını sorar: **Tarayıcıda

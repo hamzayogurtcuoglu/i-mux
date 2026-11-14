@@ -5,10 +5,11 @@ import (
 	"testing"
 )
 
-// TestBuiltins (T73.1): 18 themes, each with all 19 colors, a title, and a
-// dark or light look that matches its kind; the default is Catppuccin Mocha.
+// TestBuiltins (T73.1): 19 themes, each with all 19 colors, a title, and a
+// dark or light look that matches its kind; the default is i-mux's own
+// look from before themes.
 func TestBuiltins(t *testing.T) {
-	if len(Names) != 18 || len(builtins) != 18 || len(Titles) != 18 {
+	if len(Names) != 19 || len(builtins) != 19 || len(Titles) != 19 {
 		t.Fatalf("%d names, %d palettes, %d titles", len(Names), len(builtins), len(Titles))
 	}
 	for _, n := range Names {
@@ -19,7 +20,7 @@ func TestBuiltins(t *testing.T) {
 		if !p.SidebarBg.IsReset() {
 			t.Errorf("%s: sidebar_bg is not the terminal's", n)
 		}
-		if n == "terminal" {
+		if n == "terminal" || n == "i-mux" {
 			continue
 		}
 		for _, tok := range Tokens {
@@ -33,10 +34,15 @@ func TestBuiltins(t *testing.T) {
 			t.Errorf("%s: light %v, panel %s, text %s", n, IsLight(n), p.PanelBg.Tmux(), p.Text.Tmux())
 		}
 	}
-	if p := Builtin("nope"); p.Name != "catppuccin" || p.Accent.Tmux() != "#89b4fa" || p.PanelBg.Tmux() != "#181825" {
+	// The default: i-mux's 256 colors as before themes, on the terminal's
+	// background, leaving tmux's styles alone.
+	if p := Builtin("nope"); p.Name != "i-mux" || !p.Classic || p.Accent.Fg() != "\x1b[36m" || p.Subtext0.Fg() != "\x1b[38;5;247m" ||
+		p.SelectionBg.Bg() != "\x1b[48;5;24m" || !p.PanelBg.IsReset() || p.Text.Tmux() != "colour252" {
 		t.Errorf("default %+v", p)
 	}
-	if p := Builtin("terminal"); p.Accent.Tmux() != "blue" || p.Red.Tmux() != "brightred" || !p.Text.IsReset() {
+	// The terminal's own colors; what is quieter in dark gray, which reads
+	// on light and dark terminals.
+	if p := Builtin("terminal"); p.Accent.Tmux() != "blue" || p.Subtext0.Tmux() != "brightblack" || p.Overlay1.Tmux() != "brightblack" || !p.Text.IsReset() {
 		t.Errorf("terminal %+v", p)
 	}
 }
@@ -120,7 +126,7 @@ func TestResolve(t *testing.T) {
 	if p := Resolve(c, AppearanceLight); p.Name != "tokyo-night" || p.Accent.Tmux() != "#a6e3a1" || p.Text.Tmux() != "#ffffff" {
 		t.Errorf("fixed theme, light terminal: %s %s %s", p.Name, p.Accent.Tmux(), p.Text.Tmux())
 	}
-	if p := Resolve(Config{Name: "latte", Custom: c.Custom}, AppearanceDark); p.Accent.Tmux() != "red" || p.Text.Tmux() != "#4c4f69" {
+	if p := Resolve(Config{Name: "latte", Custom: c.Custom}, AppearanceDark); p.Accent.Tmux() != "red" || p.Text != Builtin("catppuccin-latte").Text {
 		t.Errorf("fixed light theme: %s %s", p.Accent.Tmux(), p.Text.Tmux())
 	}
 	c.AutoSwitch = true
@@ -144,7 +150,7 @@ func TestCheck(t *testing.T) {
 	c := Config{Name: "nope", LightName: "Latte"}
 	c.Custom.Light.Red = "#12"
 	w, key, err := c.Check()
-	if len(w) != 1 || !strings.Contains(w[0], `theme.name = "nope"; using "catppuccin"`) || key != "theme.custom.light.red" || err == nil {
+	if len(w) != 1 || !strings.Contains(w[0], `theme.name = "nope"; using "i-mux"`) || key != "theme.custom.light.red" || err == nil {
 		t.Errorf("%q %q %v", w, key, err)
 	}
 	if w, key, err := (Config{Name: "dracula"}).Check(); len(w) != 0 || key != "" || err != nil {
@@ -161,10 +167,10 @@ func TestWatch(t *testing.T) {
 	if Set(Builtin("nord")) != true || Set(Builtin("nord")) != false {
 		t.Error("Set's report")
 	}
-	if strings.Join(got, ",") != "catppuccin,nord" {
+	if strings.Join(got, ",") != "i-mux,nord" {
 		t.Errorf("watched %v", got)
 	}
-	if s := S(); s.Accent != Hex("#88c0d0").Fg() || !strings.HasPrefix(s.Title, "\x1b[1m") {
+	if s := S(); s.Accent != Builtin("nord").Accent.Fg() || !strings.HasPrefix(s.Title, "\x1b[1m") {
 		t.Errorf("styles %q", s.Accent)
 	}
 }

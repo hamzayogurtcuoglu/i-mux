@@ -20,10 +20,30 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 	var out []Cmd
 	for _, t := range theme.Tokens {
 		c, _ := p.Get(t)
-		out = append(out, Cmd{"set-option", "-g", ColorOpt(t), c.Tmux()})
+		v := c.Tmux()
+		if p.Classic {
+			// The tab bar's grays before themes (only it reads these).
+			switch t {
+			case "subtext0":
+				v = "colour245"
+			case "text":
+				v = "colour255"
+			}
+		}
+		out = append(out, Cmd{"set-option", "-g", ColorOpt(t), v})
 	}
 	style := func(opt, s string) { out = append(out, Cmd{"set-option", "-g", opt, s}) }
-	style("status-style", "bg=default,fg="+p.Subtext0.Tmux())
+	if p.Classic {
+		// i-mux's look before themes: the tab bar's gray, tmux's own
+		// borders, messages, popups and menus.
+		style("status-style", "bg=default,fg=colour245")
+		for _, o := range classicUnset(v) {
+			out = append(out, Cmd{"set-option", "-gu", o})
+		}
+		return out
+	}
+	// The tab bar on the theme's panel, as the sidebar (theme.PaneBase).
+	style("status-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Subtext0.Tmux())
 	style("pane-border-style", "fg="+p.Surface1.Tmux())
 	style("pane-active-border-style", "fg="+p.Accent.Tmux())
 	style("message-style", "bg="+p.Surface0.Tmux()+",fg="+p.Text.Tmux())
@@ -37,6 +57,18 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 		style("menu-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Text.Tmux())
 		style("menu-selected-style", "bg="+p.SelectionBg.Tmux()+",fg="+p.Text.Tmux())
 		style("menu-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
+	}
+	return out
+}
+
+// classicUnset are the styles the i-mux theme leaves to tmux.
+func classicUnset(v Version) []string {
+	out := []string{"pane-border-style", "pane-active-border-style", "message-style", "message-command-style", "mode-style"}
+	if v.AtLeast(3, 3) {
+		out = append(out, "popup-style", "popup-border-style")
+	}
+	if v.AtLeast(3, 4) {
+		out = append(out, "menu-style", "menu-selected-style", "menu-border-style")
 	}
 	return out
 }

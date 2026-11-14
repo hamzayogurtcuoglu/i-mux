@@ -11,12 +11,14 @@ import (
 )
 
 // TestThemes (M73, D68): tmux and the sidebar draw with the theme
-// (Catppuccin Mocha by default); following the terminal, the sidebar's
-// OSC 11 answer of a white background turns everything to Catppuccin
-// Latte; a theme chosen in Settings applies at once.
+// (Catppuccin Mocha here), the sidebar on the theme's background and text
+// color, the agent's pane untouched; following the terminal, its white
+// background turns everything to Catppuccin Latte; a theme chosen in
+// Settings applies at once, and the i-mux theme puts back the look from
+// before themes.
 func TestThemes(t *testing.T) {
-	h := newH(t, sidebarConfig+"[theme]\nauto_switch = true\n")
-	_, bar := h.startWithSidebar()
+	h := newH(t, sidebarConfig+"[theme]\nname = \"catppuccin\"\nauto_switch = true\n")
+	agent, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
@@ -33,6 +35,16 @@ func TestThemes(t *testing.T) {
 	h.waitFor("the sidebar in Mocha's text color", 5*time.Second, func() bool {
 		return strings.Contains(colors(), "38;2;205;214;244") // #cdd6f4
 	})
+	// The sidebar paints Mocha's panel itself (a tmux style would make
+	// tmux answer OSC 11 with it); the agent's pane keeps its own colors.
+	h.waitFor("the sidebar on Mocha's panel", 5*time.Second, func() bool {
+		return strings.Contains(colors(), "48;2;24;24;37") // #181825
+	})
+	for _, p := range []string{agent, bar} {
+		if s := strings.TrimSpace(h.mustTmux("show-options", "-pqv", "-t", p, "window-style")); s != "" {
+			t.Fatalf("pane %s has a tmux style: %q", p, s)
+		}
+	}
 
 	// The terminal says its background is white: the answer to tmux's own
 	// OSC 11 query when the client attached. tmux then knows the client's
@@ -47,8 +59,8 @@ func TestThemes(t *testing.T) {
 	h.waitFor("light: Catppuccin Latte", 10*time.Second, func() bool {
 		return opt("@imux_appearance") == "light" && opt("@imux_c_accent") == "#1e66f5"
 	})
-	h.waitFor("the sidebar in Latte's text color", 5*time.Second, func() bool {
-		return strings.Contains(colors(), "38;2;76;79;105") // #4c4f69
+	h.waitFor("the sidebar on Latte's panel", 5*time.Second, func() bool {
+		return strings.Contains(colors(), "48;2;239;241;245") // #eff1f5
 	})
 
 	// Settings → Theme → Nord: tmux at once, and no more following.
@@ -58,5 +70,16 @@ func TestThemes(t *testing.T) {
 	}
 	h.waitFor("the sidebar in Nord's text color", 10*time.Second, func() bool {
 		return strings.Contains(colors(), "38;2;236;239;244") // #eceff4
+	})
+
+	// Settings → Theme → i-mux: the colors before themes, tmux's own
+	// borders and menus, the terminal's background.
+	h.mustImux("__settings", "set", "theme", "i-mux")
+	if a, b := opt("@imux_c_accent"), opt("pane-active-border-style"); a != "cyan" || strings.Contains(b, "#88c0d0") {
+		t.Fatalf("i-mux: accent %q, border %q", a, b)
+	}
+	h.waitFor("the sidebar in i-mux's colors on the terminal's background", 10*time.Second, func() bool {
+		c := colors()
+		return strings.Contains(c, "38;5;247") && !strings.Contains(c, "38;2;") && !strings.Contains(c, "48;2;")
 	})
 }

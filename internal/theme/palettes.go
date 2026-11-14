@@ -7,7 +7,10 @@ import (
 
 // Palette is a theme's 19 named colors (D68).
 type Palette struct {
-	Name        string
+	Name string
+	// Classic is the i-mux theme: i-mux's colors before themes, on the
+	// terminal's background, and tmux's own borders, menus and messages.
+	Classic     bool
 	Accent      Color // buttons, links, the focus mark, typed matches, the active border
 	PanelBg     Color // menus' and popups' background
 	SidebarBg   Color // the sidebar's background (reset: the terminal's)
@@ -55,19 +58,20 @@ func (p Palette) Get(token string) (Color, bool) {
 	return Color{}, false
 }
 
-// Default is the theme without a config: Catppuccin Mocha.
-const Default = "catppuccin"
+// Default is the theme without a config: i-mux's own colors, as before
+// themes.
+const Default = "i-mux"
 
 // Names are the built-in themes, dark ones next to their light siblings.
 var Names = []string{
-	"catppuccin", "catppuccin-latte", "terminal", "tokyo-night", "tokyo-night-day", "dracula", "nord",
+	"i-mux", "catppuccin", "catppuccin-latte", "terminal", "tokyo-night", "tokyo-night-day", "dracula", "nord",
 	"gruvbox", "gruvbox-light", "one-dark", "one-light", "solarized", "solarized-light", "kanagawa",
 	"kanagawa-lotus", "rose-pine", "rose-pine-dawn", "vesper",
 }
 
 // Titles are the themes' names as menus show them.
 var Titles = map[string]string{
-	"catppuccin": "Catppuccin", "catppuccin-latte": "Catppuccin Latte", "terminal": "Terminal",
+	"i-mux": "i-mux", "catppuccin": "Catppuccin", "catppuccin-latte": "Catppuccin Latte", "terminal": "Terminal",
 	"tokyo-night": "Tokyo Night", "tokyo-night-day": "Tokyo Night Day", "dracula": "Dracula", "nord": "Nord",
 	"gruvbox": "Gruvbox", "gruvbox-light": "Gruvbox Light", "one-dark": "One Dark", "one-light": "One Light",
 	"solarized": "Solarized", "solarized-light": "Solarized Light", "kanagawa": "Kanagawa",
@@ -76,6 +80,7 @@ var Titles = map[string]string{
 }
 
 var aliases = map[string]string{
+	"imux": "i-mux", "classic": "i-mux", "default": "i-mux",
 	"catppuccin-mocha": "catppuccin", "mocha": "catppuccin", "latte": "catppuccin-latte", "light": "catppuccin-latte",
 	"tokyonight": "tokyo-night", "tokyo-day": "tokyo-night-day", "tokyonight-day": "tokyo-night-day",
 	"gruvbox-dark": "gruvbox", "solarized-dark": "solarized", "onedark": "one-dark", "onelight": "one-light",
@@ -127,6 +132,9 @@ func IsLight(name string) bool {
 // LightOf and DarkOf are a theme's light and dark siblings (itself when it
 // has none, or is that one).
 func LightOf(name string) string {
+	if name == Default {
+		return "catppuccin-latte" // i-mux's own colors are for a dark terminal
+	}
 	if s, ok := siblings[name]; ok && !IsLight(name) {
 		return s
 	}
@@ -148,10 +156,11 @@ func Builtin(name string) Palette {
 		name = Default
 	}
 	cs := builtins[name]
-	p := Palette{Name: name}
+	p := Palette{Name: name, Classic: name == "i-mux"}
 	for i, c := range p.colors() {
 		*c = cs[i]
 	}
+	p.legible()
 	return p
 }
 
@@ -170,6 +179,10 @@ func row(vals ...string) []Color {
 			var n int
 			_, _ = fmt.Sscanf(v, "ansi:%d", &n)
 			out[i] = ANSI(n)
+		case strings.HasPrefix(v, "256:"):
+			var n int
+			_, _ = fmt.Sscanf(v, "256:%d", &n)
+			out[i] = Idx(n)
 		default:
 			out[i] = Hex(v)
 		}
@@ -183,13 +196,18 @@ func row(vals ...string) []Color {
 // peach. Each is its scheme's published palette (Catppuccin, Tokyo Night,
 // Gruvbox, One, Solarized, Kanagawa, Rosé Pine, Dracula, Nord, Vesper).
 var builtins = map[string][]Color{
+	// i-mux's colors before themes (256-color): cyan links, the editor's
+	// selection blue, grays for secondary text and hints.
+	"i-mux": row("ansi:6", "reset", "reset", "256:236", "256:24", "256:236", "256:238", "256:235",
+		"256:244", "256:245", "256:252", "256:247", "256:141", "ansi:2", "ansi:3", "ansi:1", "256:75", "256:152", "256:173"),
 	"catppuccin": row("#89b4fa", "#181825", "reset", "#1e1e2e", "#313244", "#313244", "#45475a", "#1e1e2e",
 		"#6c7086", "#7f849c", "#cdd6f4", "#a6adc8", "#cba6f7", "#a6e3a1", "#f9e2af", "#f38ba8", "#89b4fa", "#94e2d5", "#fab387"),
 	"catppuccin-latte": row("#1e66f5", "#eff1f5", "reset", "#e6e9ef", "#bdd0f5", "#ccd0da", "#bcc0cc", "#e6e9ef",
 		"#9ca0b0", "#8c8fa1", "#4c4f69", "#6c6f85", "#8839ef", "#40a02b", "#df8e1d", "#d20f39", "#1e66f5", "#179299", "#fe640b"),
-	// The terminal's own colors: ANSI blue, dark gray, gray…
+	// The terminal's own colors: ANSI blue, and dark gray (bright black)
+	// for what is quieter, which reads on light and dark terminals alike.
 	"terminal": row("ansi:4", "reset", "reset", "ansi:8", "ansi:8", "ansi:8", "ansi:8", "ansi:8",
-		"ansi:7", "ansi:15", "reset", "ansi:7", "ansi:5", "ansi:2", "ansi:3", "ansi:9", "ansi:4", "ansi:6", "ansi:3"),
+		"ansi:8", "ansi:8", "reset", "ansi:8", "ansi:5", "ansi:2", "ansi:3", "ansi:1", "ansi:4", "ansi:6", "ansi:3"),
 	"tokyo-night": row("#7aa2f7", "#1a1b26", "reset", "#232636", "#2d3650", "#24283b", "#414868", "#1a1b26",
 		"#565f89", "#697196", "#c0caf5", "#a9b1d6", "#bb9af7", "#9ece6a", "#e0af68", "#f7768e", "#7aa2f7", "#7dcfff", "#ff9e64"),
 	"tokyo-night-day": row("#2e7de9", "#e1e2e7", "reset", "#d2d3da", "#b6cae7", "#c4c8da", "#a8aecb", "#d2d3da",

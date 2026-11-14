@@ -70,7 +70,7 @@ line number.
 | `tmux.agent_bar` | `false` | Clickable agent bar (second status line), the older alternative to the sidebar. |
 | `tmux.mouse` | `true` | Mouse support (clicks on the agent bar, pane borders and menus). |
 | `tmux.history_limit` | `50000` | Scrollback lines kept per pane. |
-| `theme.name` | `"catppuccin"` | The colors of the sidebar, popups, menus and tab bar: catppuccin, catppuccin-latte, terminal (the terminal's own colors), tokyo-night, tokyo-night-day, dracula, nord, gruvbox, gruvbox-light, one-dark, one-light, solarized, solarized-light, kanagawa, kanagawa-lotus, rose-pine, rose-pine-dawn, vesper. Settings (⚙) → Theme picks one. |
+| `theme.name` | `"i-mux"` | The colors of the sidebar, popups, menus and tab bar: i-mux (its own colors, on the terminal's background), catppuccin, catppuccin-latte, terminal (the terminal's own colors), tokyo-night, tokyo-night-day, dracula, nord, gruvbox, gruvbox-light, one-dark, one-light, solarized, solarized-light, kanagawa, kanagawa-lotus, rose-pine, rose-pine-dawn, vesper. Settings (⚙) → Theme picks one. |
 | `theme.auto_switch` | `false` | Follow the terminal's light or dark background: light_name on a light one, dark_name on a dark one ("" = name's light or dark sibling, e.g. catppuccin-latte). |
 | `theme.light_name` | `""` |  |
 | `theme.dark_name` | `""` |  |
@@ -295,11 +295,12 @@ mouse             = true
 history_limit     = 50000
 
 [theme]
-# The colors of the sidebar, popups, menus and tab bar: catppuccin, catppuccin-latte,
-# terminal (the terminal's own colors), tokyo-night, tokyo-night-day, dracula, nord,
-# gruvbox, gruvbox-light, one-dark, one-light, solarized, solarized-light, kanagawa,
-# kanagawa-lotus, rose-pine, rose-pine-dawn, vesper. Settings (⚙) → Theme picks one.
-name        = "catppuccin"
+# The colors of the sidebar, popups, menus and tab bar: i-mux (its own colors, on the
+# terminal's background), catppuccin, catppuccin-latte, terminal (the terminal's own
+# colors), tokyo-night, tokyo-night-day, dracula, nord, gruvbox, gruvbox-light,
+# one-dark, one-light, solarized, solarized-light, kanagawa, kanagawa-lotus,
+# rose-pine, rose-pine-dawn, vesper. Settings (⚙) → Theme picks one.
+name        = "i-mux"
 # Follow the terminal's light or dark background: light_name on a light one,
 # dark_name on a dark one ("" = name's light or dark sibling, e.g. catppuccin-latte).
 auto_switch = false

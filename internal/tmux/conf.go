@@ -303,6 +303,10 @@ func GenerateConf(in *ConfInput) string {
 	w("# The theme's colors (D68): the tab bar reads @imux_c_*; styles of the status line, borders,")
 	w("# messages, the copy mode, popups and menus.")
 	for _, c := range ThemeOptions(theme.Resolve(cfg.Theme, in.Appearance), in.Version) {
+		if c[1] == "-gu" {
+			w("set -gu %s", c[2])
+			continue
+		}
 		w("set -g  %s %s", c[2], Quote(c[3]))
 	}
 	w("")

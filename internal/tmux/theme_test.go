@@ -22,7 +22,7 @@ func TestThemeOptions(t *testing.T) {
 	got := join(ThemeOptions(theme.Builtin("nord"), v("3.4")))
 	for _, want := range []string{
 		"@imux_c_accent #88c0d0", "@imux_c_peach #d08770", "@imux_c_sidebar_bg default",
-		"status-style bg=default,fg=#d8dee9", "pane-active-border-style fg=#88c0d0", "pane-border-style fg=#434c5e",
+		"status-style bg=#272c36,fg=#d8dee9", "pane-active-border-style fg=#88c0d0", "pane-border-style fg=#434c5e",
 		"message-style bg=#3b4252,fg=#eceff4", "mode-style bg=#434c5e,fg=#eceff4",
 		"popup-style bg=#272c36,fg=#eceff4", "menu-style bg=#272c36,fg=#eceff4", "menu-selected-style bg=#434c5e,fg=#eceff4",
 	} {
@@ -36,8 +36,24 @@ func TestThemeOptions(t *testing.T) {
 	if mid := join(ThemeOptions(theme.Builtin("nord"), v("3.3a"))); !strings.Contains(mid, "popup-style") || strings.Contains(mid, "menu-style") {
 		t.Errorf("3.3:\n%s", mid)
 	}
-	if term := join(ThemeOptions(theme.Builtin("terminal"), v("3.4"))); !strings.Contains(term, "@imux_c_accent blue") || !strings.Contains(term, "status-style bg=default,fg=white") {
+	if term := join(ThemeOptions(theme.Builtin("terminal"), v("3.4"))); !strings.Contains(term, "@imux_c_accent blue") || !strings.Contains(term, "status-style bg=default,fg=brightblack") {
 		t.Errorf("terminal:\n%s", term)
+	}
+	// The i-mux theme: the tab bar's gray as before, tmux's own borders,
+	// messages, popups and menus (unset, so a theme before it goes).
+	classic := ThemeOptions(theme.Builtin("i-mux"), v("3.4"))
+	got = join(classic)
+	if !strings.Contains(got, "status-style bg=default,fg=colour245") || !strings.Contains(got, "@imux_c_subtext0 colour245") || strings.Contains(got, "pane-border-style fg") {
+		t.Errorf("classic:\n%s", got)
+	}
+	unset := 0
+	for _, c := range classic {
+		if c[1] == "-gu" {
+			unset++
+		}
+	}
+	if unset != 10 {
+		t.Errorf("classic unsets %d styles, want 10", unset)
 	}
 	// The tab bar reads the options, so a change needs no new config.
 	if f := TabFormat(false); !strings.Contains(f, "#[fg=#{@imux_c_subtext0}]") || strings.Contains(f, "fg=c") {

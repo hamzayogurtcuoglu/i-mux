@@ -60,7 +60,6 @@ type sidebar struct {
 	revealSeen bool
 	revealRow  string // a revealed path to scroll to
 	lastFrame  string // the frame last written
-	themed     bool   // the theme's background was set on the pane
 	asked      string // the light or dark this sidebar last reported (D68)
 
 	emptyAt time.Time // when this sidebar last opened a "No agents" pane
@@ -324,9 +323,8 @@ func (s *sidebar) terminalTheme(ev Event) {
 }
 
 // applyTheme draws with the config's theme for the terminal's light or
-// dark (D68); the pane's background is the theme's sidebar_bg (reset: the
-// terminal's).
-func (s *sidebar) applyTheme(ctx context.Context, w Window) {
+// dark (D68); a change draws the whole frame again.
+func (s *sidebar) applyTheme(_ context.Context, w Window) {
 	cfg := s.o.Source.Cfg
 	if cfg == nil {
 		return
@@ -335,19 +333,9 @@ func (s *sidebar) applyTheme(ctx context.Context, w Window) {
 	if cfg.Theme.AutoSwitch {
 		a = w.Appearance
 	}
-	p := theme.Resolve(cfg.Theme, a)
-	if !theme.Set(p) && s.themed {
-		return
+	if theme.Set(theme.Resolve(cfg.Theme, a)) {
+		s.lastFrame = ""
 	}
-	s.themed, s.lastFrame = true, ""
-	if p.SidebarBg.IsReset() {
-		_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-p", "-u", "-t", s.o.Pane, "window-style"},
-			tmux.Cmd{"set-option", "-p", "-u", "-t", s.o.Pane, "window-active-style"})
-		return
-	}
-	bg := "bg=" + p.SidebarBg.Tmux()
-	_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-p", "-t", s.o.Pane, "window-style", bg},
-		tmux.Cmd{"set-option", "-p", "-t", s.o.Pane, "window-active-style", bg})
 }
 
 // draw renders the cached model.

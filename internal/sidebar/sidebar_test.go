@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/auto"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
@@ -197,14 +199,23 @@ func TestTabState(t *testing.T) {
 		want  string
 	}{
 		{[]PaneRow{{State: StateIdle}, {State: StateDone}}, ""},
-		// The theme's blue, yellow and red (D68; Catppuccin Mocha's).
-		{[]PaneRow{{State: StateDone}, {State: StateWorking}}, "#[fg=#89b4fa]●"},
-		{[]PaneRow{{State: StateWorking}, {State: StateBlocked}}, "#[fg=#f9e2af]!"},
-		{[]PaneRow{{State: StateIdle, Limited: "15:00"}}, "#[fg=#f38ba8]◆"},
+		// The i-mux theme's colors, as before themes (D68).
+		{[]PaneRow{{State: StateDone}, {State: StateWorking}}, "#[fg=colour75]●"},
+		{[]PaneRow{{State: StateWorking}, {State: StateBlocked}}, "#[fg=colour214]!"},
+		{[]PaneRow{{State: StateIdle, Limited: "15:00"}}, "#[fg=colour203]◆"},
 	} {
 		if got := TabState(c.panes); got != c.want {
 			t.Errorf("%+v: %q", c.panes, got)
 		}
+	}
+}
+
+// TestTabStateTheme: another theme's blue, yellow and red.
+func TestTabStateTheme(t *testing.T) {
+	defer theme.Set(theme.Builtin(theme.Default))
+	theme.Set(theme.Builtin("catppuccin"))
+	if got := TabState([]PaneRow{{State: StateBlocked}}); got != "#[fg=#f9e2af]!" {
+		t.Errorf("blocked %q", got)
 	}
 }
 

@@ -43,7 +43,7 @@ func TestSettingsMenu(t *testing.T) {
 		names = append(names, it.Key+" "+it.Name)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|t Theme: Catppuccin|a Follow the terminal's light/dark: Off|" +
+	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|t Theme: i-mux|a Follow the terminal's light/dark: Off|" +
 		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
@@ -257,12 +257,12 @@ func TestThemeMenu(t *testing.T) {
 	i18n.SetLocale("en")
 	w, _, _ := testWS(t)
 	m := w.ThemeMenu("%1", "c1")
-	if m.Title != "Theme" || len(m.Items) != 18 || m.Items[0].Name != "● Catppuccin" || m.Items[0].Key != "1" ||
-		m.Items[9].Key != "a" || m.Items[17].Name != "  Vesper" || m.Items[17].Key != "i" {
+	if m.Title != "Theme" || len(m.Items) != 19 || m.Items[0].Name != "● i-mux" || m.Items[0].Key != "1" ||
+		m.Items[9].Key != "a" || m.Items[18].Name != "  Vesper" || m.Items[18].Key != "j" {
 		t.Fatalf("menu %+v", m.Items)
 	}
-	if !strings.Contains(m.Items[3].Cmd, "__settings set theme tokyo-night --pane %1 --client c1") {
-		t.Errorf("tokyo-night: %q", m.Items[3].Cmd)
+	if !strings.Contains(m.Items[4].Cmd, "__settings set theme tokyo-night --pane %1 --client c1") {
+		t.Errorf("tokyo-night: %q", m.Items[4].Cmd)
 	}
 	w.Cfg.Theme.Name = "Rose Pine"
 	for _, it := range w.ThemeMenu("", "").Items {
@@ -270,7 +270,7 @@ func TestThemeMenu(t *testing.T) {
 			t.Errorf("current %q", it.Name)
 		}
 	}
-	if ThemeTitle("nope") != "Catppuccin" || ThemeTitle("tokyonight") != "Tokyo Night" {
+	if ThemeTitle("nope") != "i-mux" || ThemeTitle("tokyonight") != "Tokyo Night" {
 		t.Error("ThemeTitle")
 	}
 }

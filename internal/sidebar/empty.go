@@ -162,7 +162,12 @@ func RunEmpty(ctx context.Context, o EmptyOptions) error {
 	draw := func() {
 		w, h := Size(int(o.In.Fd()))
 		sc = RenderEmpty(o.Project, o.Agents, w, h, sel, starting)
-		_, _ = io.WriteString(o.Out, "\x1b[H\x1b[2J"+strings.Join(sc.Lines, "\r\n"))
+		// On the theme's background (D68), each row painted.
+		rows := make([]string, len(sc.Lines))
+		for i, l := range sc.Lines {
+			rows[i] = paint(l) + "\x1b[K"
+		}
+		_, _ = io.WriteString(o.Out, paneBase+"\x1b[H\x1b[2J"+strings.Join(rows, "\r\n")+reset)
 	}
 	start := func(i int) {
 		if i < 0 || i >= len(sc.items) || !sc.items[i].ok || starting != "" {

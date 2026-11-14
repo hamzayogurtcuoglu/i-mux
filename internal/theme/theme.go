@@ -16,15 +16,19 @@ const (
 	kindRGB kind = iota
 	kindANSI
 	kindReset
+	kind256
 )
 
 // Color is a 24-bit color, one of the 16 ANSI colors (the terminal's own),
-// or reset (the terminal's default).
+// one of the 256 colors (the i-mux theme), or reset (the terminal's default).
 type Color struct {
 	k       kind
 	R, G, B uint8
-	ANSI    int // 0-15 with kindANSI
+	ANSI    int // 0-15 with kindANSI, 0-255 with kind256
 }
+
+// Idx is 256-color n.
+func Idx(n int) Color { return Color{k: kind256, ANSI: n} }
 
 // Reset is the terminal's default color.
 var Reset = Color{k: kindReset}
@@ -57,6 +61,8 @@ func (c Color) Fg() string {
 			return "\x1b[" + strconv.Itoa(90+c.ANSI-8) + "m"
 		}
 		return "\x1b[" + strconv.Itoa(30+c.ANSI) + "m"
+	case kind256:
+		return "\x1b[38;5;" + strconv.Itoa(c.ANSI) + "m"
 	}
 	return "\x1b[39m"
 }
@@ -71,6 +77,8 @@ func (c Color) Bg() string {
 			return "\x1b[" + strconv.Itoa(100+c.ANSI-8) + "m"
 		}
 		return "\x1b[" + strconv.Itoa(40+c.ANSI) + "m"
+	case kind256:
+		return "\x1b[48;5;" + strconv.Itoa(c.ANSI) + "m"
 	}
 	return "\x1b[49m"
 }
@@ -88,6 +96,8 @@ func (c Color) Tmux() string {
 		return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B)
 	case kindANSI:
 		return tmuxANSI[c.ANSI]
+	case kind256:
+		return "colour" + strconv.Itoa(c.ANSI) //nolint:misspell // tmux's spelling
 	}
 	return "default"
 }

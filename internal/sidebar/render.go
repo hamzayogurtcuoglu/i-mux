@@ -947,10 +947,10 @@ func Frame(sc Screen, w, h int) string {
 		if i > 0 {
 			b.WriteString("\r\n")
 		}
-		b.WriteString(clip(l.Text, w))
-		b.WriteString("\x1b[K")
+		b.WriteString(paint(clip(l.Text, w)))
+		b.WriteString("\x1b[K") // the rest of the row in its background
 	}
-	b.WriteString("\x1b[J")
+	b.WriteString(paneBase + "\x1b[J")
 	return b.String()
 }
 
