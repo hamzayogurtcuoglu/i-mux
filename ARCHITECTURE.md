@@ -151,6 +151,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D71 | **Agents report their state through hooks** (added 2026-11-14, v0.59, at the user's request; the roadmap's "native agent hooks"): i-mux starts Claude Code with hooks (its `--settings` file, beside the status line) and Codex with a `notify` program (`-c notify=…`, unless the user's config has one), all running `imux __hook <agent>`, which writes the pane's `@imux_hook` (working, blocked, idle) and `@imux_hook_at`; the watcher takes it over its reading of the screen, which stays the fallback for every other agent and for what a hook does not say. Claude's hooks also tell the session it writes, so the pane's trail follows `/clear` and forks. The user's own settings files are not changed. `[hooks] enabled` (on) and a Settings row turn them off. | Reading the screen guessed: a redraw looked like work, a reworded prompt was missed, and "done" came a few seconds late. An agent that says what it does is exact. A terminal status escape (OSC 7501) cannot reach i-mux: tmux drops OSC sequences it does not know, so hooks call i-mux directly instead. After `/clear` the trail kept the session Claude was started with, and a handoff took the old conversation. |
 | D72 | **An agent starts in a worktree of its own, listed under its project** (added 2026-11-14, v0.60, at the user's request; the roadmap's "worktree workspaces"): the place menu of a new agent (Agents' +) has **🌿 In a new worktree…**: a branch name, then `<project>.worktrees/<branch>` (a new branch from HEAD, or the branch when it exists) opens as a project with that agent in it. A project that is a linked worktree shows under its repository's project in PROJECTS, and its menu has **Diff against <base>**, **Merge into <base>…** and **Remove worktree…** (`imux worktree new|diff|merge|remove`). | Two agents in one folder edit the same files and run each other's half-done code; a worktree each keeps them apart, and the steps around it (make it, start the agent, see what it did, merge it, clean up) were spread over the Git menu or missing. |
 | D73 | **Machines: other computers' projects and agents in the same sidebar, over SSH** (added 2026-11-15, v0.61, at the user's request; the roadmap's "multi-machine SSH workspaces"): a machine is a name and an SSH destination; the watcher asks each one's i-mux for its projects and agents' states over one multiplexed SSH connection, the sidebar lists them under the machine with its connection state, a click opens the remote project in a tab (its i-mux, attached over SSH), and its agents' questions and finished work are notified here. The user's own `ssh` and its configuration do the connecting; i-mux stores no password or key, never relaxes host-key checking, forwards nothing, and treats everything a machine sends as untrusted text. | Agents that run on a server keep working with the laptop closed and build faster, but their i-mux was a separate window to look at; an agent waiting on a question there went unnoticed. |
+| D74 | **Machines get a view of their own on the rail: Remote, after Git** (added 2026-11-15, v0.62, at the user's request; refines D73): the activity rail is Agents · Files · Search · Git · **Remote** · Jobs. The Remote view is a plain tree, as VS Code's Remote Explorer: each machine with its state, its projects under it and their agents under them; **+** in the title adds a machine. Machines are no longer in PROJECTS and AGENTS, and Settings has no Machines… row. | Mixed into this computer's projects and agents, the machines were hard to make out; a view of their own, shaped as the editor's, needs no explaining. |
 
 ## 4. Components
 
@@ -1675,7 +1676,7 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
 
 - **A machine** is a name (`[a-z0-9][a-z0-9-]{0,31}`) and an SSH destination (`user@host`, a
   `~/.ssh/config` host, or `ssh://user@host:port`), in `~/.imux/machines.json` (0600). Added
-  with **Settings → Machines… → Add a machine…** or `imux machine add <name> <destination>`,
+  with **+** in the Remote view's title (D74) or `imux machine add [<name>] <destination>`,
   which first connects in a popup or the terminal so that the user sees and answers SSH's own
   questions (an unknown host's key, a password), checks the machine's i-mux (and offers to
   install it there with the release's installer), then saves it. `imux machine ls`, `rm`,
@@ -1706,12 +1707,18 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   `offline` with SSH's last line, or `auth` when only an interactive sign-in would do) and its
   projects. A change redraws the sidebars; an agent that turns to Needs you, or stops after
   working, is notified here as a local one is ("sunucu · api: Claude needs you").
-- **Sidebar:** after this computer's projects, each machine is a row `💻 sunucu` with its
-  state (● connected, ○ connecting…, ✕ and why), then its projects (their branch and agents'
-  states) and, under AGENTS, its agents. A click on a project or an agent opens it here; on the
-  machine's row (or a right-click) its menu: Open a project there… (a folder there, opened with
-  `imux open -d`), Reconnect, A terminal there, Remove…. While a machine is not connected its
-  projects are shown dimmed as they were last.
+- **The Remote view** (v0.62, D74; the rail's 💻 **Remote**, after Git; key `5`, Jobs is `6`)
+  is a tree as VS Code's Remote Explorer: the title `REMOTE` with **+** (add a machine: a popup
+  asks the destination, then connects as above); each machine a row `▾ 💻 sunucu` with its state
+  on the right (● connected, ○ connecting…, ✕ offline / needs sign-in / no i-mux there); under
+  it its projects (`📁 api` and the branch), under each its agents (as in AGENTS: name and
+  state). A click on a machine folds or unfolds it (kept in `@imux_fold` as `machine:<name>`); a
+  right-click opens its menu: Open a project there… (a folder there, opened with `imux open
+  -d`), A terminal there, Reconnect, Remove…. A click on a project or an agent opens it here.
+  While a machine is not connected its rows are dimmed as they were last. With no machine the
+  view says what it is for and offers **Add a machine…**. The rail's icon counts the machines'
+  agents that work, and its label turns yellow while one needs you. Machines are not listed in
+  the Agents view, and Settings has no row for them.
 - **Opening one** (`imux machine open <name> --session S [--remote-pane P]`) makes a tab (or goes to
   the one there is) named `💻 sunucu · api`, whose pane (`@imux_remote`) runs
   `imux __remote-view`: `ssh -t` to `imux __remote-attach`, the machine's i-mux in it, with its
