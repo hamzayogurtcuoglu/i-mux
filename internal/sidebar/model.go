@@ -417,7 +417,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		win.Appearance = strings.TrimSpace(rows[0][20])
 		if v := rows[0][9]; v == "skills" {
 			view = ViewAuto // the Skills view went into Jobs (v0.56, D66)
-		} else if v == ViewExplorer || v == ViewChanges || v == ViewAuto {
+		} else if v == ViewExplorer || v == ViewChanges || v == ViewAuto || v == ViewRemote {
 			view = v
 		}
 		closed, program = rows[0][10] == "1", rows[0][11]

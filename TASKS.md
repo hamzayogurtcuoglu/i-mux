@@ -1002,16 +1002,16 @@ slow (about a second).
 User request: machines in a view of their own on the rail, after Git, plain as VS Code's Remote
 Explorer; no Settings row (D74).
 
-- [ ] **T79.1 Remote on the rail** · S
+- [x] **T79.1 Remote on the rail** · S
   - AC: rail Agents · Files · Search · Git · Remote · Jobs (keys 1–6); the icon's badge counts
     the machines' working agents, its label yellow while one needs you; unit tests.
-- [ ] **T79.2 The tree** · M
+- [x] **T79.2 The tree** · M
   - AC: `REMOTE` + add; machine rows with state, fold on click (`machine:<name>` in
     `@imux_fold`), menu on right-click; projects and agents under it, open on click; dimmed
     when not connected; an empty view with Add a machine…; machines gone from PROJECTS, AGENTS
     and Settings; `imux machine add` asks the destination when none is given; unit tests and
     e2e.
-- [ ] **T79.3 Docs** · XS
+- [x] **T79.3 Docs** · XS
   - AC: README and README.tr, CHANGELOG.
 
 ## M78: Machines over SSH (added 2026-11-15)

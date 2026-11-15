@@ -31,28 +31,6 @@ func MachineStatus(st machine.State) string {
 	return "○ " + i18n.T("machine.connecting")
 }
 
-// MachinesMenu lists the machines with their state (each opens its menu)
-// and Add a machine… (Settings → Machines…).
-func (w *WS) MachinesMenu(pane, client string) *Menu {
-	m := &Menu{Title: i18n.T("machine.title")}
-	ms, _ := machine.Load()
-	for i, x := range ms {
-		key := ""
-		if i < 9 {
-			key = string(rune('1' + i))
-		}
-		m.Items = append(m.Items, MenuItem{
-			Name: "💻 " + x.Name + "  " + MachineStatus(machine.ReadState(x.Name)), Key: key,
-			Cmd: w.ui(append([]string{"machine", "menu", x.Name}, uiTarget(pane, client)...)...),
-		})
-	}
-	if len(ms) > 0 {
-		m.Items = append(m.Items, Separator())
-	}
-	m.Items = append(m.Items, MenuItem{Name: i18n.T("machine.add"), Key: "a", Cmd: w.machinePrompt("add", "", pane, client, i18n.T("machine.add_prompt"))})
-	return m
-}
-
 // MachineMenu is one machine's menu: open a project there, reconnect, a
 // terminal there, remove.
 func (w *WS) MachineMenu(name, pane, client string) *Menu {
@@ -80,8 +58,7 @@ func (w *WS) MachineRemoveMenu(name, pane, client string) *Menu {
 	}}
 }
 
-// machinePrompt asks a machine's question: the destination of a machine to
-// add (in a popup, where SSH may ask its own), or a folder to open there.
+// machinePrompt asks a machine's question: a folder to open there.
 func (w *WS) machinePrompt(what, name, pane, client, label string) string {
 	c := "set-option -g " + OptMachineName + " " + tmux.Quote(name) +
 		" ; set-option -g " + OptMachinePane + " " + tmux.Quote(pane) +
@@ -90,13 +67,6 @@ func (w *WS) machinePrompt(what, name, pane, client, label string) string {
 		c += " -t " + tmux.Quote(client)
 	}
 	run := tmux.RunShell(w.Self, "machine", what, "--from-option")
-	if what == "add" {
-		pop := "display-popup -E -w 80% -h 70%"
-		if client != "" {
-			pop += " -c " + tmux.Quote(client)
-		}
-		run = pop + " " + tmux.Quote(tmux.ShJoin(w.Self, "machine", "add", "--from-option"))
-	}
 	tmpl := "set-option -g " + OptMachineAnswer + " \"%%%\" ; " + run
 	return c + " -p " + tmux.Quote(label) + " " + tmux.Quote(tmpl)
 }

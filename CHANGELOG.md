@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-11-15
+
+### Changed
+
+- **Machines have a view of their own: 💻 Remote on the rail, after Git** (Agents · Files ·
+  Search · Git · Remote · Jobs). It is a plain tree, as VS Code's Remote Explorer: each machine
+  with its state, its projects under it and their agents under them. A click on a project or an
+  agent opens it here, a click on a machine folds it, a right-click opens its menu, and **+** in
+  the title adds a machine. The rail's icon counts the machines' working agents and its label
+  turns yellow while one needs you. Machines are no longer listed among this computer's
+  projects and agents, and Settings has no Machines… row. Keys: `5` is Remote, `6` is Jobs.
+
 ## [0.61.0] - 2026-11-15
 
 ### Added

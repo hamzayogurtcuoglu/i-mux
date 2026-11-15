@@ -19,6 +19,7 @@ const (
 	ViewSearch   = "search" // a popup: the rail opens it, the view stays
 	ViewChanges  = "changes"
 	ViewAuto     = "schedule" // the Scheduler: the project's agents and skills on a schedule (D61)
+	ViewRemote   = "remote"   // other computers over SSH (D74)
 	OptView      = "@imux_view"
 	// OptClosed is "1" while the panel is closed (§9.3 "Closing the side
 	// panel"): the sidebar is only the rail.
@@ -324,11 +325,12 @@ const (
 )
 
 // railIcons are the rail's icons per theme: agents, files, search, git,
-// limits, help, settings, jobs. Nerd Font codicons (v3): hubot, files,
-// search, source_control, dashboard, question, settings-gear, watch.
-var railIcons = map[string][8]string{
-	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueb7c"},
-	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "⏰"},
+// limits, help, settings, jobs, remote. Nerd Font codicons (v3): hubot,
+// files, search, source_control, dashboard, question, settings-gear,
+// watch, remote-explorer.
+var railIcons = map[string][9]string{
+	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueb7c", "\ueb39"},
+	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "⏰", "💻"},
 }
 
 // railItems are the rail's icons: the views at the top, then the bottom
@@ -343,6 +345,7 @@ func railItems(theme string) (top, bottom []railItem) {
 		{icon: ic[1], label: "rail.files", view: ViewExplorer},
 		{icon: ic[2], label: "rail.search", action: Action{Kind: ActSearch}},
 		{icon: ic[3], label: "rail.git", view: ViewChanges},
+		{icon: ic[8], label: "rail.remote", view: ViewRemote},
 		{icon: ic[7], label: "rail.schedule", view: ViewAuto},
 	}, []railItem{
 		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
@@ -366,6 +369,10 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 	color := muted
 	if it.view == ViewChanges && m.Changed > 0 {
 		text += " " + strconv.Itoa(min(m.Changed, 99))
+		color = yellow
+	}
+	working, needs := remoteCounts(m)
+	if it.view == ViewRemote && needs { // a machine's agent needs you
 		color = yellow
 	}
 	alert := it.action.Kind == ActSettings && m.Update != "" // a newer i-mux is out
@@ -403,6 +410,8 @@ func railCells(it railItem, m Model) (icon, label Cell) {
 		n = workingCount(m)
 	case ViewAuto:
 		n = m.AutoRunning
+	case ViewRemote:
+		n = working
 	}
 	if n > 0 {
 		num := strconv.Itoa(n)

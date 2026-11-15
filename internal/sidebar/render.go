@@ -56,6 +56,7 @@ const (
 	ActCollapse               // close every folder of the explorer (D63)
 	ActMachineMenu            // the menu of machine Path (D73)
 	ActMachineOpen            // open machine Path's project Session (its pane Pane) here (D73)
+	ActMachineAdd             // add a machine: a popup asks its destination (D74)
 )
 
 // Action is a row's action.
@@ -698,10 +699,6 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 		for _, pr := range m.Projects {
 			out = append(out, projectRow(pr, w, m.Tick))
 		}
-		// Other computers, each with its projects (D73).
-		for _, mv := range m.Machines {
-			out = append(out, machineProjectRows(mv, w, m.Tick)...)
-		}
 	}
 
 	gap()
@@ -727,9 +724,6 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 			for _, p := range pr.Panes {
 				out = append(out, agentRow(p, w, m.Now, m.Tick))
 			}
-		}
-		for _, mv := range m.Machines {
-			out = append(out, machineAgentRows(mv, w, m.Now, m.Tick)...)
 		}
 	}
 
@@ -799,6 +793,8 @@ func Render(m Model, w, h int, sel Item) Screen {
 		content, list = renderChanges(m, cw, h)
 	case ViewAuto:
 		content, list = renderAuto(m, cw, h)
+	case ViewRemote:
+		content, list = renderRemote(m, cw, h)
 	default:
 		content = renderAgents(m, cw, h)
 	}

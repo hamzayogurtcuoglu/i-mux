@@ -40,10 +40,11 @@ code=$?
 exit $code
 `
 
-// TestMachines (M78, D73): a machine added over (a fake) SSH shows its
-// project and agents in the sidebar; its agent's question is notified; the
-// project opens in a tab here attached to it; the connection lost shows
-// the machine offline, and back connected; the tab connects again.
+// TestMachines (M78, M79, D73, D74): a machine added over (a fake) SSH
+// shows its project and agents in the Remote view; its agent's question is
+// notified; a click on the project opens it in a tab here attached to it;
+// the connection lost shows the machine offline, and back connected; the
+// tab connects again.
 func TestMachines(t *testing.T) {
 	dir := t.TempDir()
 	notified := filepath.Join(dir, "notified")
@@ -123,11 +124,22 @@ func TestMachines(t *testing.T) {
 		t.Fatalf("machines.json: %v %v", fi, err)
 	}
 
-	// In the sidebar: the machine, its project, its agent.
-	h.waitFor("the machine in the sidebar", 20*time.Second, func() bool {
+	// Not in the Agents view; in the Remote view: the machine, its
+	// project, its agent.
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	h.waitFor("the watcher reads the machine", 20*time.Second, func() bool {
+		return strings.Contains(h.readFile(filepath.Join(h.Homes.Imux, "machines", "box.json")), `"status":"ok"`)
+	})
+	time.Sleep(time.Second) // the sidebars redrawn
+	if s := h.screen(bar); strings.Contains(s, "💻 box") || strings.Contains(s, "srv-web") {
+		t.Fatalf("the machine in the Agents view:\n%s", s)
+	}
+	h.openView(c, bar, "💻", "remote")
+	h.waitFor("the machine in the Remote view", 20*time.Second, func() bool {
 		s := h.screen(bar)
-		return strings.Contains(s, "💻 box") && strings.Contains(s, "● connected") && strings.Contains(s, "srv-web") &&
-			strings.Contains(s, "box · srv-web")
+		return strings.Contains(s, "REMOTE") && strings.Contains(s, "💻 box") && strings.Contains(s, "● connected") &&
+			strings.Contains(s, "📁 srv-web") && strings.Contains(s, "Claude")
 	})
 
 	// Its agent asks: a notification here.
@@ -136,8 +148,9 @@ func TestMachines(t *testing.T) {
 		return strings.Contains(h.readFile(notified), "Claude needs you · box · srv-web|on box · srv-web")
 	})
 
-	// Open it here: a tab attached to the machine's project.
-	h.mustImux("machine", "open", "box", "--session", rsession, "--remote-pane", rpane)
+	// A click on it opens it here: a tab attached to the machine's project.
+	x, y := h.rowOf(bar, "📁 srv-web")
+	c.Click(0, x, y)
 	var view string
 	h.waitFor("the machine's tab", 10*time.Second, func() bool {
 		for _, l := range strings.Split(h.mustTmux("list-panes", "-a", "-F", "#{pane_id} #{@imux_remote}"), "\n") {

@@ -24,7 +24,7 @@ import (
 func init() {
 	register(&command{
 		Name:    "machine",
-		Args:    "add [<name>] <destination> | ls | rm <name> | reconnect <name> | open <name> --session S [--remote-pane P] | project <name> <folder> | terminal <name>",
+		Args:    "add [[<name>] <destination>] | ls | rm <name> | reconnect <name> | open <name> --session S [--remote-pane P] | project <name> <folder> | terminal <name>",
 		Summary: "cmd.machine",
 		Run:     runMachine,
 	})
@@ -48,13 +48,13 @@ func runMachine(e *Env, args []string) error {
 	paneF := fs.String("pane", "", "the pane (here) it is for")
 	remotePane := fs.String("remote-pane", "", "open: the machine's pane to select")
 	clientF := fs.String("client", "", "the client to show it on")
-	fromOpt := fs.Bool("from-option", false, "add, project: the answer and machine from the prompt's options")
+	fromOpt := fs.Bool("from-option", false, "project: the folder and machine from the prompt's options")
 	yes := fs.Bool("yes", false, "add: install i-mux there without asking")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
 	}
-	usage := &UsageError{Msg: i18n.T("cli.usage", "machine add [<name>] <destination> | ls | rm <name> | reconnect <name> | open <name> --session S [--remote-pane P] | project <name> <folder> | terminal <name>")}
+	usage := &UsageError{Msg: i18n.T("cli.usage", "machine add [[<name>] <destination>] | ls | rm <name> | reconnect <name> | open <name> --session S [--remote-pane P] | project <name> <folder> | terminal <name>")}
 	if len(pos) == 0 {
 		return usage
 	}
@@ -74,10 +74,7 @@ func runMachine(e *Env, args []string) error {
 		if answer == "" {
 			return nil // the prompt was left empty
 		}
-		switch pos[0] {
-		case "add":
-			pos = []string{"add", answer}
-		case "project":
+		if pos[0] == "project" {
 			pos = []string{"project", opt(workspace.OptMachineName), answer}
 		}
 	}
@@ -94,6 +91,14 @@ func runMachine(e *Env, args []string) error {
 	switch pos[0] {
 	case "add":
 		switch len(pos) {
+		case 1:
+			// The Remote view's +: the destination asked here (D74).
+			fmt.Print(i18n.T("machine.add_prompt") + " ")
+			line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+			if line = strings.TrimSpace(line); line == "" {
+				return nil
+			}
+			return mc.add(machine.NameFor(line), line, *yes, true)
 		case 2:
 			return mc.add(machine.NameFor(pos[1]), pos[1], *yes, true)
 		case 3:

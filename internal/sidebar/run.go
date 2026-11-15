@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -527,6 +528,15 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			s.selected = a.Path
 		case ActAuto, ActAutoMenu:
 			menu = Action{Kind: ActAutoMenu, Path: a.Path}
+		case ActFold:
+			// A machine's row (D74): its menu.
+			name, ok := strings.CutPrefix(a.Section, foldMachine)
+			if !ok {
+				return
+			}
+			menu = Action{Kind: ActMachineMenu, Path: name}
+		case ActMachineOpen:
+			menu = Action{Kind: ActMachineMenu, Path: a.Path}
 		case ActToggleDir:
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
 			s.selected = a.Path
@@ -660,6 +670,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 	case "4":
 		s.do(ctx, Action{Kind: ActView, Section: ViewChanges})
 	case "5":
+		s.do(ctx, Action{Kind: ActView, Section: ViewRemote})
+	case "6":
 		s.do(ctx, Action{Kind: ActView, Section: ViewAuto})
 	default:
 		for _, a := range s.model.Agents {
@@ -934,13 +946,18 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.popup(client, "80%", "70%", "__goto", "--run")
 		return
 	case ActFold:
-		// Fold or unfold a section in every sidebar (@imux_fold, global).
+		// Fold or unfold a section, or a machine (D74), in every sidebar
+		// (@imux_fold, global).
 		var names []string
-		for _, n := range foldable {
-			if f := s.model.Fold[n]; f != (n == a.Section) {
+		for n, f := range s.model.Fold {
+			if f && n != a.Section {
 				names = append(names, n)
 			}
 		}
+		if !s.model.Fold[a.Section] {
+			names = append(names, a.Section)
+		}
+		sort.Strings(names)
 		_, _ = s.t.Run(ctx, tmux.Cmd{"set-option", "-g", "@imux_fold", strings.Join(names, ",")})
 		RefreshAll(ctx, s.t)
 		return
@@ -957,6 +974,9 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 			args = append(args, "--client", client)
 		}
 		s.spawn(args)
+		return
+	case ActMachineAdd:
+		s.popup(client, "80%", "60%", "machine", "add")
 		return
 	case ActMachineMenu, ActMachineOpen:
 		// Another computer's machine menu, or one of its projects (D73).

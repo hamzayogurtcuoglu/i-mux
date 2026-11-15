@@ -2547,7 +2547,7 @@ Opened by `⧉ Sessions`, menu → `Sessions…`, `prefix S` or `imux pick`. It 
   shows a hint as VS Code's does: "Message (Enter to commit)" (the branch is on the row above).
 - **Typing:** a click puts the cursor where it was clicked (Enter on the box, with the keyboard
   selection, at the end); the sidebar's pane takes the keys while the cursor is in it, and its
-  other keys (1–5, q, …) are typed. ← → Home End (Ctrl+A, Ctrl+E) move; ↑ ↓ go a line up or
+  other keys (1–6, q, …) are typed. ← → Home End (Ctrl+A, Ctrl+E) move; ↑ ↓ go a line up or
   down; Backspace, Delete, Ctrl+U (to the start of the line), Ctrl+W (the word before) delete; a
   paste goes in as it is (the sidebar turns bracketed paste on). **Enter** does what the Commit
   button does; **Ctrl+J** or **Alt+Enter** starts a new line (a body under the subject); **Esc**
@@ -2609,7 +2609,7 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
   SKILLS, under their name their run going on or their last run (one run by hand), else their
   description; a skill with a front-matter problem (as the Skills view checked it, §
   "Skills") has `⚠` and the problem in yellow instead (v0.56, D66). With nothing scheduled a hint
-  says what 🚀 does; an empty view says where definitions go. Key `5` opens the view.
+  says what 🚀 does; an empty view says where definitions go. Key `6` opens the view (`5` until v0.62, D74).
 - **Skills from Jobs** (v0.56, D66): **✨** in the title opens the New skill dialog (§ "Skills");
   a right-click on the title or the view's empty space offers New skill… and Blank SKILL.md….
   While the view shows, `skills.Sync` links `.agents/skills` into `.claude/skills` (D32), as the

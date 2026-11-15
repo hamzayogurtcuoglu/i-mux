@@ -228,7 +228,7 @@ func TestRailSchedule(t *testing.T) {
 			schedRow = i
 		}
 	}
-	if schedRow != 12 {
+	if schedRow != 15 { // after Remote (D74)
 		t.Fatalf("Jobs icon at row %d", schedRow)
 	}
 	if p := Plain(sc.Lines[schedRow].Text); !strings.Contains(p, "⏰") || !strings.Contains(p, "2") {
@@ -248,7 +248,7 @@ func TestRailSchedule(t *testing.T) {
 				}
 			}
 		}
-		if len(views) != 4 || !views[ViewAuto] {
+		if len(views) != 5 || !views[ViewAuto] || !views[ViewRemote] {
 			t.Errorf("h=%d: views %v", h, views)
 		}
 	}
