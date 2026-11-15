@@ -150,6 +150,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D70 | **A theme colors the whole window, the agents' panes too** (added 2026-11-14, v0.58.2, at the user's request; refines D68 and D69): with a theme on its own colors every pane is on the theme's panel and text color and its programs get the theme's 16 colors, as a terminal theme does; the borders are on the same panel. Following the terminal's light or dark live takes tmux 3.6+'s hooks, as a pane's OSC 11 question is then answered with the theme's background. | With only the sidebar and the tab bar in the theme, a light theme on a dark terminal split the window in two: a light sidebar beside dark agents. |
 | D71 | **Agents report their state through hooks** (added 2026-11-14, v0.59, at the user's request; the roadmap's "native agent hooks"): i-mux starts Claude Code with hooks (its `--settings` file, beside the status line) and Codex with a `notify` program (`-c notify=…`, unless the user's config has one), all running `imux __hook <agent>`, which writes the pane's `@imux_hook` (working, blocked, idle) and `@imux_hook_at`; the watcher takes it over its reading of the screen, which stays the fallback for every other agent and for what a hook does not say. Claude's hooks also tell the session it writes, so the pane's trail follows `/clear` and forks. The user's own settings files are not changed. `[hooks] enabled` (on) and a Settings row turn them off. | Reading the screen guessed: a redraw looked like work, a reworded prompt was missed, and "done" came a few seconds late. An agent that says what it does is exact. A terminal status escape (OSC 7501) cannot reach i-mux: tmux drops OSC sequences it does not know, so hooks call i-mux directly instead. After `/clear` the trail kept the session Claude was started with, and a handoff took the old conversation. |
 | D72 | **An agent starts in a worktree of its own, listed under its project** (added 2026-11-14, v0.60, at the user's request; the roadmap's "worktree workspaces"): the place menu of a new agent (Agents' +) has **🌿 In a new worktree…**: a branch name, then `<project>.worktrees/<branch>` (a new branch from HEAD, or the branch when it exists) opens as a project with that agent in it. A project that is a linked worktree shows under its repository's project in PROJECTS, and its menu has **Diff against <base>**, **Merge into <base>…** and **Remove worktree…** (`imux worktree new|diff|merge|remove`). | Two agents in one folder edit the same files and run each other's half-done code; a worktree each keeps them apart, and the steps around it (make it, start the agent, see what it did, merge it, clean up) were spread over the Git menu or missing. |
+| D73 | **Machines: other computers' projects and agents in the same sidebar, over SSH** (added 2026-11-15, v0.61, at the user's request; the roadmap's "multi-machine SSH workspaces"): a machine is a name and an SSH destination; the watcher asks each one's i-mux for its projects and agents' states over one multiplexed SSH connection, the sidebar lists them under the machine with its connection state, a click opens the remote project in a tab (its i-mux, attached over SSH), and its agents' questions and finished work are notified here. The user's own `ssh` and its configuration do the connecting; i-mux stores no password or key, never relaxes host-key checking, forwards nothing, and treats everything a machine sends as untrusted text. | Agents that run on a server keep working with the laptop closed and build faster, but their i-mux was a separate window to look at; an agent waiting on a question there went unnoticed. |
 
 ## 4. Components
 
@@ -1669,6 +1670,55 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   worktree…** (asked first; `git worktree remove`, asked again with `--force` when it has
   changes; its project closes; the branch stays). The CLI is `imux worktree diff|merge|remove
   [--session S]`.
+
+#### Machines (v0.61, D73)
+
+- **A machine** is a name (`[a-z0-9][a-z0-9-]{0,31}`) and an SSH destination (`user@host`, a
+  `~/.ssh/config` host, or `ssh://user@host:port`), in `~/.imux/machines.json` (0600). Added
+  with **Settings → Machines… → Add a machine…** or `imux machine add <name> <destination>`,
+  which first connects in a popup or the terminal so that the user sees and answers SSH's own
+  questions (an unknown host's key, a password), checks the machine's i-mux (and offers to
+  install it there with the release's installer), then saves it. `imux machine ls`, `rm`,
+  `reconnect`.
+- **SSH:** the user's `ssh` (`$IMUX_SSH` in tests) with: `BatchMode=yes` in the background (it
+  never waits for an answer), a master connection per machine (`ControlMaster=auto`,
+  `ControlPath=~/.imux/ssh/%C`, a 0700 folder, `ControlPersist=10m`) so that each question
+  rides on the open connection, `ConnectTimeout=10`, `ServerAliveInterval=15`,
+  `ServerAliveCountMax=3`, and `ForwardAgent=no`, `ForwardX11=no`, `ClearAllForwardings=yes`,
+  `PermitLocalCommand=no`: nothing of this computer reaches the machine. Host keys are checked
+  as the user's configuration says; i-mux never sets `StrictHostKeyChecking`. The destination
+  comes after `--`, and one that starts with `-` or holds a character outside the allowed
+  ones is refused, so it can never be read as an option.
+- **What runs there** is i-mux only, as a fixed command: `exec sh -c '<find imux>' imux
+  <words>`, which tries `imux` on the PATH, `~/.local/bin`, `/opt/homebrew/bin` and
+  `/usr/local/bin`. Its words are constants or values checked first (a session name
+  `[A-Za-z0-9_.-]{1,64}`, a pane `%N`) or quoted for the shell (a folder).
+  `imux __remote-state` prints the machine's projects (session, name, folder, branch) and their
+  agent panes (id, agent, name, state, since) as JSON; `imux __remote-attach <session>
+  [<pane>]` attaches a terminal to that session (the pane selected).
+- **Untrusted:** what a machine sends is read with limits (1 MB, 15 s, 200 projects, 50 panes
+  each), ids that do not match their pattern are dropped, agents not known are shown as a
+  plain terminal, and every text loses its control characters (no escape sequence reaches the
+  terminal) and is cut to 80 characters; a text put into a tmux command or format is quoted
+  and its `#` doubled.
+- **The watcher** asks each machine every 3 s (each one on its own, so a slow one stalls no
+  other) and writes `~/.imux/machines/<name>.json` (0600): its state (`ok`, `connecting`,
+  `offline` with SSH's last line, or `auth` when only an interactive sign-in would do) and its
+  projects. A change redraws the sidebars; an agent that turns to Needs you, or stops after
+  working, is notified here as a local one is ("sunucu · api: Claude needs you").
+- **Sidebar:** after this computer's projects, each machine is a row `🖥 sunucu` with its
+  state (● connected, ○ connecting…, ✕ and why), then its projects (their branch and agents'
+  states) and, under AGENTS, its agents. A click on a project or an agent opens it here; on the
+  machine's row (or a right-click) its menu: Open a project there… (a folder there, opened with
+  `imux open -d`), Reconnect, A terminal there, Remove…. While a machine is not connected its
+  projects are shown dimmed as they were last.
+- **Opening one** (`imux machine open <name> --session S [--pane P]`) makes a tab (or goes to
+  the one there is) named `🖥 sunucu · api`, whose pane (`@imux_remote`) runs
+  `imux __remote-view`: `ssh -t` to `imux __remote-attach`, the machine's i-mux in it, with its
+  own sidebar and tabs. The keys i-mux binds without the prefix (the pane menu, Go to File,
+  pasting an image) go on to it in that pane; the prefix is this computer's, so the machine's
+  takes it twice (tmux's way for one inside another). When the connection drops the pane says
+  so and connects again every few seconds; detaching ends it.
 
 #### AI completion in the editor (v0.25, D30)
 
