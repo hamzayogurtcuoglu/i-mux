@@ -94,6 +94,7 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
 		MenuItem{Name: i18n.T("settings.hooks", onOffLabel(cfg.Hooks.Enabled)), Key: "h", Cmd: menu("hooks")},
+		MenuItem{Name: i18n.T("settings.machines"), Key: "m", Cmd: menu("machines")},
 		Separator(),
 		MenuItem{Name: i18n.T("settings.open"), Key: "o", Cmd: w.popupCmd("90%", "90%", "__settings", "edit")},
 	)
@@ -173,6 +174,8 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 		return w.ChoiceMenu(i18n.T("settings.arrival_title"), "on_arrival", arrivalValue(cfg.Handoff.OnArrival), cs, pane, client)
 	case "theme":
 		return w.ThemeMenu(pane, client)
+	case "machines":
+		return w.MachinesMenu(pane, client)
 	case "hooks":
 		return w.ChoiceMenu(i18n.T("settings.hooks_title"), "hooks", onOffValue(cfg.Hooks.Enabled), onOff, pane, client)
 	case "theme_auto":

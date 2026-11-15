@@ -69,10 +69,10 @@ set -gu menu-selected-style
 set -gu menu-border-style
 
 # Pane menu, session picker.
-bind -n 'C-\' run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind -n 'C-\' if-shell -F '#{@imux_remote}' "send-keys 'C-\\'" "run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'"
 bind    a run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # Go to File, the editor's Ctrl+P (§9.3).
-bind -n C-p run-shell -b '/opt/imux/bin/imux __goto --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind -n C-p if-shell -F '#{@imux_remote}' "send-keys C-p" "run-shell -b '/opt/imux/bin/imux __goto --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'"
 bind    S run-shell -b '/opt/imux/bin/imux __menu --sessions --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # Ctrl+V / Alt+V in an agent's pane paste the clipboard's image; elsewhere, or with no image, the key goes on.
 bind -n C-v if-shell -F '#{@imux_agent}' "run-shell -b '/opt/imux/bin/imux __paste-image --pane #{pane_id} --client #{client_name} --key C-v >/dev/null 2>&1 || true'" 'send-keys C-v'

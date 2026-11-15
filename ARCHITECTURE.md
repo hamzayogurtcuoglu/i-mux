@@ -1706,14 +1706,14 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   `offline` with SSH's last line, or `auth` when only an interactive sign-in would do) and its
   projects. A change redraws the sidebars; an agent that turns to Needs you, or stops after
   working, is notified here as a local one is ("sunucu · api: Claude needs you").
-- **Sidebar:** after this computer's projects, each machine is a row `🖥 sunucu` with its
+- **Sidebar:** after this computer's projects, each machine is a row `💻 sunucu` with its
   state (● connected, ○ connecting…, ✕ and why), then its projects (their branch and agents'
   states) and, under AGENTS, its agents. A click on a project or an agent opens it here; on the
   machine's row (or a right-click) its menu: Open a project there… (a folder there, opened with
   `imux open -d`), Reconnect, A terminal there, Remove…. While a machine is not connected its
   projects are shown dimmed as they were last.
-- **Opening one** (`imux machine open <name> --session S [--pane P]`) makes a tab (or goes to
-  the one there is) named `🖥 sunucu · api`, whose pane (`@imux_remote`) runs
+- **Opening one** (`imux machine open <name> --session S [--remote-pane P]`) makes a tab (or goes to
+  the one there is) named `💻 sunucu · api`, whose pane (`@imux_remote`) runs
   `imux __remote-view`: `ssh -t` to `imux __remote-attach`, the machine's i-mux in it, with its
   own sidebar and tabs. The keys i-mux binds without the prefix (the pane menu, Go to File,
   pasting an image) go on to it in that pane; the prefix is this computer's, so the machine's

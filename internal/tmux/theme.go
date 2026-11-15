@@ -9,6 +9,10 @@ import (
 // OptPaneColors is tmux's palette option for the panes' programs (3.3+).
 const OptPaneColors = "pane-colours" //nolint:misspell // tmux's spelling
 
+// OptRemote marks a pane that shows a machine's project (D73): the keys
+// i-mux binds without the prefix go on to it.
+const OptRemote = "@imux_remote"
+
 // OptAppearance is the terminal's light or dark ("light", "dark", "" not
 // known), global (D68).
 const OptAppearance = "@imux_appearance"

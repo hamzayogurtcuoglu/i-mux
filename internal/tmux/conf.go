@@ -311,15 +311,20 @@ func GenerateConf(in *ConfInput) string {
 	}
 	w("")
 	w("# Pane menu, session picker.")
+	// In a machine's tab (@imux_remote, D73) the keys without the prefix go
+	// on to the machine's i-mux.
+	remote := func(k, cmd string) string {
+		return "if-shell -F " + Quote("#{"+OptRemote+"}") + " " + QuoteDouble("send-keys "+Quote(k)) + " " + QuoteDouble(cmd)
+	}
 	if k := cfg.Tmux.MenuKeyRoot; k != "" {
-		w("bind -n %s %s", Quote(k), runShell(in.Self, "__menu", pane))
+		w("bind -n %s %s", Quote(k), remote(k, runShell(in.Self, "__menu", pane)))
 	}
 	if k := cfg.Tmux.MenuKeyPrefix; k != "" {
 		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", pane))
 	}
 	if k := cfg.Tmux.QuickOpenKeyRoot; k != "" {
 		w("# Go to File, the editor's Ctrl+P (§9.3).")
-		w("bind -n %s %s", Quote(k), runShell(in.Self, "__goto", pane))
+		w("bind -n %s %s", Quote(k), remote(k, runShell(in.Self, "__goto", pane)))
 	}
 	if k := cfg.Tmux.PickerKeyPrefix; k != "" {
 		w("bind    %s %s", Quote(k), runShell(in.Self, "__menu", "--sessions", pane))

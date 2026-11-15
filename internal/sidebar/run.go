@@ -379,7 +379,7 @@ func (s *sidebar) draw() {
 // isMenu reports actions that open a menu.
 func isMenu(k ActionKind) bool {
 	switch k {
-	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActSettings, ActSCMMenuAt, ActAutoMenu:
+	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActSettings, ActSCMMenuAt, ActAutoMenu, ActMachineMenu:
 		return true
 	}
 	return false
@@ -953,6 +953,20 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		return
 	case ActAgentMenu:
 		args := []string{"__menu", "--agent", "--pane", a.Pane}
+		if client != "" {
+			args = append(args, "--client", client)
+		}
+		s.spawn(args)
+		return
+	case ActMachineMenu, ActMachineOpen:
+		// Another computer's machine menu, or one of its projects (D73).
+		args := []string{"machine", "menu", a.Path, "--pane", target}
+		if a.Kind == ActMachineOpen {
+			args = []string{"machine", "open", a.Path, "--session", a.Session}
+			if a.Pane != "" {
+				args = append(args, "--remote-pane", a.Pane)
+			}
+		}
 		if client != "" {
 			args = append(args, "--client", client)
 		}

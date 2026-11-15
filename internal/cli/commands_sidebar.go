@@ -693,6 +693,9 @@ func openFolder(ctx context.Context, w *workspace.WS, dir, client string) error 
 
 // openDetached opens dir as a project without showing it (imux open -d).
 func openDetached(ctx context.Context, w *workspace.WS, dir string, e *Env) error {
+	if dir == "~" || strings.HasPrefix(dir, "~/") { // a folder typed for a machine reaches no shell
+		dir = filepath.Join(paths.UserHome(), strings.TrimPrefix(dir, "~"))
+	}
 	if abs, err := filepath.Abs(dir); err == nil {
 		dir = abs
 	}

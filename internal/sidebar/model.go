@@ -22,6 +22,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/machine"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/skills"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
@@ -122,6 +123,13 @@ func (p PaneRow) Display(shell string) string {
 	return session.ShortName(p.Agent)
 }
 
+// MachineView is another computer as the sidebar shows it (D73): its name
+// and what the watcher last heard from it.
+type MachineView struct {
+	Name  string
+	State machine.State
+}
+
 // ProjectRow is one imux session: a project directory and its panes.
 type ProjectRow struct {
 	Session string
@@ -182,6 +190,7 @@ type Model struct {
 	SCMSort   string          // "name", "status" or "" (the path): @imux_scm_sort
 	SCMClosed map[string]bool // folded folders of the tree ("side:path"), per sidebar
 	Auto      []AutoItem      // the project's agents and skills with their schedules (Scheduler view)
+	Machines  []MachineView   // other computers and their projects (D73)
 	AutoRoot  string          // the Scheduler's project root
 	// AutoRunning counts the scheduled runs going on, in every project (the
 	// rail's badge).
@@ -616,6 +625,11 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		return a.Name < b.Name
 	})
 	order = s.nestWorktrees(ctx, order, bySession, cwdOf)
+	if ms, err := machine.Load(); err == nil {
+		for _, x := range ms {
+			m.Machines = append(m.Machines, MachineView{Name: x.Name, State: machine.ReadState(x.Name)})
+		}
+	}
 	for _, name := range order {
 		pr := bySession[name]
 		if dir := cwdOf[name]; dir != "" && !pr.Current {

@@ -1002,27 +1002,27 @@ slow (about a second).
 User request: the roadmap's eighth planned feature: other computers' agents in the same sidebar,
 with no security hole (D73).
 
-- [ ] **T78.1 Machines and SSH** · M
+- [x] **T78.1 Machines and SSH** · M
   - AC: `machines.json` (0600); names and destinations checked (none read as an ssh option);
     the ssh options of D73 (batch mode in the background, a master per machine, nothing
     forwarded, host keys as configured); the remote command fixed, its words checked or
     quoted; unit tests.
-- [ ] **T78.2 The machine's side** · S
+- [x] **T78.2 The machine's side** · S
   - AC: `imux __remote-state` (JSON) and `imux __remote-attach`; unit tests.
-- [ ] **T78.3 The watcher asks them** · M
+- [x] **T78.3 The watcher asks them** · M
   - AC: every 3 s, each machine on its own; state and projects in `machines/<name>.json`;
     untrusted input limited and cleaned; sidebars redrawn on a change; Needs you and finished
     notified; unit tests.
-- [ ] **T78.4 Sidebar and menus** · M
+- [x] **T78.4 Sidebar and menus** · M
   - AC: machine rows with their state, projects and agents (dimmed when not connected); the
     machine's menu; Settings → Machines…; add (connects interactively, checks or installs i-mux),
     remove, reconnect, open a project there, a terminal there; English and Turkish; unit tests.
-- [ ] **T78.5 Opening one** · M
-  - AC: a tab `🖥 machine · project` attached over SSH, found again when it exists; the root
+- [x] **T78.5 Opening one** · M
+  - AC: a tab `💻 machine · project` attached over SSH, found again when it exists; the root
     keys go on to it; it reconnects when the connection drops; e2e with a fake `ssh` and a
     second i-mux: the machine's projects and states, a question notified, a project opened,
     the connection lost and back.
-- [ ] **T78.6 Docs** · XS
+- [x] **T78.6 Docs** · XS
   - AC: README and README.tr, CHANGELOG.
 
 ## M77: Worktrees for agents (added 2026-11-14)

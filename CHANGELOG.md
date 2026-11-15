@@ -6,6 +6,25 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-11-15
+
+### Added
+
+- **Other computers' agents in the same sidebar.** Settings → **Machines…** → **Add a machine…**
+  (or `imux machine add user@host`) adds a computer you reach with `ssh`: it shows in PROJECTS
+  with its state (● connected, ✕ offline, needs sign-in), its projects under it and their agents
+  in AGENTS, and its agents' questions and finished work are notified here. A click on one of its
+  projects opens it in a tab here, attached over SSH (it connects again when the connection
+  drops). A machine's menu opens a folder there as a project, opens a terminal there, reconnects
+  or removes it. `imux machine add|ls|rm|reconnect|open|project|terminal`.
+- **Security.** i-mux runs your own `ssh`, with your keys, `~/.ssh/config` and known hosts (i-mux
+  never accepts a host key for you); no agent, X11 or port is forwarded; one connection per
+  machine is shared and closed after 10 idle minutes; the background never asks for a password.
+  A destination can never be read as an ssh option; the commands run there are fixed and their
+  words quoted; what a machine reports is limited in size and stripped of control characters;
+  `~/.imux/machines.json` and the machines' states are readable by you only. The machine needs
+  i-mux 0.61 or later (adding it offers to install it there).
+
 ## [0.60.0] - 2026-11-14
 
 ### Added

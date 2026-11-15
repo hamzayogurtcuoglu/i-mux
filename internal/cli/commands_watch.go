@@ -131,6 +131,7 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 		logger.Printf("tmux config: %v", err)
 	}
 	go keepSidebars(w, logger)
+	go keepMachines(tc, cfg.Notify, logger) // other computers' agents (D73)
 	go keepSchedules(w.Self, logger)
 	actor := &watch.Actor{W: w, Log: logger}
 	keeper := &watch.StatusKeeper{W: w}
