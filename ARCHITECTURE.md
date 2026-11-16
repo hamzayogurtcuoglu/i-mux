@@ -152,6 +152,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D72 | **An agent starts in a worktree of its own, listed under its project** (added 2026-11-14, v0.60, at the user's request; the roadmap's "worktree workspaces"): the place menu of a new agent (Agents' +) has **🌿 In a new worktree…**: a branch name, then `<project>.worktrees/<branch>` (a new branch from HEAD, or the branch when it exists) opens as a project with that agent in it. A project that is a linked worktree shows under its repository's project in PROJECTS, and its menu has **Diff against <base>**, **Merge into <base>…** and **Remove worktree…** (`imux worktree new|diff|merge|remove`). | Two agents in one folder edit the same files and run each other's half-done code; a worktree each keeps them apart, and the steps around it (make it, start the agent, see what it did, merge it, clean up) were spread over the Git menu or missing. |
 | D73 | **Machines: other computers' projects and agents in the same sidebar, over SSH** (added 2026-11-15, v0.61, at the user's request; the roadmap's "multi-machine SSH workspaces"): a machine is a name and an SSH destination; the watcher asks each one's i-mux for its projects and agents' states over one multiplexed SSH connection, the sidebar lists them under the machine with its connection state, a click opens the remote project in a tab (its i-mux, attached over SSH), and its agents' questions and finished work are notified here. The user's own `ssh` and its configuration do the connecting; i-mux stores no password or key, never relaxes host-key checking, forwards nothing, and treats everything a machine sends as untrusted text. | Agents that run on a server keep working with the laptop closed and build faster, but their i-mux was a separate window to look at; an agent waiting on a question there went unnoticed. |
 | D74 | **Machines get a view of their own on the rail: Remote, after Git** (added 2026-11-15, v0.62, at the user's request; refines D73): the activity rail is Agents · Files · Search · Git · **Remote** · Jobs. The Remote view is a plain tree, as VS Code's Remote Explorer: each machine with its state, its projects under it and their agents under them; **+** in the title adds a machine. Machines are no longer in PROJECTS and AGENTS, and Settings has no Machines… row. | Mixed into this computer's projects and agents, the machines were hard to make out; a view of their own, shaped as the editor's, needs no explaining. |
+| D75 | **Every project open at the end comes back, with or without agents** (added 2026-11-16, v0.62.1, at the user's request; refines D24 and D49): **↺ Restore last session** brings back every project that was open when i-mux quit or its tmux server went away, not only those with agents. A project with no agent to start (only its "No agents" pane or terminals were open, or its agents are no longer installed) comes back as closing its last agent leaves a project: its session in its folder with the "No agents" pane and its sidebar (§9.3 "A project without agents"). Opening such a folder on its own (the picker's this folder or Recent, `imux open`) still starts the default agent, as for a new project (D22). Terminals are not recreated, as before. | The user found that after quitting i-mux and starting it again only the projects with agents came back, though Restore last session is meant to bring back every project that was open. The last session kept only projects with agents, a rule from v0.10, when closing a project's last agent closed the project; since v0.33 such a project stays open, so it belongs to the session like any other. The "No agents" pane is how the user left it and starts no agent they did not have. tmux cannot tell a terminal from an editor or an SSH session in a pane, so none of them is started again. |
 
 ## 4. Components
 
@@ -1335,11 +1336,15 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   names set; sidebars added; the saved layout applied when the pane count matches. Shell panes
   are not restored, nor panes of an agent that is not installed or that this version does not
   know (a pane another version left: shown under its id in the sidebar, and it can be switched
-  to a known agent). Opening a folder (picker, `imux open`, `imux` in the folder) restores its
-  snapshot when the project is not open.
+  to a known agent). With no agent to start (v0.62.1, D75) the project comes back with its "No
+  agents" pane (§9.3 "A project without agents") and its sidebar, unless none of its tabs had
+  one. Opening a folder (picker, `imux open`, `imux` in the folder) restores its snapshot when
+  the project is not open and has an agent to start; otherwise it starts the default agent, as
+  for a new project.
 - **Picker:** with an empty query, sections: Restore last session (when projects of an earlier
-  server were open), RECENT (open projects, then snapshots and recent folders by time, with
-  "N tabs · M agents · age"), ON THIS MAC (git folders). Typing ranks all of them together.
+  server were open: all of them, with or without agents, since v0.62.1, D75), RECENT (open
+  projects, then snapshots and recent folders by time, with "N tabs · M agents · age"), ON THIS
+  MAC (git folders). Typing ranks all of them together.
 
 #### Sidebar v5: folding, source control, contrast (v0.13)
 
@@ -2205,7 +2210,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   target) given the "No agents" pane starts the agent in its place: `respawn-pane`, and the
   role is cleared; `--from-session` continues the conversation there.
 - **The sidebar:** the pane is never an agent: not in AGENTS, not a place to continue, not saved
-  in snapshots (Restore starts the default agent for a project without agents). The project
+  in snapshots: Restore last session brings a project without agents back with this pane
+  (v0.62.1, D75), and opening its folder on its own starts the default agent. The project
   stays in PROJECTS; under AGENTS its name and "No agents · + to start one" (the + of AGENTS).
   It is the target only when nothing else is in the window, and then "Continue this chat in" is
   hidden.

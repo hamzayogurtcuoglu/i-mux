@@ -997,6 +997,24 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M80: Projects without agents come back (added 2026-11-16)
+
+User report: after quitting i-mux and starting it again, only the projects with agents came
+back; a project that was open without agents should come back too (D75).
+
+- [ ] **T80.1 Every open project in the last session** · S
+  - AC: D75, §9.3 "Recent and restore": Restore last session counts and restores the projects
+    of the earlier server with or without agents; Restore brings a project with no agent to
+    start back with the "No agents" pane (its role, folder and label) and a sidebar when one of
+    its tabs had one; opening such a folder on its own still starts the default agent; unit
+    tests.
+- [ ] **T80.2 End to end** · S
+  - AC: e2e: a project with an agent and one whose last agent was closed; Quit; `imux`
+    elsewhere offers "Restore last session · 2 projects"; Enter: both are open again, the
+    second with its "No agents" pane and its sidebar, and no agent started in it.
+- [ ] **T80.3 Docs** · XS
+  - AC: README and README.tr; CHANGELOG.
+
 ## M79: The Remote view (added 2026-11-15)
 
 User request: machines in a view of their own on the rail, after Git, plain as VS Code's Remote
