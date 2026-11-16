@@ -997,6 +997,22 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M83: Every agent shows as working (added 2026-11-16)
+
+User report: a working Antigravity shows no spinner; check Codex, OpenCode and the others too
+(D78).
+
+- [ ] **T83.1 Each CLI's busy line** · S
+  - AC: D78: Antigravity's status line `esc to cancel` / `Esc disabled during file edits`, a
+    progress line `(… esc to cancel)` or `esc to interrupt`, and not while a question shows;
+    Codex's `… to interrupt` with any key; OpenCode's `esc interrupt` / `esc again to interrupt`
+    (no longer D38); unit tests with the screens of the CLIs as they are now.
+- [ ] **T83.2 End to end** · S
+  - AC: e2e: fake Antigravity and OpenCode panes drawing their screens at work are working; an
+    Antigravity question with its hint still showing is Needs you.
+- [ ] **T83.3 Docs** · XS
+  - AC: README and README.tr; CHANGELOG.
+
 ## M82: Themes fill the whole terminal (added 2026-11-16)
 
 User report: with a theme, black bands stay at the top, bottom and edges of the terminal (D77).
