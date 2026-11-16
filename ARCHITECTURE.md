@@ -156,6 +156,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D76 | **Claude Code's busy line is also its spinner with the time it has worked** (added 2026-11-16, v0.62.2, at the user's request; refines D55): besides `esc to interrupt`, Claude Code is at work while the screen's last 16 non-blank lines show its spinner line: the word it shows, `…`, then the time it has worked in parentheses (`· Discombobulating… (30m 46s · ↓ 139.3k tokens · thinking with high effort)`). | Claude Code 2.1 no longer writes "esc to interrupt" on that line, so i-mux saw no busy line: 3 s after the prompt's hook (D71) a working Claude read idle, with no spinner and not counted among the working agents, while Copilot's spinner turned. The time in parentheses is on that line exactly while Claude works, as the hint was. |
 | D77 | **A theme colors the terminal's own background too** (added 2026-11-16, v0.62.3, at the user's request; refines D70): with a theme on its own colors whose light or dark does not follow the terminal, the terminal's background (OSC 11) is the theme's panel while i-mux shows in it, so the terminal's padding and the strip left over beside the last whole cells are in the theme instead of the terminal's own color; when the client leaves (detach, suspend, quit) the terminal gets its own background back (OSC 111). tmux sends both with the focus-event strings it writes when a client starts and stops (`terminal-overrides`), and a theme change writes them to the attached terminals at once. | The user saw black bands at the top, bottom and edges of Windows Terminal around a Nord i-mux: tmux paints cells, while a terminal fills its padding and the part of the window too small for a cell with its own background, which only the terminal's background color reaches. tmux has no option for it; its `client-detached` hook runs after the client's terminal is gone, and `smcup`/`rmcup` are not sent when tmux 3.8's `clear-on-attach` is off, so the focus-event strings, sent on every start and stop, carry it. A theme that follows the terminal's light or dark leaves the terminal's background alone: that background is how the terminal's light or dark can be read. |
 | D78 | **Every agent's busy line is the one its CLI shows now: Antigravity's "esc to cancel", Codex's with any key, OpenCode's "esc interrupt"** (added 2026-11-16, v0.62.4, at the user's request; refines D55 and D76): checked against each CLI as it is now (Claude Code 2.1, Copilot, Codex 0.169, Antigravity's `agy`, OpenCode 1.0 to 1.19), an agent is at work while the bottom of its screen shows: Antigravity's status line starting with `esc to cancel` or `Esc disabled during file edits`, a progress line ending `(… esc to cancel)`, or its older `esc to interrupt`; Codex's `(5s • esc to interrupt)` whichever key interrupts it; OpenCode's footer `esc interrupt` (`esc again to interrupt`), so OpenCode leaves D38's rule too. A question at the bottom of Antigravity's screen ("Do you want to proceed?") means it waits for the user, whatever its status line says. | The user saw no spinner for a working Antigravity and asked for every agent to be checked, not one at a time. Antigravity's CLI now writes "esc to cancel" where it wrote "Press esc to interrupt generation."; Codex lets the interrupt key be changed; OpenCode was read from its screen changes, so moving through its menus looked like work. Antigravity's status line may keep its hint while it asks, and working wins over asking, so its question decides; OpenCode shows its permission requests in place of the footer. |
+| D79 | **Versions and updates installs a missing agent, and OpenCode installs as OpenCode 2** (added 2026-11-16, v0.62.5, at the user's request; refines D41): in Settings → Versions and updates a missing agent's row shows the command that installs it, the one Install now runs (`[agents.<id>] install`, else i-mux's), and its letter runs it there; when that command needs a program that is not here (npm, curl, brew), the row says how to get it instead. i-mux's command for OpenCode is OpenCode 2's own installer (`curl -fsSL https://opencode.ai/v2/install | bash`). An agent that is not on the PATH is also looked for in the folder its own installer uses (`~/.opencode/bin` for OpenCode, `~/.local/bin` for Antigravity). | The user typed OpenCode's letter in the list that says "Type a letter and Enter to run its command" and got "Nothing to run": its row only showed how to install it. The command it showed, and the one Install now ran, gave OpenCode 1, which i-mux does not support (`opencode.ai/install` and npm's `opencode-ai` only give OpenCode 1). A vendor's script adds its folder to the shell's PATH for new terminals only, so a tmux server started before it would not have found the agent. |
 
 ## 4. Components
 
@@ -680,8 +681,10 @@ provider, no quota; synthetic prompts only).
   owned by root (made by an earlier `sudo` command) stops it. `imux doctor` warns with the fix.
 - **OpenCode 1 is not supported:** its `--session` only continues an existing session ("Session
   not found", so a new tab exits at once to a shell), its store has no `session_v2`, and it has
-  no `session export`. Its install script and npm's `latest` still give OpenCode 1 (Homebrew gives
-  2); `opencode upgrade --major` moves to 2. `imux doctor` fails below 2.0.0 (it
+  no `session export`. Its first install script (`opencode.ai/install`) and npm's `opencode-ai`
+  give OpenCode 1; OpenCode 2 comes from `opencode.ai/v2/install` (into `~/.opencode/bin`; i-mux's
+  install command since v0.62.5, D79), npm's `@opencode/cli` or Homebrew, and `opencode upgrade
+  --major` moves an OpenCode 1 to 2. `imux doctor` fails below 2.0.0 (it
   re-probes a cached 1.x version first: the bin cache lags an in-place upgrade by up to a day).
 
 ## 8. Handoff document
@@ -886,7 +889,8 @@ Failed calls get a ` (failed)` suffix.
   CLIs installed under nvm need `node` on `PATH` (their bins are `#!/usr/bin/env node` scripts).
   i-mux therefore:
   1. resolves each agent's absolute path with `exec.LookPath` in the *invoking* process (an
-     interactive shell, which has nvm's PATH);
+     interactive shell, which has nvm's PATH), else in the folder the agent's own installer uses
+     (`~/.opencode/bin` for OpenCode, `~/.local/bin` for Antigravity; v0.62.5, D79);
   2. caches `{path, PATH, version}` per agent in `state.json → bins` whenever the CLI runs
      interactively;
   3. launches every agent through a `LaunchSpec` whose `Env.PATH` is the cached PATH with the
@@ -2163,7 +2167,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   or `i`) and **Close** (Esc); Tab moves between them, a click chooses one (after the first
   400 ms, `PopupGuard`).
 - **The command:** `[agents.<id>] install` when set, else i-mux's: npm for Claude Code, Copilot
-  and Codex, the vendor's script for Antigravity and OpenCode (`agent.Install`). When it starts
+  and Codex, the vendor's script for Antigravity and OpenCode (OpenCode 2's,
+  `opencode.ai/v2/install`, since v0.62.5, D79; `agent.Install`). When it starts
   with a program that is not on the PATH (`npm`, `curl`, `brew`), the popup says how to get it
   (Node.js from nodejs.org or the package manager) and offers only Close.
 - **Install now:** the popup clears, prints the command and runs it with `sh -c` (its output and
@@ -2351,7 +2356,10 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   popup says that i-mux's tmux server keeps the old one until it restarts.
 - **Agents:** their own updaters (`claude update`, `copilot update`, `agy update`, `opencode
   upgrade`; OpenCode 1 `upgrade --major`); Codex has none, so npm or Homebrew by where it lives.
-  A missing agent shows its install hint.
+  A missing agent shows the command that installs it, the one Install now runs (§9.3 "Not
+  installed"), and its letter runs it there (v0.62.5, D79); without the program the command
+  starts with (npm, curl, brew) the row says how to get it and its letter runs nothing. An
+  install that finished with the agent still not found says so, as Install now does.
 - **No network:** whether a newer CLI is out is its updater's business; i-mux only knows its own
   latest release (the daily check).
 
