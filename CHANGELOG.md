@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.62.4] - 2026-11-16
+
+### Fixed
+
+- **A working Antigravity shows as working.** Antigravity's CLI now writes "esc to cancel" at the
+  bottom while it works instead of "Press esc to interrupt generation.", so i-mux never showed it
+  at work. Every agent was checked against its CLI as it is now: Antigravity's "esc to cancel"
+  (and "Esc disabled during file edits") counts, and when it asks "Do you want to proceed?" it
+  is **Needs you** even with that hint still showing; Codex counts whichever key interrupts it;
+  OpenCode counts while its footer says "esc interrupt", so moving through its menus no longer
+  looks like work. Claude Code (since 0.62.2) and Copilot were already right.
+
 ## [0.62.3] - 2026-11-16
 
 ### Fixed

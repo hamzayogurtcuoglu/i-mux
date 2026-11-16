@@ -1002,16 +1002,16 @@ slow (about a second).
 User report: a working Antigravity shows no spinner; check Codex, OpenCode and the others too
 (D78).
 
-- [ ] **T83.1 Each CLI's busy line** · S
+- [x] **T83.1 Each CLI's busy line** · S
   - AC: D78: Antigravity's status line `esc to cancel` / `Esc disabled during file edits`, a
     progress line `(… esc to cancel)` or `esc to interrupt`, and not while a question shows;
     Codex's `… to interrupt` with any key; OpenCode's `esc interrupt` / `esc again to interrupt`
     (no longer D38); unit tests with the screens of the CLIs as they are now.
-- [ ] **T83.2 End to end** · S
+- [x] **T83.2 End to end** · S
   - AC: e2e: fake Antigravity and OpenCode panes drawing their screens at work are working; an
     Antigravity question with its hint still showing is Needs you.
-- [ ] **T83.3 Docs** · XS
-  - AC: README and README.tr; CHANGELOG.
+- [x] **T83.3 Docs** · XS
+  - AC: CHANGELOG (the READMEs' "while the agent itself says so" still holds).
 
 ## M82: Themes fill the whole terminal (added 2026-11-16)
 

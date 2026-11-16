@@ -251,8 +251,9 @@ func TestNormalize(t *testing.T) {
 // the watcher meeting the pane (a restarted watcher keeps the last one's
 // times), not a quiet pane resized or its redraw after that, not the user
 // typing in the agent's input, and for an agent that says when it works
-// (Copilot here) not a screen without its busy line (D55: the user moving
-// through one of its lists); its busy line on a still screen is work.
+// (Copilot here, OpenCode at the end, D78) not a screen without its busy
+// line (D55: the user moving through one of its lists); its busy line on a
+// still screen is work.
 func TestDetectorWork(t *testing.T) {
 	h := newHarness(t)
 	now := testutil.FrozenTime
@@ -327,10 +328,16 @@ func TestDetectorWork(t *testing.T) {
 	if working("%1") {
 		t.Fatal("still working after the busy line went")
 	}
-	// OpenCode says nothing: its screen changing is work (D38).
+	// OpenCode says it too (D78): its screen changing is work only with
+	// its footer's "esc interrupt".
 	h.f.screens["%3"] = "answer\nmore\n> \n"
 	step()
+	if working("%3") {
+		t.Fatal("OpenCode's screen changing without its footer counted as work")
+	}
+	h.f.screens["%3"] = "answer\nmore\n> \n ⣾ esc interrupt\n"
+	step()
 	if !working("%3") {
-		t.Fatal("an agent without a busy line did not work")
+		t.Fatal("OpenCode at work did not count")
 	}
 }
