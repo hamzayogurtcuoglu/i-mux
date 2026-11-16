@@ -997,6 +997,22 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M81: Claude shows as working again (added 2026-11-16)
+
+User report: the sidebar's spinner turns for a working Copilot but not for a working Claude
+(D76).
+
+- [ ] **T81.1 Claude Code's spinner line** · XS
+  - AC: D76: Claude's busy line is `esc to interrupt` or its spinner line with the time it has
+    worked (`· Discombobulating… (30m 46s · ↓ 139.3k tokens · thinking with high effort)`),
+    among the last 16 non-blank lines; a line without the time in parentheses is not; unit
+    tests.
+- [ ] **T81.2 End to end** · XS
+  - AC: e2e: a fake Claude drawing Claude Code 2.1's spinner line above its input is working
+    and counted in the AGENTS title; typing in its input is not work.
+- [ ] **T81.3 Docs** · XS
+  - AC: README and README.tr; CHANGELOG.
+
 ## M80: Projects without agents come back (added 2026-11-16)
 
 User report: after quitting i-mux and starting it again, only the projects with agents came
