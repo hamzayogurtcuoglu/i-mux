@@ -6,6 +6,16 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.62.6] - 2026-11-16
+
+### Fixed
+
+- **OpenCode Go's limits show in the limits panel.** With an OpenCode Go plan, OpenCode's row only
+  said that your model provider's limits apply. It now draws Go's 5-hour, weekly and monthly use
+  as bars with their reset times, and shows OpenCode as limited while a window it stops at is
+  full. i-mux asks OpenCode for them (`opencode api experimental.usage.limits`, OpenCode 2), so
+  it reads no keys and makes no request of its own; without Go the row is as before.
+
 ## [0.62.5] - 2026-11-16
 
 ### Fixed

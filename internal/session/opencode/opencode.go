@@ -387,3 +387,108 @@ func (p *Provider) Tokens(ctx context.Context, since time.Time) (in, out int64, 
 	}
 	return rows[0].I, rows[0].O, rows[0].N, nil
 }
+
+// GoTimeout bounds `opencode api experimental.usage.limits`, which waits on
+// opencode.ai (D80).
+var GoTimeout = 5 * time.Second
+
+// GoWindow is one window of an OpenCode Go plan: how much of it is used,
+// whether OpenCode stops at it, and when it resets.
+type GoWindow struct {
+	UsedPercent float64   `json:"used_percent"`
+	Limited     bool      `json:"limited,omitempty"`
+	ResetsAt    time.Time `json:"resets_at,omitzero"`
+}
+
+// GoUsage is an OpenCode Go plan's 5-hour, weekly and monthly windows.
+type GoUsage struct {
+	FiveHour *GoWindow `json:"five_hour,omitempty"`
+	Weekly   *GoWindow `json:"weekly,omitempty"`
+	Monthly  *GoWindow `json:"monthly,omitempty"`
+}
+
+// Windows are the windows OpenCode reported, in order.
+func (g *GoUsage) Windows() []*GoWindow {
+	var ws []*GoWindow
+	for _, w := range []*GoWindow{g.FiveHour, g.Weekly, g.Monthly} {
+		if w != nil {
+			ws = append(ws, w)
+		}
+	}
+	return ws
+}
+
+// GoUsage asks OpenCode for its Go plan's windows (D80): OpenCode's server
+// asks opencode.ai with the key the user connected; i-mux reads no
+// credentials. It is nil when OpenCode is not signed in, has no Go plan, or
+// the route is missing or answers in another shape.
+func (p *Provider) GoUsage(ctx context.Context) (*GoUsage, error) {
+	b := p.bin()
+	if b == "" {
+		return nil, errors.New("opencode not installed")
+	}
+	ctx, cancel := context.WithTimeout(ctx, GoTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, b, "api", "experimental.usage.limits")
+	cmd.WaitDelay = time.Second // a child left holding stdout does not keep the panel waiting
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("opencode api experimental.usage.limits: %w", err)
+	}
+	return ParseGoUsage(out), nil
+}
+
+// goMeter is one window as OpenCode's route returns it.
+type goMeter struct {
+	Percent  *float64        `json:"percent"`
+	Limited  bool            `json:"limited"`
+	ResetsAt json.RawMessage `json:"resetsAt"`
+}
+
+func (m *goMeter) window() *GoWindow {
+	if m == nil || m.Percent == nil {
+		return nil
+	}
+	return &GoWindow{UsedPercent: min(max(*m.Percent, 0), 100), Limited: m.Limited, ResetsAt: goTime(m.ResetsAt)}
+}
+
+// goTime reads resetsAt: milliseconds since the epoch, or an RFC 3339
+// string.
+func goTime(raw json.RawMessage) time.Time {
+	var n float64
+	if json.Unmarshal(raw, &n) == nil && n > 0 {
+		return time.UnixMilli(int64(n))
+	}
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
+// ParseGoUsage reads the output of `opencode api experimental.usage.limits`
+// ({"data": {"go": {"rolling", "weekly", "monthly"}}}); nil without Go data.
+func ParseGoUsage(b []byte) *GoUsage {
+	if i := bytes.IndexByte(b, '{'); i > 0 {
+		b = b[i:]
+	}
+	var in struct {
+		Data *struct {
+			Go *struct {
+				Rolling *goMeter `json:"rolling"`
+				Weekly  *goMeter `json:"weekly"`
+				Monthly *goMeter `json:"monthly"`
+			} `json:"go"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(b, &in) != nil || in.Data == nil || in.Data.Go == nil {
+		return nil
+	}
+	g := &GoUsage{FiveHour: in.Data.Go.Rolling.window(), Weekly: in.Data.Go.Weekly.window(), Monthly: in.Data.Go.Monthly.window()}
+	if len(g.Windows()) == 0 {
+		return nil
+	}
+	return g
+}

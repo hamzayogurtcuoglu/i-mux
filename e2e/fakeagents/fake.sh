@@ -14,6 +14,7 @@
 #   $IMUX_FAKE_LOG/A.headless-reply   print mode's reply (see below)
 #   $IMUX_FAKE_LOG/A.headless-plain   if present, print mode replies with it as it is
 #   $IMUX_FAKE_LOG/A.headless-pause   seconds a streamed print mode waits before its reply
+#   $IMUX_FAKE_LOG/opencode.go-usage  what `opencode api experimental.usage.limits` prints
 #   FAKE_SCRIPT           evaluated after the control file
 set -u
 agent="${FAKE_AGENT:?FAKE_AGENT not set}"
@@ -43,6 +44,14 @@ if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
 	echo "Usage: $agent [options] [prompt]"
 	echo "  --session-id <uuid>  -i, --prompt-interactive <prompt>  -r, --resume <id>  resume <id>"
 	echo "$agent --help" >>"$log/version-probes"
+	exit 0
+fi
+
+# OpenCode Go's usage (D80): `opencode api experimental.usage.limits` prints
+# $IMUX_FAKE_LOG/opencode.go-usage, or OpenCode's answer when not signed in.
+if [ "$agent" = opencode ] && [ "$#" -eq 2 ] && [ "$1" = api ] && [ "$2" = experimental.usage.limits ]; then
+	echo "opencode api experimental.usage.limits" >>"$log/opencode-api"
+	if [ -f "$log/opencode.go-usage" ]; then cat "$log/opencode.go-usage"; else echo '{"location":{},"data":null}'; fi
 	exit 0
 fi
 

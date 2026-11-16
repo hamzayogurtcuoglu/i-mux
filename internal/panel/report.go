@@ -17,6 +17,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/limits"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session/opencode"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/textfmt"
@@ -42,7 +43,9 @@ type Row struct {
 }
 
 // Usage is the agent's local usage. Window says what it covers: "5h"
-// (Claude), "today" (Antigravity), "month" (Copilot) or "latest" (Codex).
+// (Claude), "today" (Antigravity), "month" (Copilot), "latest" (Codex) or
+// "opencode" (OpenCode: the last 5 hours' tokens, and its Go plan's windows
+// when it has one, D80).
 type Usage struct {
 	Window          string                     `json:"window"`
 	From            time.Time                  `json:"from,omitzero"`
@@ -55,6 +58,7 @@ type Usage struct {
 	CopilotQuota    *CopilotQuota              `json:"copilot_quota,omitempty"`
 	Sessions        int                        `json:"sessions,omitempty"`
 	RateLimits      *session.RateLimitSnapshot `json:"rate_limits,omitempty"`
+	OpenCodeGo      *opencode.GoUsage          `json:"opencode_go,omitempty"`
 }
 
 // Collect builds the report from state.json and the session stores.
@@ -101,10 +105,44 @@ func Collect(ctx context.Context, cfg *config.Config, st *state.State, installed
 					row.Usage.InputTokens, row.Usage.OutputTokens, row.Usage.Sessions = in, out, n
 				}
 			}
+			if row.Installed {
+				if p, ok := f.Provider(session.OpenCode).(interface {
+					GoUsage(context.Context) (*opencode.GoUsage, error)
+				}); ok {
+					if g, err := p.GoUsage(ctx); err == nil && g != nil {
+						row.Usage.OpenCodeGo = g
+						goLimited(&row, g, now)
+					}
+				}
+			}
 		}
 		r.Agents = append(r.Agents, row)
 	}
 	return r
+}
+
+// goLimited marks OpenCode limited while a Go window it stops at is in
+// effect, until the last such window resets (D80); a limit seen on screen
+// stays as it is.
+func goLimited(row *Row, g *opencode.GoUsage, now time.Time) {
+	if row.Limit != nil {
+		return
+	}
+	var until time.Time
+	limited := false
+	for _, w := range g.Windows() {
+		if w.Limited && (w.ResetsAt.IsZero() || w.ResetsAt.After(now)) {
+			limited = true
+			if w.ResetsAt.After(until) {
+				until = w.ResetsAt
+			}
+		}
+	}
+	if !limited {
+		return
+	}
+	row.Status = "limited"
+	row.Limit = &state.Limit{At: now, ResetAt: until, ExpiresAt: until, Source: "opencode", Severity: "limit"}
 }
 
 // JSON writes the report as indented JSON.
@@ -164,6 +202,24 @@ func (r *Report) Table(w io.Writer) error {
 				line += " · " + i18n.T("limits.as_of", textfmt.Ago(now, cq.At))
 			}
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, line, reset)
+		case u != nil && u.OpenCodeGo != nil:
+			for _, gw := range []struct {
+				name string
+				w    *opencode.GoWindow
+			}{
+				{i18n.T("limits.win_5h"), u.OpenCodeGo.FiveHour},
+				{i18n.T("limits.win_week"), u.OpenCodeGo.Weekly},
+				{i18n.T("limits.win_month"), u.OpenCodeGo.Monthly},
+			} {
+				if gw.w == nil {
+					continue
+				}
+				pct := gw.w.UsedPercent
+				if gw.w.Limited {
+					pct = 100
+				}
+				b.WriteString(windowLine(gw.name, pct, gw.w.ResetsAt, now))
+			}
 		case rl != nil:
 			if rl.PrimaryWindowMinutes > 0 || rl.PrimaryUsedPercent > 0 {
 				b.WriteString(windowLine(windowName(rl.PrimaryWindowMinutes, "5h"), rl.PrimaryUsedPercent, rl.PrimaryResetsAt, now))

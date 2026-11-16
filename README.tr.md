@@ -124,7 +124,8 @@ https://opencode.ai/v2/install | bash`, `npm i -g @opencode/cli` ve `brew instal
 kurar. OpenCode'un ilk kurulum betiği ve npm'deki `opencode-ai` OpenCode 1 kurar; onlarla kurduysan
 ardından `opencode upgrade --major` çalıştır. `imux doctor` çalışabildiğini kontrol eder. Anahtarı OpenCode'un içinde `/connect` ile ekle (NVIDIA
 ya da Groq'u seç, build.nvidia.com ya da console.groq.com'dan aldığın anahtarı yapıştır; hesap
-gerekmez), sonra `/models` ile modeli seç.
+gerekmez), sonra `/models` ile modeli seç. OpenCode Go planın varsa limit paneli 5 saatlik, haftalık ve aylık
+kullanımını gösterir.
 
 Dosyalar editöründe açılır: Ayarlar → **Düzenleyici** micro, nano ya da Neovim'i seçer (`imux
 editor use <editör>`); **Otomatik**'te micro, `$VISUAL`, `$EDITOR`, nano, vim. Kendi editörün yoksa,

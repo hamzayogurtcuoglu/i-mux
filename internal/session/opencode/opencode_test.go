@@ -133,3 +133,77 @@ func itoa(n int64) string {
 	}
 	return itoa(n/10) + string(rune('0'+n%10))
 }
+
+// A synthetic answer of `opencode api experimental.usage.limits` with a Go
+// plan (D80).
+const goLimitsJSON = `{"location":{"directory":"/home/u"},"data":{"workspace":{"id":"wrk_1","name":"Personal","usageURL":"https://example.invalid/usage"},` +
+	`"go":{"rolling":{"percent":39,"limited":false,"resetsAt":1794865519000},` +
+	`"weekly":{"percent":15,"limited":false,"resetsAt":1795392000000},` +
+	`"monthly":{"percent":100,"limited":true,"resetsAt":"2026-12-14T10:31:01Z"}},"budgets":[]}}`
+
+func TestParseGoUsage(t *testing.T) {
+	g := ParseGoUsage([]byte(goLimitsJSON))
+	if g == nil || g.FiveHour == nil || g.Weekly == nil || g.Monthly == nil {
+		t.Fatalf("parse %+v", g)
+	}
+	if g.FiveHour.UsedPercent != 39 || g.FiveHour.Limited || !g.FiveHour.ResetsAt.Equal(time.UnixMilli(1794865519000)) {
+		t.Fatalf("5-hour %+v", g.FiveHour)
+	}
+	if g.Weekly.UsedPercent != 15 || !g.Monthly.Limited || g.Monthly.ResetsAt.UTC().Format(time.RFC3339) != "2026-12-14T10:31:01Z" {
+		t.Fatalf("weekly %+v monthly %+v", g.Weekly, g.Monthly)
+	}
+	if len(g.Windows()) != 3 {
+		t.Fatalf("windows %d", len(g.Windows()))
+	}
+	// A line before the JSON (a warning) is skipped; a percent out of range is clamped.
+	if g := ParseGoUsage([]byte("note: experimental\n" + `{"data":{"go":{"weekly":{"percent":140,"limited":true,"resetsAt":0}}}}`)); g == nil || g.Weekly.UsedPercent != 100 || g.FiveHour != nil || !g.Weekly.ResetsAt.IsZero() {
+		t.Fatalf("partial %+v", g)
+	}
+	for _, in := range []string{
+		`{"location":{},"data":null}`,                              // not signed in
+		`{"data":{"workspace":{"id":"w"},"go":null,"budgets":[]}}`, // no Go plan
+		`{"data":{"go":{"rolling":{"limited":false}}}}`,            // no percent
+		`{"data":{"go":{}}}`,
+		`not json`,
+		``,
+	} {
+		if g := ParseGoUsage([]byte(in)); g != nil {
+			t.Fatalf("%q: %+v", in, g)
+		}
+	}
+}
+
+func TestGoUsageRunsOpenCode(t *testing.T) {
+	dir := t.TempDir()
+	argv := filepath.Join(dir, "argv")
+	fake := filepath.Join(dir, "opencode")
+	if err := os.WriteFile(fake, []byte("#!/bin/sh\necho \"$@\" > '"+argv+"'\ncat <<'X'\n"+goLimitsJSON+"\nX\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	p := &Provider{Env: session.Env{OpenCodeHome: dir, OpenCodeBin: fake}}
+	g, err := p.GoUsage(context.Background())
+	if err != nil || g == nil || g.FiveHour.UsedPercent != 39 {
+		t.Fatalf("go usage %+v %v", g, err)
+	}
+	if b, _ := os.ReadFile(argv); strings.TrimSpace(string(b)) != "api experimental.usage.limits" {
+		t.Fatalf("argv %q", b)
+	}
+	// A failing command is an error, and no usage.
+	if err := os.WriteFile(fake, []byte("#!/bin/sh\necho 'no server' >&2\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if g, err := p.GoUsage(context.Background()); err == nil || g != nil {
+		t.Fatalf("failure %+v %v", g, err)
+	}
+	// One that hangs is cut at GoTimeout.
+	old := GoTimeout
+	GoTimeout = 200 * time.Millisecond
+	t.Cleanup(func() { GoTimeout = old })
+	if err := os.WriteFile(fake, []byte("#!/bin/sh\nexec sleep 5\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	if g, err := p.GoUsage(context.Background()); err == nil || g != nil || time.Since(start) > 3*time.Second {
+		t.Fatalf("timeout %+v %v after %s", g, err, time.Since(start))
+	}
+}

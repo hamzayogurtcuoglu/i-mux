@@ -3,11 +3,14 @@
 package e2e
 
 import (
+	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
 )
 
@@ -128,5 +131,35 @@ func TestLimitStatusExpires(t *testing.T) {
 	})
 	if st, _ := state.Read(); st.Limits["codex"] != nil {
 		t.Fatal("expired limit kept in state.json")
+	}
+}
+
+// TestLimitsOpenCodeGo (T85.3, D80): with an OpenCode Go plan, `imux limits`
+// shows OpenCode's 5-hour, weekly and monthly use, read from `opencode api
+// experimental.usage.limits`; without one, the row says what it said before.
+func TestLimitsOpenCodeGo(t *testing.T) {
+	h := newH(t, "")
+	out := h.mustImux("limits")
+	if !strings.Contains(out, "OpenCode uses your model provider's limits") {
+		t.Fatalf("without Go:\n%s", out)
+	}
+	resets := time.Now().Add(2 * time.Hour).UnixMilli()
+	testutil.WriteFile(t, filepath.Join(h.Log, "opencode.go-usage"), []byte(fmt.Sprintf(
+		`{"location":{"directory":"/x"},"data":{"workspace":{"id":"w","name":"n","usageURL":"u"},"go":{`+
+			`"rolling":{"percent":39,"limited":false,"resetsAt":%d},`+
+			`"weekly":{"percent":15,"limited":false,"resetsAt":%d},`+
+			`"monthly":{"percent":100,"limited":true,"resetsAt":%d}},"budgets":[]}}`, resets, resets+86400000, resets+10*86400000)))
+	out = stripANSI(h.mustImux("limits"))
+	for _, want := range []string{"5-hour", "39%", "weekly", "15%", "monthly", "100%", "limit reached"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("limits lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "OpenCode uses your model provider's limits") {
+		t.Errorf("with Go the provider note should not show:\n%s", out)
+	}
+	js := h.mustImux("limits", "--json")
+	if !strings.Contains(js, `"opencode_go"`) || !strings.Contains(js, `"used_percent": 39`) {
+		t.Errorf("json:\n%s", js)
 	}
 }

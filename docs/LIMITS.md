@@ -1,7 +1,8 @@
 # `imux limits`
 
 `imux limits` shows, for each agent, the usage limit i-mux last saw on its screen and the usage it
-can count from local session files. It reads local files only and makes no network calls.
+can count from local session files. It reads local files only and makes no network calls of its own; for
+OpenCode Go it asks OpenCode, which asks opencode.ai with the key you connected in OpenCode.
 Inside the workspace the pane menu's **Limits** item opens it in a popup (`imux limits --pager`).
 
 ```
@@ -21,6 +22,7 @@ Usage is counted from local session files. For exact plan percentages, see Codex
 | Antigravity | requests (model replies) and tokens today, local time | conversations in every project modified today (`~/.gemini/antigravity-cli/brain/*/…/transcript_full.jsonl`) |
 | Copilot | premium requests this calendar month | the latest `session.shutdown` / `session.usage_checkpoint` total of each session |
 | Codex | the newest rate-limit percentages and reset times | `token_count` events with `rate_limits` (newer Codex versions only; otherwise "n/a") |
+| OpenCode | with an OpenCode Go plan: the 5-hour, weekly and monthly use and reset times; always: tokens in the last 5 hours | `opencode api experimental.usage.limits` (OpenCode 2); `session_v2` in `opencode.db` |
 
 ## JSON (`imux limits --json`)
 
@@ -65,10 +67,11 @@ Field names are stable; new fields may be added.
 | `agent`, `name`, `installed` | id (`claude`, `antigravity`, `copilot`, `codex`), product name, whether its CLI was found |
 | `status` | `limited` (a limit was seen and has not expired), `warn` (an "approaching" message was seen) or `ok` |
 | `limit` | present when `status` is not `ok`: the record from `~/.imux/state.json` (`reset_at` is omitted when the message had no reset time; `expires_at` is then `at` + `limits.default_expiry`) |
-| `usage.window` | `5h` (Claude), `today` (Antigravity), `month` (Copilot), `latest` (Codex) |
+| `usage.window` | `5h` (Claude), `today` (Antigravity), `month` (Copilot), `latest` (Codex), `opencode` (OpenCode) |
 | `usage.from` | start of the window (local midnight for `today`, the first of the month for `month`) |
 | `usage.replies` | assistant replies (Claude: unique `message.id`s; Antigravity: model replies) |
 | `usage.*_tokens` | token counts; zero values are omitted |
 | `usage.premium_requests` | Copilot premium requests |
 | `usage.sessions` | session files that contributed |
+| `usage.opencode_go` | OpenCode with a Go plan only: `five_hour`, `weekly` and `monthly`, each `{"used_percent", "limited", "resets_at"}`; absent without Go data |
 | `usage.rate_limits` | Codex only: `{"At", "PrimaryUsedPercent", "PrimaryResetsAt", "SecondaryUsedPercent", "SecondaryResetsAt"}`; absent when Codex does not write rate limits |

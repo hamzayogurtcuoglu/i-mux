@@ -124,7 +124,8 @@ NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy p
 when the others hit their limits. i-mux needs OpenCode 2: Settings → **Versions and updates**
 installs it (its letter, `e`), as do `curl -fsSL https://opencode.ai/v2/install | bash`, `npm i -g
 @opencode/cli` and `brew install opencode`. OpenCode's first install script and npm's `opencode-ai`
-give OpenCode 1; after them, run `opencode upgrade --major`. `imux doctor` checks that it can run. Add a key inside OpenCode with `/connect` (pick NVIDIA or Groq,
+give OpenCode 1; after them, run `opencode upgrade --major`. `imux doctor` checks that it can run.
+With an OpenCode Go plan, the limits panel shows its 5-hour, weekly and monthly use. Add a key inside OpenCode with `/connect` (pick NVIDIA or Groq,
 paste the key from build.nvidia.com or console.groq.com; no account needed), then choose a model
 with `/models`.
 
