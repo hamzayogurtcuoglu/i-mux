@@ -200,7 +200,7 @@ var en = map[string]string{
 	"versions.tmux_pm":                 "update tmux with your package manager",
 	"versions.tmux_restart":            "i-mux keeps using the old tmux until its server restarts: run `tmux -L imux kill-server`, then `imux` (Restore last session brings your projects back).",
 	"versions.unknown":                 "its version could not be read",
-	"versions.install":                 "not installed · install: %s",
+	"versions.missing":                 "not installed",
 	"versions.update":                  "update: %s",
 	"versions.install_cmd":             "install: %s",
 	"versions.prompt":                  "Type a letter and Enter to run its command here (Enter alone closes): ",

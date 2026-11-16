@@ -73,8 +73,8 @@ i-mux onu hatırlar (`tmux.sidebar_width`).
 düzenleyicin, bildirimler, simgeler, renk teması, geçişten sonra yeni ajanın ne
 yapacağı, limitte ne olacağı ve ayar dosyası. Bir satıra Enter ya da tıklama, değerlerinin menüsünü
 açar (● şu ankini gösterir); birini seç ya da numarasına bas. Oradaki **Sürümler ve güncellemeler** (ya da `imux
-versions`) i-mux'u, tmux'u ve her agent CLI'ını sürümü ve onu güncelleyen komutla listeler; harfine
-basınca komut orada çalışır. Eski bir tmux'ta neyin eksik olduğunu ve sisteminde yenisini nasıl
+versions`) i-mux'u, tmux'u ve her agent CLI'ını sürümü ve onu güncelleyen (kurulu değilse kuran)
+komutla listeler; harfine basınca komut orada çalışır. Eski bir tmux'ta neyin eksik olduğunu ve sisteminde yenisini nasıl
 alacağını da söyler. **Editörde yapay zekâ tamamlama** VS Code'daki Copilot
 gibi çalışır: oradan **Düzenleyici → Neovim + Copilot**'u seçince düzenlediğin dosyalar GitHub'ın
 Copilot eklentili Neovim'inde açılır (Tab
@@ -119,7 +119,9 @@ için orada çalışmaz. `imux doctor` neyi kullandığını söyler; Ayarlar'da
 **OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
 Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):
 diğerleri limite takılınca devam etmek için kullanışlı bir yer. i-mux OpenCode 2 ister:
-`brew install opencode` onu kurar. Kurulum betiği ve npm hâlâ OpenCode 1 kurar; onlarla kurduysan
+Ayarlar → **Sürümler ve güncellemeler** onu kurar (harfi `e`); `curl -fsSL
+https://opencode.ai/v2/install | bash`, `npm i -g @opencode/cli` ve `brew install opencode` da
+kurar. OpenCode'un ilk kurulum betiği ve npm'deki `opencode-ai` OpenCode 1 kurar; onlarla kurduysan
 ardından `opencode upgrade --major` çalıştır. `imux doctor` çalışabildiğini kontrol eder. Anahtarı OpenCode'un içinde `/connect` ile ekle (NVIDIA
 ya da Groq'u seç, build.nvidia.com ya da console.groq.com'dan aldığın anahtarı yapıştır; hesap
 gerekmez), sonra `/models` ile modeli seç.

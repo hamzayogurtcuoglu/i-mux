@@ -164,8 +164,23 @@ func TestAgentAndImuxRows(t *testing.T) {
 	if r := row(t, rows, "Claude Code"); r.Show != "claude update" || r.Version != "2.1.319" || r.Key != "c" {
 		t.Errorf("claude %+v", r)
 	}
-	if r := row(t, rows, "Antigravity CLI"); r.Status != Missing || r.Fix != nil || !strings.Contains(r.Note, "antigravity.google/cli/install.sh") {
-		t.Errorf("missing agent %+v", r)
+	// A missing agent: its letter runs the command Install now runs (D79);
+	// without curl, the row says how to get it and nothing runs.
+	agy := "curl -fsSL https://antigravity.google/cli/install.sh | bash"
+	if r := row(t, rows, "Antigravity CLI"); r.Status != Missing || r.Fix != nil || r.Show != agy ||
+		!strings.Contains(r.Note, "with curl, which is not installed here") || !strings.Contains(r.Note, "sudo apt install curl") {
+		t.Errorf("missing agent without curl: %+v", r)
+	}
+	look := e.LookPath
+	e.LookPath = func(name string) (string, error) {
+		if name == "curl" {
+			return "/usr/bin/curl", nil
+		}
+		return look(name)
+	}
+	if r := row(t, Collect(context.Background(), e), "Antigravity CLI"); r.Status != Missing || strings.Join(r.Fix, " ") != "sh -c "+agy ||
+		r.Show != agy || r.Note != "not installed" || r.Agent != session.Antigravity || r.Key != "a" {
+		t.Errorf("missing agent: %+v", r)
 	}
 	// Codex from npm.
 	if fix, show := agentUpdate(agent.MustGet(session.Codex), "/usr/local/lib/node_modules/.bin/codex", "0.50.0"); show != "npm install -g @openai/codex@latest" || len(fix) != 4 {
@@ -193,7 +208,8 @@ func TestFormat(t *testing.T) {
 		{Key: "u", Name: "i-mux", Version: "0.33.0", Note: "the newest"},
 		{Key: "t", Name: "tmux", Version: "3.2a", Status: Old, Note: "works; 3.4+: the agent bar takes clicks\napt has no newer tmux here"},
 		{Key: "c", Name: "Claude Code", Version: "2.1.319", Show: "claude update"},
-		{Key: "x", Name: "Codex CLI", Status: Missing, Note: "not installed · install: npm i -g @openai/codex"},
+		{Key: "x", Name: "Codex CLI", Status: Missing, Note: "not installed", Show: "npm i -g @openai/codex", Fix: []string{"sh", "-c", "npm i -g @openai/codex"}},
+		{Key: "e", Name: "OpenCode", Status: Missing, Note: "not installed\nOpenCode installs with curl, which is not installed here.", Show: "curl -fsSL https://opencode.ai/v2/install | bash"},
 		{Key: "q", Name: "Odd", Status: Unknown, Show: "odd update"},
 	}
 	got := Format(rows)
@@ -203,6 +219,7 @@ func TestFormat(t *testing.T) {
 		"  t  tmux         3.2a     ⚠ works; 3.4+: the agent bar takes clicks\n                           apt has no newer tmux here\n",
 		"  c  Claude Code  2.1.319  update: claude update\n",
 		"  x  Codex CLI    –        ✗ not installed · install: npm i -g @openai/codex\n",
+		"  e  OpenCode     –        ✗ not installed\n                           OpenCode installs with curl, which is not installed here.\n                           install: curl -fsSL https://opencode.ai/v2/install | bash\n",
 		"  q  Odd          –        update: odd update\n",
 	} {
 		if !strings.Contains(got, want) {

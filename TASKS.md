@@ -1002,19 +1002,19 @@ slow (about a second).
 User report: in Versions and updates, OpenCode's letter says "Nothing to run"; what installs it
 there (D79)?
 
-- [ ] **T84.1 The letter installs** · S
+- [x] **T84.1 The letter installs** · S
   - AC: D79, §9.3 "Versions and updates": a missing agent's row shows the command Install now
     runs and its letter runs it (`sh -c`); without npm, curl or brew the row says how to get it
     and nothing runs; an install that finished with the agent still not found says so; unit
     tests.
-- [ ] **T84.2 OpenCode 2, and the installers' folders** · S
+- [x] **T84.2 OpenCode 2, and the installers' folders** · S
   - AC: D79: OpenCode's install command is `curl -fsSL https://opencode.ai/v2/install | bash`;
     an agent not on the PATH is found in `~/.opencode/bin` (OpenCode) or `~/.local/bin`
     (Antigravity), with that folder first on its PATH; unit tests.
-- [ ] **T84.3 End to end** · XS
+- [x] **T84.3 End to end** · XS
   - AC: e2e: in the popup, a missing agent's letter runs its install command, and the list is
     read again.
-- [ ] **T84.4 Docs** · XS
+- [x] **T84.4 Docs** · XS
   - AC: README and README.tr; CHANGELOG.
 
 ## M83: Every agent shows as working (added 2026-11-16)

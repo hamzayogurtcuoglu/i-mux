@@ -6,6 +6,21 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.62.5] - 2026-11-16
+
+### Fixed
+
+- **Versions and updates installs a missing agent.** Its letter said "Nothing to run" for an
+  agent that is not installed, though the list says a letter runs its command. Now the row shows
+  the command that installs it (the one **Install now** runs, or `[agents.<id>] install`) and its
+  letter runs it right there; when that command needs npm, curl or Homebrew and it is not here,
+  the row says how to get it.
+- **OpenCode installs as OpenCode 2.** i-mux's install command for OpenCode gave OpenCode 1, which
+  i-mux does not support; it is now OpenCode 2's own installer
+  (`curl -fsSL https://opencode.ai/v2/install | bash`). An agent its own install script put in
+  `~/.opencode/bin` (OpenCode) or `~/.local/bin` (Antigravity) is found there at once, without a
+  new terminal.
+
 ## [0.62.4] - 2026-11-16
 
 ### Fixed

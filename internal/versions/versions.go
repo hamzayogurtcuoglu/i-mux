@@ -35,10 +35,11 @@ type Row struct {
 	Name    string
 	Version string // "" when missing or unreadable
 	Status  Status
-	Note    string   // why it is old, or what to do (lines)
-	Fix     []string // the command that updates or installs it; nil: none to run
-	Show    string   // Fix as the user would type it
-	Tmux    bool     // the tmux row (its update needs a restart of i-mux's server)
+	Note    string          // why it is old, or what to do (lines)
+	Fix     []string        // the command that updates or installs it; nil: none to run
+	Show    string          // Fix as the user would type it
+	Tmux    bool            // the tmux row (its update needs a restart of i-mux's server)
+	Agent   session.AgentID // an agent's row ("" for i-mux and tmux)
 }
 
 // Env is what Collect looks at; tests replace every part.
@@ -231,10 +232,18 @@ func upstream(v string) string {
 }
 
 func agentRow(e Env, a agent.Info) Row {
-	r := Row{Key: a.Key, Name: a.Name}
+	r := Row{Key: a.Key, Name: a.Name, Agent: a.ID}
 	res := e.Resolve(a.ID)
 	if !res.Installed {
-		r.Status, r.Note = Missing, i18n.T("versions.install", a.InstallHint)
+		// The command Install now runs (D41), run by its letter (D79);
+		// without the program it starts with, how to get that.
+		cmd := agent.Install(e.Cfg, a.ID)
+		r.Status, r.Note, r.Show = Missing, i18n.T("versions.missing"), cmd
+		if p := needs(e, cmd); p != "" {
+			r.Note += "\n" + i18n.T("install.needs", a.Short, p) + "\n" + howTo(p)
+		} else {
+			r.Fix = []string{"sh", "-c", cmd}
+		}
 		return r
 	}
 	r.Version = e.Probe(res)
@@ -243,6 +252,35 @@ func agentRow(e Env, a agent.Info) Row {
 	}
 	r.Fix, r.Show = agentUpdate(a, res.Path, r.Version)
 	return r
+}
+
+// needs is the program an install command starts with when it is not here
+// (npm, curl, brew), as Install now checks (D41); "" otherwise.
+func needs(e Env, cmd string) string {
+	f := strings.Fields(cmd)
+	if len(f) == 0 {
+		return ""
+	}
+	switch f[0] {
+	case "npm", "curl", "brew":
+		if _, err := e.LookPath(f[0]); err != nil {
+			return f[0]
+		}
+	}
+	return ""
+}
+
+// howTo says how to get a program an install command needs.
+func howTo(tool string) string {
+	switch tool {
+	case "npm":
+		return i18n.T("install.needs_npm")
+	case "curl":
+		return i18n.T("install.needs_curl")
+	case "brew":
+		return i18n.T("install.needs_brew")
+	}
+	return ""
 }
 
 // agentUpdate is the command that updates agent a installed at path: its
@@ -317,7 +355,11 @@ func Format(rows []Row) string {
 			if r.Status == Missing {
 				k = "versions.install_cmd"
 			}
-			lines = append(lines, i18n.T(k, r.Show))
+			if cmd := i18n.T(k, r.Show); r.Status == Missing && len(lines) == 1 {
+				lines[0] += " · " + cmd // "✗ not installed · install: …"
+			} else {
+				lines = append(lines, cmd)
+			}
 		}
 		if len(lines) == 0 {
 			lines = []string{mark}

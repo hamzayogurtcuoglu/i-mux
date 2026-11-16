@@ -184,11 +184,12 @@ func TestDoctorOpenCode1(t *testing.T) {
 		t.Fatalf("opencode 2 behind a stale cache: %+v", r.Results)
 	}
 
-	// Not installed: the hint gives OpenCode 2 (Homebrew), or 1 then the
-	// upgrade (the install script stops at 1).
+	// Not installed: the hint gives OpenCode 2: its own installer, npm's
+	// @opencode/cli or Homebrew (D79).
 	o.Resolved = map[session.AgentID]agent.Resolved{}
 	r = Run(context.Background(), o)
-	if x := find(r, "OpenCode: not installed"); x == nil || !strings.Contains(x.Msg, "brew install opencode") || !strings.Contains(x.Msg, "opencode upgrade --major") {
+	if x := find(r, "OpenCode: not installed"); x == nil || !strings.Contains(x.Msg, "opencode.ai/v2/install") || !strings.Contains(x.Msg, "@opencode/cli") ||
+		!strings.Contains(x.Msg, "brew install opencode") {
 		t.Fatalf("opencode hint: %+v", r.Results)
 	}
 }

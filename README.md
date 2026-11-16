@@ -79,8 +79,8 @@ edge to make it wider or narrower: every tab takes the width, and i-mux remember
 notifications, icons, the color theme, what a new agent does after a handoff, what happens
 at a limit, and the config file. Enter or a click on a row opens a menu of its values (● marks the
 current one); pick one or press its number. **Versions and updates** there (or `imux versions`) lists i-mux, tmux
-and every agent CLI with its version and the command that updates it; press its letter to run it
-right there. It says what an older tmux lacks and how to get a newer one on your system. **AI completion in the editor** works like Copilot in VS Code: choose
+and every agent CLI with its version and the command that updates it, or installs it when it is
+missing; press its letter to run it right there. It says what an older tmux lacks and how to get a newer one on your system. **AI completion in the editor** works like Copilot in VS Code: choose
 **Editor → Neovim + Copilot** there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
@@ -121,9 +121,10 @@ so it cannot work there. `imux doctor` says what it uses; Settings turns it off.
 
 **OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
 NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
-when the others hit their limits. i-mux needs OpenCode 2: `brew install opencode` gives it. Its
-install script and npm still give OpenCode 1; after them, run `opencode upgrade --major`. `imux
-doctor` checks that it can run. Add a key inside OpenCode with `/connect` (pick NVIDIA or Groq,
+when the others hit their limits. i-mux needs OpenCode 2: Settings → **Versions and updates**
+installs it (its letter, `e`), as do `curl -fsSL https://opencode.ai/v2/install | bash`, `npm i -g
+@opencode/cli` and `brew install opencode`. OpenCode's first install script and npm's `opencode-ai`
+give OpenCode 1; after them, run `opencode upgrade --major`. `imux doctor` checks that it can run. Add a key inside OpenCode with `/connect` (pick NVIDIA or Groq,
 paste the key from build.nvidia.com or console.groq.com; no account needed), then choose a model
 with `/models`.
 

@@ -135,6 +135,32 @@ func TestResolveConfigBinWins(t *testing.T) {
 	}
 }
 
+// An agent its own script installed is found in that script's folder while
+// the PATH does not have it yet, with the folder first on its PATH (D79);
+// an agent installed by npm has no such folder.
+func TestResolveInstallerDir(t *testing.T) {
+	h := testutil.Isolate(t)
+	t.Setenv("PATH", "/usr/bin:/bin")
+	if r := Resolve(config.Default(), session.OpenCode, nil); r.Installed {
+		t.Fatalf("found before the install: %+v", r)
+	}
+	bin := filepath.Join(h.Home, ".opencode", "bin", "opencode")
+	writeExe(t, bin, "echo 2.3.0")
+	r := Resolve(config.Default(), session.OpenCode, nil)
+	if !r.Installed || r.Path != bin || !strings.HasPrefix(r.PathEnv, filepath.Dir(bin)+":") {
+		t.Fatalf("opencode %+v", r)
+	}
+	agy := filepath.Join(h.Home, ".local", "bin", "agy")
+	writeExe(t, agy, "true")
+	if r := Resolve(config.Default(), session.Antigravity, nil); r.Path != agy {
+		t.Fatalf("antigravity %+v", r)
+	}
+	writeExe(t, filepath.Join(h.Home, ".local", "bin", "codex"), "true")
+	if r := Resolve(config.Default(), session.Codex, nil); r.Installed {
+		t.Fatalf("codex found outside the PATH: %+v", r)
+	}
+}
+
 func TestResolveFromCache(t *testing.T) {
 	h := testutil.Isolate(t)
 	bin := filepath.Join(h.Home, "nvm", "bin", "codex")
@@ -210,13 +236,13 @@ func TestReadDirArgs(t *testing.T) {
 }
 
 // The config's install command wins over i-mux's; OpenCode's hint is prose,
-// its command is not.
+// its command is not, and it installs OpenCode 2 (D79).
 func TestInstallCommand(t *testing.T) {
 	cfg := config.Default()
 	if got := Install(cfg, session.Codex); got != "npm i -g @openai/codex" {
 		t.Errorf("codex: %q", got)
 	}
-	if got := Install(cfg, session.OpenCode); got != "curl -fsSL https://opencode.ai/install | bash" {
+	if got := Install(cfg, session.OpenCode); got != "curl -fsSL https://opencode.ai/v2/install | bash" {
 		t.Errorf("opencode: %q", got)
 	}
 	cfg.Agents = map[string]*config.Agent{"codex": {Install: "brew install codex"}}

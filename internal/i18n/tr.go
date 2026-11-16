@@ -201,7 +201,7 @@ var tr = map[string]string{
 	"versions.tmux_pm":                 "tmux'u paket yöneticinle güncelle",
 	"versions.tmux_restart":            "i-mux, sunucusu yeniden başlayana kadar eski tmux'u kullanır: `tmux -L imux kill-server`, sonra `imux` çalıştır (Son oturumu geri yükle projelerini geri getirir).",
 	"versions.unknown":                 "sürümü okunamadı",
-	"versions.install":                 "kurulu değil · kurmak için: %s",
+	"versions.missing":                 "kurulu değil",
 	"versions.update":                  "güncellemek için: %s",
 	"versions.install_cmd":             "kurmak için: %s",
 	"versions.prompt":                  "Komutunu burada çalıştırmak için bir harf yazıp Enter (yalnız Enter kapatır): ",

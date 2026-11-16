@@ -33,6 +33,10 @@ type Info struct {
 	InstallHint string
 	// InstallCmd installs it (sh); "" means InstallHint, which is one.
 	InstallCmd string
+	// Dirs are the folders, under the home folder, where its own install
+	// script puts it: looked in when it is not on the PATH, which gets them
+	// only in new shells (D79).
+	Dirs []string
 	// ReadDirFlag lets the agent read files in another directory without
 	// asking ("" when it needs nothing: Codex reads any path).
 	ReadDirFlag string
@@ -43,10 +47,12 @@ type Info struct {
 
 var registry = []Info{
 	{ID: session.Claude, Key: "c", Bin: "claude", Vendor: "Anthropic", InstallHint: "npm i -g @anthropic-ai/claude-code", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
-	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
+	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", Dirs: []string{".local/bin"}, ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
 	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
 	{ID: session.Codex, Key: "x", Bin: "codex", Vendor: "OpenAI", InstallHint: "npm i -g @openai/codex"},
-	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "brew install opencode (or: curl -fsSL https://opencode.ai/install | bash, then: opencode upgrade --major)", InstallCmd: "curl -fsSL https://opencode.ai/install | bash", UpdateArgs: []string{"upgrade"}},
+	// OpenCode 2's own installer: i-mux needs OpenCode 2, and the first one
+	// (opencode.ai/install) and npm's opencode-ai give OpenCode 1 (D79).
+	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "curl -fsSL https://opencode.ai/v2/install | bash (or: npm i -g @opencode/cli, or: brew install opencode)", InstallCmd: "curl -fsSL https://opencode.ai/v2/install | bash", Dirs: []string{".opencode/bin"}, UpdateArgs: []string{"upgrade"}},
 }
 
 func init() {
@@ -199,10 +205,11 @@ type Resolved struct {
 var LookPathFunc = exec.LookPath
 
 // Resolve finds agent id's binary. Order: config `bin` (absolute path, or a
-// name looked up on PATH), the current PATH, then the bin cache (menus and
-// the watcher run with the tmux server's environment, which may lack nvm's
-// PATH). PathEnv is the PATH to use, with the binary's *unresolved*
-// directory first (nvm's bin/ holds both the CLI and node).
+// name looked up on PATH), the current PATH, the folder its own install
+// script uses (D79), then the bin cache (menus and the watcher run with the
+// tmux server's environment, which may lack nvm's PATH). PathEnv is the PATH
+// to use, with the binary's *unresolved* directory first (nvm's bin/ holds
+// both the CLI and node).
 func Resolve(cfg *config.Config, id session.AgentID, st *state.State) Resolved {
 	info := MustGet(id)
 	r := Resolved{Agent: id}
@@ -219,6 +226,8 @@ func Resolve(cfg *config.Config, id session.AgentID, st *state.State) Resolved {
 		if abs, err := filepath.Abs(p); err == nil {
 			path = abs
 		}
+	} else {
+		path = inInstallDirs(info, name)
 	}
 	if path != "" {
 		r.Installed = true
@@ -242,6 +251,21 @@ func Resolve(cfg *config.Config, id session.AgentID, st *state.State) Resolved {
 		}
 	}
 	return r
+}
+
+// inInstallDirs finds name in the folders the agent's own install script
+// puts it in ("" when it is in none).
+func inInstallDirs(info Info, name string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || filepath.Base(name) != name {
+		return ""
+	}
+	for _, d := range info.Dirs {
+		if p := filepath.Join(home, d, name); isExecutable(p) {
+			return p
+		}
+	}
+	return ""
 }
 
 // ResolveAll resolves every agent in config order.
