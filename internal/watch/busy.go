@@ -16,6 +16,11 @@ type busyLine struct {
 
 var escToInterrupt = regexp.MustCompile(`(?i)\besc to interrupt\b`)
 
+// claudeBusy is Claude Code's progress line: "esc to interrupt" on older
+// versions; on 2.1 only its word, "…" and the time it has worked in
+// parentheses ("· Discombobulating… (30m 46s · ↓ 139.3k tokens)", D76).
+var claudeBusy = regexp.MustCompile(`(?i)\besc to interrupt\b|…\s*\(\d+[hms](?:\s+\d+[hms])*(?:\s*·|\))`)
+
 // busyLines are the agents whose screen says when they work (D55): Claude
 // Code's and Codex's progress line ("… (12s · esc to interrupt)"; Claude's
 // to-do list can stand between it and the input), Antigravity's hint ("Press
@@ -23,7 +28,7 @@ var escToInterrupt = regexp.MustCompile(`(?i)\besc to interrupt\b`)
 // interrupt", its last line). The others (OpenCode) are at work while their
 // screen changes (D38).
 var busyLines = map[session.AgentID]busyLine{
-	"claude":      {escToInterrupt, 16},
+	"claude":      {claudeBusy, 16},
 	"codex":       {escToInterrupt, 10},
 	"antigravity": {escToInterrupt, 6},
 	"copilot":     {regexp.MustCompile(`(?i)\bctrl\+c (?:to )?interrupt\b`), 3},

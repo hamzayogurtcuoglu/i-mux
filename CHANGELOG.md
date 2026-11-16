@@ -6,6 +6,16 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.62.2] - 2026-11-16
+
+### Fixed
+
+- **A working Claude shows as working again.** Claude Code 2.1 no longer writes "esc to
+  interrupt" on its progress line, so a few seconds after each prompt the sidebar showed a
+  working Claude as idle: no spinner, and not counted in "N working", while Copilot's spinner
+  turned. i-mux now also reads the line Claude Code shows now
+  (`· Thinking… (30m 46s · ↓ 139.3k tokens)`).
+
 ## [0.62.1] - 2026-11-16
 
 ### Fixed
