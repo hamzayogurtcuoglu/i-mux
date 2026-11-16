@@ -136,8 +136,9 @@ The mouse wheel scrolls everywhere.
 Run `imux` and it asks which project to open: type a few letters of its name. (In an open
 project's folder it goes straight there; in another folder, with nothing open or to restore, it
 opens that folder.) **Restore last session** comes first after a restart or a quit and brings back
-every project that was open; then **this folder**, then **Recent** projects, which reopen as you
-left them: the same tabs, names and agents, each agent back in its own conversation.
+every project that was open, with or without agents; then **this folder**, then **Recent**
+projects, which reopen as you left them: the same tabs, names and agents, each agent back in its
+own conversation.
 
 **Leaving:** **⏻ Exit** at the right of the tab bar → **Back to the terminal** returns you to your
 shell while the agents keep working (`imux` takes you back to them); **Quit i-mux and stop every

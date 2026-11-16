@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.62.1] - 2026-11-16
+
+### Fixed
+
+- **Projects without agents come back with the last session.** After you quit i-mux (or the
+  computer restarted), **Restore last session** brought back only the projects that had agents;
+  a project left with its "No agents" pane, or with only terminals, stayed closed. Now every
+  project that was open comes back. One without agents opens as you left it, with its "No
+  agents" pane and its sidebar, and no agent starts in it. Opening such a folder on its own
+  still starts your default agent.
+
 ## [0.62.0] - 2026-11-15
 
 ### Changed

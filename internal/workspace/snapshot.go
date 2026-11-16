@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -206,11 +207,12 @@ func markClosed(dir string) {
 }
 
 // Interrupted lists the projects that were open in an earlier tmux server
-// (it went away, e.g. with a reboot) and are not open now.
+// (it went away, e.g. with a reboot or a quit) and are not open now, with
+// or without agents (D75).
 func (s *Snapshots) Interrupted(server string, open map[string]bool) []ProjectSnap {
 	var out []ProjectSnap
 	for _, p := range s.Projects {
-		if p.Open && p.Server != server && !open[p.Dir] && p.Agents() > 0 {
+		if p.Open && p.Server != server && !open[p.Dir] {
 			out = append(out, p)
 		}
 	}
@@ -219,7 +221,8 @@ func (s *Snapshots) Interrupted(server string, open map[string]bool) []ProjectSn
 
 // Restore recreates a saved project: a session in its folder, a window per
 // tab, a pane per agent (each resuming its conversation when it can), the
-// names, sidebars and layouts (§9.3 "Recent and restore").
+// names, sidebars and layouts (§9.3 "Recent and restore"). A project with
+// no agent to start comes back with its "No agents" pane (D75).
 func (w *WS) Restore(ctx context.Context, f *sources.Finder, snap *ProjectSnap) (*StartResult, error) {
 	name := SessionName(snap.Dir)
 	if ok, err := w.HasSession(ctx, name); err != nil {
@@ -233,12 +236,7 @@ func (w *WS) Restore(ctx context.Context, f *sources.Finder, snap *ProjectSnap) 
 	res := &StartResult{Session: name, Created: true}
 	activeWin := ""
 	for _, tab := range snap.Tabs {
-		var panes []PaneSnap
-		for _, p := range tab.Panes {
-			if p.Agent != "" && w.Installed(p.Agent) {
-				panes = append(panes, p)
-			}
-		}
+		panes := w.agentsOf(tab)
 		if len(panes) == 0 {
 			continue
 		}
@@ -300,13 +298,62 @@ func (w *WS) Restore(ctx context.Context, f *sources.Finder, snap *ProjectSnap) 
 		}
 	}
 	if res.Pane == "" {
-		return nil, errors.New("nothing to restore")
+		return w.restoreEmpty(ctx, name, snap)
 	}
 	if activeWin != "" {
 		_, _ = w.T.Run(ctx, tmux.Cmd{"select-window", "-t", activeWin})
 	}
 	EnsureWatcher(w)
 	return res, nil
+}
+
+// agentsOf lists the panes of tab that Restore starts: its agents that are
+// installed.
+func (w *WS) agentsOf(tab TabSnap) []PaneSnap {
+	var panes []PaneSnap
+	for _, p := range tab.Panes {
+		if p.Agent != "" && w.Installed(p.Agent) {
+			panes = append(panes, p)
+		}
+	}
+	return panes
+}
+
+// startsAgent reports whether Restore starts an agent of snap.
+func (w *WS) startsAgent(snap *ProjectSnap) bool {
+	for _, t := range snap.Tabs {
+		if len(w.agentsOf(t)) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// restoreEmpty brings back a project with no agent to start (D75): its
+// session with the "No agents" pane, as closing its last agent leaves it
+// (§9.3 "A project without agents"), and its sidebar unless none of its
+// tabs had one.
+func (w *WS) restoreEmpty(ctx context.Context, name string, snap *ProjectSnap) (*StartResult, error) {
+	// The options that follow in the batch go to the new session's pane.
+	cmds := append([]tmux.Cmd{{"new-session", "-d", "-s", name, "-c", snap.Dir, "-P", "-F", "#{pane_id}", w.Self, "__empty"}},
+		sidebar.EmptyOpts("", snap.Dir)...)
+	out, err := w.T.Run(ctx, cmds...)
+	if err != nil {
+		return nil, err
+	}
+	pane := strings.TrimSpace(strings.SplitN(out, "\n", 2)[0])
+	if !strings.HasPrefix(pane, "%") {
+		return nil, fmt.Errorf("tmux: unexpected new pane id %q", pane)
+	}
+	bar := len(snap.Tabs) == 0
+	for _, t := range snap.Tabs {
+		bar = bar || t.Sidebar
+	}
+	if bar {
+		w.maybeSidebar(ctx, pane)
+	}
+	EnsureWatcher(w)
+	return &StartResult{Session: name, Pane: pane, Created: true}, nil
 }
 
 // resumeID is the session a saved pane's agent resumes ("" = fresh): only

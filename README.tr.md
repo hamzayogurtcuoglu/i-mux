@@ -133,9 +133,9 @@ Fare tekerleği her yerde kaydırır.
 `imux`'u çalıştırınca hangi projeyi açacağını sorar: adının birkaç harfini yaz. (Açık bir projenin
 klasöründeysen doğrudan ona gider; başka bir klasörde, açık ya da geri yüklenecek bir şey yoksa o
 klasörü açar.) Bilgisayar yeniden başladıysa ya da i-mux'u kapattıysan en üstte **Son oturumu geri
-yükle** gelir ve açık olan bütün projeleri geri getirir; sonra **bu klasör**, sonra **Son
-kullanılanlar**: bıraktığın gibi açılırlar, aynı sekmeler, adlar ve agent'lar, her agent kendi
-sohbetine döner.
+yükle** gelir ve açık olan bütün projeleri, agent'ı olsun olmasın, geri getirir; sonra **bu
+klasör**, sonra **Son kullanılanlar**: bıraktığın gibi açılırlar, aynı sekmeler, adlar ve
+agent'lar, her agent kendi sohbetine döner.
 
 **Çıkmak:** sekme çubuğunun sağındaki **⏻ Çık** → **Terminale dön** seni kabuğuna döndürür, agent'lar
 çalışmaya devam eder (`imux` seni onlara geri götürür); **i-mux'u kapat, tüm agent'ları durdur…** bir

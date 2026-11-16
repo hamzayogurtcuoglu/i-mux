@@ -78,8 +78,9 @@ func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartR
 		return &StartResult{Session: name}, nil
 	}
 	if id == "" {
-		// Opened before: bring its tabs and agents back as they were (D24).
-		if snap := LoadSnapshots().Find(cwd); snap != nil && snap.Agents() > 0 {
+		// Opened before: bring its tabs and agents back as they were (D24);
+		// with no agent to bring back, it starts as a new project (D75).
+		if snap := LoadSnapshots().Find(cwd); snap != nil && w.startsAgent(snap) {
 			if res, err := w.Restore(ctx, sources.New(w.Cfg), snap); err == nil {
 				_ = state.Update(func(s *state.State) error { s.AddRecent(cwd, w.Now()); return nil })
 				return res, nil
