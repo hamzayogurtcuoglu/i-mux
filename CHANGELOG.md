@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.62.3] - 2026-11-16
+
+### Fixed
+
+- **Themes fill the whole terminal.** With a theme on its own colors (Nord, Catppuccin, …), the
+  terminal's edges kept its own background: black bands at the top, bottom and sides in Windows
+  Terminal, where the terminal pads the text and leaves a strip too small for a whole character.
+  The terminal's background now takes the theme's color while i-mux is open in it, and gets its
+  own back when you leave i-mux. A theme that follows the terminal's light or dark leaves the
+  terminal's background as it is.
+
 ## [0.62.2] - 2026-11-16
 
 ### Fixed

@@ -51,6 +51,9 @@ func (w *WS) AgentCount(ctx context.Context) int {
 // every agent stops and every client returns to its shell.
 func (w *WS) Quit(ctx context.Context, before func()) error {
 	_ = w.SaveSnapshot(ctx)
+	// Each terminal's own background back (D77), also for clients that
+	// attached before terminal-overrides gave it back on their own.
+	w.PaintTerminals(ctx, "")
 	if before != nil {
 		before()
 	}

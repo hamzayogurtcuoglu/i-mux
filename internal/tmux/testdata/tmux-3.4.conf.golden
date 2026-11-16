@@ -67,6 +67,9 @@ set -gu popup-border-style
 set -gu menu-style
 set -gu menu-selected-style
 set -gu menu-border-style
+# The terminal's own background in the theme's panel while a client shows i-mux, its own
+# again when the client leaves (D77): with the focus-event strings tmux writes then.
+set -g  terminal-overrides[90] '*:Dsfcs=\E]111\007\E[?1004l'
 
 # Pane menu, session picker.
 bind -n 'C-\' if-shell -F '#{@imux_remote}' "send-keys 'C-\\'" "run-shell -b '/opt/imux/bin/imux __menu --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'"

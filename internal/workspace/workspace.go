@@ -27,6 +27,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -471,9 +472,15 @@ func (w *WS) EnsureConf(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if changed {
-		return w.T.Reload(ctx, paths.TmuxConf())
+	if !changed {
+		return nil
 	}
+	if err := w.T.Reload(ctx, paths.TmuxConf()); err != nil {
+		return err
+	}
+	// terminal-overrides reach the clients that attach from now on; the
+	// attached ones get the terminal's background here (D77).
+	w.PaintTerminals(ctx, tmux.TerminalBg(theme.Resolve(w.Cfg.Theme, in.Appearance), w.Cfg.Theme.AutoSwitch))
 	return nil
 }
 

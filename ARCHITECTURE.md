@@ -1599,7 +1599,7 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   is a 24-bit color, and `auto_switch` off, the terminal's own background is `panel_bg` while a
   client shows i-mux: its padding and the strip beside the last whole cells are no longer the
   terminal's color. `terminal-overrides[90]` makes tmux's focus-event strings carry it: `Enfcs`
-  (sent when a client starts or resumes, with `focus-events` on) ends with OSC 11
+  (sent when a client starts, with `focus-events` on) ends with OSC 11
   (`\E]11;rgb:27/2c/36\007`), and `Dsfcs` (sent when a client detaches, is suspended or the
   server ends) starts with OSC 111, which gives the terminal its own background back; for the
   other themes the item holds only the `Dsfcs` part. A theme change (Settings, a light or dark

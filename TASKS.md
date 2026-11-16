@@ -1001,17 +1001,17 @@ slow (about a second).
 
 User report: with a theme, black bands stay at the top, bottom and edges of the terminal (D77).
 
-- [ ] **T82.1 The terminal's background** · S
+- [x] **T82.1 The terminal's background** · S
   - AC: D77, §9.3 "Themes": `terminal-overrides[90]` with OSC 11 at the end of `Enfcs` and OSC
     111 at the start of `Dsfcs` for a theme on its own 24-bit colors without `auto_switch`, only
     the `Dsfcs` part otherwise; written to the attached terminals when the theme changes and
     when tmux.conf reloads, and OSC 111 when i-mux quits; control-mode clients skipped; the
     config loads in a real tmux; unit tests.
-- [ ] **T82.2 End to end** · S
+- [x] **T82.2 End to end** · S
   - AC: e2e: a client attaching with Nord gets OSC 11 with Nord's panel and OSC 111 when it
     detaches; another theme chosen in Settings reaches the attached terminal at once, and the
     i-mux theme gives the terminal its own background back.
-- [ ] **T82.3 Docs** · XS
+- [x] **T82.3 Docs** · XS
   - AC: README and README.tr; CHANGELOG.
 
 ## M81: Claude shows as working again (added 2026-11-16)

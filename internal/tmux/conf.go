@@ -302,13 +302,17 @@ func GenerateConf(in *ConfInput) string {
 	}
 	w("# The theme's colors (D68): the tab bar reads @imux_c_*; styles of the status line, borders,")
 	w("# messages, the copy mode, popups and menus.")
-	for _, c := range ThemeOptions(theme.Resolve(cfg.Theme, in.Appearance), in.Version) {
+	pal := theme.Resolve(cfg.Theme, in.Appearance)
+	for _, c := range ThemeOptions(pal, in.Version) {
 		if c[1] == "-gu" {
 			w("set -gu %s", c[2])
 			continue
 		}
 		w("set -g  %s %s", c[2], Quote(c[3]))
 	}
+	w("# The terminal's own background in the theme's panel while a client shows i-mux, its own")
+	w("# again when the client leaves (D77): with the focus-event strings tmux writes then.")
+	w("set -g  %s %s", TermBgItem, Quote(TerminalBgOverride(TerminalBg(pal, cfg.Theme.AutoSwitch))))
 	w("")
 	w("# Pane menu, session picker.")
 	// In a machine's tab (@imux_remote, D73) the keys without the prefix go

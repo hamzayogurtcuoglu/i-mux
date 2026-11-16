@@ -1,7 +1,9 @@
 package tmux
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 )
@@ -111,6 +113,46 @@ func paneUnset(v Version) []string {
 		out = append(out, OptPaneColors)
 	}
 	return out
+}
+
+// TermBgItem is the item of terminal-overrides that carries the terminal's
+// own background (D77).
+const TermBgItem = "terminal-overrides[90]"
+
+// TerminalBg is the color the terminal's own background takes with p
+// (D77), in OSC 11's form ("rgb:27/2c/36"): the panes' panel, so the
+// terminal's padding and the strip beside the last whole cells are the
+// theme's too. It is "" when the panes are on the terminal's colors (i-mux,
+// terminal), when the panel is no 24-bit color, and when the theme follows
+// the terminal's light or dark (follow): that background is the terminal's.
+func TerminalBg(p theme.Palette, follow bool) string {
+	if base, _, _ := theme.PaneBase(p); follow || base == "" || !p.PanelBg.IsRGB() {
+		return ""
+	}
+	return fmt.Sprintf("rgb:%02x/%02x/%02x", p.PanelBg.R, p.PanelBg.G, p.PanelBg.B)
+}
+
+// TerminalBgOverride is TermBgItem's value for background bg: tmux writes
+// Enfcs when a client starts (with focus-events on) and Dsfcs when it stops
+// (detached, suspended, the server gone), so OSC 11 after the first gives
+// the terminal bg and OSC 111 before the second gives it its own back. With
+// no bg only the second. terminal-overrides separates capabilities with
+// ":", so the color's is doubled.
+func TerminalBgOverride(bg string) string {
+	const reset = `Dsfcs=\E]111\007\E[?1004l`
+	if bg == "" {
+		return "*:" + reset
+	}
+	return `*:Enfcs=\E[?1004h\E]11;` + strings.ReplaceAll(bg, ":", "::") + `\007:` + reset
+}
+
+// TerminalBgSeq is the escape that gives a terminal background bg now (OSC
+// 11), or its own again (OSC 111) for "".
+func TerminalBgSeq(bg string) string {
+	if bg == "" {
+		return "\x1b]111\x07"
+	}
+	return "\x1b]11;" + bg + "\x07"
 }
 
 // ANSIColors are the 16 colors the panes' programs get with a theme (D70):

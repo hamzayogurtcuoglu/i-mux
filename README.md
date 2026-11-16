@@ -90,8 +90,9 @@ colors, the default), Catppuccin, Catppuccin Latte, Tokyo Night (and Day), Dracu
 One Light, Solarized (and Light), Kanagawa (and Lotus), Rosé Pine (and Dawn), Vesper, or Terminal
 (your terminal's own colors). Settings → **Theme** picks one; **Follow the terminal's light/dark**
 switches between a theme's light and dark versions when your terminal does (tmux 3.6 or later). A
-theme colors the whole window, the agents' panes too, as a terminal theme would; i-mux and
-Terminal keep your terminal's own colors. Single colors can be
+theme colors the whole window, the agents' panes and the terminal's edges too, as a terminal theme
+would (your terminal gets its own background back when you leave i-mux); i-mux and Terminal keep
+your terminal's own colors. Single colors can be
 changed in `[theme.custom]` (see [docs/CONFIG.md](docs/CONFIG.md)).
 
 **Web pages, live:** a click on an HTML file in the explorer asks how to open it: **Open in

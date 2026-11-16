@@ -86,8 +86,9 @@ i-mux (kendi renkleri, varsayılan), Catppuccin, Catppuccin Latte, Tokyo Night (
 One Dark ve One Light, Solarized (ve Light), Kanagawa (ve Lotus), Rosé Pine (ve Dawn), Vesper ya da
 Terminal (terminalinin kendi renkleri). Ayarlar → **Tema** birini seçer; **Terminalin açık/koyu
 moduna uy**, terminalin açık ya da koyuya geçince temanın açık ve koyu sürümleri arasında geçer
-(tmux 3.6 ve sonrası). Tema, bir terminal teması gibi bütün pencereyi, ajanların panellerini de
-boyar; i-mux ve Terminal temaları terminalinin kendi renklerini korur. Tek
+(tmux 3.6 ve sonrası). Tema, bir terminal teması gibi bütün pencereyi, ajanların panellerini ve
+terminalin kenarlarını da boyar (i-mux'tan çıkınca terminal kendi arka planına döner); i-mux ve
+Terminal temaları terminalinin kendi renklerini korur. Tek
 tek renkler `[theme.custom]` içinde değiştirilebilir (bkz. [docs/CONFIG.md](docs/CONFIG.md)).
 
 **Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca nasıl açılacağını sorar: **Tarayıcıda

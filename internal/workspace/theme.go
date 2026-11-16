@@ -2,7 +2,9 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
@@ -62,12 +64,67 @@ func (w *WS) SetAppearance(ctx context.Context, appearance string) (bool, error)
 }
 
 // ApplyTheme gives a running tmux the palette's colors and styles (the
-// same lines tmux.conf has).
+// same lines tmux.conf has), and the attached terminals its background
+// (D77) first, before tmux redraws them.
 func (w *WS) ApplyTheme(ctx context.Context, p theme.Palette) error {
 	v, err := w.T.BinVersion(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = w.T.Run(ctx, tmux.ThemeOptions(p, v)...)
+	bg := tmux.TerminalBg(p, w.Cfg.Theme.AutoSwitch)
+	w.PaintTerminals(ctx, bg)
+	cmds := append(tmux.ThemeOptions(p, v), tmux.Cmd{"set-option", "-g", tmux.TermBgItem, tmux.TerminalBgOverride(bg)})
+	_, err = w.T.Run(ctx, cmds...)
 	return err
+}
+
+// PaintTerminals gives the attached clients' terminals background bg now
+// (OSC 11), or their own back for "" (OSC 111), D77; a client that attaches
+// later gets it from terminal-overrides. A control-mode client has no
+// terminal of its own to paint.
+func (w *WS) PaintTerminals(ctx context.Context, bg string) {
+	out, err := w.T.Run(ctx, tmux.Cmd{"list-clients", "-F", "#{client_control_mode}\t#{client_tty}"})
+	if err != nil {
+		return
+	}
+	seq := tmux.TerminalBgSeq(bg)
+	for _, r := range tmux.Rows(out, 2) {
+		if r[0] != "1" && strings.HasPrefix(r[1], "/dev/") {
+			_ = writeTerminal(r[1], seq)
+		}
+	}
+}
+
+// writeTerminal writes s to the terminal device tty in one blocking write:
+// the kernel keeps it whole, so tmux's own output cannot land inside it (a
+// non-blocking file may write it in parts). A terminal that does not read
+// is given up on after a second. Tests replace it.
+var writeTerminal = func(tty, s string) error {
+	done := make(chan error, 1)
+	go func() {
+		fd, err := syscall.Open(tty, syscall.O_WRONLY|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0)
+		if err != nil {
+			done <- err
+			return
+		}
+		defer func() { _ = syscall.Close(fd) }()
+		b := []byte(s)
+		for len(b) > 0 {
+			n, err := syscall.Write(fd, b)
+			if err != nil && !errors.Is(err, syscall.EINTR) {
+				done <- err
+				return
+			}
+			if n > 0 {
+				b = b[n:]
+			}
+		}
+		done <- nil
+	}()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(time.Second):
+		return errors.New("terminal not reading: " + tty)
+	}
 }
