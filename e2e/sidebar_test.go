@@ -441,6 +441,28 @@ func TestSidebarTypingIsNotWork(t *testing.T) {
 	h.waitFor("AGENTS counting it", 5*time.Second, func() bool { return strings.Contains(h.lineOf(bar, "AGENTS"), "1 working") })
 }
 
+// TestAgentsAtWork (T83.2, D78): Antigravity's and OpenCode's screens at
+// work, as their CLIs draw them now, make their panes working; a question
+// on Antigravity's screen, its status line's hint still there, is Needs you.
+func TestAgentsAtWork(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	h.control("antigravity", "i=0; while [ $i -lt 50 ]; do printf '\\033[H\\033[2J⣯  Editing files %d...\\n────\\n> \\n────\\nesc to cancel' $i; sleep 0.2; i=$((i+1)); done; "+
+		"printf '\\033[H\\033[2JDo you want to proceed?\\n❯ Yes, accept this change\\n  No\\n────\\nesc to cancel'; sleep 60\n")
+	h.control("opencode", "i=0; while [ $i -lt 50 ]; do printf '\\033[H\\033[2J┃ fix the tests %d\\n▀▀▀▀▀▀\\n ⣾ esc interrupt' $i; sleep 0.2; i=$((i+1)); done; sleep 60\n")
+	agentPane, _ := h.startWithSidebar()
+	h.run("claude", 1)
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	ag := strings.TrimSpace(h.mustImux("split", "antigravity", "-h", "--pane", agentPane))
+	h.run("antigravity", 1)
+	oc := strings.TrimSpace(h.mustImux("split", "opencode", "-v", "--pane", agentPane))
+	h.run("opencode", 1)
+	state := func(p string) string { return h.paneOpt(p, "#{@imux_state}") }
+	h.waitFor("Antigravity working", 8*time.Second, func() bool { return state(ag) == "working" })
+	h.waitFor("OpenCode working", 8*time.Second, func() bool { return state(oc) == "working" })
+	h.waitFor("Antigravity's question: Needs you", 20*time.Second, func() bool { return state(ag) == "blocked" })
+}
+
 // TestSidebarFold (T19.1): a click on a section title folds it in every
 // sidebar (@imux_fold) and a second click unfolds it.
 func TestSidebarFold(t *testing.T) {
