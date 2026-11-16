@@ -106,3 +106,36 @@ func tmuxAtLeast(h *H, maj, min int) bool {
 	y, _ := strconv.Atoi(b)
 	return x > maj || x == maj && y >= min
 }
+
+// TestThemeTerminalBackground (T82.2, D77): the terminal's own background
+// is the theme's, so its padding is too: a client attaching with Nord gets
+// Nord's panel (OSC 11) from tmux; a theme chosen in Settings reaches the
+// attached terminal at once; the i-mux theme gives the terminal its own
+// background back (OSC 111), and so does leaving.
+func TestThemeTerminalBackground(t *testing.T) {
+	h := newH(t, sidebarConfig+"[theme]\nname = \"nord\"\n")
+	h.startWithSidebar()
+	h.run("claude", 1)
+	c, client := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	sent := func(what string, mark int, seq string) {
+		t.Helper()
+		h.waitFor(what, 5*time.Second, func() bool { return strings.Contains(c.Output()[mark:], seq) })
+	}
+	// From tmux, with the focus events it turns on.
+	sent("Nord's background when the client attaches", 0, "\x1b[?1004h\x1b]11;rgb:27/2c/36\x07")
+
+	mark := c.Mark()
+	h.mustImux("__settings", "set", "theme", "catppuccin")
+	sent("Mocha's background at once", mark, "\x1b]11;rgb:18/18/25\x07")
+	mark = c.Mark()
+	h.mustImux("__settings", "set", "theme", "i-mux")
+	sent("the terminal's own background with the i-mux theme", mark, "\x1b]111\x07")
+	mark = c.Mark()
+	h.mustImux("__settings", "set", "theme", "nord")
+	sent("Nord's again", mark, "\x1b]11;rgb:27/2c/36\x07")
+
+	mark = c.Mark()
+	h.mustTmux("detach-client", "-t", client)
+	sent("the terminal's own background when the client leaves", mark, "\x1b]111\x07\x1b[?1004l")
+}

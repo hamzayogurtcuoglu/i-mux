@@ -69,6 +69,32 @@ func TestThemeOptions(t *testing.T) {
 	}
 }
 
+// TestTerminalBg (T82.1): the terminal's own background is the panel of a
+// theme on its own 24-bit colors that does not follow the terminal (D77),
+// set with tmux's Enfcs and given back with its Dsfcs; with the other
+// themes it is only given back. The color's ":" is doubled, as overrides
+// are separated by ":".
+func TestTerminalBg(t *testing.T) {
+	nord := TerminalBg(theme.Builtin("nord"), false)
+	if nord != "rgb:27/2c/36" {
+		t.Fatalf("nord %q", nord)
+	}
+	for name, follow := range map[string]bool{"nord": true, "i-mux": false, "terminal": false} {
+		if bg := TerminalBg(theme.Builtin(name), follow); bg != "" {
+			t.Errorf("%s (following the terminal: %v): %q", name, follow, bg)
+		}
+	}
+	if got, want := TerminalBgOverride(nord), `*:Enfcs=\E[?1004h\E]11;rgb::27/2c/36\007:Dsfcs=\E]111\007\E[?1004l`; got != want {
+		t.Errorf("override %q, want %q", got, want)
+	}
+	if got := TerminalBgOverride(""); got != `*:Dsfcs=\E]111\007\E[?1004l` {
+		t.Errorf("override with no background %q", got)
+	}
+	if TerminalBgSeq(nord) != "\x1b]11;rgb:27/2c/36\x07" || TerminalBgSeq("") != "\x1b]111\x07" {
+		t.Errorf("escapes %q %q", TerminalBgSeq(nord), TerminalBgSeq(""))
+	}
+}
+
 // TestThemeHooks (T73.4): tmux 3.6+ tells imux when the terminal turns
 // light or dark; older tmux has no such hooks (they would fail to load).
 func TestThemeHooks(t *testing.T) {

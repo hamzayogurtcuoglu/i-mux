@@ -187,6 +187,7 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 	dir := t.TempDir()
 	in := confInput(v.Raw)
 	in.Version = v
+	in.Cfg.Theme.Name = "nord" // every theme line, the terminal's background too (D77)
 	in.LocalConf = filepath.Join(dir, "tmux.local.conf")
 	if err := os.WriteFile(in.LocalConf, []byte("set -g @imux_local_loaded yes\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -229,6 +230,9 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 	to, _ := c.Do(Cmd{"show-options", "-s", "terminal-overrides"})
 	if n := strings.Count(to, "Sync="); n != 1 || !strings.Contains(to, "?2026") {
 		t.Fatalf("the Sync override appears %d times:\n%s", n, to)
+	}
+	if n := strings.Count(to, "Enfcs="); n != 1 || !strings.Contains(to, "[90]") || !strings.Contains(to, "rgb::27/2c/36") {
+		t.Fatalf("the terminal's background appears %d times:\n%s", n, to)
 	}
 	keys, _ := c.Do(Cmd{"list-keys", "-T", "root"})
 	if !strings.Contains(keys, "__menu") {
