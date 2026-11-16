@@ -95,3 +95,64 @@ func TestRecentInPicker(t *testing.T) {
 	h.run("codex", 2)
 	h.waitFor("client on the restored project", 5*time.Second, func() bool { return h.clientSession(client) == first })
 }
+
+// TestRestoreWithoutAgents (T80.2): a project whose last agent was closed
+// belongs to the last session like the others (D75): after Quit, `imux`
+// offers both projects, and Enter brings the one without agents back with
+// its "No agents" pane and its sidebar, no agent started in it.
+func TestRestoreWithoutAgents(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	h.startWithSidebar()
+	h.run("claude", 1)
+	notes := filepath.Join(h.Homes.Home, "notes")
+	if err := os.MkdirAll(notes, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	h.mustImux("open", "-d", notes)
+	h.run("claude", 2)
+	panes := func() string {
+		out, _ := h.tmux("list-panes", "-a", "-F", "#{session_path}|#{@imux_role}|#{@imux_agent}|#{pane_id}")
+		return out
+	}
+	var pane string
+	for _, l := range strings.Split(panes(), "\n") {
+		if f := strings.Split(l, "|"); len(f) == 4 && f[0] == notes && f[2] == "claude" {
+			pane = f[3]
+		}
+	}
+	if pane == "" {
+		t.Fatalf("no agent in notes: %s", panes())
+	}
+	h.mustImux("__close-pane", "--pane", pane)
+	h.waitFor("No agents in notes", 5*time.Second, func() bool { return h.paneOpt(pane, "#{@imux_role}") == "empty" })
+
+	h.mustImux("quit", "--yes")
+	h.waitFor("the server gone", 5*time.Second, func() bool {
+		_, err := h.tmux("list-sessions")
+		return err != nil
+	})
+	elsewhere := filepath.Join(h.Homes.Home, "elsewhere")
+	if err := os.MkdirAll(elsewhere, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	c := h.startClient(120, 40, elsewhere, h.Bin)
+	c.waitScreen(h, "Restore last session", 10*time.Second)
+	c.waitScreen(h, "2 projects", 5*time.Second)
+	c.Write("\r")
+	h.run("claude", 3)
+	var out string
+	defer func() {
+		if t.Failed() {
+			t.Logf("panes: %s", out)
+		}
+	}()
+	h.waitFor("both projects back", 10*time.Second, func() bool {
+		out = panes()
+		return strings.Contains(out, h.Homes.Project+"||claude|") && strings.Contains(out, notes+"|empty||") &&
+			strings.Contains(out, notes+"|sidebar||")
+	})
+	time.Sleep(time.Second)
+	if n := h.runs("claude"); n != 3 {
+		t.Errorf("%d runs of claude: an agent started in the project without agents", n)
+	}
+}

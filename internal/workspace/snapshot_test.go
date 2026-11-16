@@ -44,7 +44,9 @@ func TestCapture(t *testing.T) {
 }
 
 // Merge: open projects replace their snapshots; one gone from this server
-// was closed; one of an earlier server stays open (it died with it).
+// was closed; one of an earlier server stays open (it died with it). The
+// last session is every project of the earlier server, with or without
+// agents (D75).
 func TestMergeSnapshots(t *testing.T) {
 	now := testutil.FrozenTime
 	tab := []TabSnap{{Panes: []PaneSnap{{Agent: "claude"}}}}
@@ -52,6 +54,7 @@ func TestMergeSnapshots(t *testing.T) {
 		{Dir: "/a", Tabs: tab, Server: "s1", Open: true, At: now.Add(-time.Hour).Unix()},
 		{Dir: "/b", Tabs: tab, Server: "s2", Open: true, At: now.Add(-time.Hour).Unix()},
 		{Dir: "/c", Tabs: tab, Server: "s2", Open: true, At: now.Add(-2 * time.Hour).Unix()},
+		{Dir: "/e", Tabs: []TabSnap{{Sidebar: true}}, Server: "s1", Open: true, At: now.Add(-3 * time.Hour).Unix()}, // "No agents"
 	}}
 	s.Merge([]ProjectSnap{{Dir: "/b", Tabs: append(tab, tab...)}, {Dir: "/d", Tabs: tab}}, "s2", now)
 	get := func(d string) ProjectSnap { return *s.Find(d) }
@@ -64,14 +67,89 @@ func TestMergeSnapshots(t *testing.T) {
 	if c := get("/c"); c.Open {
 		t.Errorf("closed project %+v", c)
 	}
-	if s.Projects[0].At != now.Unix() || len(s.Projects) != 4 {
+	if s.Projects[0].At != now.Unix() || len(s.Projects) != 5 {
 		t.Errorf("order %+v", s.Projects)
 	}
 	in := s.Interrupted("s2", map[string]bool{"/b": true})
-	if len(in) != 1 || in[0].Dir != "/a" {
+	if len(in) != 2 || in[0].Dir != "/a" || in[1].Dir != "/e" {
 		t.Errorf("interrupted %+v", in)
 	}
-	if len(s.Interrupted("s2", map[string]bool{"/a": true})) != 0 {
-		t.Error("an open project is not interrupted")
+	if in := s.Interrupted("s2", map[string]bool{"/a": true}); len(in) != 1 || in[0].Dir != "/e" {
+		t.Errorf("an open project is not interrupted: %+v", in)
+	}
+}
+
+// A project with no agent to start (only its "No agents" pane was open, or
+// its agents are not installed) comes back with the "No agents" pane and
+// its sidebar, starting no agent (D75); opening its folder on its own starts
+// the default agent, as for a new project.
+func TestRestoreWithoutAgents(t *testing.T) {
+	w, f, h := testWS(t)
+	ctx := context.Background()
+	f.errs["has-session"] = "can't find session: x"
+	f.replies["new-session"] = "%7\n"
+	calls := func() []string {
+		var out []string
+		for _, c := range f.calls {
+			out = append(out, strings.Join(c, " "))
+		}
+		f.calls = nil
+		return out
+	}
+	// Codex is not installed (testWS).
+	res, err := w.Restore(ctx, nil, &ProjectSnap{Dir: h.Project, Tabs: []TabSnap{{Sidebar: true, Panes: []PaneSnap{{Agent: "codex"}}}}})
+	if err != nil || !res.Created || res.Pane != "%7" || res.Session != SessionName(h.Project) {
+		t.Fatalf("restore %+v %v", res, err)
+	}
+	var batch, bar string
+	for _, c := range calls() {
+		if strings.Contains(c, "new-session") {
+			batch = c
+		}
+		if strings.Contains(c, "-t %7") && strings.HasSuffix(c, "/opt/imux/bin/imux __sidebar") {
+			bar = c
+		}
+	}
+	for _, want := range []string{
+		"new-session -d -s " + res.Session + " -c " + h.Project + " -P -F #{pane_id} /opt/imux/bin/imux __empty ;",
+		"; set-option -p @imux_role empty", "; set-option -p @imux_cwd " + h.Project, "; set-option -p @imux_label No agents",
+	} {
+		if !strings.Contains(batch, want) {
+			t.Errorf("batch lacks %q:\n%s", want, batch)
+		}
+	}
+	if strings.Contains(batch, "__exec") {
+		t.Errorf("an agent started: %s", batch)
+	}
+	if bar == "" {
+		t.Error("no sidebar")
+	}
+
+	// No tab had a sidebar: none comes back.
+	if _, err := w.Restore(ctx, nil, &ProjectSnap{Dir: h.Project, Tabs: []TabSnap{{}}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range calls() {
+		if strings.Contains(c, "__sidebar") {
+			t.Errorf("a sidebar: %s", c)
+		}
+	}
+
+	// Its folder opened on its own: the default agent, no "No agents".
+	if err := (&Snapshots{Projects: []ProjectSnap{{Dir: h.Project, Tabs: []TabSnap{{Sidebar: true}}, Open: true}}}).Save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Start(ctx, "", h.Project); err != nil {
+		t.Fatal(err)
+	}
+	started := false
+	for _, c := range calls() {
+		started = started || strings.Contains(c, "new-session") && strings.Contains(c, "__exec")
+		if strings.Contains(c, "__empty") {
+			t.Errorf("the No agents pane: %s", c)
+		}
+	}
+	if !started {
+		t.Error("the default agent did not start")
 	}
 }
