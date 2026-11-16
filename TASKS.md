@@ -997,6 +997,25 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M85: OpenCode Go's limits (added 2026-11-16)
+
+User report: with OpenCode Go, which has 5-hour, weekly and monthly limits, the limits panel does not
+show them (D80).
+
+- [ ] **T85.1 Go's windows from OpenCode** · S
+  - AC: D80: the OpenCode provider runs `opencode api experimental.usage.limits` (5 s timeout) and
+    parses `data.go`; null data, null `go`, a failed command or another shape give nothing; unit
+    tests with synthetic output and a fake `opencode`.
+- [ ] **T85.2 The panel** · S
+  - AC: the OpenCode row draws 5-hour, weekly and monthly bars with their reset times; a `limited`
+    window marks the row limited until its reset; `imux limits --json` has `usage.opencode_go`
+    (docs/LIMITS.md); without Go the row is as before; unit tests.
+- [ ] **T85.3 End to end** · XS
+  - AC: e2e: the fake opencode answers `api experimental.usage.limits`; `imux limits` shows the three
+    windows.
+- [ ] **T85.4 Docs** · XS
+  - AC: README and README.tr; CHANGELOG.
+
 ## M84: Agents install from Versions and updates (added 2026-11-16)
 
 User report: in Versions and updates, OpenCode's letter says "Nothing to run"; what installs it
