@@ -997,6 +997,16 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M87: Agents in their project's color (added 2026-11-17)
+
+User request: color the AGENTS section like the projects' boxes, the open agent's row on its
+project's color (ARCHITECTURE D82).
+
+- [x] **T87.1 Project colors in AGENTS** · S
+  - AC: one function maps a project name to its color (avatar box, bar, tint); AGENTS' group rows
+    show the box, agent rows a `▎` bar, the target row the tint (classic: a darker 256 color); a
+    worktree uses its repository's color; widths unchanged where they fit; unit tests; README.
+
 ## M86: Aider (added 2026-11-17)
 
 User request: Aider CLI everywhere an agent is, like Claude, Copilot and the others (D81, §7.8).
