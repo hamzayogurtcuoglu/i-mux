@@ -23,14 +23,16 @@ const (
 	Copilot     AgentID = "copilot"
 	Codex       AgentID = "codex"
 	OpenCode    AgentID = "opencode" // any model endpoint (OpenAI-compatible, Anthropic, Ollama ...)
+	Aider       AgentID = "aider"    // Aider: any model, its chat history in the repository
 )
 
 // AllAgents lists the known agents in default order.
-var AllAgents = []AgentID{Claude, Antigravity, Copilot, Codex, OpenCode}
+var AllAgents = []AgentID{Claude, Antigravity, Copilot, Codex, OpenCode, Aider}
 
-// SharedStore reports whether an agent keeps every session in one file (a
-// database: OpenCode). Its sessions are told apart by id, never by Ref.Path.
-func SharedStore(id AgentID) bool { return id == OpenCode }
+// SharedStore reports whether an agent keeps several sessions in one file (a
+// database: OpenCode; a project's chat history: Aider). Its sessions are told
+// apart by id, never by Ref.Path.
+func SharedStore(id AgentID) bool { return id == OpenCode || id == Aider }
 
 // Known reports whether id is a known agent.
 func Known(id string) bool {
@@ -55,6 +57,8 @@ func DisplayName(id AgentID) string {
 		return "Codex CLI"
 	case OpenCode:
 		return "OpenCode"
+	case Aider:
+		return "Aider"
 	}
 	return string(id)
 }
@@ -72,6 +76,8 @@ func ShortName(id AgentID) string {
 		return "Codex"
 	case OpenCode:
 		return "OpenCode"
+	case Aider:
+		return "Aider"
 	}
 	return string(id)
 }
@@ -80,7 +86,7 @@ func ShortName(id AgentID) string {
 type Ref struct {
 	Agent     AgentID
 	ID        string    // native session id (a UUID for all four agents)
-	Path      string    // file (Claude, Antigravity, Codex) or directory (Copilot)
+	Path      string    // file (Claude, Antigravity, Codex, Aider's history) or directory (Copilot)
 	CWD       string    // may be "" until parsed
 	StartedAt time.Time // zero if unknown
 	UpdatedAt time.Time // file mtime

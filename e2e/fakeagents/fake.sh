@@ -15,6 +15,13 @@
 #   $IMUX_FAKE_LOG/A.headless-plain   if present, print mode replies with it as it is
 #   $IMUX_FAKE_LOG/A.headless-pause   seconds a streamed print mode waits before its reply
 #   $IMUX_FAKE_LOG/opencode.go-usage  what `opencode api experimental.usage.limits` prints
+#   $IMUX_FAKE_LOG/aider.ask-gitignore  aider asks its .gitignore question first and
+#                         logs the answer to aider-n.answer
+#
+# aider, like the real one, takes no prompt: it writes .aider.chat.history.md
+# in its folder ("# aider chat started at", "#### " for each line typed, a
+# reply after each message; a pasted handoff is one message up to the line
+# that names its file).
 #   FAKE_SCRIPT           evaluated after the control file
 set -u
 agent="${FAKE_AGENT:?FAKE_AGENT not set}"
@@ -28,7 +35,7 @@ if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
 	exit 0
 fi
 # Self-updates (Settings → Versions and updates) are not runs either.
-if [ "${1:-}" = update ] || [ "${1:-}" = upgrade ]; then
+if [ "${1:-}" = update ] || [ "${1:-}" = upgrade ] || [ "${1:-}" = --upgrade ]; then
 	echo "$agent $*" >>"$log/updates"
 	echo "$agent is up to date"
 	exit 0
@@ -99,7 +106,7 @@ jstr() {
 # Claude Code's events: a Bash step, its result, then the reply.
 headless=""
 case "$agent:${1:-}" in
-claude:-p | copilot:-p | antigravity:-p | codex:exec | opencode:run) headless=1 ;;
+claude:-p | copilot:-p | antigravity:-p | codex:exec | opencode:run | aider:--message) headless=1 ;;
 esac
 if [ -n "$headless" ]; then
 	n=1
@@ -130,6 +137,13 @@ if [ -n "$headless" ]; then
 		[ -f "$log/$agent.headless-pause" ] && sleep "$(cat "$log/$agent.headless-pause")"
 		printf '{"type":"assistant","message":{"content":[{"type":"text","text":"%s"}]},"session_id":"%s"}\n' "$text" "$sid"
 		printf '{"type":"result","subtype":"success","is_error":false,"result":"%s","session_id":"%s","duration_ms":5}\n' "$text" "$sid"
+	elif [ "$agent" = aider ]; then
+		# Its reply goes to the chat history file it is given, among its
+		# own lines; stdout has its banner.
+		hist=$(opt --chat-history-file "$@")
+		echo "Aider v9.9.9-fake"
+		printf '\n# aider chat started at %s\n\n> Aider v9.9.9-fake  \n\n#### %s  \n\n%s\n\n> Tokens: 1k sent, 20 received.  \n' \
+			"$(date '+%Y-%m-%d %H:%M:%S')" "$(opt --message "$@" | head -n 1)" "$msg" >>"$hist"
 	elif [ -f "$log/$agent.headless-plain" ]; then
 		printf '%s\n' "$msg"
 	else
@@ -242,6 +256,12 @@ EOF
 		printf '{"type":"user","time":{"created":%s},"text":"%s"}\n' "$ms" "$req" >>"$session"
 		printf '{"type":"assistant","time":{"created":%s},"content":[{"type":"text","text":"%s"},{"type":"tool","name":"bash","state":{"status":"completed","input":{"command":"fake test %s"}}}]}\n' "$ms" "$reply" "$n" >>"$session"
 		;;
+	aider)
+		# The run's part of the folder's chat history; what is typed is
+		# added as it comes (below).
+		session="$PWD/.aider.chat.history.md"
+		printf '\n# aider chat started at %s\n\n> Aider v9.9.9-fake  \n> Main model: fake/fake-model with diff edit format  \n' "$(date '+%Y-%m-%d %H:%M:%S')" >>"$session"
+		;;
 	copilot)
 		id=$(opt --resume "$@") || id=$(uuid)
 		dir="${COPILOT_HOME:-$HOME/.copilot}/session-state/$id"
@@ -266,10 +286,31 @@ echo "argc $# · last argument $(printf %s "$last" | wc -c | tr -d ' ') bytes"
 [ -f "$log/$agent.sh" ] && . "$log/$agent.sh"
 [ -n "${FAKE_SCRIPT:-}" ] && eval "$FAKE_SCRIPT"
 
+if [ "$agent" = aider ] && [ -e "$log/aider.ask-gitignore" ]; then
+	printf 'Add .aider* to .gitignore (recommended)? (Y)es/(N)o [Yes]: '
+	IFS= read -r answer
+	printf '%s\n' "$answer" >"$log/aider-$n.answer"
+	rm -f "$log/aider.ask-gitignore" # asked once, like the real one
+	echo "Added .aider* to .gitignore"
+	printf '> '
+fi
+
+inhandoff=""
 while IFS= read -r line; do
 	case "$line" in
 	"/exit "*) exit "${line#/exit }" ;; # tests end a run with a given status
 	esac
 	printf '%s\n' "$line" >>"$log/$agent-$n.stdin"
+	if [ "$agent" = aider ] && [ -n "$session" ]; then
+		printf '#### %s  \n' "$line" >>"$session"
+		case "$line" in
+		"[i-mux handoff"*) inhandoff=1 ;;
+		esac
+		if [ -n "$inhandoff" ] && ! [ -f "$line" ]; then
+			continue # the pasted handoff goes on
+		fi
+		inhandoff=""
+		printf '\n%s\n\n> Applied edit to fake%s.go  \n> Tokens: 1k sent, 20 received.  \n\n' "$reply" "$n" >>"$session"
+	fi
 done
 exit "${FAKE_EXIT_STATUS:-0}"

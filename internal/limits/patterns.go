@@ -73,6 +73,17 @@ var Defaults = map[session.AgentID][]Spec{
 		{`insufficient (?:credits|quota|balance)`, SevLimit},
 		{`out of (?:credits|quota)`, SevLimit},
 	},
+	// Aider shows its provider's errors through LiteLLM (§7.8).
+	session.Aider: {
+		{`RateLimitError`, SevLimit},
+		{`rate limit (?:exceeded|reached)`, SevLimit},
+		{`rate limited you`, SevLimit},
+		{`too many requests`, SevLimit},
+		{`\b429\b.*(?:rate|limit|quota|requests)`, SevLimit},
+		{`quota (?:exceeded|exhausted)`, SevLimit},
+		{`insufficient (?:credits|quota|balance)`, SevLimit},
+		{`out of (?:credits|quota)`, SevLimit},
+	},
 }
 
 // Set is the compiled patterns of every agent.

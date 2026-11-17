@@ -19,7 +19,7 @@ import (
 )
 
 // AgentIDs are the agents imux knows, in default order.
-var AgentIDs = []string{"claude", "antigravity", "copilot", "codex", "opencode"}
+var AgentIDs = []string{"claude", "antigravity", "copilot", "codex", "opencode", "aider"}
 
 // RemovedAgents were supported once. A config that still names one loads
 // with a warning instead of an error.
@@ -261,6 +261,14 @@ func defaultAgents() map[string]*Agent {
 		"opencode": {
 			NewArgs:    []string{"--session", "ses_imux{uuid}", "--prompt", "{prompt}"},
 			ResumeArgs: []string{"--session", "{id}", "--prompt", "{prompt}"},
+			Resume:     true,
+		},
+		// Aider has no flag for a first message that keeps the chat open
+		// (--message exits): the handoff is pasted (D81). Resuming restores
+		// the project's chat history file.
+		"aider": {
+			NewArgs:    []string{},
+			ResumeArgs: []string{"--restore-chat-history"},
 			Resume:     true,
 		},
 	}

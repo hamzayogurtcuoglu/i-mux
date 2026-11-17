@@ -235,6 +235,8 @@ func (r *Report) Table(w io.Writer) error {
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.pct_later_copilot"), reset)
 		case row.Agent == session.OpenCode:
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.opencode"), reset)
+		case row.Agent == session.Aider:
+			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.aider"), reset)
 		default:
 			fmt.Fprintf(&b, "   %s%s%s\n", dim, i18n.T("limits.no_pct", name), reset)
 		}

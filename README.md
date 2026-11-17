@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Hit your usage limit in one AI coding agent? Keep going in another, with the whole conversation.</b><br>
-  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode
+  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode · Aider
 </p>
 
 <p align="center">
@@ -129,6 +129,15 @@ With an OpenCode Go plan, the limits panel shows its 5-hour, weekly and monthly 
 paste the key from build.nvidia.com or console.groq.com; no account needed), then choose a model
 with `/models`.
 
+**Aider** works with any model too, through the keys you give it (`OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`, OpenRouter, Ollama ... or its `.aider.conf.yml`). Settings → **Versions and
+updates** installs it (its letter, `i`), as does `curl -LsSf https://aider.chat/install.sh | sh`
+(or `aider-install`, `uv tool install aider-chat`, `pipx install aider-chat`). Aider takes no first
+message on its command line, so i-mux gives it the handoff file (`--read`) and types the handoff in
+once Aider is ready; if Aider first asks something (adding `.aider*` to `.gitignore`), answer it and
+the handoff follows. Its conversations come from `.aider.chat.history.md` in the repository, and
+coming back to Aider restores that history.
+
 Files open in your editor: Settings → **Editor** picks micro, nano or Neovim (`imux editor use
 <editor>`); on **Auto**, micro, `$VISUAL`, `$EDITOR`, nano, vim. Without an editor of your own, the
 first file you open offers to get micro for you (5 MB, once; also Settings → **Editor** → micro, or
@@ -156,7 +165,7 @@ them) switches its view.
 | 📁 | **Files:** the project's files, each with the icon of its type as in the editor (Seti's, with a Nerd Font; emoji otherwise), folders open or closed, indent guides for the levels; click a folder to open it, a file to edit it (an HTML file opens in your browser, live: below); changed files are colored. Its title has VS Code's buttons: **New File…** and **New Folder…** (in the selected folder, else the project's), **Refresh Explorer**, **Collapse Folders**, and **⋯** with **Show Hidden Files** (✓ while on: files and folders starting with a dot, such as `.github`, `.env` or `.gitlab-ci.yml`, show here; `.git` and `node_modules` never; saved for next time); the title says what the button under the pointer does. **Ctrl+P** (or ⋯ → Go to File…) finds a file of the project like the editor's Quick Open: type letters of its name (`sbrnd` finds `sidebar/render.go`; `name:42` opens at line 42), Enter opens it. **Right-click** gives the editor's menu: New File / New Folder, Rename, Delete (to the Trash), Cut / Copy / Paste, Copy Path / Copy Relative Path, Reveal in Finder, Open in Terminal, Open to the Side, Find in Folder, Compare, Add to Agent, and Open Preview for HTML and SVG files. What the pointer is over lights up; the selected file stays marked |
 | 🔍 | **Search:** every file of the project, results as you type, grouped by file with its icon and number of matches (click a file to fold it, **⊟ Collapse all** or Tab for all; many files start folded); Enter opens the file at the line. Long lists, diffs and files have a thin scroll bar you can click or drag; beside a diff's bar, red and green marks show where lines were removed and added in the whole file, as in VS Code: click one to go there, or press **]** and **[** for the next and previous change |
 | 🔀 | **Git:** VS Code's Source Control, every action of it. **⋯** opens its menu: Pull, Push, Clone, Checkout to, Fetch, Show Git Output and the Commit (amend, signed off, undo), Changes, Pull/Push, Branch (merge, rebase, create, rename, delete, publish), Remote, Stash, Tags and Worktrees submenus, and View & Sort (list or tree; by name, path or status). Branches, tags, stashes and remotes are chosen in a Quick Pick you type to filter. Merge, staged and unstaged changes (each file's name, then its folder in gray) with stage, unstage and discard (asks first) on each file, folder and all; VS Code's message box above **Commit**: click it, type the message, Enter commits (Ctrl+J for a new line; the message is kept per project until it is committed), with ▾ (Commit & Push, Commit & Sync, Amend) and Continue during a rebase; pull / push / sync with ↑↓ counts, Publish for a new branch; a click on the branch: Checkout to…; a right-click on a file or a commit: its menu (Add to .gitignore, Cherry Pick, Revert, Create Tag…); the history as a graph with branch and tag labels. A click on a file shows the whole file with the changes highlighted, side by side when the window is wide |
-| ⏰ | **Jobs:** the project's own agents (Claude Code's `.claude/agents/`, Copilot's `.github/agents/`, OpenCode's, `.agents/agents/` for any CLI, and your personal ones) and its skills, run now or on a schedule while i-mux is open, with nothing to fill in: what to do is in the agent or skill already written. **🚀** opens one Run panel where everything is chosen already: the installed CLI (Claude, Antigravity, Copilot, Codex, OpenCode; the agent's own first), the model (the CLI's list, or a name you type), when (now, every 5 or 15 minutes, every hour, every day at 09:00, or one such as `10m`, `2h`, `09:00 18:30`) and the access; **Enter** runs it. Its output opens and follows the run: each tool it calls with its result, then its answer; **s** stops it, **Esc** leaves it running. It runs headless in the project; the sidebar shows each one's time, CLI and model, its last report's first line (✓, or ✗ when it failed) and its next run, with a spinner and a badge on ⏰ while one runs; a click shows its output. A report notifies you; "nothing new" does not. **⋯** on every row (or a right-click): Run / Stop, Output, History, Continue in a pane, Schedule (or Change schedule), Pause, Open definition, Remove; for a skill also Add to Agent, Improve with Agent, Share with all agents and Delete skill. **✨** in the title writes a new skill (an agent you pick, or a blank `SKILL.md`); a skill whose front matter has a problem shows ⚠ and what is wrong |
+| ⏰ | **Jobs:** the project's own agents (Claude Code's `.claude/agents/`, Copilot's `.github/agents/`, OpenCode's, `.agents/agents/` for any CLI, and your personal ones) and its skills, run now or on a schedule while i-mux is open, with nothing to fill in: what to do is in the agent or skill already written. **🚀** opens one Run panel where everything is chosen already: the installed CLI (Claude, Antigravity, Copilot, Codex, OpenCode, Aider; the agent's own first), the model (the CLI's list, or a name you type), when (now, every 5 or 15 minutes, every hour, every day at 09:00, or one such as `10m`, `2h`, `09:00 18:30`) and the access; **Enter** runs it. Its output opens and follows the run: each tool it calls with its result, then its answer; **s** stops it, **Esc** leaves it running. It runs headless in the project; the sidebar shows each one's time, CLI and model, its last report's first line (✓, or ✗ when it failed) and its next run, with a spinner and a badge on ⏰ while one runs; a click shows its output. A report notifies you; "nothing new" does not. **⋯** on every row (or a right-click): Run / Stop, Output, History, Continue in a pane, Schedule (or Change schedule), Pause, Open definition, Remove; for a skill also Add to Agent, Improve with Agent, Share with all agents and Delete skill. **✨** in the title writes a new skill (an agent you pick, or a blank `SKILL.md`); a skill whose front matter has a problem shows ⚠ and what is wrong |
 | 📊 · ❓ | usage limits · every key |
 
 | Sidebar / key | What it does |
@@ -174,7 +183,7 @@ them) switches its view.
 | `prefix H` `J` `K` `L` | swap the active pane with the one on that side (left, down, up, right) |
 | `prefix r`, then `h` `j` `k` `l` or the arrows (Shift: faster), `Esc` | resize the active pane |
 | `prefix ?` (or `?` in the sidebar) | every key: type to find one, Enter runs it |
-| `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode |
+| `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` `i` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode / Aider |
 
 `prefix` is `Ctrl+b`: press it, release, then press the key.
 

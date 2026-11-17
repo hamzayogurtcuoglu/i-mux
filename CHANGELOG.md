@@ -6,6 +6,26 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.63.0] - 2026-11-18
+
+### Added
+
+- **Aider is the sixth agent.** Aider joins Claude Code, Antigravity, Copilot, Codex and OpenCode
+  everywhere an agent is: the agent bar and menus (letter `i`), new tabs and splits, switching with
+  the whole conversation in both directions, History, the limits panel, `imux doctor`, Versions
+  and updates (it installs with `curl -LsSf https://aider.chat/install.sh | sh` and updates with
+  `aider --upgrade`) and Jobs. Aider takes no first message on its command line, so i-mux gives it
+  the handoff file with `--read` and types the handoff in once Aider is ready. Its conversations
+  are read from `.aider.chat.history.md` in the repository; coming back to Aider restores that
+  history.
+
+### Fixed
+
+- **A handoff typed into an agent waits for its question.** When the agent asked something first
+  (a yes/no question), the handoff was typed in as the answer and lost. It now waits until the
+  question is answered; an answered yes/no question still on the screen no longer counts as one,
+  for the "needs you" mark too.
+
 ## [0.62.6] - 2026-11-16
 
 ### Fixed

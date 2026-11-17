@@ -16,7 +16,9 @@ import (
 const (
 	keyCtrlBackslash = "\x1c"
 	keyPrefix        = "\x02" // C-b
-	uiCols, uiRows   = 120, 40
+	// Wide enough for the agent bar with all six agents' full names
+	// (narrower clients get short names, Q29).
+	uiCols, uiRows = 140, 40
 )
 
 // TestUIKeyPath (T2.8d): Ctrl+\ then a switches the Claude pane to Antigravity,

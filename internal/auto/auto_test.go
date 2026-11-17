@@ -173,6 +173,7 @@ func TestCommand(t *testing.T) {
 		{session.Antigravity, skill, "", true, []string{"agy", "-p", "P", "--output-format", "stream-json", "--mode", "plan"}},
 		{session.Codex, skill, "o9", false, []string{"codex", "exec", "--skip-git-repo-check", "--color", "never", "--output-last-message", "OUT", "-m", "o9", "--dangerously-bypass-approvals-and-sandbox", "P"}},
 		{session.OpenCode, Def{Kind: KindAgent, Name: "rev", Owner: session.OpenCode}, "a/b", false, []string{"opencode", "run", "--agent", "rev", "-m", "a/b", "P"}},
+		{session.Aider, skill, "gpt-x", true, []string{"aider", "--message", "P", "--yes-always", "--no-pretty", "--no-stream", "--no-fancy-input", "--no-check-update", "--no-gitignore", "--no-analytics", "--chat-history-file", "OUT", "--model", "gpt-x", "--chat-mode", "ask"}},
 	} {
 		inv, err := Command(c.cli, string(c.cli[:min(len(c.cli), 8)]), c.d, c.model, "P", c.readOnly, "OUT", "U")
 		want := append([]string{}, c.want...)
@@ -515,5 +516,16 @@ func TestLogLines(t *testing.T) {
 	}
 	if Shown([]string{"claude", "-p", "line\nline"}) != "claude -p <prompt>" {
 		t.Error("Shown")
+	}
+}
+
+// An Aider run's report is its last reply in the run's chat history.
+func TestAiderReply(t *testing.T) {
+	h := "\n# aider chat started at 2026-11-17 10:00:00\n\n> Aider v0.86.1  \n\n#### do it  \n\nFirst.\n\n#### again  \n\nAll done: 3 files.\n\n> Tokens: 1k sent, 20 received.  \n"
+	if got := AiderReply([]byte(h)); got != "All done: 3 files." {
+		t.Fatalf("%q", got)
+	}
+	if AiderReply(nil) != "" {
+		t.Fatal("empty")
 	}
 }

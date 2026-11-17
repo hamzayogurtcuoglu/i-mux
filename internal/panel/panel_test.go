@@ -124,6 +124,7 @@ func TestReportTableAndJSON(t *testing.T) {
 		"Antigravity", "● available", "Antigravity keeps its quota to itself", "today: 2 requests · 200 in / 20 out · 10 cache read",
 		"Copilot", "not installed",
 		"Codex", "◐ approaching a limit", "Send Codex a message",
+		"Aider", "Aider uses your model provider's limits",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("table lacks %q:\n%s", want, out)
@@ -168,7 +169,7 @@ func TestReportTableAndJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(b.String()), &back); err != nil {
 		t.Fatal(err)
 	}
-	if len(back.Agents) != 5 || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
+	if len(back.Agents) != 6 || back.Agents[5].Agent != "aider" || back.Agents[0].Agent != "claude" || back.Agents[0].Status != "limited" || back.Agents[0].Limit.Severity != "limit" ||
 		back.Agents[1].Agent != "antigravity" || back.Agents[1].Usage.Window != "today" || back.Agents[1].Usage.Replies != 2 ||
 		back.Agents[3].Status != "warn" {
 		t.Fatalf("json %+v\n%s", back, b.String())

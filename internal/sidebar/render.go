@@ -223,6 +223,8 @@ func icon(a session.AgentID) (string, string) {
 		return "◉", agentFg[3]
 	case session.OpenCode:
 		return "▣", agentFg[4]
+	case session.Aider:
+		return "◆", agentFg[5]
 	}
 	return "›", faint
 }

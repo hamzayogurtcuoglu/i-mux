@@ -715,7 +715,7 @@ checked with a real Aider on the dev machine** (Q32).
 - **First-run questions:** Aider asks `Add .aider* to .gitignore (recommended)? (Y)es/(N)o [Yes]:`
   in a repository whose `.gitignore` lacks it, `No git repo found, create one to track aider's
   changes (recommended)?` outside one, and, without any model key, whether to log in to
-  OpenRouter. A paste waits while the screen asks (`watch.Asking` knows Aider's `(Y)es/(N)o`), so
+  OpenRouter. A paste waits while the screen asks (`agent.Asking` knows Aider's `(Y)es/(N)o`), so
   the user answers first and the handoff follows (D81).
 - **Store:** `.aider.chat.history.md` at the git repository's root (the working directory outside
   one); `--chat-history-file` or `AIDER_CHAT_HISTORY_FILE` can move it, which i-mux does not follow.
@@ -2833,9 +2833,12 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
   - `paste`: launch without a prompt, wait until the screen is stable for 1.5 s (max 20 s), then
     `load-buffer` + `paste-buffer -p -d` + `Enter`. This avoids exposing the prompt in `ps`
     (§19). It is also the fallback for agents with no initial-prompt flag (Aider, D81). A still
-    screen that asks a question (`watch.Asking`: a yes/no prompt, a numbered choice, Aider's
-    `(Y)es/(N)o`) is not ready: the paste waits until the question is gone (up to 10 min, then it
-    pastes anyway), so the handoff never becomes the answer.
+    screen that asks a question (`agent.Asking`: a numbered choice or a permission dialog at the
+    bottom, or a yes/no prompt such as Aider's `(Y)es/(N)o [Yes]:` ending the last line; answered
+    ones stay above it and do not count) is not ready: the paste waits until the question is gone
+    (up to 10 min, then it pastes anyway), so the handoff never becomes the answer. The switch
+    lets go of the pane's lock before it waits, and a pane that runs another program by then
+    gets nothing.
 - **Kill semantics:** `respawn-pane -k` sends SIGHUP to the old agent. All four CLIs write their
   transcripts incrementally [observed: files grow during sessions], so only an in-flight streaming
   turn is lost, which is usually the limit message itself.

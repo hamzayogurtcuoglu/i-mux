@@ -63,9 +63,10 @@ func Doc() string {
 			comment = nil
 		}
 	}
-	b.WriteString("\nAgent ids are `claude`, `antigravity`, `copilot` and `codex`. Launch templates use the placeholders\n")
+	b.WriteString("\nAgent ids are `claude`, `antigravity`, `copilot`, `codex`, `opencode` and `aider`. Launch templates use the placeholders\n")
 	b.WriteString("`{prompt}` (the handoff, at most once), `{id}` (the session to resume) and `{uuid}` (a new id).\n")
-	b.WriteString("A placeholder with an empty value is dropped together with the flag before it.\n\n")
+	b.WriteString("A placeholder with an empty value is dropped together with the flag before it.\n")
+	b.WriteString("A template without `{prompt}` (Aider's) gets the handoff pasted into the agent once it has started.\n\n")
 	b.WriteString("## The default file\n\n```toml\n")
 	b.WriteString(strings.TrimRight(Template, "\n"))
 	b.WriteString("\n```\n")

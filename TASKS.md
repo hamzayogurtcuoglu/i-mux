@@ -1001,31 +1001,31 @@ slow (about a second).
 
 User request: Aider CLI everywhere an agent is, like Claude, Copilot and the others (D81, §7.8).
 
-- [ ] **T86.1 Agent, launch and config** · S
+- [x] **T86.1 Agent, launch and config** · S
   - AC: `session.Aider` ("Aider"), in `AllAgents`, `config.AgentIDs` and the default order (last);
     registry entry: key `i`, bin `aider`, vendor "any model", install `curl -LsSf
     https://aider.chat/install.sh | sh` (hint names aider-install, uv and pipx too), `Dirs`
     `~/.local/bin`, update `--upgrade`; templates: new with no prompt (pasted), resume
     `--restore-chat-history`; with `deliver = "file"` the handoff is passed as `--read=<file>`;
     sidebar icon and the agent bar's short name; default.toml and docs/CONFIG.md; unit tests.
-- [ ] **T86.2 A paste waits for a question** · S
+- [x] **T86.2 A paste waits for a question** · S
   - AC: §9.5: `WaitStable` does not paste into a still screen that asks (yes/no, numbered choice,
     Aider's `(Y)es/(N)o`), up to 10 min; `Asking` moves where `workspace` can use it; unit tests.
-- [ ] **T86.3 Session provider** · M
+- [x] **T86.3 Session provider** · M
   - AC: `internal/session/aider`: Find (the folder's `.aider.chat.history.md` or its repository
     root's; runs as sessions, id = start time, `Since`, `ID`, newest first), Load (user, assistant,
     edits, reads, tokens, model, limit-like errors, chained handoff), Preview; `SharedStore`; a
     path to the history file resolves to Aider; the handoff's "full transcript" line names the
     file and the run; tests with synthetic history files only.
-- [ ] **T86.4 Limits, doctor, Jobs, i18n** · S
+- [x] **T86.4 Limits, doctor, Jobs, i18n** · S
   - AC: limit patterns (provider wording and `RateLimitError`); the panel's Aider row says the
     provider's limits apply; doctor checks it like the others; Jobs run it headless (§7.8) and read
     the reply from the run's history file; i18n (en, tr); unit tests.
-- [ ] **T86.5 End to end** · M · deps: T86.1–T86.4
+- [x] **T86.5 End to end** · M · deps: T86.1–T86.4
   - AC: a fake aider (fake.sh): it asks the `.gitignore` question first, then writes a history
     file; Claude → Aider (the handoff is pasted after the question is answered, `--read` names the
     file) → Claude keeps Aider's replies; doctor and the limits panel list Aider.
-- [ ] **T86.6 Docs** · XS
+- [x] **T86.6 Docs** · XS
   - AC: README and README.tr (agent list, keys, an Aider paragraph); docs/LIMITS.md; CHANGELOG.
 - [ ] **T86.7 A real Aider** · USER
   - AC: Q32 with a real Aider and a fake model server; results in §7.8 and §21.

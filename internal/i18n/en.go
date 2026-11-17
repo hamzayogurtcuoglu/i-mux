@@ -845,6 +845,7 @@ var en = map[string]string{
 	"doctor.opencode_v1":       "OpenCode %s is OpenCode 1: i-mux needs OpenCode 2 (new OpenCode tabs drop to a plain shell). Fix: opencode upgrade --major",
 	"doctor.opencode_sqlite":   "sqlite3 is not installed: imux finds OpenCode sessions it started, but not others (install sqlite3)",
 	"limits.opencode":          "OpenCode uses your model provider's limits; when it hits one, it shows here.",
+	"limits.aider":             "Aider uses your model provider's limits; when it hits one, it shows here.",
 	"limits.opencode_tokens":   "last 5 h: %s in / %s out tokens in %d sessions",
 	"limits.as_of":             "as of %s (its last reply)",
 	"limits.copilot_unlimited": "unlimited premium requests",

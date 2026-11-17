@@ -148,6 +148,8 @@ func guessAgent(path string) session.AgentID {
 		return session.Copilot
 	case strings.Contains(p, "/.codex/") || strings.HasPrefix(filepath.Base(p), "rollout-"):
 		return session.Codex
+	case filepath.Base(p) == ".aider.chat.history.md":
+		return session.Aider
 	}
 	return ""
 }
