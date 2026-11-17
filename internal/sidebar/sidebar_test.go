@@ -300,8 +300,15 @@ func TestRender(t *testing.T) {
 	if l, _ := find(sc, " A  acme-api"); l.ActionAt(10) != (Action{Kind: ActProjectMenu, Session: "acme-api-1a2b"}) || !strings.Contains(l.Text, selBg) {
 		t.Error("the current project is highlighted and opens its menu")
 	}
-	if l, _ := find(sc, "backend fix"); !strings.Contains(l.Text, selBg) || l.ActionAt(10) != (Action{Kind: ActAgentMenu, Pane: "%1"}) {
-		t.Error("the target agent is highlighted and opens its menu")
+	if l, _ := find(sc, "backend fix"); !strings.Contains(l.Text, avatarTints[projectColor("acme-api")]) || l.ActionAt(10) != (Action{Kind: ActAgentMenu, Pane: "%1"}) {
+		t.Error("the target agent is on its project's tint and opens its menu")
+	}
+	// D82: agents wear their project's color; the group row has its box.
+	if l, _ := find(sc, "og tags"); !strings.Contains(l.Text, avatarBars[projectColor("acme-api")]+"▎") {
+		t.Error("an agent's bar is its project's color")
+	}
+	if l, _ := find(sc, "B  blog"); strings.Count(l.Text, avatars[projectColor("blog")]) != 1 {
+		t.Error("blog's box")
 	}
 	// The rail: views and the bottom buttons.
 	if l, _ := find(sc, "PROJECTS"); l.ActionAt(1) != (Action{Kind: ActView, Section: ViewAgents}) || !strings.Contains(l.Text, cyan+"▌") {
@@ -1049,10 +1056,9 @@ func TestFold(t *testing.T) {
 	if lineWith("▾ AGENTS") == "" {
 		t.Error("agents stay open")
 	}
-	for _, gone := range []string{" A  acme-api"} {
-		if strings.Contains(text, gone) {
-			t.Errorf("folded section shows %q", gone)
-		}
+	// Folded PROJECTS: acme-api only under AGENTS, as its group's name.
+	if before, _, _ := strings.Cut(text, "▾ AGENTS"); strings.Contains(before, "acme-api") {
+		t.Errorf("folded section shows %q", "acme-api")
 	}
 }
 
@@ -1613,5 +1619,31 @@ func TestSkillsInJobs(t *testing.T) {
 	}
 	if !strings.Contains(root[2], "__skill dialog") || strings.Contains(root[2], "--template") || !strings.Contains(root[5], "__skill dialog --template") {
 		t.Errorf("root menu commands: %q, %q", root[2], root[5])
+	}
+}
+
+// D82: a worktree's agents wear its repository's color.
+func TestWorktreeColor(t *testing.T) {
+	i18n.SetLocale("en")
+	m := model()
+	wt := ProjectRow{Session: "acme-wt", Worktree: true, Name: "acme-api-fix", Panes: []PaneRow{
+		{ID: "%9", Agent: "claude", Name: "wt agent", State: StateIdle},
+	}}
+	m.Projects = append(m.Projects[:1], append([]ProjectRow{wt}, m.Projects[1:]...)...)
+	sc := Render(m, 41, 0, NoItem)
+	group, agent := "", ""
+	for _, l := range sc.Lines {
+		switch p := Plain(l.Text); {
+		case strings.Contains(p, " A  🌿 acme-api-fix"):
+			group = l.Text
+		case strings.Contains(p, "wt agent"):
+			agent = l.Text
+		}
+	}
+	if !strings.Contains(group, avatars[projectColor("acme-api")]) {
+		t.Errorf("the worktree's group wears acme-api's color:\n%s", screenText(sc))
+	}
+	if !strings.Contains(agent, avatarBars[projectColor("acme-api")]+"▎") {
+		t.Error("the worktree's agent has acme-api's bar")
 	}
 }

@@ -239,12 +239,17 @@ func avatar(name string) string {
 	if len(r) > 0 {
 		letter = strings.ToUpper(string(r[0]))
 	}
+	return avatars[projectColor(name)] + bold + " " + letter + " " + reset
+}
+
+// projectColor is the index of name's color in avatars, avatarBars and
+// avatarTints: a project is the same color everywhere (D82).
+func projectColor(name string) int {
 	var h uint32
 	for _, c := range name {
 		h = h*31 + uint32(c)
 	}
-	av := avatars[h%uint32(len(avatars))]
-	return av + bold + " " + letter + " " + reset
+	return int(h % uint32(len(avatars)))
 }
 
 // age is the time since since: "<1m", "9m", "2h", "3d" ("" if unknown).
@@ -467,8 +472,10 @@ func projectRow(pr ProjectRow, w, tick int) Line {
 	return Line{Text: text, Action: a}
 }
 
-// agentRow: icon, name, time since the state changed and the state.
-func agentRow(p PaneRow, w int, now time.Time, tick int) Line {
+// agentRow: icon, name, time since the state changed and the state. pc is
+// its project's color (projectColor; -1 for none): a bar on the left, and
+// the selected agent's row on its tint (D82).
+func agentRow(p PaneRow, w int, now time.Time, tick, pc int) Line {
 	sym, color := icon(p.Agent)
 	name := p.Display(i18n.T("sidebar.shell"))
 	nameStyle := ""
@@ -507,32 +514,48 @@ func agentRow(p PaneRow, w int, now time.Time, tick int) Line {
 		layout()
 	}
 	nw := min(runes(name), max(room(), 1))
-	left := " " + color + sym + reset + "  " + nameStyle + fit(name, nw) + reset
+	lead := " "
+	if pc >= 0 {
+		lead = avatarBars[pc] + "▎" + reset
+	}
+	left := lead + color + sym + reset + "  " + nameStyle + fit(name, nw) + reset
 	text := spread(left, 4+nw, right+" ", rw+1, w)
 	if p.Target {
 		// The selected agent: a click opens its menu (go, rename, close).
+		if pc >= 0 {
+			return Line{Text: onBg(text, avatarTints[pc]), Action: Action{Kind: ActAgentMenu, Pane: p.ID}}
+		}
 		return Line{Text: withBg(text), Action: Action{Kind: ActAgentMenu, Pane: p.ID}}
 	}
 	return Line{Text: text, Action: Action{Kind: ActFocus, Pane: p.ID}}
 }
 
-// groupRow is a project's name above its agents; collapsed, it also shows
-// how many agents it has and their roll-up state.
-func groupRow(pr ProjectRow, w, tick int, collapsed bool) Line {
+// groupRow is a project's name above its agents, after its avatar (box is
+// the project whose color it wears: a worktree its repository's, D82);
+// collapsed, it also shows how many agents it has and their roll-up state.
+func groupRow(pr ProjectRow, box string, w, tick int, collapsed bool) Line {
 	a := Action{}
 	if !pr.Current {
 		a = Action{Kind: ActProject, Session: pr.Session}
 	}
-	if !collapsed {
-		return Line{Text: muted + fit(" "+pr.Name, w) + reset, Action: a}
+	lead, lw := " "+avatar(box)+" ", 5
+	if pr.Worktree {
+		lead, lw = lead+"🌿 ", lw+3
 	}
-	right, rw := muted+strconv.Itoa(len(pr.Panes))+reset, runes(strconv.Itoa(len(pr.Panes)))
-	if st, ok := rollup(pr.Panes); ok {
-		b, bw := badge(st, tick, true)
-		right, rw = right+" "+b, rw+1+bw
+	right, rw := "", 0
+	if collapsed {
+		right, rw = muted+strconv.Itoa(len(pr.Panes))+reset, runes(strconv.Itoa(len(pr.Panes)))
+		if st, ok := rollup(pr.Panes); ok {
+			b, bw := badge(st, tick, true)
+			right, rw = right+" "+b, rw+1+bw
+		}
+		right, rw = right+" ", rw+1
 	}
-	nw := max(w-rw-3, 1)
-	return Line{Text: spread(muted+" "+fit(pr.Name, nw)+reset, nw+1, right+" ", rw+1, w), Action: a}
+	if w-lw-rw < 4 {
+		lead, lw = " ", 1 // too narrow for the box
+	}
+	nw := max(w-lw-rw, 1)
+	return Line{Text: spread(lead+muted+fit(pr.Name, nw)+reset, lw+nw, right, rw, w), Action: a}
 }
 
 // continueRows: the agents the chat can move to, two buttons per row.
@@ -707,11 +730,16 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 	right, rw := agentsCount(m, w)
 	out = append(out, headerWith(SecAgents, i18n.T("sidebar.agents"), folded(SecAgents), right, rw, w, Action{Kind: ActNewAgent}, m.icons()))
 	if !folded(SecAgents) {
+		box := ""
 		for _, pr := range m.Projects {
+			if !pr.Worktree || box == "" {
+				box = pr.Name // a worktree wears its repository's color
+			}
+			pc := projectColor(box)
 			if len(pr.Panes) == 0 {
 				if pr.Current {
 					// Its last agent was closed: the project stays.
-					out = append(out, groupRow(pr, w, m.Tick, false), Line{
+					out = append(out, groupRow(pr, box, w, m.Tick, false), Line{
 						Text:   muted + fit("   "+i18n.T("sidebar.no_agents_hint"), w) + reset,
 						Action: Action{Kind: ActNewAgent},
 					})
@@ -719,12 +747,12 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 				continue
 			}
 			fold := collapse && !pr.Current
-			out = append(out, groupRow(pr, w, m.Tick, fold))
+			out = append(out, groupRow(pr, box, w, m.Tick, fold))
 			if fold {
 				continue
 			}
 			for _, p := range pr.Panes {
-				out = append(out, agentRow(p, w, m.Now, m.Tick))
+				out = append(out, agentRow(p, w, m.Now, m.Tick, pc))
 			}
 		}
 	}
