@@ -997,6 +997,17 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M88: New projects start with an agent chosen in Settings (added 2026-11-17)
+
+User request: Claude opens by default; Settings should choose which agent a new project opens
+with, Claude still the default (ARCHITECTURE D83).
+
+- [ ] **T88.1 Settings row for default_agent** · S
+  - AC: a **New projects start with** row (key `p`) showing Auto (<the agent it resolves to>) or
+    the chosen agent; its menu lists Auto and every agent in `order`, ● on the current one, a
+    missing agent marked "not installed"; `__settings set default_agent <id|auto>` saves
+    `default_agent` ("" for auto) and rejects unknown ids; i18n (en, tr); unit tests; README.
+
 ## M87: Agents in their project's color (added 2026-11-17)
 
 User request: color the AGENTS section like the projects' boxes, the open agent's row on its
