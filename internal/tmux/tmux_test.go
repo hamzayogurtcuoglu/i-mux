@@ -173,6 +173,67 @@ func TestParseVersion(t *testing.T) {
 	}
 }
 
+func TestBackendBin(t *testing.T) {
+	if b := BackendBin(""); b != "tmux" {
+		t.Fatalf("empty backend: %q", b)
+	}
+	if b := BackendBin("tmux"); b != "tmux" {
+		t.Fatalf("tmux backend: %q", b)
+	}
+	// The imux-core next to the running binary wins over the PATH.
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sibling := filepath.Join(filepath.Dir(self), "imux-core")
+	if err := os.WriteFile(sibling, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(sibling)
+	if b := BackendBin("core"); b != sibling {
+		t.Fatalf("sibling: %q", b)
+	}
+	// Without it, the one on the PATH is used.
+	os.Remove(sibling)
+	dir := t.TempDir()
+	onPath := filepath.Join(dir, "imux-core")
+	if err := os.WriteFile(onPath, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	if b := BackendBin("core"); b != onPath {
+		t.Fatalf("path: %q", b)
+	}
+}
+
+func TestNewResolvesEngine(t *testing.T) {
+	t.Setenv("IMUX_HOME", t.TempDir()) // never the real ~/.imux
+	t.Setenv("IMUX_TMUX_BIN", "/somewhere/tmux")
+	if c := New(""); c.Bin != "/somewhere/tmux" {
+		t.Fatalf("IMUX_TMUX_BIN: %q", c.Bin)
+	}
+	t.Setenv("IMUX_TMUX_BIN", "")
+	dir := t.TempDir()
+	core := filepath.Join(dir, "imux-core")
+	if err := os.WriteFile(core, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(os.Getenv("IMUX_HOME"), "config.toml"), []byte("[engine]\nbackend = \"core\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	if c := New(""); c.Bin != core {
+		t.Fatalf("config core: %q", c.Bin)
+	}
+	if err := os.WriteFile(filepath.Join(os.Getenv("IMUX_HOME"), "config.toml"), []byte(""), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", "/usr/bin:/bin")
+	if c := New(""); c.Bin != "tmux" {
+		t.Fatalf("config default: %q", c.Bin)
+	}
+}
+
 func TestInside(t *testing.T) {
 	c := &Client{Socket: "imux"}
 	if !c.Inside("/tmp/tmux-501/imux,1234,0") {

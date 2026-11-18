@@ -1012,7 +1012,7 @@ passing with tmux, exactly as before, all through this.
     `Engine` field set from the bracketed part; `imux doctor` shows the engine and its version
     and warns when an imux-core older than i-mux's minimum is found; unit tests; a doctor e2e
     for both engines.
-- [ ] **T88.3 The engine switch** · M · deps: T88.2
+- [x] **T88.3 The engine switch** · M · deps: T88.2
   - AC: D83: `[engine] backend = "tmux" | "core"`, default `tmux`; with `core`, the imux-core
     next to imux's own binary, else the one on `PATH`; `IMUX_TMUX_BIN` still overrides
     everything; the two engines use different socket directories; switching while sessions

@@ -167,6 +167,11 @@ type Hooks struct {
 	Enabled bool `toml:"enabled"`
 }
 
+// Engine is the [engine] section (D83): what runs everything on screen.
+type Engine struct {
+	Backend string `toml:"backend"` // "" and "tmux" = tmux; "core" = i-mux-core
+}
+
 // Tmux is the [tmux] section.
 type Tmux struct {
 	MenuKeyRoot string `toml:"menu_key_root"`
@@ -215,6 +220,7 @@ type Config struct {
 	Paste        Paste             `toml:"paste"`
 	Explorer     Explorer          `toml:"explorer"`
 	Web          Web               `toml:"web"`
+	Engine       Engine            `toml:"engine"`
 	Tmux         Tmux              `toml:"tmux"`
 	Theme        theme.Config      `toml:"theme"`
 	Hooks        Hooks             `toml:"hooks"`
@@ -299,6 +305,7 @@ func Default() *Config {
 		Notify: Notify{Enabled: true, Sound: true},
 		Paste:  Paste{Images: true},
 		Web:    Web{Enabled: true, Open: "window"},
+		Engine: Engine{Backend: "tmux"},
 		Bus: Bus{
 			Enabled:         true,
 			IdleAfter:       D(5 * time.Second),
@@ -416,6 +423,12 @@ func Parse(data []byte) (*Config, []string, error) {
 			continue // already reported
 		}
 		warnings = append(warnings, fmt.Sprintf("unknown key %q ignored", k.String()))
+	}
+	switch cfg.Engine.Backend {
+	case "", "tmux", "core":
+	default:
+		warnings = append(warnings, fmt.Sprintf("engine.backend %q is not tmux or core; tmux is used", cfg.Engine.Backend))
+		cfg.Engine.Backend = ""
 	}
 	for _, a := range cfg.Agents {
 		a.normalize()

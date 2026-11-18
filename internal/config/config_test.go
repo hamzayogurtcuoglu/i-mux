@@ -109,6 +109,26 @@ func TestUnknownKeyWarns(t *testing.T) {
 	}
 }
 
+func TestEngineBackend(t *testing.T) {
+	cfg, warns, err := Parse([]byte("[engine]\nbackend = \"core\"\n"))
+	if err != nil || len(warns) != 0 {
+		t.Fatalf("core: %v %v", warns, err)
+	}
+	if cfg.Engine.Backend != "core" {
+		t.Fatalf("core: %+v", cfg.Engine)
+	}
+	if cfg, _, err := Parse(nil); err != nil || cfg.Engine.Backend != "tmux" {
+		t.Fatalf("default: %+v %v", cfg.Engine, err)
+	}
+	_, warns, err = Parse([]byte("[engine]\nbackend = \"psmux\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 1 || !strings.Contains(warns[0], "engine.backend") {
+		t.Fatalf("invalid: %q", strings.Join(warns, "\n"))
+	}
+}
+
 func TestInvalidRegexHasLine(t *testing.T) {
 	_, _, err := Parse([]byte("on_limit = \"ask\"\n\n[agents.antigravity]\npatterns = [{ re = 'a(b', severity = \"limit\" }]\n"))
 	var ce *Error

@@ -22,6 +22,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 )
 
 // DefaultSocket is the socket name used with `tmux -L`.
@@ -121,11 +124,12 @@ func Socket() string {
 	return DefaultSocket
 }
 
-// New returns a client for imux's socket with config file conf.
+// New returns a client for imux's socket with config file conf. The engine
+// binary is IMUX_TMUX_BIN when set, else the configured backend's (D83).
 func New(conf string) *Client {
 	bin := os.Getenv("IMUX_TMUX_BIN")
 	if bin == "" {
-		bin = "tmux"
+		bin = BackendBin(backendFromConfig())
 	}
 	return &Client{
 		Bin:    bin,
@@ -134,6 +138,37 @@ func New(conf string) *Client {
 		Runner: ExecRunner{},
 		Record: os.Getenv("IMUX_TMUX_RECORD"),
 	}
+}
+
+// backendFromConfig reads the engine backend from the configuration; "" (so
+// tmux) when the file is missing or unreadable — the same default as before
+// the switch existed.
+func backendFromConfig() string {
+	cfg, _, err := config.Load(paths.Config())
+	if err != nil || cfg == nil {
+		return ""
+	}
+	return cfg.Engine.Backend
+}
+
+// BackendBin resolves the engine binary for a backend (D83): "core" uses the
+// imux-core next to the running imux binary, else the one on the PATH —
+// neither found, the name is returned and the exec error names it too, while
+// doctor explains. Any other backend is tmux.
+func BackendBin(backend string) string {
+	if backend != "core" {
+		return "tmux"
+	}
+	if self, err := os.Executable(); err == nil {
+		p := filepath.Join(filepath.Dir(self), "imux-core")
+		if st, err := os.Stat(p); err == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
+			return p
+		}
+	}
+	if p, err := exec.LookPath("imux-core"); err == nil {
+		return p
+	}
+	return "imux-core"
 }
 
 // BaseArgs returns the arguments that select the socket and config.

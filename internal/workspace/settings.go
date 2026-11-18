@@ -94,6 +94,7 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
 		MenuItem{Name: i18n.T("settings.hooks", onOffLabel(cfg.Hooks.Enabled)), Key: "h", Cmd: menu("hooks")},
+		MenuItem{Name: i18n.T("settings.engine", EngineLabel(EngineValue(cfg.Engine.Backend))), Key: "g", Cmd: menu("engine")},
 		Separator(),
 		MenuItem{Name: i18n.T("settings.open"), Key: "o", Cmd: w.popupCmd("90%", "90%", "__settings", "edit")},
 	)
@@ -183,8 +184,27 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 			cs = append(cs, Choice{v, limitLabel(v)})
 		}
 		return w.ChoiceMenu(i18n.T("settings.limit_title"), "on_limit", cfg.OnLimit, cs, pane, client)
+	case "engine":
+		cs := []Choice{{"tmux", i18n.T("settings.engine_tmux")}, {"core", i18n.T("settings.engine_core")}}
+		return w.ChoiceMenu(i18n.T("settings.engine_title"), "engine", EngineValue(cfg.Engine.Backend), cs, pane, client)
 	}
 	return nil
+}
+
+// EngineValue is the Engine row's value (D83): "" and "tmux" are tmux.
+func EngineValue(v string) string {
+	if v == "core" {
+		return "core"
+	}
+	return "tmux"
+}
+
+// EngineLabel names an engine backend as the Settings row shows it.
+func EngineLabel(v string) string {
+	if v == "core" {
+		return i18n.T("settings.engine_core")
+	}
+	return i18n.T("settings.engine_tmux")
 }
 
 // EditorChoice is the Editor row's value (D50): copilot (AI completion,
