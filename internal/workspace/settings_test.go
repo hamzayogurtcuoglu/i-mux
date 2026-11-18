@@ -44,13 +44,13 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	got := strings.Join(names, "|")
 	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|t Theme: i-mux|a Follow the terminal's light/dark: Off|" +
-		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me|h Agent states from their hooks: Off| |o Open the config file…"
+		"p New projects start with: Auto (Claude)|w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me|h Agent states from their hooks: Off| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
 	}
 	for key, which := range map[string]string{
 		"e": "editor", "n": "notify", "d": "notify_sound", "v": "paste_images", "i": "icons", "t": "theme", "a": "theme_auto", "h": "hooks",
-		"w": "on_arrival", "l": "on_limit",
+		"w": "on_arrival", "l": "on_limit", "p": "default_agent",
 	} {
 		if c := cmdOf(m, key); !strings.Contains(c, "__settings menu "+which+" --pane %1 --client c1") {
 			t.Errorf("%s: %q does not open the %s menu", key, c, which)
@@ -80,6 +80,7 @@ func TestSettingsMenu(t *testing.T) {
 	// Values change the rows; with AI completion on, Copilot's sign-in.
 	w.Cfg.Completion.Enabled = true
 	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival = "emoji", "off", "continue"
+	w.Cfg.DefaultAgent = "antigravity"
 	m = w.SettingsMenu("%1", "")
 	got = ""
 	for _, it := range m.Items {
@@ -88,7 +89,7 @@ func TestSettingsMenu(t *testing.T) {
 	for _, want := range []string{
 		"e Editor: Neovim + Copilot|s Sign in to GitHub Copilot…|",
 		"i Icons: Emoji|", "w After a handoff the new agent: continues at once|",
-		"l When an agent hits its limit: do nothing|",
+		"l When an agent hits its limit: do nothing|", "p New projects start with: Antigravity|",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("menu lacks %q:\n%s", want, got)
@@ -122,6 +123,8 @@ func TestSettingMenus(t *testing.T) {
 		{"on_arrival", "After a handoff the new agent", "1 ● waits for you|2   continues at once", "__settings set on_arrival continue"},
 		{"on_limit", "When an agent hits its limit", "1 ● ask me|2   switch on its own|3   do nothing", "__settings set on_limit off"},
 		{"theme_auto", "Follow the terminal's light/dark", "1   On|2 ● Off", "__settings set theme_auto off"},
+		// D83: Auto is the first installed agent in order; a missing one says so.
+		{"default_agent", "New projects start with", "1 ● Auto (Claude)|2   Claude|3   Antigravity|4   Copilot · not installed|5   Codex · not installed|6   OpenCode · not installed|7   Aider · not installed", "__settings set default_agent aider"},
 	} {
 		m := w.SettingMenu(c.which, "%1", "c1")
 		if m == nil || m.Title != c.title || rows(m) != c.rows {

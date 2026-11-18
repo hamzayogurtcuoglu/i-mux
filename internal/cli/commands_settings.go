@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
@@ -148,6 +149,8 @@ func setSetting(name, value string) error {
 		return setEditor(value)
 	case "theme":
 		return setTheme(value)
+	case "default_agent":
+		return setDefaultAgent(value)
 	}
 	k, ok := settingKeys[name]
 	if !ok {
@@ -168,6 +171,21 @@ func setSetting(name, value string) error {
 		return err
 	}
 	return config.Set(paths.Config(), k.section, k.key, v)
+}
+
+// setDefaultAgent saves the agent a new project starts with (D83): an
+// agent id, or "auto" ("": the first installed agent in order).
+func setDefaultAgent(value string) error {
+	v := value
+	if value == "auto" {
+		v = ""
+	} else if !slices.Contains(config.AgentIDs, value) {
+		return fmt.Errorf("default_agent: unknown agent %q", value)
+	}
+	if err := paths.Ensure(); err != nil {
+		return err
+	}
+	return config.Set(paths.Config(), "", "default_agent", config.Str(v))
 }
 
 // setEditor saves the Editor row's choice (D50): copilot turns AI

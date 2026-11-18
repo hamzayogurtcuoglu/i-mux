@@ -32,6 +32,9 @@ var (
 	// on the terminal's colors (theme.PaneBase).
 	paneBase, paneFg, paneBg string
 	avatars                  []string // projects' avatars (background and text)
+	// avatarBars and avatarTints are the same colors as a bar's text color
+	// and as a quiet row background (D82).
+	avatarBars, avatarTints []string
 )
 
 func init() { theme.Watch(applyPalette) }
@@ -65,12 +68,21 @@ func applyPalette(p theme.Palette) {
 	barThumb = p.Overlay0.Fg() + "┃" + reset
 	buttonStyle = p.Accent.Bg() + onColor(p.Accent)
 	agentFg = [6]string{p.Peach.Fg(), p.Blue.Fg(), p.Text.Fg(), p.Mauve.Fg(), p.Yellow.Fg(), p.Green.Fg()} // Claude, Antigravity, Codex, Copilot, OpenCode, Aider
-	var av []string
-	for _, c := range []theme.Color{p.Teal, p.Peach, p.Blue, p.Green, p.Mauve, p.Red, p.Yellow, p.Accent} {
+	var av, bars, tints []string
+	for i, c := range []theme.Color{p.Teal, p.Peach, p.Blue, p.Green, p.Mauve, p.Red, p.Yellow, p.Accent} {
 		av = append(av, c.Bg()+onColor(c))
+		bars = append(bars, c.Fg())
+		tints = append(tints, theme.Tint(p, c, 0.25, classicTints[i]))
 	}
-	avatars = av
+	avatars, avatarBars, avatarTints = av, bars, tints
 }
+
+// classicAvatars are the classic theme's avatar colors (256-color), and
+// classicTints darker shades of them for a row's background (D82).
+var (
+	classicAvatars = []int{30, 166, 68, 71, 98, 168, 136, 37}
+	classicTints   = []string{"\x1b[48;5;23m", "\x1b[48;5;94m", "\x1b[48;5;24m", "\x1b[48;5;22m", "\x1b[48;5;54m", "\x1b[48;5;89m", "\x1b[48;5;58m", "\x1b[48;5;23m"}
+)
 
 // classic are the sidebar's colors before themes, exactly (the i-mux theme).
 func classic() {
@@ -86,11 +98,12 @@ func classic() {
 	barTrack, barThumb = "\x1b[38;5;236m│"+reset, "\x1b[38;5;245m┃"+reset
 	buttonStyle = "\x1b[48;5;24m\x1b[38;5;255m"
 	agentFg = [6]string{"\x1b[38;5;173m", "\x1b[38;5;75m", "\x1b[38;5;252m", "\x1b[38;5;141m", "\x1b[38;5;215m", "\x1b[38;5;114m"}
-	var av []string
-	for _, n := range []int{30, 166, 68, 71, 98, 168, 136, 37} {
+	var av, bars []string
+	for _, n := range classicAvatars {
 		av = append(av, "\x1b[48;5;"+strconv.Itoa(n)+"m"+white)
+		bars = append(bars, "\x1b[38;5;"+strconv.Itoa(n)+"m")
 	}
-	avatars = av
+	avatars, avatarBars, avatarTints = av, bars, classicTints
 }
 
 // paint puts a row on the theme's background (paneBase): the row starts
