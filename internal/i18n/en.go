@@ -211,6 +211,7 @@ var en = map[string]string{
 	"update.out":                       "i-mux %s is out (you have %s): run imux update, or Settings → Update.",
 	"update.updating":                  "Updating i-mux %s → %s…",
 	"update.done":                      "Done: i-mux %s. Open panes and sidebars switch to it on their own.",
+	"update.core_running":              "Your sessions run on the i-mux-core engine, which keeps its old version until they all end; the next ones start on the new one.",
 	"update.failed":                    "The update failed: %s",
 	"update.unreachable":               "Could not reach GitHub: %s",
 	"update.brew":                      "i-mux was installed with Homebrew: run brew upgrade imux.",

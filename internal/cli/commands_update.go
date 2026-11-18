@@ -79,8 +79,20 @@ func runUpdate(e *Env, args []string) error {
 		return err
 	}
 	fmt.Fprintln(e.Stdout, "\n"+i18n.T("update.done", latest))
-	sidebar.RefreshAll(context.Background(), tmux.New(paths.TmuxConf()))
+	t := tmux.New(paths.TmuxConf())
+	if coreKeepsOld(context.Background(), t) {
+		fmt.Fprintln(e.Stdout, i18n.T("update.core_running"))
+	}
+	sidebar.RefreshAll(context.Background(), t)
 	return nil
+}
+
+// coreKeepsOld reports whether sessions run on an i-mux-core engine: its
+// server keeps the binary it started with until they all end (D83), so the
+// update says so. tmux's server is not i-mux's to update.
+func coreKeepsOld(ctx context.Context, t *tmux.Client) bool {
+	v, err := t.BinVersion(ctx)
+	return err == nil && v.Engine != "" && t.Running(ctx)
 }
 
 // remember keeps the newest release in state.json for the sidebars and

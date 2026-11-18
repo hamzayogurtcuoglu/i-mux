@@ -69,6 +69,8 @@ jobs:
       - name: imux doctor --ci
         if: ${{ matrix.tmux == 'install' }}
         run: '"$HOME/.local/bin/imux" doctor --ci'
+      - name: The i-mux-core engine is installed beside imux (D83)
+        run: '"$HOME/.local/bin/imux-core" -V | grep "(imux-core "'
       - name: Without --version the installer picks the latest release
         # Only a full release (no "-rc1" suffix) is "latest". A newer release
         # can come out while this job runs, so the check is against whatever

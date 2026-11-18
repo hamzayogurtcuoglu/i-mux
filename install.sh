@@ -11,13 +11,13 @@
 #   --no-modify-path   do not add the install directory to your shell profile
 #   --no-font          do not offer the Nerd Font (env IMUX_NO_FONT=1)
 #
-# Downloads the release archive for this OS and architecture, verifies its
-# sha256 against checksums.txt, installs the binary, and puts the install
-# directory on PATH in your shell profile. If tmux is missing it offers to
-# install it with the system package manager; it asks first and says so
-# before it uses sudo. Then it offers the Nerd Font the sidebar's icons need
-# (imux font install: for your user only; on WSL in Windows, where the
-# terminal runs, with Windows Terminal and VS Code set to it).
+# Downloads the release for this OS and architecture, verifies its sha256
+# against checksums.txt, installs imux and the i-mux-core engine (both or
+# neither), and puts the install directory on PATH in your shell profile. If
+# tmux is missing it offers to install it with the system package manager; it
+# asks first and says so before it uses sudo. Then it offers the Nerd Font the
+# sidebar's icons need (imux font install: for your user only; on WSL in
+# Windows, where the terminal runs, with Windows Terminal and VS Code set).
 set -eu
 
 REPO="hamzayogurtcuoglu/i-mux"
@@ -172,12 +172,53 @@ got=$(sha256 "$tmp/$archive")
 [ "$want" = "$got" ] || die "checksum mismatch for $archive (expected $want, got $got)"
 say "Checksum verified."
 
-tar -xzf "$tmp/$archive" -C "$tmp" imux || die "could not unpack $archive"
+tar -xzf "$tmp/$archive" -C "$tmp" || die "could not unpack $archive"
+[ -f "$tmp/imux" ] || die "$archive has no imux"
+# A release with the i-mux-core engine ships it beside imux (D83).
+bins=imux
+[ -f "$tmp/imux-core" ] && bins="imux-core imux"
 mkdir -p "$PREFIX" || die "cannot create $PREFIX"
-if ! { cp "$tmp/imux" "$PREFIX/imux.tmp.$$" && chmod 755 "$PREFIX/imux.tmp.$$" && mv -f "$PREFIX/imux.tmp.$$" "$PREFIX/imux"; }; then
-	die "cannot install to $PREFIX (use --prefix)"
-fi
-say "Installed $PREFIX/imux"
+
+# The binaries are replaced as one step: each is copied next to its place
+# first, then they take their places by rename (a running imux or engine
+# server keeps the file it started with); if one cannot, those already
+# replaced are put back, so neither changes.
+new() { printf '%s/.%s.new.%s' "$PREFIX" "$1" "$$"; }
+old() { printf '%s/.%s.old.%s' "$PREFIX" "$1" "$$"; }
+undo() { # undo DONE: put back the binaries in DONE and drop the copies
+	for b in $1; do
+		if [ -e "$(old "$b")" ]; then
+			mv -f "$(old "$b")" "$PREFIX/$b" || true
+		else
+			rm -f "$PREFIX/$b" || true
+		fi
+	done
+	for b in $bins; do rm -f "$(new "$b")" "$(old "$b")" || true; done
+}
+for b in $bins; do
+	if [ -d "$PREFIX/$b" ]; then
+		undo ""
+		die "$PREFIX/$b is a directory: nothing was installed"
+	fi
+	if ! { cp "$tmp/$b" "$(new "$b")" && chmod 755 "$(new "$b")"; }; then
+		undo ""
+		die "cannot install to $PREFIX (use --prefix)"
+	fi
+	if [ -e "$PREFIX/$b" ] && ! cp "$PREFIX/$b" "$(old "$b")"; then
+		undo ""
+		die "cannot install to $PREFIX (use --prefix)"
+	fi
+done
+done_bins=""
+for b in $bins; do
+	if ! mv -f "$(new "$b")" "$PREFIX/$b"; then
+		undo "$done_bins"
+		die "cannot replace $PREFIX/$b: nothing was installed"
+	fi
+	done_bins="$done_bins $b"
+done
+for b in $bins; do rm -f "$(old "$b")"; done
+for b in $bins; do say "Installed $PREFIX/$b"; done
 
 # Put PREFIX on PATH for new terminals by adding one line to the profile of
 # the user's login shell. A piped script cannot change the PATH of the shell

@@ -1019,7 +1019,7 @@ passing with tmux, exactly as before, all through this.
     run is refused with an offer to close them; Settings shows the choice as "Engine (beta)";
     unit tests for the resolution order; e2e: the whole suite passes with the default and with
     `core`.
-- [ ] **T88.4 Packaging and updates** · M · deps: T88.3
+- [x] **T88.4 Packaging and updates** · M · deps: T88.3
   - AC: GoReleaser builds `imux-core` for darwin and linux (amd64 and arm64) into the same
     archives and the Homebrew formula, from `go.mod`'s pin of i-mux-core through `cmd/imux-core`
     (D83); `make install-local` installs both; the self-update

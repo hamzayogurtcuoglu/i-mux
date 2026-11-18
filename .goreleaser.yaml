@@ -20,9 +20,24 @@ builds:
       - -X github.com/hamzayogurtcuoglu/i-mux/internal/version.Commit={{ .ShortCommit }}
       - -X github.com/hamzayogurtcuoglu/i-mux/internal/version.Date={{ .Date }}
     mod_timestamp: "{{ .CommitTimestamp }}"
+  # The i-mux-core engine (D83), from go.mod's pin of its module; it reports
+  # that version itself, so it takes no -X.
+  - id: imux-core
+    main: ./cmd/imux-core
+    binary: imux-core
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
   - id: imux
+    ids: [imux, imux-core]
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
@@ -73,9 +88,10 @@ brews:
     dependencies:
       - name: tmux
     install: |
-      bin.install "imux"
+      bin.install "imux", "imux-core"
     test: |
       assert_match "imux", shell_output("#{bin}/imux version")
+      assert_match "imux-core", shell_output("#{bin}/imux-core -V")
     commit_author:
       name: hamzayogurtcuoglu
       email: hamzayogurtcuoglu@users.noreply.github.com

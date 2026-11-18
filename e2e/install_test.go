@@ -18,8 +18,16 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// fakeRelease writes <dir>/v9.9.9/{archive,checksums.txt} for this machine.
+// fakeRelease writes <dir>/v9.9.9/{archive,checksums.txt} for this machine,
+// with imux only, as releases before the engine (D83).
 func fakeRelease(t *testing.T, bin string, corrupt bool) string {
+	t.Helper()
+	return fakeReleaseCore(t, bin, nil, corrupt)
+}
+
+// fakeReleaseCore is fakeRelease with core as the archive's imux-core when
+// not nil, as a release with the engine ships it (T88.4).
+func fakeReleaseCore(t *testing.T, bin string, core []byte, corrupt bool) string {
 	t.Helper()
 	dir := t.TempDir()
 	rel := filepath.Join(dir, "v9.9.9")
@@ -39,6 +47,10 @@ func fakeRelease(t *testing.T, bin string, corrupt bool) string {
 	}
 	_ = tw.WriteHeader(&tar.Header{Name: "imux", Mode: 0o755, Size: int64(len(data))})
 	_, _ = tw.Write(data)
+	if core != nil {
+		_ = tw.WriteHeader(&tar.Header{Name: "imux-core", Mode: 0o755, Size: int64(len(core))})
+		_, _ = tw.Write(core)
+	}
 	_ = tw.WriteHeader(&tar.Header{Name: "LICENSE", Mode: 0o644, Size: 3})
 	_, _ = tw.Write([]byte("MIT"))
 	tw.Close()
@@ -236,4 +248,101 @@ func TestInstallScriptOffersFont(t *testing.T) {
 	if out, ran = install("--yes"); ran != "font --check\n" || strings.Contains(out, "Nerd Font") {
 		t.Fatalf("font in place:\n%s\nran %q", out, ran)
 	}
+}
+
+// TestInstallScriptReplacesBoth (T88.4, D83): the self-update runs the
+// release's installer as update.InstallCmd does; it replaces imux and the
+// i-mux-core engine together, and when one cannot be replaced neither
+// changes. A release without the engine still installs imux alone.
+func TestInstallScriptReplacesBoth(t *testing.T) {
+	bin := imuxBin(t)
+	if _, err := exec.LookPath("curl"); err != nil {
+		t.Skip("curl not installed")
+	}
+	testutil.Isolate(t)
+	tm, _ := exec.LookPath("tmux")
+	path := filepath.Dir(tm) + ":/usr/bin:/bin"
+	prefix := filepath.Join(t.TempDir(), "bin")
+	newCore := []byte("#!/bin/sh\necho 'tmux 3.8 (imux-core 9.9.9)'\n")
+	base := fakeReleaseCore(t, bin, newCore, false)
+	oldImux, oldCore := []byte("#!/bin/sh\necho old imux\n"), []byte("#!/bin/sh\necho old core\n")
+	setOld := func() {
+		t.Helper()
+		_ = os.RemoveAll(filepath.Join(prefix, "imux-core"))
+		testutil.WriteFile(t, filepath.Join(prefix, "imux"), oldImux)
+		testutil.WriteFile(t, filepath.Join(prefix, "imux-core"), oldCore)
+		for _, b := range []string{"imux", "imux-core"} {
+			if err := os.Chmod(filepath.Join(prefix, b), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	is := func(name string, want []byte) bool {
+		b, err := os.ReadFile(filepath.Join(prefix, name))
+		return err == nil && string(b) == string(want)
+	}
+	leftovers := func() {
+		t.Helper()
+		ents, _ := os.ReadDir(prefix)
+		for _, e := range ents {
+			if strings.HasPrefix(e.Name(), ".") {
+				t.Errorf("left behind: %s", e.Name())
+			}
+		}
+	}
+	update := func(base string) (string, error) {
+		return runInstall(t, base, path, "--version", "v9.9.9", "--prefix", prefix, "--no-modify-path", "--yes")
+	}
+
+	// Both replaced.
+	setOld()
+	out, err := update(base)
+	if err != nil {
+		t.Fatalf("update: %v\n%s", err, out)
+	}
+	if is("imux", oldImux) || !is("imux-core", newCore) || !strings.Contains(out, "Installed "+prefix+"/imux-core") {
+		t.Fatalf("not both replaced:\n%s", out)
+	}
+	if v, err := exec.Command(filepath.Join(prefix, "imux"), "version").Output(); err != nil || !strings.HasPrefix(string(v), "imux ") {
+		t.Fatalf("installed imux: %v %q", err, v)
+	}
+	leftovers()
+
+	// The engine's place is taken by a folder: nothing changes.
+	setOld()
+	_ = os.Remove(filepath.Join(prefix, "imux-core"))
+	if err := os.Mkdir(filepath.Join(prefix, "imux-core"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	out, err = update(base)
+	if err == nil || !strings.Contains(out, "nothing was installed") || !is("imux", oldImux) {
+		t.Fatalf("a failed engine changed imux: %v\n%s", err, out)
+	}
+	leftovers()
+
+	// imux cannot be replaced once the engine was: the engine is put back.
+	// macOS only: a user can make a file immutable there (chflags uchg).
+	if runtime.GOOS == "darwin" {
+		setOld()
+		if err := exec.Command("chflags", "uchg", filepath.Join(prefix, "imux")).Run(); err != nil {
+			t.Fatal(err)
+		}
+		out, err = update(base)
+		_ = exec.Command("chflags", "nouchg", filepath.Join(prefix, "imux")).Run()
+		if err == nil || !strings.Contains(out, "cannot replace "+prefix+"/imux") {
+			t.Fatalf("an immutable imux was replaced: %v\n%s", err, out)
+		}
+		if !is("imux", oldImux) || !is("imux-core", oldCore) {
+			t.Fatalf("the engine was not put back:\n%s", out)
+		}
+		leftovers()
+	}
+
+	// A release without the engine installs imux and leaves the engine.
+	setOld()
+	out, err = update(fakeRelease(t, bin, false))
+	if err != nil || is("imux", oldImux) || !is("imux-core", oldCore) || strings.Contains(out, "imux-core") {
+		t.Fatalf("a release without the engine: %v\n%s", err, out)
+	}
+	leftovers()
 }

@@ -1,6 +1,7 @@
 # imux build tooling. See TASKS.md (T0.7).
 
 BINARY    ?= imux
+CORE      ?= imux-core
 PKG       := github.com/hamzayogurtcuoglu/i-mux
 VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT    ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null)
@@ -20,19 +21,22 @@ export CGO_ENABLED = 0
 
 all: lint test build
 
-build: ## Build bin/imux
+build: ## Build bin/imux and bin/imux-core (the engine, from go.mod's pin; D83)
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/imux
+	$(GO) build -trimpath -ldflags "-s -w" -o bin/$(CORE) ./cmd/imux-core
 
 # A new file, then mv: overwriting a running imux in place makes macOS kill
 # every imux process (Code Signature Invalid), the sidebars included.
 INSTALL_DIR ?= $(HOME)/.local/bin
-install-local: build ## Install bin/imux into ~/.local/bin the safe way (a new file, then mv)
+install-local: build ## Install bin/imux and bin/imux-core into ~/.local/bin the safe way (new files, then mv)
 	mkdir -p "$(INSTALL_DIR)"
+	cp bin/$(CORE) "$(INSTALL_DIR)/.$(CORE).new.$$$$" && mv -f "$(INSTALL_DIR)/.$(CORE).new.$$$$" "$(INSTALL_DIR)/$(CORE)"
 	cp bin/$(BINARY) "$(INSTALL_DIR)/.$(BINARY).new.$$$$" && mv -f "$(INSTALL_DIR)/.$(BINARY).new.$$$$" "$(INSTALL_DIR)/$(BINARY)"
 	"$(INSTALL_DIR)/$(BINARY)" version
+	"$(INSTALL_DIR)/$(CORE)" -V
 
-install: ## Install imux into GOBIN
-	$(GO) install -trimpath -ldflags "$(LDFLAGS)" ./cmd/imux
+install: ## Install imux and imux-core into GOBIN
+	$(GO) install -trimpath -ldflags "$(LDFLAGS)" ./cmd/imux ./cmd/imux-core
 
 test: ## Unit tests
 	$(GO) test $(PKGS)
@@ -109,4 +113,4 @@ size: build ## Fail if the stripped binary exceeds 15 MB
 
 clean:
 	$(GO) clean
-	rm -f bin/$(BINARY)
+	rm -f bin/$(BINARY) bin/$(CORE)

@@ -212,6 +212,7 @@ var tr = map[string]string{
 	"update.out":                       "i-mux %s çıktı (sende %s var): imux update çalıştır ya da Ayarlar → Güncelle.",
 	"update.updating":                  "i-mux güncelleniyor: %s → %s…",
 	"update.done":                      "Tamam: i-mux %s. Açık paneller ve kenar çubukları kendiliğinden ona geçer.",
+	"update.core_running":              "Oturumların i-mux-core motorunda çalışıyor; motor hepsi bitene kadar eski sürümünde kalır, sonrakiler yenisiyle başlar.",
 	"update.failed":                    "Güncelleme başarısız: %s",
 	"update.unreachable":               "GitHub'a ulaşılamadı: %s",
 	"update.brew":                      "i-mux Homebrew ile kurulmuş: brew upgrade imux çalıştır.",
