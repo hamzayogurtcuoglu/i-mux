@@ -81,11 +81,13 @@ test-macos: ## Unit tests with TMPDIR behind a symlink, as on macOS
 e2e: build ## End-to-end tests against a real tmux on a private socket
 	IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) $(GO) test -tags e2e -count=1 -timeout 15m ./e2e/...
 
-# The i-mux-core engine (D83): IMUX_CORE_BIN, or the i-mux-core checkout beside
-# this one (built by its `make build`). Not installed anywhere.
-IMUX_CORE_BIN ?= $(abspath ../i-mux-core/bin/imux-core)
+# The i-mux-core engine (D83): by default bin/imux-core, built by `make build`
+# from go.mod's pin, which is what releases ship; IMUX_CORE_BIN picks another,
+# e.g. IMUX_CORE_BIN=../i-mux-core/bin/imux-core for the engine's working tree.
+IMUX_CORE_BIN ?= $(CURDIR)/bin/$(CORE)
 e2e-core: build ## End-to-end tests on the i-mux-core engine (D83)
-	@test -x "$(IMUX_CORE_BIN)" || { echo >&2 "e2e-core: $(IMUX_CORE_BIN) not found; build it (cd ../i-mux-core && make build) or set IMUX_CORE_BIN"; exit 2; }
+	@test -x "$(IMUX_CORE_BIN)" || { echo >&2 "e2e-core: $(IMUX_CORE_BIN) not found"; exit 2; }
+	"$(IMUX_CORE_BIN)" -V
 	IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) IMUX_TMUX_BIN=$(IMUX_CORE_BIN) $(GO) test -tags e2e -count=1 -timeout 20m ./e2e/...
 
 lint: ## golangci-lint (vet, staticcheck, errcheck, gofumpt, misspell)

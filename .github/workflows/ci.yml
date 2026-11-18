@@ -77,6 +77,29 @@ jobs:
       - name: End-to-end tests
         run: make e2e
 
+  # The same suite on the i-mux-core engine (D83), built from go.mod's pin by
+  # make build. tmux is installed as in e2e: the installer's tests expect it;
+  # every engine call of imux and of the harness goes to imux-core.
+  e2e-core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Install tmux (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q tmux
+      - name: Install tmux (macOS)
+        if: runner.os == 'macOS'
+        run: brew install tmux
+      - name: End-to-end tests on i-mux-core
+        run: make e2e-core
+
   size:
     runs-on: ubuntu-latest
     steps:
