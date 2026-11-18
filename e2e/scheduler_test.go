@@ -128,9 +128,10 @@ func TestScheduler(t *testing.T) {
 		s := schedules()
 		return strings.Contains(s, `when = "2h"`) && strings.Contains(s, `cli = "claude"`)
 	})
-	// Only the label: from 22:00 local time the next run is tomorrow, its
-	// date on the right cuts "· Claude" to "· …" (the CLI is checked above).
-	h.rowOf(bar, "every 2 h · ")
+	// Only the label: when the next run is tomorrow (from 22:00 local time
+	// here, 23:55 for every 5 min below) its date on the right cuts the rest
+	// of the row (the CLI is checked above).
+	h.rowOf(bar, "every 2 h")
 
 	// 🚀 on the skill, its time every 5 minutes: scheduled, it starts at
 	// once with the skill's path in its prompt, and its output opens.
@@ -149,7 +150,7 @@ func TestScheduler(t *testing.T) {
 	if strings.Contains(strings.Join(argv, " "), "--agent") {
 		t.Errorf("--agent for a skill: %q", argv)
 	}
-	h.rowOf(bar, "every 5 min · Claude")
+	h.rowOf(bar, "every 5 min")
 	h.rowOf(bar, "Release notes are")
 	if s := schedules(); !strings.Contains(s, `name = "notes"`) || !strings.Contains(s, `when = "5m"`) {
 		t.Errorf("schedules.toml:\n%s", s)
