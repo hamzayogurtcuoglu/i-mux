@@ -1028,8 +1028,10 @@ passing with tmux, exactly as before, all through this.
     and the update message says so; a goreleaser snapshot contains both; an update e2e with a
     local release fixture replaces both.
 - [ ] **T88.5 CI for both engines** · S · deps: T88.4
-  - AC: an `e2e-core` job checks out i-mux-core at the pinned version, builds it and runs
-    `make e2e-core` on Linux and macOS; it is blocking and green.
+  - AC: an `e2e-core` job builds i-mux-core at `go.mod`'s pin (`make build`, D83) and runs
+    `make e2e-core` on Linux and macOS; `make e2e-core` defaults to that build
+    (`IMUX_CORE_BIN` still picks another, such as the engine's working tree); the job is
+    blocking and green.
 - [ ] **T88.6 Beta release** · S · deps: T88.5
   - AC: the release notes explain the switch and how to go back; an "Engine (beta)" issue
     template asks for the terminal, the OS and `imux doctor` output; the owner approves and
