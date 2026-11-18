@@ -124,8 +124,13 @@ func TestScheduler(t *testing.T) {
 	keys("t", "Runs now with Claude")
 	keys("2 saat", "Runs every 2 h with Claude")
 	c.Write("\r")
-	h.waitFor("every 2h", 5*time.Second, func() bool { return strings.Contains(schedules(), `when = "2h"`) })
-	h.rowOf(bar, "every 2 h · Claude")
+	h.waitFor("every 2h", 5*time.Second, func() bool {
+		s := schedules()
+		return strings.Contains(s, `when = "2h"`) && strings.Contains(s, `cli = "claude"`)
+	})
+	// Only the label: from 22:00 local time the next run is tomorrow, its
+	// date on the right cuts "· Claude" to "· …" (the CLI is checked above).
+	h.rowOf(bar, "every 2 h · ")
 
 	// 🚀 on the skill, its time every 5 minutes: scheduled, it starts at
 	// once with the skill's path in its prompt, and its output opens.
@@ -150,11 +155,15 @@ func TestScheduler(t *testing.T) {
 		t.Errorf("schedules.toml:\n%s", s)
 	}
 
-	// Due: its last run was 10 minutes ago. The watcher starts it.
+	// Due: its last run was 10 minutes ago. The watcher starts it. The
+	// watcher races the panel for the run above, and one it started it
+	// leaves alone for a minute: a new watcher has no such memory.
+	h.mustImux("__watch", "stop")
 	id := auto.ID(p, skillFile)
 	old := time.Now().Add(-10 * time.Minute).UTC().Format(time.RFC3339)
 	testutil.WriteFile(t, filepath.Join(h.Homes.Imux, "auto", id, "runs.json"), []byte(`[{"start":"`+old+`","end":"`+old+`","status":"ok"}]`))
 	reply("Nothing new since " + old)
+	h.mustImux("__watch", "ensure")
 	argv = h.headless("claude", 3)
 	if prompt := argv[len(argv)-1]; !strings.Contains(prompt, "on a schedule (every 5m)") {
 		t.Errorf("watcher's run prompt:\n%s", prompt)
