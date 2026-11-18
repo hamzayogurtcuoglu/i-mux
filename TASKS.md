@@ -997,6 +997,20 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M87: Aider is removed (added 2026-11-18)
+
+User request: remove Aider, added in v0.63: "I think it's bad, remove it" (D82).
+
+- [ ] **T87.1 Aider out of the code** · S
+  - AC: D82: M86's code goes (the agent, its session reader, limit patterns, colors and Jobs
+    command, `HandoffArgs` and `--read`, the paste's wait while a question shows, `Asking` back
+    in `watch`); `aider` in `config.RemovedAgents`, so a config naming it loads with a warning;
+    OpenCode's short name `Oc` stays; `docs/CONFIG.md`; unit tests.
+- [ ] **T87.2 End to end** · XS
+  - AC: e2e: the suite passes without the fake Aider and its test.
+- [ ] **T87.3 Docs** · XS
+  - AC: README and README.tr, docs/LIMITS.md; CHANGELOG.
+
 ## M86: Aider (added 2026-11-17)
 
 User request: Aider CLI everywhere an agent is, like Claude, Copilot and the others (D81, §7.8).
@@ -1027,7 +1041,7 @@ User request: Aider CLI everywhere an agent is, like Claude, Copilot and the oth
     file) → Claude keeps Aider's replies; doctor and the limits panel list Aider.
 - [x] **T86.6 Docs** · XS
   - AC: README and README.tr (agent list, keys, an Aider paragraph); docs/LIMITS.md; CHANGELOG.
-- [ ] **T86.7 A real Aider** · USER
+- [ ] ~~**T86.7 A real Aider** · USER~~ **Dropped (2026-11-18):** Aider was removed (M87).
   - AC: Q32 with a real Aider and a fake model server; results in §7.8 and §21.
 
 ## M85: OpenCode Go's limits (added 2026-11-16)

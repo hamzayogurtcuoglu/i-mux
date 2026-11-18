@@ -158,7 +158,8 @@ done by tmux on a dedicated socket. i-mux only:
 | D78 | **Every agent's busy line is the one its CLI shows now: Antigravity's "esc to cancel", Codex's with any key, OpenCode's "esc interrupt"** (added 2026-11-16, v0.62.4, at the user's request; refines D55 and D76): checked against each CLI as it is now (Claude Code 2.1, Copilot, Codex 0.169, Antigravity's `agy`, OpenCode 1.0 to 1.19), an agent is at work while the bottom of its screen shows: Antigravity's status line starting with `esc to cancel` or `Esc disabled during file edits`, a progress line ending `(… esc to cancel)`, or its older `esc to interrupt`; Codex's `(5s • esc to interrupt)` whichever key interrupts it; OpenCode's footer `esc interrupt` (`esc again to interrupt`), so OpenCode leaves D38's rule too. A question at the bottom of Antigravity's screen ("Do you want to proceed?") means it waits for the user, whatever its status line says. | The user saw no spinner for a working Antigravity and asked for every agent to be checked, not one at a time. Antigravity's CLI now writes "esc to cancel" where it wrote "Press esc to interrupt generation."; Codex lets the interrupt key be changed; OpenCode was read from its screen changes, so moving through its menus looked like work. Antigravity's status line may keep its hint while it asks, and working wins over asking, so its question decides; OpenCode shows its permission requests in place of the footer. |
 | D79 | **Versions and updates installs a missing agent, and OpenCode installs as OpenCode 2** (added 2026-11-16, v0.62.5, at the user's request; refines D41): in Settings → Versions and updates a missing agent's row shows the command that installs it, the one Install now runs (`[agents.<id>] install`, else i-mux's), and its letter runs it there; when that command needs a program that is not here (npm, curl, brew), the row says how to get it instead. i-mux's command for OpenCode is OpenCode 2's own installer (`curl -fsSL https://opencode.ai/v2/install | bash`). An agent that is not on the PATH is also looked for in the folder its own installer uses (`~/.opencode/bin` for OpenCode, `~/.local/bin` for Antigravity). | The user typed OpenCode's letter in the list that says "Type a letter and Enter to run its command" and got "Nothing to run": its row only showed how to install it. The command it showed, and the one Install now ran, gave OpenCode 1, which i-mux does not support (`opencode.ai/install` and npm's `opencode-ai` only give OpenCode 1). A vendor's script adds its folder to the shell's PATH for new terminals only, so a tmux server started before it would not have found the agent. |
 | D80 | **OpenCode Go's limits come from OpenCode** (added 2026-11-16, v0.62.6, at the user's request; refines D25 and D28): with an OpenCode Go plan, OpenCode has a 5-hour, a weekly and a monthly allowance, each a percentage with a reset time. OpenCode 2 reads them itself (its background server asks opencode.ai with the key the user connected) and returns them from `opencode api experimental.usage.limits` (`data.go.rolling` / `weekly` / `monthly`: `percent`, `limited`, `resetsAt` in ms; `data` is null when OpenCode is not signed in to a Console workspace, `go` is null without a Go plan). The limits panel runs that command (5 s timeout) and draws the three windows as bars; a window that is `limited` marks OpenCode limited until its reset. Without Go data the panel says what it said before (the provider's limits apply). | The user's OpenCode row showed only "OpenCode uses your model provider's limits" and tokens, while their Go plan has three windows. As in D25, i-mux reads no credentials and sends no request of its own: it asks the CLI, which already has the numbers' source. The route is marked experimental by OpenCode; when it fails or changes shape, the row falls back to what it showed before. |
-| D81 | **Aider is the sixth agent** (added 2026-11-17, v0.63.0, at the user's request; follows D28): Aider (`aider`, Python) joins Claude Code, Antigravity, Copilot, Codex and OpenCode everywhere an agent appears: the agent bar and menus (letter `i`), new tabs and splits, switching with a handoff in both directions, History, the limits panel, `imux doctor`, Versions and updates, notifications and Jobs. Aider has no flag that starts a chat with a first message and stays open (`--message` answers and exits), so the handoff is pasted once its screen is still (§9.5), and the handoff file is given to it with `--read=<file>`: Aider's model sees only the files in its chat and has no tool to open one. A paste waits while the agent's screen asks a question (Aider asks to add `.aider*` to `.gitignore` the first time in a repository), so the handoff never answers it. Aider's conversations are read from `.aider.chat.history.md` at the repository's root (one file per project, each run a `# aider chat started at …` part); coming back to Aider restores that history (`--restore-chat-history`) and pastes what happened meanwhile. | The user asked for Aider "everywhere, properly, like Claude, Copilot and the others". Aider works with any model (like OpenCode) and is widely used. Its history file is the only record of a chat, with no session id, so a session is a part of that file named by its start time. Pasting into a question would have sent the handoff as its answer and lost it. |
+| D81 | **Aider is the sixth agent** (added 2026-11-17, v0.63.0, at the user's request; follows D28): Aider (`aider`, Python) joins Claude Code, Antigravity, Copilot, Codex and OpenCode everywhere an agent appears: the agent bar and menus (letter `i`), new tabs and splits, switching with a handoff in both directions, History, the limits panel, `imux doctor`, Versions and updates, notifications and Jobs. Aider has no flag that starts a chat with a first message and stays open (`--message` answers and exits), so the handoff is pasted once its screen is still (§9.5), and the handoff file is given to it with `--read=<file>`: Aider's model sees only the files in its chat and has no tool to open one. A paste waits while the agent's screen asks a question (Aider asks to add `.aider*` to `.gitignore` the first time in a repository), so the handoff never answers it. Aider's conversations are read from `.aider.chat.history.md` at the repository's root (one file per project, each run a `# aider chat started at …` part); coming back to Aider restores that history (`--restore-chat-history`) and pastes what happened meanwhile. **Removed in v0.64 (D82).** | The user asked for Aider "everywhere, properly, like Claude, Copilot and the others". Aider works with any model (like OpenCode) and is widely used. Its history file is the only record of a chat, with no session id, so a session is a part of that file named by its start time. Pasting into a question would have sent the handoff as its answer and lost it. |
+| D82 | **Aider is no longer an agent** (added 2026-11-18, v0.64.0, at the user's request; undoes D81): i-mux runs Claude Code, Antigravity, Copilot, Codex and OpenCode, as before v0.63. What was there for Aider goes with it: its session reader, limit patterns, colors and Jobs command, the handoff file given with `--read`, and the paste's wait while the screen asks a question (a paste again waits only for a still screen, at most 20 s, §9.5). A config that still names `aider` (`order`, `default_agent`, `[agents.aider]`) loads with a warning, as one naming Gemini does; a pane still running Aider shows under its id and can be switched to a known agent; snapshots' Aider panes are not restored; Aider's own files (`.aider.chat.history.md`, `.aider*`) stay in the repositories. OpenCode's short name on a narrow agent bar (`Oc`, v0.63) stays. | The user tried Aider in i-mux, found it bad and asked for it to be removed. OpenCode already works with any model endpoint, which was Aider's reason to be here. |
 
 ## 4. Components
 
@@ -215,8 +216,7 @@ imux/
 │   │   ├── gemini/
 │   │   ├── copilot/
 │   │   ├── codex/
-│   │   ├── opencode/
-│   │   └── aider/
+│   │   └── opencode/
 │   ├── handoff/                  # builder, budget allocator, renderer, marker/chain parsing,
 │   │   ├── toolsum/              #   generic tool-call summarizer
 │   │   ├── clean/                #   wrapper-tag stripping, middle truncation (UTF-8 safe)
@@ -603,7 +603,6 @@ after the binary, before the template.
 | codex | `{prompt}` | `resume {id} {prompt}` | verified (help, 0.38.0) |
 | antigravity | `-i {prompt}` | `--conversation {id} -i {prompt}` | both flags verified in `agy --help` (1.5.2); their combination is unverified (Q30) |
 | opencode | `--session ses_imux{uuid} --prompt {prompt}` | `--session {id} --prompt {prompt}` | verified (2.2.6, §7.7) |
-| aider | (none: the handoff is pasted) | `--restore-chat-history` (the handoff is pasted) | from Aider's documented options; unverified with a real Aider (Q32) |
 
 ### 7.6 Antigravity CLI (`agy`)
 
@@ -694,61 +693,6 @@ provider, no quota; synthetic prompts only).
   install command since v0.62.5, D79), npm's `@opencode/cli` or Homebrew, and `opencode upgrade
   --major` moves an OpenCode 1 to 2. `imux doctor` fails below 2.0.0 (it
   re-probes a cached 1.x version first: the bin cache lags an in-place upgrade by up to a day).
-
-### 7.8 Aider (`aider`)
-
-Added 2026-11-17 (D81). Aider is a Python CLI that works with any model (OpenAI, Anthropic, Gemini,
-OpenRouter, Ollama …) through the keys in the user's environment or `.aider.conf.yml`. Facts below
-are from Aider's documentation (options reference, v0.86) and its source as published, **not yet
-checked with a real Aider on the dev machine** (Q32).
-
-- **Binary and install:** `aider`. i-mux's install command is Aider's own installer, `curl -LsSf
-  https://aider.chat/install.sh | sh` (built on uv's installer: it puts `aider` in `~/.local/bin`,
-  so that folder is in its `Dirs`, D79); also `python -m pip install aider-install && aider-install`,
-  `uv tool install aider-chat` or `pipx install aider-chat`. Updates: `aider --upgrade`.
-- **Launch:** new: `aider` with no prompt; Aider has no option that sends a first message and stays
-  open (`--message` / `--message-file` answer once and exit), so the handoff is pasted once the
-  screen is still (`inject` acts as `paste` for it, §9.5). With `deliver = "file"` the handoff file
-  is passed as `--read=<file>` (a read-only file in the chat): Aider's model sees only the files in
-  the chat and cannot open a path it is told about. Resume: `aider --restore-chat-history`, which
-  loads the project's history file (Aider summarizes it when it is long), then the delta is pasted.
-- **First-run questions:** Aider asks `Add .aider* to .gitignore (recommended)? (Y)es/(N)o [Yes]:`
-  in a repository whose `.gitignore` lacks it, `No git repo found, create one to track aider's
-  changes (recommended)?` outside one, and, without any model key, whether to log in to
-  OpenRouter. A paste waits while the screen asks (`agent.Asking` knows Aider's `(Y)es/(N)o`), so
-  the user answers first and the handoff follows (D81).
-- **Store:** `.aider.chat.history.md` at the git repository's root (the working directory outside
-  one); `--chat-history-file` or `AIDER_CHAT_HISTORY_FILE` can move it, which i-mux does not follow.
-  Markdown, appended to by every run:
-  - `# aider chat started at 2026-11-17 10:22:33` (local time) starts a run: one session. Its id is
-    that time as `20261117T102233`; its start is that time, its end the next run's start (the
-    file's modification time for the last run).
-  - `#### <text>` lines are the user's input, one line each (a line ends with two spaces when more
-    follow); `/commands` are input too (`#### /add a.go`).
-  - `> <text>` lines are Aider's own output: `Aider v0.86.1`, `Main model: <model> with diff edit
-    format` (older: `Model: …`), `Added a.go to the chat`, `Applied edit to a.go`, `Commit 1a2b3c4
-    feat: …`, `Tokens: 2.3k sent, 512 received. Cost: …`, errors such as `litellm.RateLimitError: …`.
-    Lines right after one without a blank line between continue it.
-  - Everything else is the assistant's reply in Markdown (edit blocks included).
-  No times per message: entries carry none, so a delta from an Aider session is the whole run.
-- **As a handoff source** (`internal/session/aider`): user and assistant turns; `Applied edit to X`
-  becomes an edit of X, `Added X to the chat` a read; `Tokens:` lines add up the usage; error lines
-  that look like a limit become API errors; the model from `Main model:`. A run whose first input is
-  an i-mux handoff (pasted, so it is the first `####` block) is a chained handoff. Sessions are found
-  for a folder: its history file, or the one at the root of its repository. A session is a part of
-  a shared file, so discovery tells them apart by id (`session.SharedStore`), and the handoff names
-  the file and the run's first line instead of a transcript of its own.
-- **Limits:** Aider shows the provider's errors (through LiteLLM): `RateLimitError`, "rate limit",
-  "429", "quota exceeded", "insufficient credits" (Q32). It has no plan; the limits panel says the
-  model provider's limits apply.
-- **Busy:** Aider prints no fixed line while it works; its screen changes while it streams (D38).
-- **Jobs:** `aider --message <prompt> --yes-always --no-pretty --no-stream --no-fancy-input
-  --no-check-update --no-gitignore --no-analytics --chat-history-file <run>/chat.md [--model m]`,
-  with `--chat-mode ask` for a read-only run; the report is the last reply in that file. Aider has
-  no agent definitions of its own, so the instructions are in the prompt. Its model is typed (no
-  list).
-- **Not used:** `--notifications-command` (a turn's end; the screen tells it), skills (Aider reads
-  none).
 
 ## 8. Handoff document
 
@@ -2832,13 +2776,7 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
   - `argv` (default): the prompt is in argv.
   - `paste`: launch without a prompt, wait until the screen is stable for 1.5 s (max 20 s), then
     `load-buffer` + `paste-buffer -p -d` + `Enter`. This avoids exposing the prompt in `ps`
-    (§19). It is also the fallback for agents with no initial-prompt flag (Aider, D81). A still
-    screen that asks a question (`agent.Asking`: a numbered choice or a permission dialog at the
-    bottom, or a yes/no prompt such as Aider's `(Y)es/(N)o [Yes]:` ending the last line; answered
-    ones stay above it and do not count) is not ready: the paste waits until the question is gone
-    (up to 10 min, then it pastes anyway), so the handoff never becomes the answer. The switch
-    lets go of the pane's lock before it waits, and a pane that runs another program by then
-    gets nothing.
+    (§19). It is also the fallback for agents with no initial-prompt flag.
 - **Kill semantics:** `respawn-pane -k` sends SIGHUP to the old agent. All four CLIs write their
   transcripts incrementally [observed: files grow during sessions], so only an in-flight streaming
   turn is lost, which is usually the limit message itself.
@@ -2922,7 +2860,7 @@ Patterns are RE2 (Go `regexp`), case-insensitive, matched per line. Users can ex
 | gemini | limit | `quota exceeded`, `exceeded your current quota`, `RESOURCE_EXHAUSTED` | brief, unverified |
 | copilot | limit | `exceeded your premium request allowance`, `(session\|weekly) limit reached` | brief, unverified |
 | codex | limit | `you've hit your usage limit` | verified (0.38.0 binary) |
-| opencode, aider | limit | `rate limit (exceeded\|reached)`, `too many requests`, `429 … rate\|limit\|quota`, `quota (exceeded\|exhausted)`, `insufficient (credits\|quota\|balance)`, `out of (credits\|quota)`; aider also `RateLimitError` | the provider's wording (LiteLLM's for Aider), unverified (Q32) |
+| opencode | limit | `rate limit (exceeded\|reached)`, `too many requests`, `429 … rate\|limit\|quota`, `quota (exceeded\|exhausted)`, `insufficient (credits\|quota\|balance)`, `out of (credits\|quota)` | the provider's wording, unverified |
 
 Claude's real messages use ` ∙ ` as the separator ("5-hour limit reached ∙ resets 3pm"), not
 " - ", so patterns must not depend on the separator.
@@ -3421,7 +3359,7 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
 | Q29 | A two-line status bar fits small terminals; the agent bar text does not overflow when 5 agents and limit markers are shown. | Layout | Visual check at 80 columns. Overflow rule: drop "(not installed)" entries first, then use short names (`Cl Ag Ge Cx Cp`). |
 | Q30 | `agy -i "<prompt>"` accepts a 30K-character handoff as its first prompt, and `agy --conversation <id> -i "<prompt>"` resumes and submits it. | Switching to Antigravity | Both flags are in `agy --help` (1.5.2, verified). Remaining: one manual Claude → Antigravity → Claude → Antigravity round trip by the user. |
 | Q31 | Antigravity CLI's on-screen text when a quota runs out. | Limit detection for Antigravity | Note the exact line the next time it happens and add it to `limits.Defaults`. |
-| Q32 | Aider (§7.8) as documented: `--read=<file>` outside the repository, `--restore-chat-history`, a bracketed paste of a 30K handoff into its prompt, the history file's lines, its question format and its rate-limit text. | Aider as an agent (D81) | A real Aider with a fake OpenAI-compatible server: Claude → Aider → Claude → Aider round trip by the user (USER). |
+| Q32 | ~~Aider as documented: `--read=<file>` outside the repository, `--restore-chat-history`, a bracketed paste of a 30K handoff into its prompt, the history file's lines, its question format and its rate-limit text.~~ **Closed (2026-11-18):** Aider was removed (D82). | Aider as an agent (D81) | A real Aider with a fake OpenAI-compatible server: Claude → Aider → Claude → Aider round trip by the user (USER). |
 
 ## 21. Verification log (2026-11-05, dev machine)
 
