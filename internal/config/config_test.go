@@ -216,6 +216,32 @@ bin = "/usr/local/bin/gemini"
 	}
 }
 
+// A config written for v0.63, which had Aider, loads the same way: Aider is
+// dropped from order and default_agent, its table ignored, each with a
+// warning that points to OpenCode (D82).
+func TestRemovedAiderTolerated(t *testing.T) {
+	cfg, warns, err := Parse([]byte(`order = ["claude", "antigravity", "copilot", "codex", "opencode", "aider"]
+default_agent = "aider"
+
+[agents.aider]
+resume = true
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(cfg.Order, ",") != "claude,antigravity,copilot,codex,opencode" || cfg.DefaultAgent != "" {
+		t.Fatalf("order %v default %q", cfg.Order, cfg.DefaultAgent)
+	}
+	if len(warns) != 3 {
+		t.Fatalf("want 3 warnings, got %q", warns)
+	}
+	for _, w := range warns {
+		if !strings.Contains(w, "aider") || !strings.Contains(w, "opencode") {
+			t.Errorf("warning %q should name aider and point to opencode", w)
+		}
+	}
+}
+
 // A config from a version with the ✨ commit messages (the Settings menu
 // wrote their agent) loads with no warning: every imux command would print
 // it (T70.3).
