@@ -89,7 +89,7 @@ func newH(t *testing.T, extraConfig string) *H {
 		top = "update_check = false\n" + top // never the network in tests
 	}
 	cfg.WriteString(top + "\n")
-	for _, a := range []string{"claude", "antigravity", "copilot", "codex", "opencode", "aider"} {
+	for _, a := range []string{"claude", "antigravity", "copilot", "codex", "opencode"} {
 		if strings.Contains(tables, "[agents."+a+"]") {
 			continue // the test configures this agent itself
 		}

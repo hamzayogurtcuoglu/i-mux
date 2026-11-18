@@ -59,14 +59,9 @@ func (w *WS) lockPane(ctx context.Context, p *Pane) (*paneLock, error) {
 	return &paneLock{f: f, w: w, pane: p.ID}, nil
 }
 
-// release gives the lock back; a second call does nothing.
 func (l *paneLock) release(ctx context.Context) {
-	if l == nil || l.f == nil {
-		return
-	}
 	_, _ = l.w.T.Run(ctx, tmux.Cmd{"set-option", "-p", "-u", "-t", l.pane, OptLock})
 	l.f.Close()
-	l.f = nil
 }
 
 func alive(pid int) bool {
@@ -113,9 +108,8 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	if err != nil {
 		return nil, err
 	}
-	var lock *paneLock
 	if !req.NewPane {
-		lock, err = w.lockPane(ctx, p)
+		lock, err := w.lockPane(ctx, p)
 		if err != nil {
 			return nil, err
 		}
@@ -245,9 +239,6 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	w.notifySwitch(ctx, req.Client, target, res)
 	if w.pasteMode(l) {
 		res.Pasted = true
-		// The agent runs: the pane may switch again while the paste waits
-		// for a question to be answered (WaitStable stops when it does).
-		lock.release(ctx)
 		if err := w.WaitStable(ctx, target); err != nil {
 			return res, err
 		}

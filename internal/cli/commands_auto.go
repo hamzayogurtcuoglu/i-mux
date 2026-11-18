@@ -836,9 +836,6 @@ func (a *autoCmd) exec(id string) error {
 	case session.Codex:
 		outFile = filepath.Join(auto.Dir(id), "reply.txt")
 		_ = os.Remove(outFile)
-	case session.Aider:
-		outFile = filepath.Join(auto.Dir(id), "chat.md")
-		_ = os.Remove(outFile)
 	}
 	inv, err := auto.Command(cli, binPath(bin, cli), d, s.Model, prompt, s.ReadOnly(), outFile, uuid)
 	if err != nil {
@@ -874,9 +871,6 @@ func (a *autoCmd) exec(id string) error {
 		} else if inv.OutFile != "" {
 			if b, err := os.ReadFile(inv.OutFile); err == nil && len(strings.TrimSpace(string(b))) > 0 {
 				report = string(b)
-				if inv.Reply != nil {
-					report = firstNonEmpty(inv.Reply(b), o.Stdout)
-				}
 			}
 		}
 		report = auto.Clean(report)

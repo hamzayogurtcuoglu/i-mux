@@ -70,7 +70,7 @@ func TestRegistry(t *testing.T) {
 	for _, a := range Ordered(cfg) {
 		ids = append(ids, a.ID)
 	}
-	if !reflect.DeepEqual(ids, []session.AgentID{"codex", "claude", "antigravity", "copilot", "opencode", "aider"}) {
+	if !reflect.DeepEqual(ids, []session.AgentID{"codex", "claude", "antigravity", "copilot", "opencode"}) {
 		t.Fatalf("ordered %v", ids)
 	}
 }
@@ -232,21 +232,6 @@ func TestReadDirArgs(t *testing.T) {
 	}
 	if ReadDirArgs(session.Claude, "") != nil || ReadDirArgs("nope", "/h") != nil {
 		t.Fatal("empty dir or unknown agent")
-	}
-}
-
-// Aider sees only the files it is given: the handoff file itself (D81);
-// the others get its folder.
-func TestHandoffArgs(t *testing.T) {
-	for id, want := range map[session.AgentID]string{
-		session.Aider: "--read=/h/x.md", session.Claude: "--add-dir=/h", session.Codex: "",
-	} {
-		if got := strings.Join(HandoffArgs(id, "/h/x.md"), " "); got != want {
-			t.Errorf("%s: %q, want %q", id, got, want)
-		}
-	}
-	if HandoffArgs(session.Aider, "") != nil {
-		t.Fatal("no file")
 	}
 }
 

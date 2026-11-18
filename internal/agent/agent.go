@@ -40,10 +40,6 @@ type Info struct {
 	// ReadDirFlag lets the agent read files in another directory without
 	// asking ("" when it needs nothing: Codex reads any path).
 	ReadDirFlag string
-	// ReadFileFlag puts one file in the agent's context ("--read": Aider's
-	// model sees only the files in its chat, D81); used instead of
-	// ReadDirFlag for a handoff file.
-	ReadFileFlag string
 	// UpdateArgs make the CLI update itself (`claude update`); nil when its
 	// package manager does it (Codex: npm or Homebrew).
 	UpdateArgs []string
@@ -57,8 +53,6 @@ var registry = []Info{
 	// OpenCode 2's own installer: i-mux needs OpenCode 2, and the first one
 	// (opencode.ai/install) and npm's opencode-ai give OpenCode 1 (D79).
 	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "curl -fsSL https://opencode.ai/v2/install | bash (or: npm i -g @opencode/cli, or: brew install opencode)", InstallCmd: "curl -fsSL https://opencode.ai/v2/install | bash", Dirs: []string{".opencode/bin"}, UpdateArgs: []string{"upgrade"}},
-	// Aider's own installer (uv's, into ~/.local/bin), D81.
-	{ID: session.Aider, Key: "i", Bin: "aider", Vendor: "any model", InstallHint: "curl -LsSf https://aider.chat/install.sh | sh (or: python -m pip install aider-install && aider-install, or: uv tool install aider-chat, or: pipx install aider-chat)", InstallCmd: "curl -LsSf https://aider.chat/install.sh | sh", Dirs: []string{".local/bin"}, ReadFileFlag: "--read", UpdateArgs: []string{"--upgrade"}},
 }
 
 func init() {
@@ -131,19 +125,6 @@ func ReadDirArgs(id session.AgentID, dir string) []string {
 		return nil
 	}
 	return []string{a.ReadDirFlag + "=" + dir}
-}
-
-// HandoffArgs are the arguments that let agent id read the handoff file
-// (handoff.deliver = "file"): the file itself for an agent that only sees
-// the files it is given (Aider's --read), else its folder (ReadDirArgs).
-func HandoffArgs(id session.AgentID, file string) []string {
-	if file == "" {
-		return nil
-	}
-	if a, ok := Get(id); ok && a.ReadFileFlag != "" {
-		return []string{a.ReadFileFlag + "=" + file}
-	}
-	return ReadDirArgs(id, filepath.Dir(file))
 }
 
 // Vars are the template placeholders.

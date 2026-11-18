@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/session/aider"
 )
 
 // NothingNew is the reply of a run with nothing to report: no notification.
@@ -71,11 +70,8 @@ func Prompt(in PromptInput) string {
 // Invocation is a run's command line.
 type Invocation struct {
 	Argv    []string // Argv[0] is the binary
-	OutFile string   // the reply is read from this file instead of stdout (Codex, Aider)
-	// Reply picks the reply out of OutFile (Aider's chat history); nil: the
-	// whole file is the reply.
-	Reply   func([]byte) string
-	Session string // the session id i-mux gave it (Claude)
+	OutFile string   // the reply is read from this file instead of stdout (Codex)
+	Session string   // the session id i-mux gave it (Claude)
 }
 
 // Command builds the headless command line of cli (binary bin) for def:
@@ -136,29 +132,6 @@ func Command(cli session.AgentID, bin string, d Def, model, prompt string, readO
 		a = append(a, opt("--agent", agentName)...)
 		a = append(a, opt("-m", model)...)
 		return Invocation{Argv: append(a, prompt)}, nil
-	case session.Aider:
-		// --message answers once and exits; the run's own chat history
-		// keeps the project's untouched and holds the reply (§7.8).
-		a := []string{
-			bin, "--message", prompt, "--yes-always", "--no-pretty", "--no-stream", "--no-fancy-input",
-			"--no-check-update", "--no-gitignore", "--no-analytics", "--chat-history-file", outFile,
-		}
-		a = append(a, opt("--model", model)...)
-		if readOnly {
-			a = append(a, "--chat-mode", "ask")
-		}
-		return Invocation{Argv: a, OutFile: outFile, Reply: AiderReply}, nil
 	}
 	return Invocation{}, fmt.Errorf("%s cannot run on a schedule", cli)
-}
-
-// AiderReply is the last reply in an Aider chat history ("" without one).
-func AiderReply(history []byte) string {
-	s := aider.Parse(history, session.Ref{Agent: session.Aider}, session.LoadOptions{})
-	for i := len(s.Entries) - 1; i >= 0; i-- {
-		if e := s.Entries[i]; e.Role == session.RoleAssistant && e.Text != "" {
-			return e.Text
-		}
-	}
-	return ""
 }

@@ -1001,14 +1001,14 @@ slow (about a second).
 
 User request: remove Aider, added in v0.63: "I think it's bad, remove it" (D82).
 
-- [ ] **T87.1 Aider out of the code** · S
+- [x] **T87.1 Aider out of the code** · S
   - AC: D82: M86's code goes (the agent, its session reader, limit patterns, colors and Jobs
     command, `HandoffArgs` and `--read`, the paste's wait while a question shows, `Asking` back
     in `watch`); `aider` in `config.RemovedAgents`, so a config naming it loads with a warning;
     OpenCode's short name `Oc` stays; `docs/CONFIG.md`; unit tests.
-- [ ] **T87.2 End to end** · XS
+- [x] **T87.2 End to end** · XS
   - AC: e2e: the suite passes without the fake Aider and its test.
-- [ ] **T87.3 Docs** · XS
+- [x] **T87.3 Docs** · XS
   - AC: README and README.tr, docs/LIMITS.md; CHANGELOG.
 
 ## M86: Aider (added 2026-11-17)

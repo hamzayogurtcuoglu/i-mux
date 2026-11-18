@@ -846,7 +846,6 @@ var tr = map[string]string{
 	"doctor.opencode_v1":       "OpenCode %s, OpenCode 1 sürümü: i-mux OpenCode 2 ister (yeni OpenCode sekmeleri düz kabuğa düşer). Düzeltmek için: opencode upgrade --major",
 	"doctor.opencode_sqlite":   "sqlite3 kurulu değil: imux OpenCode'un kendi başlattığı oturumlarını bulur, diğerlerini bulamaz (sqlite3 kur)",
 	"limits.opencode":          "OpenCode, model sağlayıcının limitlerini kullanır; birine takılınca burada görünür.",
-	"limits.aider":             "Aider, model sağlayıcının limitlerini kullanır; birine takılınca burada görünür.",
 	"limits.opencode_tokens":   "son 5 saat: %s giriş / %s çıkış token, %d oturum",
 	"limits.as_of":             "%s itibarıyla (son yanıtı)",
 	"limits.copilot_unlimited": "sınırsız premium istek",

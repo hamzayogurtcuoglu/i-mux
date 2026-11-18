@@ -23,7 +23,6 @@ Usage is counted from local session files. For exact plan percentages, see Codex
 | Copilot | premium requests this calendar month | the latest `session.shutdown` / `session.usage_checkpoint` total of each session |
 | Codex | the newest rate-limit percentages and reset times | `token_count` events with `rate_limits` (newer Codex versions only; otherwise "n/a") |
 | OpenCode | with an OpenCode Go plan: the 5-hour, weekly and monthly use and reset times; always: tokens in the last 5 hours | `opencode api experimental.usage.limits` (OpenCode 2); `session_v2` in `opencode.db` |
-| Aider | nothing of its own: the model provider's limits apply, and a limit Aider shows on screen (`RateLimitError` …) marks it limited | its screen |
 
 ## JSON (`imux limits --json`)
 
@@ -65,10 +64,10 @@ Field names are stable; new fields may be added.
 | Field | Meaning |
 |---|---|
 | `agents[]` | one entry per agent, in the configured `order` |
-| `agent`, `name`, `installed` | id (`claude`, `antigravity`, `copilot`, `codex`, `opencode`, `aider`), product name, whether its CLI was found |
+| `agent`, `name`, `installed` | id (`claude`, `antigravity`, `copilot`, `codex`, `opencode`), product name, whether its CLI was found |
 | `status` | `limited` (a limit was seen and has not expired), `warn` (an "approaching" message was seen) or `ok` |
 | `limit` | present when `status` is not `ok`: the record from `~/.imux/state.json` (`reset_at` is omitted when the message had no reset time; `expires_at` is then `at` + `limits.default_expiry`) |
-| `usage.window` | `5h` (Claude), `today` (Antigravity), `month` (Copilot), `latest` (Codex), `opencode` (OpenCode); absent for Aider |
+| `usage.window` | `5h` (Claude), `today` (Antigravity), `month` (Copilot), `latest` (Codex), `opencode` (OpenCode) |
 | `usage.from` | start of the window (local midnight for `today`, the first of the month for `month`) |
 | `usage.replies` | assistant replies (Claude: unique `message.id`s; Antigravity: model replies) |
 | `usage.*_tokens` | token counts; zero values are omitted |

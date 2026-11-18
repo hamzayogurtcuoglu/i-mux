@@ -10,7 +10,7 @@ line number.
 
 | Key | Default | Description |
 |---|---|---|
-| `order` | `["claude", "antigravity", "copilot", "codex", "opencode", "aider"]` | Agent order: menu order, agent bar order and auto-switch priority. |
+| `order` | `["claude", "antigravity", "copilot", "codex", "opencode"]` | Agent order: menu order, agent bar order and auto-switch priority. |
 | `default_agent` | `""` | Agent started by a plain `imux`. "" = first installed agent in `order`. |
 | `on_limit` | `"ask"` | What happens when an agent hits its usage limit: ask  = show a "continue in ..." menu (default) auto = switch to the first installed, non-limited agent in `order` off  = only show the limit in the status bar |
 | `on_exit` | `"shell"` | What a pane does when its agent exits: "shell" (drop to your login shell) or "close". |
@@ -96,14 +96,10 @@ line number.
 | `agents.opencode.new_args` | `["--session", "ses_imux{uuid}", "--prompt", "{prompt}"]` | Template for a new session; the handoff goes in {prompt}. |
 | `agents.opencode.resume_args` | `["--session", "{id}", "--prompt", "{prompt}"]` | Template for resuming a native session ({id}) with a delta handoff. |
 | `agents.opencode.home` | `""` | Where the agent keeps its sessions. "" = $XDG_DATA_HOME/opencode or ~/.local/share/opencode |
-| `agents.aider.new_args` | `[]` | Template for a new session; the handoff goes in {prompt}. |
-| `agents.aider.resume_args` | `["--restore-chat-history"]` | Template for resuming a native session ({id}) with a delta handoff. |
-| `agents.aider.home` | `""` | Where the agent keeps its sessions. unused: Aider keeps its history in each repository |
 
-Agent ids are `claude`, `antigravity`, `copilot`, `codex`, `opencode` and `aider`. Launch templates use the placeholders
+Agent ids are `claude`, `antigravity`, `copilot` and `codex`. Launch templates use the placeholders
 `{prompt}` (the handoff, at most once), `{id}` (the session to resume) and `{uuid}` (a new id).
 A placeholder with an empty value is dropped together with the flag before it.
-A template without `{prompt}` (Aider's) gets the handoff pasted into the agent once it has started.
 
 ## The default file
 
@@ -114,7 +110,7 @@ A template without `{prompt}` (Aider's) gets the handoff pasted into the agent o
 # Regex patterns use TOML literal strings ('...'), so backslashes need no escaping.
 
 # Agent order: menu order, agent bar order and auto-switch priority.
-order         = ["claude", "antigravity", "copilot", "codex", "opencode", "aider"]
+order         = ["claude", "antigravity", "copilot", "codex", "opencode"]
 
 # Agent started by a plain `imux`. "" = first installed agent in `order`.
 default_agent = ""
@@ -387,21 +383,6 @@ args                     = []
 new_args                 = ["--session", "ses_imux{uuid}", "--prompt", "{prompt}"]
 resume_args              = ["--session", "{id}", "--prompt", "{prompt}"]
 home                     = ""   # "" = $XDG_DATA_HOME/opencode or ~/.local/share/opencode
-resume                   = true
-patterns                 = []
-replace_default_patterns = false
-install                  = ""   # "" = i-mux's command (the popup for a missing agent runs it)
-
-# Aider: works with any model through your keys (OpenAI, Anthropic, Gemini,
-# OpenRouter, Ollama ...). It has no flag for a first message that keeps the
-# chat open, so a handoff is pasted into it; it keeps its chat history in
-# .aider.chat.history.md at the repository's root.
-[agents.aider]
-bin                      = ""
-args                     = []
-new_args                 = []
-resume_args              = ["--restore-chat-history"]
-home                     = ""   # unused: Aider keeps its history in each repository
 resume                   = true
 patterns                 = []
 replace_default_patterns = false

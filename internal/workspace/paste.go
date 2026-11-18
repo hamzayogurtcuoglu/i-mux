@@ -8,7 +8,6 @@ import (
 	"hash/fnv"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
@@ -17,13 +16,10 @@ import (
 )
 
 // Paste timing (§9.5): the agent's screen must be unchanged for StableFor
-// before the handoff is pasted; after StableMax it is pasted anyway. A still
-// screen that asks a question (Aider's .gitignore question) is not ready: the
-// paste waits until it is answered, up to AskMax (D81).
+// before the handoff is pasted; after StableMax it is pasted anyway.
 var (
 	StableFor  = 1500 * time.Millisecond
 	StableMax  = 20 * time.Second
-	AskMax     = 10 * time.Minute
 	stablePoll = 250 * time.Millisecond
 	enterDelay = 150 * time.Millisecond
 )
@@ -43,48 +39,27 @@ func (w *WS) pasteMode(l Launch) bool {
 }
 
 // WaitStable waits until pane's screen did not change for StableFor (or
-// StableMax passed) and asks no question (or AskMax passed). It returns an
-// error if the pane is gone or dead, or runs another program (respawned).
+// StableMax passed). It returns an error if the pane is gone or dead.
 func (w *WS) WaitStable(ctx context.Context, pane string) error {
-	start := time.Now()
-	deadline := start.Add(StableMax)
+	deadline := time.Now().Add(StableMax)
 	var last uint64
 	since := time.Now()
-	pid := ""
 	for {
 		out, err := w.T.Run(ctx,
-			tmux.Cmd{"display-message", "-p", "-t", pane, "#{pane_dead} #{pane_pid}"},
+			tmux.Cmd{"display-message", "-p", "-t", pane, "#{pane_dead}"},
 			tmux.Cmd{"capture-pane", "-p", "-t", pane})
 		if err != nil {
 			return err
 		}
-		head, _, _ := strings.Cut(out, "\n")
-		dead, p, _ := strings.Cut(head, " ")
-		if dead == "1" {
+		if len(out) >= 2 && out[:2] == "1\n" {
 			return errors.New("pane exited")
-		}
-		if pid == "" {
-			pid = p
-		} else if p != pid {
-			return errors.New("pane respawned")
 		}
 		h := fnv.New64a()
 		_, _ = h.Write([]byte(out))
-		asking := false
 		if sum := h.Sum64(); sum != last {
 			last, since = sum, time.Now()
 		} else if time.Since(since) >= StableFor {
-			screen := out[strings.IndexByte(out, '\n')+1:]
-			if asking = agent.Asking(screen); !asking {
-				return nil
-			}
-		}
-		if asking {
-			// Answered later, the screen gets StableMax again to settle.
-			deadline = time.Now().Add(StableMax)
-			if end := start.Add(AskMax); deadline.After(end) {
-				deadline = end
-			}
+			return nil
 		}
 		if time.Now().After(deadline) {
 			return nil

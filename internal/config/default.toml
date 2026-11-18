@@ -4,7 +4,7 @@
 # Regex patterns use TOML literal strings ('...'), so backslashes need no escaping.
 
 # Agent order: menu order, agent bar order and auto-switch priority.
-order         = ["claude", "antigravity", "copilot", "codex", "opencode", "aider"]
+order         = ["claude", "antigravity", "copilot", "codex", "opencode"]
 
 # Agent started by a plain `imux`. "" = first installed agent in `order`.
 default_agent = ""
@@ -277,21 +277,6 @@ args                     = []
 new_args                 = ["--session", "ses_imux{uuid}", "--prompt", "{prompt}"]
 resume_args              = ["--session", "{id}", "--prompt", "{prompt}"]
 home                     = ""   # "" = $XDG_DATA_HOME/opencode or ~/.local/share/opencode
-resume                   = true
-patterns                 = []
-replace_default_patterns = false
-install                  = ""   # "" = i-mux's command (the popup for a missing agent runs it)
-
-# Aider: works with any model through your keys (OpenAI, Anthropic, Gemini,
-# OpenRouter, Ollama ...). It has no flag for a first message that keeps the
-# chat open, so a handoff is pasted into it; it keeps its chat history in
-# .aider.chat.history.md at the repository's root.
-[agents.aider]
-bin                      = ""
-args                     = []
-new_args                 = []
-resume_args              = ["--restore-chat-history"]
-home                     = ""   # unused: Aider keeps its history in each repository
 resume                   = true
 patterns                 = []
 replace_default_patterns = false

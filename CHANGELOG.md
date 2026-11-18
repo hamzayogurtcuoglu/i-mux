@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.64.0] - 2026-11-18
+
+### Removed
+
+- **Aider is no longer an agent.** i-mux runs Claude Code, Antigravity, Copilot, Codex and OpenCode
+  again, as before 0.63.0; OpenCode works with any model, as Aider did. With Aider go the changes
+  that were only there for it: a handoff that is pasted no longer waits while the agent asks a
+  question, and the handoff file is again given to an agent by its folder. A config that still
+  names `aider` loads with a warning; an Aider pane that is still open keeps running, shown under
+  its name; Aider's own files (`.aider.chat.history.md`) stay in your repositories. OpenCode keeps
+  its short name `Oc` on a narrow agent bar.
+
 ## [0.63.0] - 2026-11-18
 
 ### Added

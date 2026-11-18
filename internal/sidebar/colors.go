@@ -26,7 +26,7 @@ var (
 	boxBg, boxFocusBg  string // the commit box, and with the cursor in it
 	barTrack, barThumb string // scroll bars (§9.3 "Scroll bars")
 	buttonStyle        string // a filled button (Commit)
-	agentFg            [6]string
+	agentFg            [5]string
 	// paneBase starts every row (the theme's background and text color),
 	// and paneFg / paneBg stand for the terminal's default ones in it; ""
 	// on the terminal's colors (theme.PaneBase).
@@ -64,7 +64,7 @@ func applyPalette(p theme.Palette) {
 	barTrack = p.Surface0.Fg() + "│" + reset
 	barThumb = p.Overlay0.Fg() + "┃" + reset
 	buttonStyle = p.Accent.Bg() + onColor(p.Accent)
-	agentFg = [6]string{p.Peach.Fg(), p.Blue.Fg(), p.Text.Fg(), p.Mauve.Fg(), p.Yellow.Fg(), p.Green.Fg()} // Claude, Antigravity, Codex, Copilot, OpenCode, Aider
+	agentFg = [5]string{p.Peach.Fg(), p.Blue.Fg(), p.Text.Fg(), p.Mauve.Fg(), p.Yellow.Fg()} // Claude, Antigravity, Codex, Copilot, OpenCode
 	var av []string
 	for _, c := range []theme.Color{p.Teal, p.Peach, p.Blue, p.Green, p.Mauve, p.Red, p.Yellow, p.Accent} {
 		av = append(av, c.Bg()+onColor(c))
@@ -85,7 +85,7 @@ func classic() {
 	boxBg, boxFocusBg = "\x1b[48;5;236m", "\x1b[48;5;237m"
 	barTrack, barThumb = "\x1b[38;5;236m│"+reset, "\x1b[38;5;245m┃"+reset
 	buttonStyle = "\x1b[48;5;24m\x1b[38;5;255m"
-	agentFg = [6]string{"\x1b[38;5;173m", "\x1b[38;5;75m", "\x1b[38;5;252m", "\x1b[38;5;141m", "\x1b[38;5;215m", "\x1b[38;5;114m"}
+	agentFg = [5]string{"\x1b[38;5;173m", "\x1b[38;5;75m", "\x1b[38;5;252m", "\x1b[38;5;141m", "\x1b[38;5;215m"}
 	var av []string
 	for _, n := range []int{30, 166, 68, 71, 98, 168, 136, 37} {
 		av = append(av, "\x1b[48;5;"+strconv.Itoa(n)+"m"+white)

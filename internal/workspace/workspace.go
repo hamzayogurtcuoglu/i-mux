@@ -278,7 +278,7 @@ func (w *WS) Spec(l Launch) (*launch.Spec, TrailEntry, error) {
 	}
 	var argv []string
 	if l.Handoff != "" && w.Cfg.Handoff.Deliver != "inline" {
-		argv = agent.HandoffArgs(l.Agent, l.Handoff) // the agent reads the file itself
+		argv = agent.ReadDirArgs(l.Agent, filepath.Dir(l.Handoff)) // the agent reads the file itself
 	}
 	if l.Agent == session.Claude && (w.Cfg.Limits.ClaudeStatusline || w.Cfg.Hooks.Enabled) {
 		if p, err := w.claudeSettings(); err == nil {

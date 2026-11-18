@@ -2,7 +2,6 @@
 package all
 
 import (
-	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/aider"       // Aider
 	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/antigravity" // Antigravity CLI
 	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/claude"      // Claude Code
 	_ "github.com/hamzayogurtcuoglu/i-mux/internal/session/codex"       // Codex CLI

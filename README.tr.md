@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Bir yapay zekâ kodlama agent'ında kullanım limitine mi takıldınız? Sohbetin tamamıyla başka bir agent'ta devam edin.</b><br>
-  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode · Aider
+  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode
 </p>
 
 <p align="center">
@@ -127,14 +127,6 @@ ya da Groq'u seç, build.nvidia.com ya da console.groq.com'dan aldığın anahta
 gerekmez), sonra `/models` ile modeli seç. OpenCode Go planın varsa limit paneli 5 saatlik, haftalık ve aylık
 kullanımını gösterir.
 
-**Aider** de verdiğin anahtarlarla (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, OpenRouter, Ollama ... ya
-da `.aider.conf.yml`) herhangi bir modelle çalışır. Ayarlar → **Sürümler ve güncellemeler** onu kurar
-(harfi `i`); `curl -LsSf https://aider.chat/install.sh | sh` (ya da `aider-install`, `uv tool install
-aider-chat`, `pipx install aider-chat`) de kurar. Aider komut satırında ilk mesaj almaz; bu yüzden
-i-mux devir dosyasını ona `--read` ile verir ve Aider hazır olunca devri yazar. Aider önce bir şey
-sorarsa (`.aider*`'ı `.gitignore`'a eklemek gibi) cevapla, devir arkasından gelir. Konuşmaları
-depodaki `.aider.chat.history.md`'den okunur; Aider'a dönünce bu geçmiş geri yüklenir.
-
 Dosyalar editöründe açılır: Ayarlar → **Düzenleyici** micro, nano ya da Neovim'i seçer (`imux
 editor use <editör>`); **Otomatik**'te micro, `$VISUAL`, `$EDITOR`, nano, vim. Kendi editörün yoksa,
 açtığın ilk dosya micro'yu senin için getirmeyi önerir (bir kez, 5 MB; ayrıca Ayarlar →
@@ -162,7 +154,7 @@ görünümü değiştirir.
 | 📁 | **Dosyalar:** projenin dosyaları, editördeki gibi her biri türünün simgesiyle (Nerd Font varsa Seti'ninkiler, yoksa emoji), açık ya da kapalı klasörler ve düzeyleri gösteren girinti çizgileriyle; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir (HTML dosyası tarayıcında canlı açılır, aşağıda); değişen dosyalar renklidir. Başlığında VS Code'un düğmeleri var: **Yeni dosya…** ve **Yeni klasör…** (seçili klasörde, yoksa projede), **Gezgini yenile**, **Klasörleri kapat** ve **⋯** içinde **Gizli dosyaları göster** (açıkken ✓: `.github`, `.env`, `.gitlab-ci.yml` gibi adı noktayla başlayan dosya ve klasörler burada görünür; `.git` ve `node_modules` hiç görünmez; bir dahaki sefere de kalır); imlecin üzerindeki düğmenin ne yaptığını başlık söyler. **Ctrl+P** (ya da ⋯ → Dosyaya git…) editördeki gibi projede dosya bulur: adından harfler yaz (`sbrnd`, `sidebar/render.go`'yu bulur; `ad:42` 42. satırda açar), Enter açar. **Sağ tık** editördeki menüyü açar: Yeni dosya / Yeni klasör, Yeniden adlandır, Sil (Çöp Sepeti'ne), Kes / Kopyala / Yapıştır, Yolu / Göreli yolu kopyala, Finder'da göster, Terminalde aç, Yanda aç, Klasörde ara, Karşılaştır, Ajana ekle; HTML ve SVG dosyalarında Önizlemeyi Aç. İmlecin üzerindeki şey parlar; seçili dosya işaretli kalır |
 | 🔍 | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar, dosya dosya, ikonu ve eşleşme sayısıyla (dosyaya tıkla: daralt; hepsi için **⊟ Hepsini kapat** ya da Tab; çok dosya varsa kapalı gelir); Enter dosyayı o satırda açar. Uzun listelerde, diff'lerde ve dosyalarda tıklanıp sürüklenebilen ince bir kaydırma çubuğu var; diff'te çubuğun yanında, VS Code'daki gibi, bütün dosyada satırların silindiği yerler kırmızı, eklendiği yerler yeşil işaretli: birine tıkla oraya git, ya da sonraki ve önceki değişiklik için **]** ve **[** |
 | 🔀 | **Git:** VS Code'un kaynak kontrolü, bütün işlemleriyle. **⋯** menüsünü açar: Pull, Push, Clone, Checkout to, Fetch, Git çıktısı ve Commit (amend, signed off, geri al), Changes, Pull/Push, Branch (merge, rebase, oluştur, yeniden adlandır, sil, yayınla), Remote, Stash, Tags ve Worktrees alt menüleri, bir de View & Sort (liste ya da ağaç; ada, yola ya da duruma göre). Dal, etiket, stash ve remote'lar yazdıkça süzülen bir Quick Pick'ten seçilir. Merge, hazırlanan ve hazırlanmayan değişiklikler (her dosyanın önce adı, sonra gri klasörü), her dosyada, klasörde ve hepsi için hazırla, geri al ve at (önce sorar); **Commit**'in üstünde VS Code'daki gibi mesaj kutusu: tıkla, mesajı yaz, Enter commit eder (yeni satır için Ctrl+J; mesaj commit edilene kadar proje başına saklanır), yanında ▾ (Commit & Push, Commit & Sync, Amend) ve rebase sürerken Continue; ↑↓ sayılarıyla pull / push / senkron, yeni dal için Publish; dala tıklayınca Checkout to…; dosyaya ya da commit'e sağ tıklayınca menüsü (.gitignore'a ekle, Cherry Pick, Revert, Etiket oluştur…); dal ve etiket etiketli grafik olarak geçmiş. Dosyaya tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
-| ⏰ | **İşler:** projenin kendi agent'ları (Claude Code'un `.claude/agents/`, Copilot'un `.github/agents/`, OpenCode'unki, her CLI için `.agents/agents/` ve kişisel agent'ların) ve skill'leri, i-mux açıkken hemen ya da zamanında çalışır; doldurulacak form yok: ne yapacağı zaten yazılmış agent'ta ya da skill'de. **🚀** her şeyin önceden seçili olduğu tek bir Çalıştır paneli açar: kurulu CLI (Claude, Antigravity, Copilot, Codex, OpenCode, Aider; önce agent'ın kendi CLI'ı), model (CLI'ın listesi ya da yazdığın bir ad), ne zaman (şimdi, 5 ya da 15 dakikada bir, saat başı, her gün 09:00, ya da `10dk`, `2saat`, `09:00 18:30` gibi biri) ve erişim; **Enter** çalıştırır. Çıktısı açılır ve çalışmayı izler: çağırdığı her araç sonucuyla, sonra cevabı; **s** durdurur, **Esc** çalışmaya bırakır. Projede arka planda çalışır; kenar panel her birinin zamanını, CLI'ını ve modelini, son raporunun ilk satırını (✓, başarısızsa ✗) ve sıradaki çalışmasını gösterir; biri çalışırken dönen bir işaret ve ⏰ üzerinde bir rozet; tıklayınca çıktısını gösterir. Rapor gelince bildirir; "yeni bir şey yok" bildirmez. Her satırdaki **⋯** (ya da sağ tık): Çalıştır / Durdur, Çıktı, Geçmiş, Bir bölmede sürdür, Zamanla (ya da Zamanlamayı değiştir), Duraklat, Tanımı aç, Kaldır; skill'lerde ayrıca Ajana ekle, Agent ile iyileştir, Tüm agent'larla paylaş ve Skill'i sil. Başlıktaki **✨** yeni bir skill yazdırır (seçtiğin bir agent ya da boş bir `SKILL.md`); ön bilgisinde sorun olan skill ⚠ ve neyin yanlış olduğunu gösterir |
+| ⏰ | **İşler:** projenin kendi agent'ları (Claude Code'un `.claude/agents/`, Copilot'un `.github/agents/`, OpenCode'unki, her CLI için `.agents/agents/` ve kişisel agent'ların) ve skill'leri, i-mux açıkken hemen ya da zamanında çalışır; doldurulacak form yok: ne yapacağı zaten yazılmış agent'ta ya da skill'de. **🚀** her şeyin önceden seçili olduğu tek bir Çalıştır paneli açar: kurulu CLI (Claude, Antigravity, Copilot, Codex, OpenCode; önce agent'ın kendi CLI'ı), model (CLI'ın listesi ya da yazdığın bir ad), ne zaman (şimdi, 5 ya da 15 dakikada bir, saat başı, her gün 09:00, ya da `10dk`, `2saat`, `09:00 18:30` gibi biri) ve erişim; **Enter** çalıştırır. Çıktısı açılır ve çalışmayı izler: çağırdığı her araç sonucuyla, sonra cevabı; **s** durdurur, **Esc** çalışmaya bırakır. Projede arka planda çalışır; kenar panel her birinin zamanını, CLI'ını ve modelini, son raporunun ilk satırını (✓, başarısızsa ✗) ve sıradaki çalışmasını gösterir; biri çalışırken dönen bir işaret ve ⏰ üzerinde bir rozet; tıklayınca çıktısını gösterir. Rapor gelince bildirir; "yeni bir şey yok" bildirmez. Her satırdaki **⋯** (ya da sağ tık): Çalıştır / Durdur, Çıktı, Geçmiş, Bir bölmede sürdür, Zamanla (ya da Zamanlamayı değiştir), Duraklat, Tanımı aç, Kaldır; skill'lerde ayrıca Ajana ekle, Agent ile iyileştir, Tüm agent'larla paylaş ve Skill'i sil. Başlıktaki **✨** yeni bir skill yazdırır (seçtiğin bir agent ya da boş bir `SKILL.md`); ön bilgisinde sorun olan skill ⚠ ve neyin yanlış olduğunu gösterir |
 | 📊 · ❓ | kullanım limitleri · bütün tuşlar |
 
 | Kenar panel / tuş | Ne yapar |
@@ -180,7 +172,7 @@ görünümü değiştirir.
 | `prefix H` `J` `K` `L` | aktif pane'i o taraftakiyle (sol, alt, üst, sağ) yer değiştir |
 | `prefix r`, sonra `h` `j` `k` `l` ya da oklar (Shift: hızlı), `Esc` | aktif pane'i boyutlandır |
 | `prefix ?` (ya da kenar panelde `?`) | bütün tuşlar: birini bulmak için yaz, Enter çalıştırır |
-| `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` `e` `i` | pane menüsü; Claude / Antigravity / Copilot / Codex / OpenCode / Aider'da sürdür |
+| `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` `e` | pane menüsü; Claude / Antigravity / Copilot / Codex / OpenCode'da sürdür |
 
 `prefix`, `Ctrl+b` demektir: bas, bırak, sonra tuşa bas.
 

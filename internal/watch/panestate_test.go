@@ -70,8 +70,6 @@ func TestAsking(t *testing.T) {
 		"Continue? [Y/n] ",
 		" Allow this action?\n",
 		"  1. Yes\n  2. Yes, and don't ask again\n  3. No\n",
-		"Aider v0.86.1\nAdd .aider* to .gitignore (recommended)? (Y)es/(N)o [Yes]: ",
-		"Add a.go to the chat? (Y)es/(N)o/(D)on't ask again [Yes]: ",
 	} {
 		if !Asking(screen) {
 			t.Errorf("not seen as a question:\n%s", screen)
@@ -84,9 +82,6 @@ func TestAsking(t *testing.T) {
 		"The function allows this behavior when the flag is set.\n",
 		"Step 1. Yesterday we changed the parser.\n",
 		"? for shortcuts\n",
-		// Answered: the prompt waits on the next line.
-		"Add .aider* to .gitignore (recommended)? (Y)es/(N)o [Yes]: y\nAdded .aider* to .gitignore\n> \n",
-		"Overwrite config? (y/N) y\ndone\n",
 	} {
 		if Asking(screen) {
 			t.Errorf("seen as a question:\n%s", screen)

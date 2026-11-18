@@ -19,12 +19,13 @@ import (
 )
 
 // AgentIDs are the agents imux knows, in default order.
-var AgentIDs = []string{"claude", "antigravity", "copilot", "codex", "opencode", "aider"}
+var AgentIDs = []string{"claude", "antigravity", "copilot", "codex", "opencode"}
 
 // RemovedAgents were supported once. A config that still names one loads
 // with a warning instead of an error.
 var RemovedAgents = map[string]string{
 	"gemini": "Gemini CLI support was removed (Google stopped serving personal accounts in it on 2026-06-18); use \"antigravity\"",
+	"aider":  "Aider support was removed in i-mux 0.64; use \"opencode\" for any model",
 }
 
 // removedKeys were settings once; a config that still has one loads
@@ -261,14 +262,6 @@ func defaultAgents() map[string]*Agent {
 		"opencode": {
 			NewArgs:    []string{"--session", "ses_imux{uuid}", "--prompt", "{prompt}"},
 			ResumeArgs: []string{"--session", "{id}", "--prompt", "{prompt}"},
-			Resume:     true,
-		},
-		// Aider has no flag for a first message that keeps the chat open
-		// (--message exits): the handoff is pasted (D81). Resuming restores
-		// the project's chat history file.
-		"aider": {
-			NewArgs:    []string{},
-			ResumeArgs: []string{"--restore-chat-history"},
 			Resume:     true,
 		},
 	}
