@@ -22,6 +22,24 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
 )
 
+// tmuxBin is the engine the suite runs on: IMUX_TMUX_BIN when set (i-mux-core,
+// or a particular tmux build), else tmux on PATH — the same order imux itself
+// uses, so the harness's engine and the binary under test agree.
+func tmuxBin(t *testing.T) string {
+	t.Helper()
+	if b := os.Getenv("IMUX_TMUX_BIN"); b != "" {
+		if st, err := os.Stat(b); err != nil || st.IsDir() || st.Mode()&0o111 == 0 {
+			t.Fatalf("IMUX_TMUX_BIN %s is not an executable file", b)
+		}
+		return b
+	}
+	b, err := exec.LookPath("tmux")
+	if err != nil {
+		t.Skip("tmux not installed")
+	}
+	return b
+}
+
 // H is one isolated e2e environment: its own tmux socket, IMUX_HOME, fake
 // agent homes, fake agent log directory and tmux command recorder.
 type H struct {
@@ -39,10 +57,7 @@ type H struct {
 func newH(t *testing.T, extraConfig string) *H {
 	t.Helper()
 	bin := imuxBin(t)
-	tm, err := exec.LookPath("tmux")
-	if err != nil {
-		t.Skip("tmux not installed")
-	}
+	tm := tmuxBin(t)
 	homes := testutil.Isolate(t)
 	var r [5]byte
 	_, _ = rand.Read(r[:])

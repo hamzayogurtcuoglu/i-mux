@@ -1003,7 +1003,7 @@ User request: run i-mux on i-mux-core behind a switch, with tmux the default (D8
 mirror Phase 7 (C7.2–C7.7) of i-mux-core's plan, whose Gate 6 holds; i-mux's `make ci` keeps
 passing with tmux, exactly as before, all through this.
 
-- [ ] **T88.1 The e2e harness honours `IMUX_TMUX_BIN`** · S
+- [x] **T88.1 The e2e harness honours `IMUX_TMUX_BIN`** · S
   - AC: `e2e/harness_test.go` uses `IMUX_TMUX_BIN` when set, else `tmux` on `PATH`, as today;
     `make e2e-core` builds or locates `imux-core` and runs the suite with it; `make e2e` is
     unchanged and passes.

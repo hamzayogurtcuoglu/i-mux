@@ -82,7 +82,7 @@ func TestBinaryRuns(t *testing.T) {
 }
 
 func TestTmuxAvailable(t *testing.T) {
-	out, err := exec.Command("tmux", "-V").CombinedOutput()
+	out, err := exec.Command(tmuxBin(t), "-V").CombinedOutput()
 	if err != nil {
 		t.Fatalf("tmux not available: %v %s", err, out)
 	}
