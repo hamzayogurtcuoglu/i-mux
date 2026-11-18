@@ -997,6 +997,43 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M88: The engine switch: i-mux-core, opt-in (added 2026-11-18)
+
+User request: run i-mux on i-mux-core behind a switch, with tmux the default (D83). The tasks
+mirror Phase 7 (C7.2–C7.7) of i-mux-core's plan, whose Gate 6 holds; i-mux's `make ci` keeps
+passing with tmux, exactly as before, all through this.
+
+- [ ] **T88.1 The e2e harness honours `IMUX_TMUX_BIN`** · S
+  - AC: `e2e/harness_test.go` uses `IMUX_TMUX_BIN` when set, else `tmux` on `PATH`, as today;
+    `make e2e-core` builds or locates `imux-core` and runs the suite with it; `make e2e` is
+    unchanged and passes.
+- [ ] **T88.2 Engine detection and versions** · S · deps: T88.1
+  - AC: `ParseVersion` reads `tmux 3.8 (imux-core X.Y.Z)` as tmux 3.8, as today, and gains an
+    `Engine` field set from the bracketed part; `imux doctor` shows the engine and its version
+    and warns when an imux-core older than i-mux's minimum is found; unit tests; a doctor e2e
+    for both engines.
+- [ ] **T88.3 The engine switch** · M · deps: T88.2
+  - AC: D83: `[engine] backend = "tmux" | "core"`, default `tmux`; with `core`, the imux-core
+    next to imux's own binary, else the one on `PATH`; `IMUX_TMUX_BIN` still overrides
+    everything; the two engines use different socket directories; switching while sessions
+    run is refused with an offer to close them; Settings shows the choice as "Engine (beta)";
+    unit tests for the resolution order; e2e: the whole suite passes with the default and with
+    `core`.
+- [ ] **T88.4 Packaging and updates** · M · deps: T88.3
+  - AC: GoReleaser builds `imux-core` for darwin and linux (amd64 and arm64) into the same
+    archives and the Homebrew formula; `make install-local` installs both; the self-update
+    (Settings → Update, `imux update`) replaces both checksum-verified as one step, rolling
+    back if either fails; a running engine server keeps its old binary until its sessions end,
+    and the update message says so; a goreleaser snapshot contains both; an update e2e with a
+    local release fixture replaces both.
+- [ ] **T88.5 CI for both engines** · S · deps: T88.4
+  - AC: an `e2e-core` job checks out i-mux-core at the pinned version, builds it and runs
+    `make e2e-core` on Linux and macOS; it is blocking and green.
+- [ ] **T88.6 Beta release** · S · deps: T88.5
+  - AC: the release notes explain the switch and how to go back; an "Engine (beta)" issue
+    template asks for the terminal, the OS and `imux doctor` output; the owner approves and
+    tags (USER).
+
 ## M87: Aider is removed (added 2026-11-18)
 
 User request: remove Aider, added in v0.63: "I think it's bad, remove it" (D82).
