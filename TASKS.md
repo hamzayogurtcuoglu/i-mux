@@ -1002,7 +1002,7 @@ slow (about a second).
 User request: Claude opens by default; Settings should choose which agent a new project opens
 with, Claude still the default (ARCHITECTURE D83).
 
-- [ ] **T88.1 Settings row for default_agent** · S
+- [x] **T88.1 Settings row for default_agent** · S
   - AC: a **New projects start with** row (key `p`) showing Auto (<the agent it resolves to>) or
     the chosen agent; its menu lists Auto and every agent in `order`, ● on the current one, a
     missing agent marked "not installed"; `__settings set default_agent <id|auto>` saves

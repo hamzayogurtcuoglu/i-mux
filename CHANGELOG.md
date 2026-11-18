@@ -12,6 +12,10 @@ All notable changes to i-mux are listed here. The format follows
   agents too, every agent row has a thin bar in its project's color, and the open agent's row is
   drawn on that color instead of grey, so whose agent a row is shows at a glance. A worktree's
   agents wear its repository's color.
+- **Settings chooses the agent a new project starts with.** A new **New projects start with** row
+  lists Auto (the first installed agent, Claude on a fresh install) and every agent; it saves
+  `default_agent`, which until now only the config file could set. A project opened before still
+  comes back with its own agents.
 
 ## [0.63.0] - 2026-11-18
 

@@ -70,7 +70,8 @@ Panelin kenarını sürükleyerek onu genişletir ya da daraltırsın: her sekme
 i-mux onu hatırlar (`tmux.sidebar_width`).
 
 Şeritteki **🔧 Ayar** (ya da `imux settings`, ya da kenar çubuğunda `,`) Ayarlar'ı açar:
-düzenleyicin, bildirimler, simgeler, renk teması, geçişten sonra yeni ajanın ne
+düzenleyicin, bildirimler, simgeler, renk teması, yeni bir projenin hangi agent'la başlayacağı
+(**Otomatik** ilk kurulu olanı seçer, yeni kurulumda Claude), geçişten sonra yeni ajanın ne
 yapacağı, limitte ne olacağı ve ayar dosyası. Bir satıra Enter ya da tıklama, değerlerinin menüsünü
 açar (● şu ankini gösterir); birini seç ya da numarasına bas. Oradaki **Sürümler ve güncellemeler** (ya da `imux
 versions`) i-mux'u, tmux'u ve her agent CLI'ını sürümü ve onu güncelleyen (kurulu değilse kuran)

@@ -8,9 +8,11 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	upd "github.com/hamzayogurtcuoglu/i-mux/internal/update"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
@@ -91,6 +93,7 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 		MenuItem{Name: i18n.T("settings.font"), Key: "f", Cmd: w.popupCmd("90%", "70%", "font", "install", "--popup")},
 		MenuItem{Name: i18n.T("settings.theme", ThemeTitle(cfg.Theme.Name)), Key: "t", Cmd: menu("theme")},
 		MenuItem{Name: i18n.T("settings.theme_auto", onOffLabel(cfg.Theme.AutoSwitch)), Key: "a", Cmd: menu("theme_auto")},
+		MenuItem{Name: i18n.T("settings.default_agent", w.defaultAgentLabel()), Key: "p", Cmd: menu("default_agent")},
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
 		MenuItem{Name: i18n.T("settings.hooks", onOffLabel(cfg.Hooks.Enabled)), Key: "h", Cmd: menu("hooks")},
@@ -183,8 +186,47 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 			cs = append(cs, Choice{v, limitLabel(v)})
 		}
 		return w.ChoiceMenu(i18n.T("settings.limit_title"), "on_limit", cfg.OnLimit, cs, pane, client)
+	case "default_agent":
+		return w.DefaultAgentMenu(pane, client)
 	}
 	return nil
+}
+
+// autoAgentLabel is "Auto (<the agent a new project gets now>)" (D83).
+func (w *WS) autoAgentLabel() string {
+	for _, a := range agent.Ordered(w.Cfg) {
+		if w.Installed(a.ID) {
+			return i18n.T("settings.editor_auto", a.Short)
+		}
+	}
+	return labels("auto")
+}
+
+// defaultAgentLabel is the New projects row's value: the chosen agent, or
+// Auto with the agent it resolves to (D83).
+func (w *WS) defaultAgentLabel() string {
+	if d := w.Cfg.DefaultAgent; d != "" {
+		return session.ShortName(session.AgentID(d))
+	}
+	return w.autoAgentLabel()
+}
+
+// DefaultAgentMenu chooses the agent a new project starts with (D83):
+// Auto, then every agent in order; a missing one says so.
+func (w *WS) DefaultAgentMenu(pane, client string) *Menu {
+	cur := w.Cfg.DefaultAgent
+	if cur == "" {
+		cur = "auto"
+	}
+	cs := []Choice{{"auto", w.autoAgentLabel()}}
+	for _, a := range agent.Ordered(w.Cfg) {
+		label := a.Short
+		if !w.Installed(a.ID) {
+			label += " · " + i18n.T("settings.not_installed")
+		}
+		cs = append(cs, Choice{string(a.ID), label})
+	}
+	return w.ChoiceMenu(i18n.T("settings.default_agent_title"), "default_agent", cur, cs, pane, client)
 }
 
 // EditorChoice is the Editor row's value (D50): copilot (AI completion,

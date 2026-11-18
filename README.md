@@ -76,7 +76,8 @@ edge to make it wider or narrower: every tab takes the width, and i-mux remember
 (`tmux.sidebar_width`).
 
 **🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: your editor,
-notifications, icons, the color theme, what a new agent does after a handoff, what happens
+notifications, icons, the color theme, which agent a new project starts with (**Auto** is the
+first installed one, Claude on a fresh install), what a new agent does after a handoff, what happens
 at a limit, and the config file. Enter or a click on a row opens a menu of its values (● marks the
 current one); pick one or press its number. **Versions and updates** there (or `imux versions`) lists i-mux, tmux
 and every agent CLI with its version and the command that updates it, or installs it when it is
