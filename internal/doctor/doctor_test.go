@@ -139,6 +139,26 @@ func TestDoctor(t *testing.T) {
 	if r.Failed() || find(r, "Claude") != nil {
 		t.Fatalf("--ci: %+v", r.Results)
 	}
+	// The engine line (D83): shown for i-mux-core, warned when older than
+	// i-mux's minimum, absent on plain tmux.
+	tmux.MinCoreVersion = "1.0.0"
+	o.Tmux.Runner = fakeTmux{"3.8 (imux-core 0.5.2)"}
+	if r = Run(context.Background(), o); r.Failed() {
+		t.Fatalf("old engine fails: %+v", r.Results)
+	} else if x := find(r, "engine imux-core 0.5.2 is too old"); x == nil || x.Level != Warn {
+		t.Fatalf("old engine: %+v", r.Results)
+	}
+	tmux.MinCoreVersion = "0.5.0"
+	if r = Run(context.Background(), o); r.Failed() {
+		t.Fatalf("engine fails: %+v", r.Results)
+	} else if x := find(r, "engine imux-core 0.5.2"); x == nil || x.Level != OK {
+		t.Fatalf("engine: %+v", r.Results)
+	}
+	tmux.MinCoreVersion = "0.0.0"
+	o.Tmux.Runner = fakeTmux{"3.8"}
+	if r = Run(context.Background(), o); r.Failed() || find(r, "engine") != nil {
+		t.Fatalf("plain tmux has an engine line: %+v", r.Results)
+	}
 	o.Tmux.Runner = fakeTmux{"2.9a"}
 	if r = Run(context.Background(), o); !r.Failed() || find(r, "too old") == nil {
 		t.Fatalf("old tmux: %+v", r.Results)

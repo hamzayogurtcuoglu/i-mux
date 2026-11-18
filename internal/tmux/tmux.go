@@ -407,6 +407,7 @@ func Rows(out string, n int) [][]string {
 type Version struct {
 	Major, Minor int
 	Suffix       string // "a" in 3.2a
+	Engine       string // "imux-core 1.2.3" in "tmux 3.8 (imux-core 1.2.3)" (D83)
 	Raw          string
 }
 
@@ -423,20 +424,30 @@ func (v Version) String() string {
 }
 
 // ParseVersion parses `tmux -V` output: "tmux 3.2a", "tmux next-3.5",
-// "tmux 3.8". Development builds ("tmux master", "tmux openbsd-7.6") count as
+// "tmux 3.8", and i-mux-core's "tmux 3.8 (imux-core X.Y.Z)" (D83), whose
+// bracket names the engine while the tmux version stays outside it.
+// Development builds ("tmux master", "tmux openbsd-7.6") count as
 // newer than any release. It reports false if nothing was recognized.
 func ParseVersion(s string) (Version, bool) {
 	s = strings.TrimSpace(s)
 	raw := strings.TrimPrefix(s, "tmux ")
 	v := Version{Raw: raw}
-	if raw == "" {
+	t := raw
+	if i := strings.IndexByte(t, '('); i >= 0 {
+		if j := strings.LastIndexByte(t, ')'); j > i {
+			v.Engine = strings.TrimSpace(t[i+1 : j])
+		}
+		t = strings.TrimSpace(t[:i])
+	}
+	if t == "" {
 		return v, false
 	}
-	if raw == "master" || strings.HasPrefix(raw, "openbsd-") {
+	if t == "master" || strings.HasPrefix(t, "openbsd-") {
 		v.Major, v.Minor = 99, 0
 		return v, true
 	}
-	t := strings.TrimPrefix(raw, "next-")
+	isNext := strings.HasPrefix(t, "next-")
+	t = strings.TrimPrefix(t, "next-")
 	maj, rest, ok := strings.Cut(t, ".")
 	if !ok {
 		return v, false
@@ -457,11 +468,26 @@ func ParseVersion(s string) (Version, bool) {
 		return v, false
 	}
 	v.Major, v.Minor, v.Suffix = m, n, rest[i:]
-	if strings.HasPrefix(raw, "next-") {
+	if isNext {
 		v.Suffix = "-next"
 	}
 	return v, true
 }
+
+// EngineVersion returns the engine's own version — "1.2.3" for Engine
+// "imux-core 1.2.3" — or "" when the version line named no engine.
+func (v Version) EngineVersion() string {
+	s, ok := strings.CutPrefix(v.Engine, "imux-core ")
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(s)
+}
+
+// MinCoreVersion is the oldest i-mux-core engine whose behavior i-mux relies
+// on (D83); doctor warns about an older one. 0.0.0 until the engine's first
+// release is pinned. A var so tests can raise it.
+var MinCoreVersion = "0.0.0"
 
 // BinVersion runs `tmux -V`.
 func (c *Client) BinVersion(ctx context.Context) (Version, error) {

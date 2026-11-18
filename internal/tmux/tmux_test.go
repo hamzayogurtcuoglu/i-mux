@@ -130,28 +130,46 @@ func TestParseVersion(t *testing.T) {
 		in       string
 		maj, min int
 		suffix   string
+		engine   string
 		ok       bool
 	}{
-		{"tmux 3.2a\n", 3, 2, "a", true},
-		{"tmux 3.8", 3, 8, "", true},
-		{"tmux 3.4", 3, 4, "", true},
-		{"tmux next-3.6", 3, 6, "-next", true},
-		{"tmux master", 99, 0, "", true},
-		{"tmux openbsd-7.6", 99, 0, "", true},
-		{"tmux 2.9a", 2, 9, "a", true},
-		{"tmux", 0, 0, "", false},
-		{"garbage", 0, 0, "", false},
-		{"tmux 3.x", 0, 0, "", false},
+		{"tmux 3.2a\n", 3, 2, "a", "", true},
+		{"tmux 3.8", 3, 8, "", "", true},
+		{"tmux 3.4", 3, 4, "", "", true},
+		{"tmux next-3.6", 3, 6, "-next", "", true},
+		{"tmux master", 99, 0, "", "", true},
+		{"tmux openbsd-7.6", 99, 0, "", "", true},
+		{"tmux 2.9a", 2, 9, "a", "", true},
+		{"tmux 3.8 (imux-core 1.2.3)", 3, 8, "", "imux-core 1.2.3", true},
+		{"tmux 3.8 (imux-core 0.0.0-dev)", 3, 8, "", "imux-core 0.0.0-dev", true},
+		{"tmux next-3.5 (imux-core 1.0)", 3, 5, "-next", "imux-core 1.0", true},
+		{"tmux 3.8 (", 3, 8, "", "", true},
+		{"tmux", 0, 0, "", "", false},
+		{"garbage", 0, 0, "", "", false},
+		{"tmux 3.x", 0, 0, "", "", false},
 	}
 	for _, c := range cases {
 		v, ok := ParseVersion(c.in)
-		if ok != c.ok || ok && (v.Major != c.maj || v.Minor != c.min || v.Suffix != c.suffix) {
+		if ok != c.ok || ok && (v.Major != c.maj || v.Minor != c.min || v.Suffix != c.suffix || v.Engine != c.engine) {
 			t.Errorf("ParseVersion(%q) = %+v, %v", c.in, v, ok)
 		}
 	}
 	v, _ := ParseVersion("tmux 3.2a")
 	if !v.AtLeast(3, 2) || v.AtLeast(3, 3) || !v.AtLeast(2, 9) || v.AtLeast(4, 0) {
 		t.Fatalf("AtLeast wrong for %v", v)
+	}
+	v, _ = ParseVersion("tmux 3.8 (imux-core 1.2.3)")
+	if !v.AtLeast(3, 4) || v.AtLeast(3, 9) {
+		t.Fatalf("AtLeast wrong for %v", v)
+	}
+	if ev := v.EngineVersion(); ev != "1.2.3" {
+		t.Fatalf("EngineVersion = %q for %+v", ev, v)
+	}
+	if v.String() != "3.8 (imux-core 1.2.3)" {
+		t.Fatalf("String = %q", v.String())
+	}
+	if v, _ := ParseVersion("tmux 3.8"); v.Engine != "" || v.EngineVersion() != "" {
+		t.Fatalf("plain tmux has an engine: %+v", v)
 	}
 }
 

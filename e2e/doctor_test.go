@@ -27,6 +27,14 @@ func TestDoctor(t *testing.T) {
 			t.Fatalf("doctor started %s", a)
 		}
 	}
+	// The engine line (D83, T88.2): named on i-mux-core, absent on tmux.
+	if strings.HasSuffix(h.Tmux, "imux-core") {
+		if !strings.Contains(out, "engine imux-core ") {
+			t.Errorf("doctor output lacks the engine line:\n%s", out)
+		}
+	} else if strings.Contains(out, "engine ") {
+		t.Errorf("doctor output has an engine line on tmux:\n%s", out)
+	}
 	if out, _, err := h.imux("doctor", "--ci"); err != nil || strings.Contains(out, "Claude Code") {
 		t.Fatalf("doctor --ci: %v\n%s", err, out)
 	}

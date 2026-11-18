@@ -790,6 +790,8 @@ var en = map[string]string{
 	"doctor.tmux_error":       "tmux: %v",
 	"doctor.tmux_old":         "tmux %s is too old; i-mux needs %s or newer",
 	"doctor.tmux_ok":          "tmux %s (%s)",
+	"doctor.core_ok":          "engine %s",
+	"doctor.core_old":         "engine %s is too old; i-mux needs %s or newer",
 	"doctor.tmux_no_click":    "tmux %s: the agent bar is not clickable (needs %s); use the menu keys",
 	"doctor.terminfo_ok":      "terminfo tmux-256color found",
 	"doctor.terminfo_missing": "terminfo tmux-256color missing: using screen-256color (install ncurses-term, or brew install ncurses)",

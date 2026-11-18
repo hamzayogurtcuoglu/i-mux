@@ -791,6 +791,8 @@ var tr = map[string]string{
 	"doctor.tmux_error":       "tmux: %v",
 	"doctor.tmux_old":         "tmux %s çok eski; i-mux %s ya da daha yenisini gerektirir",
 	"doctor.tmux_ok":          "tmux %s (%s)",
+	"doctor.core_ok":          "motor %s",
+	"doctor.core_old":         "motor %s çok eski; i-mux %s ya da daha yenisini gerektirir",
 	"doctor.tmux_no_click":    "tmux %s: agent çubuğu tıklanamaz (%s gerekir); menü tuşlarını kullanın",
 	"doctor.terminfo_ok":      "terminfo tmux-256color bulundu",
 	"doctor.terminfo_missing": "terminfo tmux-256color eksik: screen-256color kullanılıyor (ncurses-term ya da brew install ncurses kurun)",

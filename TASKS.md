@@ -1007,7 +1007,7 @@ passing with tmux, exactly as before, all through this.
   - AC: `e2e/harness_test.go` uses `IMUX_TMUX_BIN` when set, else `tmux` on `PATH`, as today;
     `make e2e-core` builds or locates `imux-core` and runs the suite with it; `make e2e` is
     unchanged and passes.
-- [ ] **T88.2 Engine detection and versions** · S · deps: T88.1
+- [x] **T88.2 Engine detection and versions** · S · deps: T88.1
   - AC: `ParseVersion` reads `tmux 3.8 (imux-core X.Y.Z)` as tmux 3.8, as today, and gains an
     `Engine` field set from the bracketed part; `imux doctor` shows the engine and its version
     and warns when an imux-core older than i-mux's minimum is found; unit tests; a doctor e2e

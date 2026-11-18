@@ -155,6 +155,13 @@ func checkTmux(ctx context.Context, r *Report, o Options) {
 		return
 	}
 	r.add(OK, "doctor.tmux_ok", v.String(), path)
+	if ev := v.EngineVersion(); ev != "" {
+		if compareVersions(ev, tmux.MinCoreVersion) < 0 {
+			r.add(Warn, "doctor.core_old", v.Engine, tmux.MinCoreVersion)
+		} else {
+			r.add(OK, "doctor.core_ok", v.Engine)
+		}
+	}
 	if !v.AtLeast(tmux.ClickMinVersion[0], tmux.ClickMinVersion[1]) {
 		r.add(Info, "doctor.tmux_no_click", v.String(), fmt.Sprintf("%d.%d", tmux.ClickMinVersion[0], tmux.ClickMinVersion[1]))
 	}
