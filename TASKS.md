@@ -1021,7 +1021,8 @@ passing with tmux, exactly as before, all through this.
     `core`.
 - [ ] **T88.4 Packaging and updates** · M · deps: T88.3
   - AC: GoReleaser builds `imux-core` for darwin and linux (amd64 and arm64) into the same
-    archives and the Homebrew formula; `make install-local` installs both; the self-update
+    archives and the Homebrew formula, from `go.mod`'s pin of i-mux-core through `cmd/imux-core`
+    (D83); `make install-local` installs both; the self-update
     (Settings → Update, `imux update`) replaces both checksum-verified as one step, rolling
     back if either fails; a running engine server keeps its old binary until its sessions end,
     and the update message says so; a goreleaser snapshot contains both; an update e2e with a
