@@ -1050,8 +1050,9 @@ tmux on macOS and Linux, exactly as before.
 - [ ] **T90.4 Paths and agents' homes** · S · deps: T90.2
   - AC: `~/.imux` under `%USERPROFILE%`; each agent's config and session paths on Windows
     (Claude Code, Codex, Copilot, Antigravity, OpenCode), each verified from that agent's own
-    documentation and recorded in ARCHITECTURE.md; path separators in session names, git paths
-    and the sidebar; unit tests with synthetic Windows-style homes, reading no real files.
+    documentation and recorded in ARCHITECTURE.md (§7.8); path separators (and case) in
+    session names, git paths and the sidebar; unit tests with synthetic Windows-style homes,
+    reading no real files.
 - [ ] **T90.5 Agents on Windows** · M · deps: T90.3, T90.4
   - AC: detection, installation, starting, resuming and hooking each agent works: npm's `.cmd`
     and `.ps1` shims and `.exe` files are found; install commands for Windows; hook installation

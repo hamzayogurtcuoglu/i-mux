@@ -703,6 +703,27 @@ provider, no quota; synthetic prompts only).
   --major` moves an OpenCode 1 to 2. `imux doctor` fails below 2.0.0 (it
   re-probes a cached 1.x version first: the bin cache lags an in-place upgrade by up to a day).
 
+### 7.8 On Windows (D85)
+
+`~` is `%USERPROFILE%` (`sysx.HomeEnv`), for `~\.imux` and for every agent; the variables that
+move an agent's home do so on Windows too. Checked on 2026-11-19 against each agent's own
+documentation or source:
+
+| Agent | Home and sessions on Windows | Override | Source |
+|---|---|---|---|
+| Claude Code | `~\.claude`; `projects\<cwd encoded>\<id>.jsonl`, the cwd with every character but `[A-Za-z0-9]` a `-` (`C:\Users\me\proj` is `C--Users-me-proj`) | `CLAUDE_CONFIG_DIR` | code.claude.com docs: claude-directory, sessions, env-vars |
+| Codex | `~\.codex` (Rust's `dirs::home_dir`, the profile); `sessions\YYYY\MM\DD\rollout-*.jsonl` | `CODEX_HOME` | openai/codex `codex-rs/utils/home-dir/src/lib.rs`, `codex-rs/rollout` |
+| Copilot | `~\.copilot`; `session-state\<id>\events.jsonl`, `workspace.yaml` | `COPILOT_HOME` | docs.github.com: cli-config-dir-reference (its source is closed: `~` as the profile is documented, not seen in code) |
+| Antigravity | `~\.gemini\antigravity-cli`; `brain\<id>\…` | — | google-antigravity/antigravity-cli README and CHANGELOG (no source: the `brain` layout on Windows is assumed the same) |
+| OpenCode | `~\.local\share\opencode` (XDG's folders even on Windows); sessions in `opencode.db` | `XDG_DATA_HOME` | anomalyco/opencode `packages/util/src/global-roots.ts` and its Windows test |
+
+- Paths that come from git (`git status`, `ls-files`) use `/` on Windows too; a folder walked
+  without git is listed the same way (`search.Files`), and `filepath` joins both. Checks that a
+  relative path stays in its folder use the system's separator (`..\` on Windows), as do the
+  folder picker (`C:\…`, `~\…`) and the `~` shortening.
+- Windows' paths ignore case, so a project's session name is made from its folder lower-cased
+  there (`sysx.PathKey`): `C:\Users\me\Proj` and `c:\users\me\proj` are one session.
+
 ## 8. Handoff document
 
 ### 8.1 Storage
