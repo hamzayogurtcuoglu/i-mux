@@ -2,6 +2,7 @@ package doctor
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -230,5 +231,22 @@ func TestCompareVersions(t *testing.T) {
 		if got := compareVersions(c.a, c.b); got != c.want {
 			t.Errorf("compare(%s, %s) = %d, want %d", c.a, c.b, got, c.want)
 		}
+	}
+}
+
+// Doctor says when git is missing (§7.10), and nothing when it is there.
+func TestCheckGit(t *testing.T) {
+	old := lookGit
+	t.Cleanup(func() { lookGit = old })
+	lookGit = func() error { return nil }
+	r := &Report{}
+	checkGit(r)
+	if len(r.Results) != 0 {
+		t.Errorf("git present: %+v", r.Results)
+	}
+	lookGit = func() error { return errors.New("no git") }
+	checkGit(r)
+	if len(r.Results) != 1 || r.Results[0].Level != Warn {
+		t.Errorf("git missing: %+v", r.Results)
 	}
 }

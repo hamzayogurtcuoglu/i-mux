@@ -36,6 +36,9 @@ var microAssets = map[string]MicroAsset{
 	"linux/arm64":  {"micro-2.0.15-linux-arm64.tar.gz", 4680364, "5ca127857bf5500be3879f1a70b27556e737a49da04a1be5334de9e8e8781ad9"},
 	"darwin/amd64": {"micro-2.0.15-osx.tar.gz", 5195727, "d765b9bdd6478c4f5a3cbd5a93ebe7bab2b9cec30b5350016975cf1045855cee"},
 	"darwin/arm64": {"micro-2.0.15-macos-arm64.tar.gz", 4879518, "2ff285cc49f2ac3f7a6e9110e2dabd3c848b73eed56a8396d627c0af80a34624"},
+	// Windows: zips, with micro.exe (§7.10).
+	"windows/amd64": {"micro-2.0.15-win64.zip", 5148356, "90635c53c11aa2a0d997f5e3ed43528877740725500207640b29551cef18479b"},
+	"windows/arm64": {"micro-2.0.15-win-arm64.zip", 4676177, "c3d5acd5fc05afd65b7dcad3a18e0c08148e4885b4044be8d19e22a8efbf670b"},
 }
 
 // MicroFor is the archive for goos and goarch.
@@ -112,13 +115,17 @@ func InstallMicro(ctx context.Context, out io.Writer, bar bool) error {
 		return err
 	}
 	defer os.RemoveAll(tmp)
-	if err := fetch.Untar(part, tmp); err != nil {
+	unpack := fetch.Untar
+	if strings.HasSuffix(a.Name, ".zip") {
+		unpack = fetch.Unzip
+	}
+	if err := unpack(part, tmp); err != nil {
 		return err
 	}
 	src := filepath.Join(tmp, "micro-"+MicroVersion)
-	bin := filepath.Join(src, "micro")
+	bin := filepath.Join(src, "micro"+sysx.ExeSuffix)
 	if fi, err := os.Stat(bin); err != nil || !fi.Mode().IsRegular() {
-		return fmt.Errorf("%s has no micro-%s/micro", a.Name, MicroVersion)
+		return fmt.Errorf("%s has no micro-%s/%s", a.Name, MicroVersion, filepath.Base(bin))
 	}
 	vctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()

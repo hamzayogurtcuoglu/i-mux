@@ -1082,12 +1082,24 @@ tmux on macOS and Linux, exactly as before.
     whatever their case, with its folders and shell kept. Windows tests (`sysx`, `agent`,
     `agenthook`, `envfile`, which runs the apply files in Windows PowerShell and cmd.exe) pass on
     Windows 11 build 26200; Linux's behaviour is unchanged.
-- [ ] **T90.6 Windows integrations** · L · deps: T90.2
+- [x] **T90.6 Windows integrations** · L · deps: T90.2
   - AC: §7.10; opening URLs and files (`ShellExecute`); clipboard text and image paste (Win32
     clipboard); notifications (a Windows toast); the Nerd Font install as a per-user font with
     the Windows Terminal profile set to it, with the user's consent; the editor launch; git
     (Git for Windows required, `imux doctor` checks); unit tests with fakes and Windows CI e2e
     where the OS allows.
+  - Status: native Windows takes the paths i-mux already had under WSL, with Windows' own
+    folders and no `wslpath`: the clipboard through PowerShell, Explorer for pages, files and
+    Reveal, the default browser's (or Edge's) app window found under `%ProgramFiles%` and
+    `%LOCALAPPDATA%`, a window raised with `AppActivate`, the image paste through PowerShell with
+    copied files' paths as they are, and the Nerd Font installed and registered for the user with
+    Windows Terminal's and VS Code's settings read and set from `%LOCALAPPDATA%` and `%APPDATA%`.
+    New for Windows: the Recycle Bin (.NET's `SendToRecycleBin`), a toast through WinRT, micro's
+    `win64` and `win-arm64` zips (checksums as GitHub lists them; `fetch.Unzip`), VS Code's
+    `code.cmd`, and doctor's git check (Git for Windows there). The test hooks run in PowerShell.
+    Unit tests with fakes run everywhere; on Windows 11 build 26200 the toast's script builds its
+    toast (not shown), micro's real zip installs and runs, and the new tests pass. Windows CI's
+    e2e comes with T90.9.
 - [ ] **T90.7 Self-update on Windows** · M · deps: T90.2
   - AC: Settings → Update downloads and verifies both `imux.exe` and `imux-core.exe`; replacing
     a running executable renames the current one to `*.old`, writes the new one, deletes

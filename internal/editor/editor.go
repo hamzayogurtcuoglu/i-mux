@@ -94,10 +94,21 @@ func VSCode() string {
 	if p, err := LookPath("code"); err == nil {
 		return p
 	}
-	for _, p := range []string{
+	dirs := []string{
 		"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
 		filepath.Join(os.Getenv("HOME"), "Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"),
-	} {
+	}
+	// Windows: the user's install, then the machine's (§7.10).
+	for _, v := range []string{"LOCALAPPDATA", "ProgramFiles"} {
+		if d := os.Getenv(v); d != "" {
+			sub := "Microsoft VS Code"
+			if v == "LOCALAPPDATA" {
+				sub = filepath.Join("Programs", sub)
+			}
+			dirs = append(dirs, filepath.Join(d, sub, "bin", "code.cmd"))
+		}
+	}
+	for _, p := range dirs {
 		if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
 			return p
 		}

@@ -114,3 +114,20 @@ func TestTerminals(t *testing.T) {
 		t.Fatalf("terminals: %d %q", got, written)
 	}
 }
+
+// On Windows a toast shows through PowerShell (§7.10).
+func TestWindowsToast(t *testing.T) {
+	var ran []string
+	n := &Notifier{
+		GOOS: "windows", LookPath: func(string) (string, error) { return "", nil },
+		Run: func(_ context.Context, name string, args ...string) error {
+			ran = append(ran, name+" "+strings.Join(args, " "))
+			return nil
+		},
+	}
+	how, err := n.System(context.Background(), Message{Title: "T", Body: "B", Sound: true})
+	if err != nil || how != "toast" || len(ran) != 1 || !strings.HasPrefix(ran[0], "powershell.exe -NoProfile -NonInteractive -Command ") ||
+		!strings.Contains(ran[0], "<text>T</text><text>B</text>") || strings.Contains(ran[0], "silent") {
+		t.Errorf("%q %v %q", how, err, ran)
+	}
+}

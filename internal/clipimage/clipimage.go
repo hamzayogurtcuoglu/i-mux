@@ -110,6 +110,8 @@ func (r *Reader) Source() (string, string) {
 	switch {
 	case r.goos() == "darwin":
 		return "osascript", ""
+	case r.goos() == "windows":
+		return "powershell.exe (Windows clipboard)", ""
 	case r.WSL():
 		if _, ok := r.powershell(); ok {
 			return "powershell.exe (Windows clipboard)", ""
@@ -147,6 +149,8 @@ func (r *Reader) Read(ctx context.Context) ([]string, error) {
 	switch {
 	case r.goos() == "darwin":
 		return r.mac(ctx)
+	case r.goos() == "windows":
+		return r.windows(ctx, "powershell.exe")
 	case r.WSL():
 		if ps, ok := r.powershell(); ok {
 			return r.windows(ctx, ps)
@@ -356,6 +360,10 @@ func (r *Reader) windows(ctx context.Context, ps string) ([]string, error) {
 		case strings.HasPrefix(l, "FILE:"):
 			win := strings.TrimPrefix(l, "FILE:")
 			if !IsImage(win) {
+				continue
+			}
+			if r.goos() == "windows" {
+				files = append(files, win) // a Windows path as it is
 				continue
 			}
 			p, err := r.output(ctx, "wslpath", "-u", win)

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/jsonc"
@@ -37,6 +38,26 @@ var WSL = func() bool {
 	}
 	b, _ := os.ReadFile("/proc/sys/kernel/osrelease")
 	return strings.Contains(strings.ToLower(string(b)), "microsoft")
+}
+
+// Windows reports native Windows, where Windows Terminal's and VS Code's
+// settings are the user's own (§7.10); tests replace it.
+var Windows = func() bool { return runtime.GOOS == "windows" }
+
+// windowsAppData is the user's AppData\Local and AppData\Roaming folders, for
+// each Windows user i-mux can see: under WSL theirs, on Windows the user's.
+func windowsAppData() (locals, roamings []string) {
+	if Windows() {
+		return []string{os.Getenv("LOCALAPPDATA")}, []string{os.Getenv("APPDATA")}
+	}
+	if !WSL() {
+		return nil, nil
+	}
+	for _, home := range WindowsHomes() {
+		locals = append(locals, filepath.Join(home, "AppData", "Local"))
+		roamings = append(roamings, filepath.Join(home, "AppData", "Roaming"))
+	}
+	return locals, roamings
 }
 
 // winHomeRe finds a Windows user folder in a WSL path entry.
@@ -93,9 +114,10 @@ func NerdFont(program string) bool {
 		return anyNerd(vscodeFonts())
 	case p == "windowsterminal":
 		return anyNerd(windowsTerminalFonts())
-	case p == "" && WSL():
+	case p == "" && (WSL() || Windows()):
 		// Started from the Start menu, Windows hands WSL to its default
-		// terminal and tells it nothing (no TERM_PROGRAM, no WT_SESSION).
+		// terminal and tells it nothing (no TERM_PROGRAM, no WT_SESSION);
+		// on Windows itself the terminal is Windows Terminal or VS Code too.
 		return anyNerd(windowsTerminalFonts()) || anyNerd(vscodeFonts())
 	}
 	return false
@@ -110,16 +132,14 @@ func anyNerd(names []string) bool {
 	return false
 }
 
-// windowsTerminalFonts are the fonts of the Windows Terminals WSL sees ("" for
-// one that keeps its default, Cascadia Mono).
+// windowsTerminalFonts are the fonts of the Windows Terminals WSL or Windows
+// sees ("" for one that keeps its default, Cascadia Mono).
 func windowsTerminalFonts() []string {
-	if !WSL() {
-		return nil
-	}
+	locals, _ := windowsAppData()
 	var out []string
-	for _, home := range WindowsHomes() {
+	for _, local := range locals {
 		for _, rel := range WTSettings {
-			b, err := os.ReadFile(filepath.Join(home, "AppData", "Local", filepath.FromSlash(rel)))
+			b, err := os.ReadFile(filepath.Join(local, filepath.FromSlash(rel)))
 			if err != nil {
 				continue
 			}
@@ -173,10 +193,9 @@ func vscodeFonts() []string {
 		filepath.Join(Home(), "Library", "Application Support", "Code", "User"),
 		filepath.Join(Home(), ".config", "Code", "User"),
 	}
-	if WSL() {
-		for _, home := range WindowsHomes() {
-			dirs = append(dirs, filepath.Join(home, "AppData", "Roaming", "Code", "User"))
-		}
+	_, roamings := windowsAppData()
+	for _, r := range roamings {
+		dirs = append(dirs, filepath.Join(r, "Code", "User"))
 	}
 	var out []string
 	for _, dir := range dirs {

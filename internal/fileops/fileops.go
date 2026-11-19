@@ -290,6 +290,26 @@ func (s *System) wsl() bool {
 	return s.goos() == "linux" && r.WSL()
 }
 
+// windows reports native Windows, which does what i-mux does under WSL, with Windows' own
+// paths (§7.10).
+func (s *System) windows() bool { return s.goos() == "windows" }
+
+// hook is a test hook's command line (IMUX_COPY_COMMAND, IMUX_BROWSE_COMMAND) as an argv:
+// sh -c with args after it, or on Windows Windows PowerShell with them appended, quoted
+// (§7.10).
+func (s *System) hook(c string, args ...string) []string {
+	if s.windows() {
+		for _, a := range args {
+			c += " '" + strings.ReplaceAll(a, "'", "''") + "'"
+		}
+		return []string{"powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", c}
+	}
+	if len(args) == 0 {
+		return []string{"/bin/sh", "-c", c}
+	}
+	return append([]string{"/bin/sh", "-c", c, "sh"}, args...)
+}
+
 // desktop reports a Linux graphical session.
 func (s *System) desktop() bool {
 	return s.env("WAYLAND_DISPLAY") != "" || s.env("DISPLAY") != ""
@@ -301,12 +321,13 @@ func (s *System) CopyText(ctx context.Context, text string) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	if c := s.env("IMUX_COPY_COMMAND"); c != "" {
-		return s.run(ctx, text, "/bin/sh", "-c", c)
+		argv := s.hook(c)
+		return s.run(ctx, text, argv[0], argv[1:]...)
 	}
 	switch {
 	case s.goos() == "darwin":
 		return s.run(ctx, text, "pbcopy")
-	case s.wsl() && s.look("powershell.exe"):
+	case (s.wsl() || s.windows()) && s.look("powershell.exe"):
 		// clip.exe reads the console code page; Set-Clipboard keeps any
 		// character. The text goes as UTF-8 bytes in base64.
 		ps := "Set-Clipboard -Value ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" +
@@ -328,7 +349,7 @@ func (s *System) Reveal() string {
 	switch {
 	case s.goos() == "darwin":
 		return "file.reveal_finder"
-	case s.wsl():
+	case s.wsl() || s.windows():
 		return "file.reveal_explorer"
 	case s.goos() == "linux" && s.desktop():
 		return "file.reveal_folder"
@@ -343,6 +364,11 @@ func (s *System) RevealFile(ctx context.Context, path string) error {
 	switch {
 	case s.goos() == "darwin":
 		return s.run(ctx, "", "open", "-R", path)
+	case s.windows():
+		// explorer.exe exits 1 even when it worked; "/select," then the path, which Go quotes
+		// when it has a space, is the form it reads.
+		_ = s.run(ctx, "", "explorer.exe", "/select,", path)
+		return nil
 	case s.wsl():
 		w, err := s.output(ctx, "wslpath", "-w", path)
 		if err != nil {
@@ -412,14 +438,22 @@ func (s *System) winDefault(ctx context.Context) string {
 	return ""
 }
 
-// winExe finds a Chromium browser's program on Windows (a WSL path).
+// winExe finds a Chromium browser's program on Windows (a WSL path under WSL).
 func (s *System) winExe(c chromium) string {
 	var dirs []string
-	for _, pf := range []string{"Program Files", "Program Files (x86)"} {
-		dirs = append(dirs, "/mnt/c/"+pf)
-	}
-	for _, h := range s.winHomes() {
-		dirs = append(dirs, filepath.Join(h, "AppData", "Local"))
+	if s.windows() {
+		for _, v := range []string{"ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"} {
+			if d := s.env(v); d != "" {
+				dirs = append(dirs, d)
+			}
+		}
+	} else {
+		for _, pf := range []string{"Program Files", "Program Files (x86)"} {
+			dirs = append(dirs, "/mnt/c/"+pf)
+		}
+		for _, h := range s.winHomes() {
+			dirs = append(dirs, filepath.Join(h, "AppData", "Local"))
+		}
 	}
 	for _, d := range dirs {
 		if p := filepath.Join(d, filepath.FromSlash(c.win)); s.exists(p) {
@@ -446,10 +480,11 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	if c := s.env("IMUX_BROWSE_COMMAND"); c != "" {
-		return "", s.run(ctx, "", "/bin/sh", "-c", c, "sh", u)
+		argv := s.hook(c, u)
+		return "", s.run(ctx, "", argv[0], argv[1:]...)
 	}
 	switch {
-	case s.wsl():
+	case s.wsl() || s.windows():
 		progID := s.winDefault(ctx)
 		var def *chromium // the default browser, when Chromium-based
 		for i, c := range chromiums {
@@ -504,7 +539,7 @@ func (s *System) OpenPage(ctx context.Context, u string, window bool) (string, e
 // Windows (from WSL), in the background, as well as Windows lets it.
 func (s *System) Raise(title string) {
 	title = strings.TrimSpace(title)
-	if title == "" || !s.wsl() {
+	if title == "" || !s.wsl() && !s.windows() {
 		return
 	}
 	if r := []rune(title); len(r) > 120 {
@@ -542,6 +577,14 @@ func (s *System) Trash(ctx context.Context, path string) error {
 			return err
 		}
 		return os.Rename(path, filepath.Join(d, FreeName(d, filepath.Base(path), fi.IsDir())))
+	}
+	if s.windows() {
+		// The Recycle Bin, through .NET, so Explorer's Restore works (§7.10).
+		p := "'" + strings.ReplaceAll(path, "'", "''") + "'"
+		ps := "Add-Type -AssemblyName Microsoft.VisualBasic; $p = " + p + "; " +
+			"if (Test-Path -LiteralPath $p -PathType Container) { [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($p, 'OnlyErrorDialogs', 'SendToRecycleBin') } " +
+			"else { [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($p, 'OnlyErrorDialogs', 'SendToRecycleBin') }"
+		return s.run(ctx, "", "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps)
 	}
 	if s.goos() == "darwin" {
 		// NSFileManager's trash: the Finder's Put Back works.

@@ -103,6 +103,7 @@ func Run(ctx context.Context, o Options) *Report {
 	checkTmux(ctx, r, o)
 	checkHome(r)
 	checkSelf(r, o.Self)
+	checkGit(r)
 	if !o.CI {
 		checkAgents(ctx, r, o)
 	}
@@ -400,6 +401,22 @@ func keyHints(r *Report, cfg *config.Config) {
 	}
 	if cfg.Tmux.MenuKeyRoot != "" {
 		r.add(Info, "doctor.key_vscode", cfg.Tmux.MenuKeyRoot)
+	}
+}
+
+// lookGit finds git; tests replace it.
+var lookGit = func() error { _, err := exec.LookPath("git"); return err }
+
+// checkGit says when git is missing: the source control views and worktrees use it. On Windows
+// it is Git for Windows, which i-mux needs (§7.10).
+func checkGit(r *Report) {
+	if lookGit() == nil {
+		return
+	}
+	if sysx.POSIXShell {
+		r.add(Warn, "doctor.git_missing")
+	} else {
+		r.add(Warn, "doctor.git_missing_windows")
 	}
 }
 

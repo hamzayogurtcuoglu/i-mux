@@ -336,3 +336,51 @@ func TestOsaError(t *testing.T) {
 		t.Fatalf("%q", m)
 	}
 }
+
+// Native Windows does what WSL does, with Windows' own paths (§7.10): the clipboard through
+// PowerShell, Explorer for Reveal and pages, the Recycle Bin, and the test hooks in PowerShell.
+func TestWindowsSystem(t *testing.T) {
+	var ran []string
+	exists := map[string]bool{}
+	env := map[string]string{"ProgramFiles": `C:\Program Files`, "LOCALAPPDATA": `C:\Users\a\AppData\Local`}
+	s := &System{
+		GOOS:     "windows",
+		Getenv:   func(k string) string { return env[k] },
+		LookPath: func(n string) (string, error) { return n, nil },
+		Run: func(_ context.Context, stdin, name string, args ...string) error {
+			ran = append(ran, name+" "+strings.Join(args, " ")+" <"+stdin)
+			return nil
+		},
+		Output: func(context.Context, string, ...string) ([]byte, error) { return nil, errors.New("no") },
+		Exists: func(p string) bool { return exists[p] },
+	}
+	ctx := context.Background()
+	if err := s.CopyText(ctx, "ç"); err != nil || len(ran) != 1 || !strings.HasPrefix(ran[0], "powershell.exe -NoProfile -NonInteractive -Command Set-Clipboard") {
+		t.Errorf("copy: %q %v", ran, err)
+	}
+	if s.Reveal() != "file.reveal_explorer" {
+		t.Errorf("reveal key %q", s.Reveal())
+	}
+	ran = nil
+	if err := s.RevealFile(ctx, `C:\a b\f.txt`); err != nil || len(ran) != 1 || ran[0] != `explorer.exe /select, C:\a b\f.txt <` {
+		t.Errorf("reveal: %q %v", ran, err)
+	}
+	ran = nil
+	if err := s.Trash(ctx, `C:\a\it's`); err != nil || len(ran) != 1 || !strings.Contains(ran[0], "SendToRecycleBin") || !strings.Contains(ran[0], `$p = 'C:\a\it''s'`) {
+		t.Errorf("trash: %q %v", ran, err)
+	}
+	edge := filepath.Join(`C:\Program Files`, filepath.FromSlash(chromiums[1].win))
+	exists[edge] = true
+	ran = nil
+	if name, err := s.OpenPage(ctx, "http://x", true); err != nil || name != chromiums[1].name || len(ran) != 1 || !strings.HasPrefix(ran[0], edge+" --app=http://x") {
+		t.Errorf("page: %q %q %v", name, ran, err)
+	}
+	env["IMUX_COPY_COMMAND"], env["IMUX_BROWSE_COMMAND"] = "$input | Set-Content f", "Set-Content u"
+	ran = nil
+	_ = s.CopyText(ctx, "t")
+	_, _ = s.OpenPage(ctx, "http://y'z", false)
+	if len(ran) != 2 || ran[0] != "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $input | Set-Content f <t" ||
+		ran[1] != "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command Set-Content u 'http://y''z' <" {
+		t.Errorf("hooks: %q", ran)
+	}
+}

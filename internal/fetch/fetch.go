@@ -4,6 +4,7 @@ package fetch
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -161,6 +162,45 @@ func Untar(file, dir string) error {
 			return fmt.Errorf("unexpected entry in %s: %q", filepath.Base(file), h.Name)
 		}
 	}
+}
+
+// Unzip unpacks the .zip file into dir: folders and regular files. A path that would leave dir,
+// or another kind of entry, is an error (as Untar's).
+func Unzip(file, dir string) error {
+	zr, err := zip.OpenReader(file)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = zr.Close() }()
+	for _, f := range zr.File {
+		name := filepath.FromSlash(strings.TrimSuffix(f.Name, "/"))
+		if name == "." || name == "" {
+			continue
+		}
+		if !filepath.IsLocal(name) {
+			return fmt.Errorf("unsafe path in %s: %q", filepath.Base(file), f.Name)
+		}
+		dst := filepath.Join(dir, name)
+		switch mode := f.Mode(); {
+		case mode.IsDir():
+			if err := os.MkdirAll(dst, 0o755); err != nil {
+				return err
+			}
+		case mode.IsRegular():
+			r, err := f.Open()
+			if err != nil {
+				return err
+			}
+			err = write(r, dst, mode.Perm()|0o600)
+			_ = r.Close()
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unexpected entry in %s: %q", filepath.Base(file), f.Name)
+		}
+	}
+	return nil
 }
 
 func write(r io.Reader, dst string, perm os.FileMode) error {

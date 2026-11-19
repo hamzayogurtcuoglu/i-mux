@@ -121,3 +121,29 @@ func TestWindowsHomes(t *testing.T) {
 		t.Fatalf("IMUX_WINDOWS_HOME: %q", got)
 	}
 }
+
+// On native Windows Windows Terminal's and VS Code's settings are the user's own, in
+// %LOCALAPPDATA% and %APPDATA% (§7.10).
+func TestNerdFontWindows(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("LOCALAPPDATA", filepath.Join(root, "Local"))
+	t.Setenv("APPDATA", filepath.Join(root, "Roaming"))
+	oldHome, oldWSL, oldWin := Home, WSL, Windows
+	defer func() { Home, WSL, Windows = oldHome, oldWSL, oldWin }()
+	Home = func() string { return t.TempDir() }
+	WSL = func() bool { return false }
+	Windows = func() bool { return true }
+	p := filepath.Join(root, "Local", "Packages", "Microsoft.WindowsTerminal_8wekyb3d8bbwe", "LocalState", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if NerdFont("") {
+		t.Fatal("no Windows Terminal settings")
+	}
+	if err := os.WriteFile(p, []byte(`{"profiles": {"defaults": {"font": {"face": "JetBrainsMono NF"}}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !NerdFont("") || !NerdFont("WindowsTerminal") {
+		t.Fatal("Windows Terminal with a Nerd Font")
+	}
+}

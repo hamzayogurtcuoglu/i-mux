@@ -78,6 +78,11 @@ func (n *Notifier) System(ctx context.Context, m Message) (string, error) {
 		return "command", n.run(ctx, n.Command[0], args...)
 	}
 	switch n.goos() {
+	case "windows":
+		if !n.lookPath("powershell.exe") {
+			return "", ErrNone
+		}
+		return "toast", n.run(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ToastScript(m))
 	case "darwin":
 		if !n.lookPath("osascript") {
 			return "", ErrNone
@@ -110,6 +115,33 @@ func (n *Notifier) System(ctx context.Context, m Message) (string, error) {
 		return "", ErrNone
 	}
 }
+
+// toastApp is the app id the toast shows under: Windows PowerShell's own, which every Windows
+// has registered (§7.10).
+const toastApp = `{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe`
+
+// ToastScript is the PowerShell that shows m as a Windows toast, through WinRT.
+func ToastScript(m Message) string {
+	audio := `<audio silent="true"/>`
+	if m.Sound {
+		audio = ""
+	}
+	xml := `<toast><visual><binding template="ToastGeneric"><text>` + xmlText(m.Title) + `</text><text>` +
+		xmlText(m.Body) + `</text></binding></visual>` + audio + `</toast>`
+	return "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; " +
+		"[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null; " +
+		"$x = New-Object Windows.Data.Xml.Dom.XmlDocument; $x.LoadXml(" + psString(xml) + "); " +
+		"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier(" + psString(toastApp) + ").Show(" +
+		"(New-Object Windows.UI.Notifications.ToastNotification $x))"
+}
+
+// xmlText escapes s for an XML element's text.
+func xmlText(s string) string {
+	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;").Replace(clean(s))
+}
+
+// psString quotes s for PowerShell: in single quotes, a quote doubled.
+func psString(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 
 // appleString quotes s for AppleScript.
 func appleString(s string) string {

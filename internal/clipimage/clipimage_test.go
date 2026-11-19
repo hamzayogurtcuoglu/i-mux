@@ -168,3 +168,30 @@ func TestMacAnswer(t *testing.T) {
 		t.Fatal("none")
 	}
 }
+
+// Native Windows reads the clipboard as WSL does, through PowerShell, and keeps copied files'
+// paths as they are (§7.10).
+func TestWindows(t *testing.T) {
+	ctx := context.Background()
+	answer := "PNG:" + base64.StdEncoding.EncodeToString(png) + "\r\n"
+	r := reader(t, "windows", nil, nil, func(name string, args []string) ([]byte, error) {
+		if name == "powershell.exe" && strings.Contains(strings.Join(args, " "), "-STA") {
+			return []byte(answer), nil
+		}
+		return nil, errors.New("unexpected " + name)
+	})
+	if src, _ := r.Source(); !strings.HasPrefix(src, "powershell.exe") {
+		t.Fatalf("source %q", src)
+	}
+	got, err := r.Read(ctx)
+	if err != nil || len(got) != 1 {
+		t.Fatalf("image: %v %v", got, err)
+	}
+	if b, _ := os.ReadFile(got[0]); string(b) != string(png) {
+		t.Fatal("content")
+	}
+	answer = "FILE:C:\\Users\\me\\Pictures\\shot.png\r\n"
+	if got, err := r.Read(ctx); err != nil || len(got) != 1 || got[0] != `C:\Users\me\Pictures\shot.png` {
+		t.Fatalf("files: %v %v", got, err)
+	}
+}

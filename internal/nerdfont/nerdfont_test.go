@@ -195,3 +195,32 @@ func TestUse(t *testing.T) {
 		t.Fatal("an old Windows Terminal format (profiles as a list) was changed")
 	}
 }
+
+// TestInstallWindows (T90.6): on native Windows the font goes to the user's fonts and is
+// registered as under WSL, the folders from the environment, with no cmd.exe or wslpath.
+func TestInstallWindows(t *testing.T) {
+	f := fake(t, false)
+	GOOS = "windows"
+	local, roaming, sysroot := filepath.Join(f.root, "Local"), filepath.Join(f.root, "Roaming"), filepath.Join(f.root, "WINDOWS")
+	t.Setenv("LOCALAPPDATA", local)
+	t.Setenv("APPDATA", roaming)
+	t.Setenv("SystemRoot", sysroot)
+	writeFile(t, filepath.Join(local, "Packages", "Microsoft.WindowsTerminal_8wekyb3d8bbwe", "LocalState", "settings.json"), `{"profiles": {"defaults": {}}}`)
+	s, err := Detect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Kind != Windows || s.FontDir != filepath.Join(local, "Microsoft", "Windows", "Fonts") || s.WinDir != local+`\Microsoft\Windows\Fonts` ||
+		s.SystemDir != filepath.Join(sysroot, "Fonts") || len(s.Terminals) != 1 || s.Terminals[0].Name != "Windows Terminal" {
+		t.Fatalf("%+v", s)
+	}
+	if err := s.Install(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if reg := f.ran("reg.exe"); len(reg) != 4 || reg[0][8] != local+`\Microsoft\Windows\Fonts\JetBrainsMonoNerdFont-Regular.ttf` {
+		t.Fatalf("reg.exe: %q", reg)
+	}
+	if len(f.ran("cmd.exe")) != 0 || len(f.ran("wslpath")) != 0 {
+		t.Fatal("cmd.exe or wslpath on native Windows")
+	}
+}

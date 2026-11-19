@@ -64,9 +64,10 @@ func URL() string {
 
 // Kinds of system.
 const (
-	MacOS = "macos"
-	Linux = "linux"
-	WSL   = "wsl" // Linux in WSL: the terminal runs on Windows
+	MacOS   = "macos"
+	Linux   = "linux"
+	WSL     = "wsl"     // Linux in WSL: the terminal runs on Windows
+	Windows = "windows" // native Windows (§7.10): as WSL, with Windows' own paths
 )
 
 // Terminal is a terminal whose settings file i-mux edits.
@@ -81,7 +82,7 @@ type Terminal struct {
 type System struct {
 	Kind      string
 	FontDir   string     // where the font goes (under WSL the Windows user's fonts, under /mnt)
-	WinDir    string     // WSL: FontDir as Windows names it (the registry's)
+	WinDir    string     // WSL and Windows: FontDir as Windows names it (the registry's)
 	SystemDir string     // fonts installed for every user (only looked at)
 	Family    string     // the font's name for the terminals
 	Terminals []Terminal // the ones on this system
@@ -109,7 +110,7 @@ var winSystem32 = []string{"/mnt/c/Windows/System32", "/mnt/c/Windows/System32/W
 
 func run(ctx context.Context, name string, args ...string) ([]byte, error) {
 	var dir string
-	if strings.HasSuffix(name, ".exe") {
+	if strings.HasSuffix(name, ".exe") && IsWSL() {
 		if _, err := exec.LookPath(name); err != nil {
 			for _, d := range winSystem32 {
 				if p := filepath.Join(d, name); isFile(p) {
@@ -166,13 +167,28 @@ func Detect(ctx context.Context) (*System, error) {
 		s := &System{Kind: MacOS, FontDir: filepath.Join(home, "Library", "Fonts"), SystemDir: SystemFonts[MacOS], Family: Family}
 		s.vscode(filepath.Join(home, "Library", "Application Support"))
 		return s, nil
-	case IsWSL():
-		local, roaming, sysroot, err := windowsDirs(ctx)
-		if err != nil {
-			return nil, err
+	case GOOS == "windows" || IsWSL():
+		kind := WSL
+		var local, roaming, sysroot winPath
+		if GOOS == "windows" {
+			// Windows' own folders, named the same both ways.
+			kind = Windows
+			for _, d := range []struct {
+				p *winPath
+				v string
+			}{{&local, "LOCALAPPDATA"}, {&roaming, "APPDATA"}, {&sysroot, "SystemRoot"}} {
+				if *d.p = (winPath{win: os.Getenv(d.v), unix: os.Getenv(d.v)}); d.p.win == "" {
+					return nil, fmt.Errorf("%%%s%% is not set", d.v)
+				}
+			}
+		} else {
+			var err error
+			if local, roaming, sysroot, err = windowsDirs(ctx); err != nil {
+				return nil, err
+			}
 		}
 		s := &System{
-			Kind: WSL, FontDir: filepath.Join(local.unix, "Microsoft", "Windows", "Fonts"),
+			Kind: kind, FontDir: filepath.Join(local.unix, "Microsoft", "Windows", "Fonts"),
 			WinDir: local.win + `\Microsoft\Windows\Fonts`, SystemDir: filepath.Join(sysroot.unix, "Fonts"), Family: FamilyWindows,
 		}
 		for i, rel := range termfont.WTSettings {
@@ -293,7 +309,7 @@ func (s *System) Install(ctx context.Context) error {
 		}
 	}
 	switch s.Kind {
-	case WSL:
+	case WSL, Windows:
 		return s.register(ctx)
 	case Linux:
 		_, _ = Run(ctx, "fc-cache", "-f", s.FontDir) // without fontconfig there is nobody to tell

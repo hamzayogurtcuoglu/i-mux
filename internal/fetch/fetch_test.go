@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -111,5 +112,44 @@ func TestDownloadAndCheck(t *testing.T) {
 	}
 	if err := Download(context.Background(), srv.URL+"/gone", file, 0, nil, false); err == nil || !strings.Contains(err.Error(), "404") {
 		t.Errorf("a missing file: %v", err)
+	}
+}
+
+// Unzip unpacks folders and files and refuses paths that leave the folder, as Untar does
+// (micro's Windows builds are zips, §7.10).
+func TestUnzip(t *testing.T) {
+	mk := func(names ...string) string {
+		p := filepath.Join(t.TempDir(), "a.zip")
+		f, err := os.Create(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		zw := zip.NewWriter(f)
+		for _, n := range names {
+			w, err := zw.Create(n)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.HasSuffix(n, "/") {
+				_, _ = w.Write([]byte("x"))
+			}
+		}
+		if err := zw.Close(); err != nil {
+			t.Fatal(err)
+		}
+		_ = f.Close()
+		return p
+	}
+	dir := t.TempDir()
+	if err := Unzip(mk("micro-2.0.15/", "micro-2.0.15/micro.exe"), dir); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "micro-2.0.15", "micro.exe")); err != nil || string(b) != "x" {
+		t.Fatalf("the program: %q %v", b, err)
+	}
+	for _, bad := range []string{"../evil", "/etc/evil"} {
+		if err := Unzip(mk(bad), t.TempDir()); err == nil {
+			t.Errorf("%q unpacked", bad)
+		}
 	}
 }
