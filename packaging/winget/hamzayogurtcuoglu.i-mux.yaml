@@ -1,0 +1,48 @@
+# Created for winget-pkgs (D85, T90.8, ARCHITECTURE.md §7.11).
+# scripts/build-installer.sh writes bin/hamzayogurtcuoglu.i-mux.yaml with the
+# release's version and the SHA-256 sums of the two NSIS installers.
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.6.0.schema.json
+
+PackageIdentifier: hamzayogurtcuoglu.i-mux
+PackageVersion: 0.65.0
+PackageLocale: en-US
+Publisher: hamzayogurtcuoglu
+PublisherUrl: https://github.com/hamzayogurtcuoglu
+PublisherSupportUrl: https://github.com/hamzayogurtcuoglu/i-mux/issues
+Author: hamzayogurtcuoglu
+PackageName: i-mux
+PackageUrl: https://github.com/hamzayogurtcuoglu/i-mux
+License: MIT
+LicenseUrl: https://github.com/hamzayogurtcuoglu/i-mux/blob/main/LICENSE
+ShortDescription: Continue an AI coding conversation in another agent CLI
+Description: >-
+  Terminal workspace that moves an AI coding conversation between Claude Code,
+  Antigravity CLI, GitHub Copilot CLI, OpenAI Codex CLI and OpenCode with one
+  keystroke, running on i-mux-core on Windows.
+Moniker: imux
+Tags:
+  - ai
+  - cli
+  - claude
+  - codex
+  - copilot
+  - multiplexer
+  - terminal
+Commands:
+  - imux
+  - imux-core
+InstallerType: nullsoft
+Scope: user
+InstallModes:
+  - interactive
+  - silent
+UpgradeBehavior: install
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/hamzayogurtcuoglu/i-mux/releases/download/v0.65.0/imux_0.65.0_windows_amd64_setup.exe
+    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000001
+  - Architecture: arm64
+    InstallerUrl: https://github.com/hamzayogurtcuoglu/i-mux/releases/download/v0.65.0/imux_0.65.0_windows_arm64_setup.exe
+    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000002
+ManifestType: singleton
+ManifestVersion: 1.6.0

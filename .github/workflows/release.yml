@@ -31,6 +31,10 @@ jobs:
           done
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH" # go install's folder is not on the PATH
           "$RUNNER_TEMP/bin/goreleaser" --version
+      - name: Cross-build Windows NSIS installers
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q nsis
+          ./scripts/build-installer.sh --version "${GITHUB_REF_NAME#v}" --arch all
       - name: GoReleaser
         run: goreleaser release --clean
         env:

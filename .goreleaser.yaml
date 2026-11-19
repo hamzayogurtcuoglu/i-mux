@@ -67,10 +67,14 @@ release:
     name: i-mux
   draft: false
   prerelease: auto
-  # The installer is attached to every release too, so this also works:
+  # The installers are attached to every release too, so these also work:
   #   curl -fsSL https://github.com/hamzayogurtcuoglu/i-mux/releases/latest/download/install.sh | sh
+  #   irm https://github.com/hamzayogurtcuoglu/i-mux/releases/latest/download/install.ps1 | iex
   extra_files:
     - glob: ./install.sh
+    - glob: ./install.ps1
+    - glob: ./bin/*_windows_*_setup.exe
+    - glob: ./bin/hamzayogurtcuoglu.i-mux.yaml
 
 # Homebrew formula in hamzayogurtcuoglu/homebrew-tap:
 #   brew install hamzayogurtcuoglu/tap/imux

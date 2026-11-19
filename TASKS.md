@@ -1120,7 +1120,7 @@ tmux on macOS and Linux, exactly as before.
     and `TestSelfUpdateEndToEnd` (with a live running `imux.exe` and `imux-core.exe`, cleanup on
     the next start, the running-engine message, and rollback) pass on Linux and on Windows 11
     build 26200.
-- [ ] **T90.8 Installer** · L · deps: T90.7
+- [x] **T90.8 Installer** · L · deps: T90.7
   - AC: §7.11, D85: a per-user NSIS installer needing no admin, cross-built on Linux CI
     (`scripts/installer.nsi`, `scripts/build-installer.sh`): installs `imux.exe` and
     `imux-core.exe` to `%LOCALAPPDATA%\Programs\i-mux`, adds it to the user's `PATH`, adds a Start
@@ -1128,6 +1128,20 @@ tmux on macOS and Linux, exactly as before.
     in Apps & features; `install.ps1` one-liner; a winget manifest
     (`packaging/winget/hamzayogurtcuoglu.i-mux.yaml`); CI builds it and a Windows job installs it
     silently, runs `imux doctor` and uninstalls cleanly.
+  - Status: `scripts/installer.nsi` and `scripts/build-installer.sh` cross-build the per-user NSIS
+    installers (`imux_<version>_windows_{amd64,arm64}_setup.exe`) on Linux with `makensis` and
+    render `packaging/winget/hamzayogurtcuoglu.i-mux.yaml` with the release's version and SHA-256
+    sums; `install.ps1` installs `imux-core.exe` and `imux.exe` from the release zip (or builds
+    both with `-FromSource`), adds `%LOCALAPPDATA%\Programs\i-mux` to the user's `PATH` and offers
+    the Nerd Font; `imux doctor` skips the Unix terminfo check on Windows (where i-mux-core embeds
+    its own terminfo, E15); CHANGELOG explains the SmartScreen prompt until a code-signing
+    certificate is configured. Checked on Windows 11 build 26200: the cross-built NSIS installer
+    installs silently (`/S`), puts both binaries in `%LOCALAPPDATA%\Programs\i-mux`, adds the
+    folder to `HKCU\Environment\Path`, creates the Start menu shortcut (`i-mux.lnk` → `wt.exe`),
+    registers the Apps & features uninstaller, `imux doctor --ci` passes, and `uninstall.exe /S`
+    removes the files, folder, shortcut, `PATH` entry and registry key cleanly; `TestInstallPS1Windows`
+    passes on Windows 11 as well. CI's `release-snapshot` and `windows-installer` jobs run the
+    same check.
 - [ ] **T90.9 Windows CI for i-mux** · S · deps: T90.5, T90.6
   - AC: a `windows` job runs the unit tests and the e2e suite on i-mux-core, with tests that
     cannot apply skipped and each skip listed; the fake agents ported to Go (with T90.5's

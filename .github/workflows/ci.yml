@@ -154,5 +154,61 @@ jobs:
             sleep 20
           done
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Cross-build Windows NSIS installers
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q nsis
+          ./scripts/build-installer.sh --version 0.0.0-ci --arch all
       - name: GoReleaser snapshot
         run: goreleaser release --snapshot --clean
+      - name: Upload Windows NSIS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: bin/imux_0.0.0-ci_windows_amd64_setup.exe
+
+  windows-installer:
+    needs: release-snapshot
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: .
+      - name: Install silently, run imux doctor and uninstall cleanly
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = (Resolve-Path .\imux_0.0.0-ci_windows_amd64_setup.exe).Path
+          $instDir = Join-Path $env:LOCALAPPDATA 'Programs\i-mux'
+          $lnk = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\i-mux.lnk'
+          $uninstKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\i-mux'
+
+          $p = Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "setup /S exited with $($p.ExitCode)" }
+          foreach ($f in @('imux.exe', 'imux-core.exe', 'LICENSE', 'README.md', 'uninstall.exe')) {
+            $fp = Join-Path $instDir $f
+            if (-not (Test-Path -LiteralPath $fp -PathType Leaf)) { throw "missing $fp" }
+          }
+          if (-not (Test-Path -LiteralPath $lnk -PathType Leaf)) { throw "missing $lnk" }
+          if (-not (Test-Path -Path $uninstKey)) { throw "missing $uninstKey" }
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if (-not ($userPath -split ';' | Where-Object { $_.TrimEnd('\') -ieq $instDir.TrimEnd('\') })) {
+            throw "$instDir not on user PATH ($userPath)"
+          }
+
+          & (Join-Path $instDir 'imux.exe') doctor --ci
+          if ($LASTEXITCODE -ne 0) { throw "imux doctor --ci failed ($LASTEXITCODE)" }
+
+          $up = Start-Process -FilePath (Join-Path $instDir 'uninstall.exe') -ArgumentList '/S' -Wait -PassThru
+          if ($up.ExitCode -ne 0) { throw "uninstall /S exited with $($up.ExitCode)" }
+          $deadline = (Get-Date).AddSeconds(15)
+          while ((Test-Path -LiteralPath $instDir) -and (Get-Date) -lt $deadline) {
+            Start-Sleep -Milliseconds 100
+          }
+          if (Test-Path -LiteralPath $instDir) { throw "$instDir still exists after uninstall" }
+          if (Test-Path -LiteralPath $lnk) { throw "$lnk still exists after uninstall" }
+          if (Test-Path -Path $uninstKey) { throw "$uninstKey still exists after uninstall" }
+          $userPathAfter = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if ($userPathAfter -split ';' | Where-Object { $_.TrimEnd('\') -ieq $instDir.TrimEnd('\') }) {
+            throw "$instDir still on user PATH after uninstall"
+          }

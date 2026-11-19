@@ -6,6 +6,19 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Native Windows on i-mux-core.** i-mux runs natively on Windows 10 and 11 (x64 and ARM64) on
+  the i-mux-core engine, without WSL. Install with the per-user installer
+  (`imux_<version>_windows_amd64_setup.exe`, which installs `imux.exe` and `imux-core.exe` into
+  `%LOCALAPPDATA%\Programs\i-mux`, adds it to your user `PATH`, adds a Start menu entry that opens
+  i-mux in Windows Terminal, and registers an uninstaller in Apps & features), the PowerShell
+  one-liner (`irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 | iex`)
+  or WinGet (`packaging/winget/hamzayogurtcuoglu.i-mux.yaml`); update in place from Settings →
+  Update or `imux update`. Until the Windows installer is signed with a code-signing certificate,
+  Windows SmartScreen shows an "Unrecognized app" prompt on first run: click **More info → Run
+  anyway** (or verify the file's SHA-256 against the release's `checksums.txt`).
+
 ### Changed
 
 - **Env's + asks in a popup.** A new environment's name is typed in a New environment popup in
