@@ -210,6 +210,23 @@ yazar):
 on_limit = "ask"   # ask (varsayılan) | auto: `order` içindeki sıradaki agent'a geç | off: yalnızca göster
 ```
 
+## i-mux-core motoru (beta)
+
+i-mux tmux üzerinde çalışır. Aynı sürümle gelen **i-mux-core** üzerinde de çalışabilir: i-mux için
+yapılmış, tmux ile uyumlu bir motor (`imux-core`, `imux`'un yanında). Varsayılan tmux olarak
+kalır; motoru denemek için Ayarlar (raydaki ⚙) → Engine (beta) seçin ya da `~/.imux/config.toml`
+içinde ayarlayın:
+
+```toml
+[engine]
+backend = "core"   # "tmux" (varsayılan) | "core"
+```
+
+İki motor oturumlarını ayrı tutar; bu yüzden i-mux geçmeden önce açık oturumları kapatmanızı ister.
+Geri dönmek için yeniden tmux'u seçin (ya da `backend = "tmux"`). `imux doctor` hangi motorun
+kullanıldığını ve sürümünü gösterir. tmux'tan farklı görünen ya da davranan bir şey mi var?
+"Engine (beta)" şablonuyla bir issue açın.
+
 ## Gizlilik
 
 - Ağ bağlantısı, telemetri ya da API anahtarı yok. i-mux, agent'ların yerel oturum dosyalarını ve

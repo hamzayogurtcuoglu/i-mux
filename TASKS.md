@@ -1036,6 +1036,9 @@ passing with tmux, exactly as before, all through this.
   - AC: the release notes explain the switch and how to go back; an "Engine (beta)" issue
     template asks for the terminal, the OS and `imux doctor` output; the owner approves and
     tags (USER).
+  - Status: the notes (CHANGELOG, README and README.tr) and the issue template
+    (`.github/ISSUE_TEMPLATE/engine-beta.yml`) are in; the release waits for T88.5's green run
+    and the owner's tag.
 
 ## M87: Aider is removed (added 2026-11-18)
 

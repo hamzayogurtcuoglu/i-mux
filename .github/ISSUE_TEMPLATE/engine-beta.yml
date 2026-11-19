@@ -1,0 +1,44 @@
+name: Engine (beta)
+description: Something looks or behaves differently on the i-mux-core engine than on tmux.
+title: "Engine (beta): "
+labels: ["engine"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying the i-mux-core engine. If you can, try the same thing on tmux
+        (Settings → Engine (beta) → tmux) and tell us what each showed.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what i-mux-core showed or did, and what tmux does instead.
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      description: The terminal emulator and its version (iTerm2, Terminal.app, Ghostty, kitty, WezTerm, GNOME Terminal, …).
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: For example macOS 15.2 or Ubuntu 24.04.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: imux doctor
+      description: The output of `imux doctor`.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots, the agent involved, whether it happens every time.

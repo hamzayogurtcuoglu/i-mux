@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A second engine, i-mux-core (beta).** i-mux can run on i-mux-core, a tmux-compatible engine
+  made for i-mux, instead of tmux. It ships in the same release and Homebrew formula
+  (`imux-core`, next to `imux`), and `imux update` and `make install-local` install both
+  together. tmux stays the default: choose Settings → Engine (beta), or set
+  `[engine] backend = "core"` in `~/.imux/config.toml`. The engines keep their sessions apart,
+  so i-mux asks to close the running sessions before it switches; choosing tmux again goes back
+  the same way. `imux doctor` shows the engine in use and its version, and warns about an
+  imux-core older than i-mux needs. Please report what differs from tmux with the "Engine (beta)"
+  issue template.
+
 ## [0.64.0] - 2026-11-18
 
 ### Removed

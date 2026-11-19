@@ -208,6 +208,22 @@ what happens next in `~/.imux/config.toml` (`imux config init` writes a commente
 on_limit = "ask"   # ask (default) | auto: switch to the next agent in `order` | off: only show it
 ```
 
+## The i-mux-core engine (beta)
+
+i-mux runs on tmux. It can also run on **i-mux-core**, a tmux-compatible engine made for i-mux,
+which ships in the same release (`imux-core`, next to `imux`). tmux stays the default; to try the
+engine, choose Settings (⚙ on the rail) → Engine (beta), or set it in `~/.imux/config.toml`:
+
+```toml
+[engine]
+backend = "core"   # "tmux" (default) | "core"
+```
+
+The two engines keep their sessions apart, so i-mux asks you to close the running sessions before
+it switches. To go back, choose tmux again (or set `backend = "tmux"`). `imux doctor` shows which
+engine is in use and its version. Something looks or behaves differently from tmux? Please open an
+issue with the "Engine (beta)" template.
+
 ## Privacy
 
 - No network calls, no telemetry, no API keys. i-mux reads the agents' local session files and
