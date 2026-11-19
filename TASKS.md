@@ -1047,12 +1047,20 @@ tmux on macOS and Linux, exactly as before.
     i-mux-core, where the same run on tmux fails, as it must. On Windows 11 the `sysx` tests
     and `internal/tmux`'s goldens pass; its tests of file modes, engine resolution and a real
     tmux wait for T90.9.
-- [ ] **T90.4 Paths and agents' homes** · S · deps: T90.2
+- [x] **T90.4 Paths and agents' homes** · S · deps: T90.2
   - AC: `~/.imux` under `%USERPROFILE%`; each agent's config and session paths on Windows
     (Claude Code, Codex, Copilot, Antigravity, OpenCode), each verified from that agent's own
     documentation and recorded in ARCHITECTURE.md (§7.8); path separators (and case) in
     session names, git paths and the sidebar; unit tests with synthetic Windows-style homes,
     reading no real files.
+  - Status: every agent keeps its home under `%USERPROFILE%` with the same overrides (§7.8, from
+    each agent's docs or source), so `sysx.HomeEnv` (T90.2) was all their resolution needed.
+    A file name can no longer leave its folder through `..\` or name a drive (`fileops`: before
+    this, on Windows `..\out` was made outside it); the folder picker takes `C:\…`, `~\…` and a
+    trailing `\`; the `~` shortening, pane titles that are paths, a run's paths and the search's
+    title use the system's separator; `search.Files` lists with `/` without git as with it; and a
+    session's name comes from its folder lower-cased on Windows (`sysx.PathKey`). The new
+    Windows tests pass on Windows 11 (through WSL), the `..\` one failing before the fix.
 - [ ] **T90.5 Agents on Windows** · M · deps: T90.3, T90.4
   - AC: detection, installation, starting, resuming and hooking each agent works: npm's `.cmd`
     and `.ps1` shims and `.exe` files are found; install commands for Windows; hook installation

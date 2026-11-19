@@ -364,7 +364,7 @@ func unix(v string) int64 {
 // glyphs in front are dropped; the host name, a program or agent name and
 // paths are not names ("").
 func CleanTitle(title, host string, agentID session.AgentID) string {
-	if t := strings.TrimSpace(title); strings.HasPrefix(t, "/") || strings.HasPrefix(t, "~") {
+	if t := strings.TrimSpace(title); strings.HasPrefix(t, "/") || strings.HasPrefix(t, "~") || filepath.IsAbs(t) {
 		return ""
 	}
 	t := strings.TrimLeftFunc(title, func(r rune) bool {

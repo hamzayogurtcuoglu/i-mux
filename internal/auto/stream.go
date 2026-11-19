@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -332,7 +333,9 @@ func (o *Output) toolArg(args map[string]any) string {
 	}
 	v = strings.TrimSpace(v)
 	if o.Dir != "" {
-		v = strings.ReplaceAll(v, strings.TrimSuffix(o.Dir, "/")+"/", "")
+		dir := strings.TrimRightFunc(o.Dir, func(r rune) bool { return r == '/' || r == filepath.Separator })
+		v = strings.ReplaceAll(v, dir+"/", "")
+		v = strings.ReplaceAll(v, dir+string(filepath.Separator), "") // a Windows agent's paths
 	}
 	if i := strings.IndexByte(v, '\n'); i >= 0 {
 		v = strings.TrimSpace(v[:i]) + " …"

@@ -75,7 +75,7 @@ func Files(ctx context.Context, dir string, showHidden bool) []string {
 			return nil
 		}
 		if rel, err := filepath.Rel(dir, p); err == nil {
-			files = append(files, rel)
+			files = append(files, filepath.ToSlash(rel)) // as git lists them
 		}
 		return nil
 	})

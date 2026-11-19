@@ -339,6 +339,10 @@ func StartDetachedCmd(newCmd func() *exec.Cmd) (*exec.Cmd, error) {
 // which the agents' CLIs use as their home on Windows too.
 const HomeEnv = "USERPROFILE"
 
+// PathKey is path p as the file system tells paths apart, for keys and
+// hashes: Windows' paths ignore case, and "/" is "\".
+func PathKey(p string) string { return strings.ToLower(filepath.Clean(p)) }
+
 // SetUmask does nothing on Windows: the files in the user's profile are the
 // user's alone.
 func SetUmask() {}

@@ -418,7 +418,7 @@ func Run(o Options) (*search.Match, error) {
 	defer func() { _, _ = io.WriteString(o.Out, "\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 
 	name := o.Dir
-	if i := strings.LastIndex(name, "/"); i >= 0 {
+	if i := strings.LastIndexAny(name, "/"+string(filepath.Separator)); i >= 0 {
 		name = name[i+1:]
 	}
 	m := &Model{Title: i18n.T("search.title", name), Theme: o.Theme}

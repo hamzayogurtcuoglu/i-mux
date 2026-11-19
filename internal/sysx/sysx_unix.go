@@ -108,6 +108,10 @@ func StartDetachedCmd(newCmd func() *exec.Cmd) (*exec.Cmd, error) {
 // HomeEnv is the variable that names the user's home folder.
 const HomeEnv = "HOME"
 
+// PathKey is path p as the file system tells paths apart, for keys and
+// hashes: p itself.
+func PathKey(p string) string { return p }
+
 // SetUmask makes every file and directory this process creates private.
 func SetUmask() { syscall.Umask(0o077) }
 

@@ -28,6 +28,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -217,7 +218,9 @@ func (w *WS) DefaultAgent() (session.AgentID, error) {
 // SessionName is the tmux session for a project directory:
 // <sanitized basename>-<first 4 hex of sha256(cwd)> (tmux forbids . and :).
 func SessionName(cwd string) string {
-	base := filepath.Base(filepath.Clean(cwd))
+	// One name per folder: on Windows, however its case is typed (§7.8).
+	key := sysx.PathKey(cwd)
+	base := filepath.Base(filepath.Clean(key))
 	var b strings.Builder
 	for _, r := range base {
 		switch {
@@ -234,7 +237,7 @@ func SessionName(cwd string) string {
 	if len(name) > 32 {
 		name = name[:32]
 	}
-	sum := sha256.Sum256([]byte(cwd))
+	sum := sha256.Sum256([]byte(key))
 	return name + "-" + hex.EncodeToString(sum[:])[:4]
 }
 

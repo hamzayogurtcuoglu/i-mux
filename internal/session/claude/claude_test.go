@@ -87,6 +87,7 @@ func TestEncodeCWD(t *testing.T) {
 		"/Users/test/Masaüstü/proje":    "-Users-test-Masa-st--proje",
 		"/home/test/şirket/İş 2":        "-home-test--irket--- 2",
 		"/home/test/notes 😀":            "-home-test-notes---",
+		`C:\Users\test\proj`:            "C--Users-test-proj", // Windows (§7.8)
 	} {
 		if got := EncodeCWD(in); got != strings.ReplaceAll(want, " ", "-") {
 			t.Errorf("EncodeCWD(%q) = %q, want %q", in, got, want)

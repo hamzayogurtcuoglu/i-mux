@@ -272,9 +272,14 @@ func Rank(query string, cands []Cand, shorten func(string) string) []Cand {
 	return res
 }
 
-// IsPath reports whether the query is a path to browse ("/…", "~", "~/…").
+// sep is the file system's separator; "/" works on Windows too.
+const sep = string(filepath.Separator)
+
+// IsPath reports whether the query is a path to browse ("/…", "~", "~/…";
+// on Windows also "C:\…" and "~\…").
 func IsPath(query string) bool {
-	return strings.HasPrefix(query, "/") || query == "~" || strings.HasPrefix(query, "~/")
+	return strings.HasPrefix(query, "/") || filepath.IsAbs(query) || query == "~" ||
+		strings.HasPrefix(query, "~/") || strings.HasPrefix(query, "~"+sep)
 }
 
 // Expand turns "~" and "~/x" into home paths.
@@ -282,11 +287,14 @@ func Expand(query, home string) string {
 	switch {
 	case query == "~":
 		return home
-	case strings.HasPrefix(query, "~/"):
+	case strings.HasPrefix(query, "~/") || strings.HasPrefix(query, "~"+sep):
 		return home + query[1:] // not Join: "~/x/." must keep its "."
 	}
 	return query
 }
+
+// endsInSep reports whether p ends in a separator.
+func endsInSep(p string) bool { return strings.HasSuffix(p, "/") || strings.HasSuffix(p, sep) }
 
 // Browse lists the subfolders for a typed path: the folders in its
 // directory part whose name starts with the rest (case-insensitive), hidden
@@ -294,8 +302,8 @@ func Expand(query, home string) string {
 func Browse(query, home string) []Cand {
 	p := Expand(query, home)
 	dir, prefix := p, ""
-	if !strings.HasSuffix(query, "/") && query != "~" {
-		i := strings.LastIndex(p, "/")
+	if !endsInSep(query) && query != "~" {
+		i := strings.LastIndexAny(p, "/"+sep)
 		dir, prefix = p[:i+1], p[i+1:]
 	}
 	ents, err := os.ReadDir(dir)
@@ -325,14 +333,14 @@ func Browse(query, home string) []Cand {
 }
 
 // Complete is the query after Tab on cand while browsing: its path in the
-// query's style (~ kept) with a trailing "/".
+// query's style (~ kept) with a trailing separator.
 func Complete(query, home string, c Cand) string {
 	p := c.Path
-	if strings.HasPrefix(query, "~") && (p == home || strings.HasPrefix(p, home+"/")) {
+	if strings.HasPrefix(query, "~") && (p == home || strings.HasPrefix(p, home+sep)) {
 		p = "~" + strings.TrimPrefix(p, home)
 	}
-	if !strings.HasSuffix(p, "/") {
-		p += "/"
+	if !endsInSep(p) {
+		p += sep
 	}
 	return p
 }

@@ -295,7 +295,7 @@ func Run(o Options) (folders.Cand, bool, error) {
 		if p == o.Home {
 			return "~"
 		}
-		if strings.HasPrefix(p, o.Home+"/") {
+		if strings.HasPrefix(p, o.Home+string(filepath.Separator)) {
 			return "~" + p[len(o.Home):]
 		}
 		return p

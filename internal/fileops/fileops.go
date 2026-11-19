@@ -37,15 +37,21 @@ var ErrIntoItself = errors.New("a folder cannot be pasted into itself")
 // makes folder a), not empty.
 func cleanName(name string) (string, error) {
 	name = strings.TrimSpace(name)
-	name = strings.TrimRight(name, "/")
-	if name == "" || filepath.IsAbs(name) {
+	name = strings.TrimRightFunc(name, func(r rune) bool { return r == '/' || r == filepath.Separator })
+	if name == "" || filepath.IsAbs(name) || filepath.VolumeName(name) != "" {
 		return "", ErrBadName
 	}
 	c := filepath.Clean(name)
-	if c == "." || c == ".." || strings.HasPrefix(c, "../") {
+	if c == "." || up(c) {
 		return "", ErrBadName
 	}
 	return c, nil
+}
+
+// up reports whether the relative path rel leaves its folder: ".." or
+// "../…" ("..\…" on Windows; "..cache" is a name).
+func up(rel string) bool {
+	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // Create makes file (or folder) name in dir, with the folders on the way;
@@ -137,7 +143,7 @@ func Paste(src, dir string, move bool) (string, error) {
 	if fi.IsDir() {
 		rel, err := filepath.Rel(src, dir)
 		// Inside it: not ".." nor "../…" ("..cache" is a folder in it).
-		if err == nil && rel != ".." && !strings.HasPrefix(rel, "../") {
+		if err == nil && !up(rel) {
 			return "", ErrIntoItself
 		}
 	}
