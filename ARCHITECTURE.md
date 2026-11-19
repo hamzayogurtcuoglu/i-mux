@@ -724,6 +724,37 @@ documentation or source:
 - Windows' paths ignore case, so a project's session name is made from its folder lower-cased
   there (`sysx.PathKey`): `C:\Users\me\Proj` and `c:\users\me\proj` are one session.
 
+### 7.9 Agents on Windows (D85, T90.5)
+
+Each agent installs with its own maker's Windows command, checked on 2026-11-19:
+
+| Agent | Install | Where it lands | Update |
+|---|---|---|---|
+| Claude Code | `irm https://claude.ai/install.ps1 \| iex` | `~\.local\bin\claude.exe` | `claude update` |
+| Antigravity | `irm https://antigravity.google/cli/install.ps1 \| iex` | `%LOCALAPPDATA%\agy\bin\agy.exe` | `agy update` |
+| Copilot | `winget install --id GitHub.Copilot -e` | WinGet's `Links` folder | `copilot update` |
+| Codex | `winget install --id OpenAI.Codex -e` | WinGet's `Links` folder | `winget upgrade --id OpenAI.Codex -e` (npm's: `npm install -g @openai/codex@latest`) |
+| OpenCode | `npm i -g @opencode/cli@latest` (it has no Windows installer) | `%APPDATA%\npm` | `opencode upgrade` |
+
+- **Install and fix commands** run in Windows PowerShell
+  (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command …`), as `sh -c` runs them on Unix;
+  one that needs npm or winget says so when it is missing.
+- **Finding an agent:** on `PATH` (with `PATHEXT`), then in the folders above, since a new
+  install reaches `PATH` only in new terminals.
+- **npm's shims:** npm installs a CLI as `<name>.cmd` and `<name>.ps1`. cmd.exe would parse a
+  prompt given to a `.cmd` (`%`, `^`, `&`, `"`), so i-mux reads the shim and runs what it runs,
+  `node.exe <script>` or the package's `.exe`, with the arguments as they are: to start an agent,
+  for a scheduled run, and to ask its version.
+- **Claude's hooks** use its exec form, `"command": "C:\\…\\imux.exe", "args": ["__hook",
+  "claude"]`, which runs with no shell. Its status line has only a shell form, run by Git Bash or
+  else PowerShell, so its command is imux's path with `/` and no quotes, in its 8.3 form when the
+  path has a space (`imux` from `PATH` when even that has one).
+- **The user's own Claude status line** runs as Claude runs it: Git Bash's `bash -c` when Git for
+  Windows is installed (`CLAUDE_CODE_GIT_BASH_PATH` first), else PowerShell.
+- **Codex's notify program** is an argv already (`-c notify=[…]`), the same on Windows.
+- **The versions panel** shows the engine, i-mux-core, in tmux's row; it comes and updates with
+  i-mux, so no package manager is offered.
+
 ## 8. Handoff document
 
 ### 8.1 Storage
@@ -1866,6 +1897,18 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
     does not set, and a last line that deletes the file. Then it sends `C-u` (an unfinished line
     is cleared) and ` . <file>` (fish: ` source <file>`) with Enter. The leading space keeps it out
     of the history where the shell skips such lines; only the file's path is typed, never a value.
+  - **On Windows (D85),** PowerShell (`pwsh`, `powershell`) and cmd.exe at their prompt are
+    shells too, and `Escape` clears an unfinished line instead of `C-u`:
+    - for PowerShell the apply file sets `$env:KEY = 'value'` (`''` for a `'`), removes the
+      variables left behind and itself, and i-mux types
+      ` . ([scriptblock]::Create([IO.File]::ReadAllText('<file>')))`. A script block runs
+      whatever the execution policy, which stops `.ps1` files on Windows PowerShell;
+    - for cmd.exe (`.apply-<random>.cmd`) it has `set "KEY=value"` (`%` doubled), `set "KEY="`
+      and `(goto) 2>nul & del "%~f0"`, typed as ` call "<file>"`. A value with a line break
+      cannot be set there and is reported;
+    - keys are told apart without case, as Windows does, and `USERPROFILE`, `APPDATA`,
+      `LOCALAPPDATA`, `SystemRoot`, `ComSpec`, `TEMP` and `TMP` are Windows' own, not taken
+      from an environment.
   - **The "No agents" pane:** only `@imux_env` is set; the agent started there gets it.
   - **Anything else** (an editor, a server, a dead pane): nothing is applied, and the message says
     to close that program first, since i-mux types into a shell at its prompt only.

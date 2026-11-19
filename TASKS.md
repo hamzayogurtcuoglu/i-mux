@@ -1066,8 +1066,8 @@ tmux on macOS and Linux, exactly as before.
     and `.ps1` shims and `.exe` files are found; install commands for Windows; hook installation
     into each agent's settings with Windows paths and commands; resume commands; an environment
     (D84) applied to PowerShell or cmd.exe at its prompt (a `.ps1` or `.cmd` apply file; until
-    then such a pane is left alone, with a message); e2e on Windows CI with the fake agents,
-    ported to Windows (Go or `.cmd`).
+    then such a pane is left alone, with a message); unit tests; their e2e on Windows comes with
+    T90.9's suite, whose fake agents are ported to Go.
 - [ ] **T90.6 Windows integrations** · L · deps: T90.2
   - AC: opening URLs and files (`ShellExecute`); clipboard text and image paste (Win32
     clipboard); notifications (a Windows toast); the Nerd Font install as a per-user font with
@@ -1088,8 +1088,9 @@ tmux on macOS and Linux, exactly as before.
     installs it silently, runs `imux doctor` and uninstalls cleanly.
 - [ ] **T90.9 Windows CI for i-mux** · S · deps: T90.5, T90.6
   - AC: a `windows` job runs the unit tests and the e2e suite on i-mux-core, with tests that
-    cannot apply skipped and each skip listed; green and blocking; the Windows lint covers the
-    e2e tests too; CONTRIBUTING says how to run them on Windows.
+    cannot apply skipped and each skip listed; the fake agents ported to Go (with T90.5's
+    agents: installs, shims, hooks); green and blocking; the Windows lint covers the e2e tests
+    too; CONTRIBUTING says how to run them on Windows.
 - [ ] **T90.10 Windows check** · XS · deps: T90.9 · USER
   - AC: the owner installs from the installer, opens from the Start menu, installs an agent,
     checks the sidebar, tabs, popups, menus and mouse, image paste, notifications, updates from
