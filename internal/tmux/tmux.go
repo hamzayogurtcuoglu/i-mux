@@ -25,6 +25,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // DefaultSocket is the socket name used with `tmux -L`.
@@ -154,14 +155,15 @@ func backendFromConfig() string {
 // BackendBin resolves the engine binary for a backend (D83): "core" uses the
 // imux-core next to the running imux binary, else the one on the PATH —
 // neither found, the name is returned and the exec error names it too, while
-// doctor explains. Any other backend is tmux.
+// doctor explains. Any other backend is tmux, where tmux runs (on Windows
+// every backend is core, D85).
 func BackendBin(backend string) string {
-	if backend != "core" {
+	if backend != "core" && sysx.HasTmux {
 		return "tmux"
 	}
 	if self, err := os.Executable(); err == nil {
-		p := filepath.Join(filepath.Dir(self), "imux-core")
-		if st, err := os.Stat(p); err == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
+		p := filepath.Join(filepath.Dir(self), "imux-core"+sysx.ExeSuffix)
+		if st, err := os.Stat(p); err == nil && !st.IsDir() && sysx.Executable(st) {
 			return p
 		}
 	}

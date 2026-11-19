@@ -22,10 +22,10 @@ make check-fixtures
 ```
 
 CI runs the unit tests on Linux and macOS, so passing `make test` here is not enough: run
-`make ci` before you push. It stops at the first failure: golangci-lint and vet for the Linux and
-macOS builds, generated files, fixtures, shellcheck, the unit tests with the race detector,
-`make test-macos` (macOS's temp folder is a symlink, `/var` to `/private/var`, and git reports
-the resolved path), the size gate and e2e. `PKGS=` narrows the test targets
+`make ci` before you push. It stops at the first failure: golangci-lint and vet for the Linux,
+macOS and Windows builds, generated files, fixtures, shellcheck, the unit tests with the race
+detector, `make test-macos` (macOS's temp folder is a symlink, `/var` to `/private/var`, and git
+reports the resolved path), the size gate and e2e. `PKGS=` narrows the test targets
 (`make test-macos PKGS=./internal/gitops/`).
 
 To try a build as your everyday `imux`, run `make install-local`. Never `cp` (or `go build -o`)
@@ -37,9 +37,9 @@ On Windows, work inside WSL. End-to-end tests copy the binary to the Linux file 
 programs under `/mnt/c` start slowly.
 
 The dependency rule is strict: the standard library, `github.com/BurntSushi/toml`, the engine
-`github.com/hamzayogurtcuoglu/i-mux-core` (D83) and, in Windows-only files, `golang.org/x/sys/windows`,
-which the engine already brings (D85). Do not add modules (test helpers included; the e2e pty
-helper uses raw ioctls for this reason).
+`github.com/hamzayogurtcuoglu/i-mux-core` (D83) and, in Windows-only files,
+`golang.org/x/sys/windows`, which the engine already brings (D85). Do not add modules (test
+helpers included; the e2e pty helper uses raw ioctls for this reason).
 
 Every user-facing string goes through `internal/i18n` (a test fails on a missing key). The handoff
 document is model-facing and always English.

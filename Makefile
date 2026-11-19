@@ -49,10 +49,15 @@ race: ## Unit tests with the race detector (needs cgo)
 # it before a push (.agents/skills/check-before-push).
 ci: lint-all generate-check check-fixtures shellcheck race test-macos size e2e ## Every check CI runs, here: run it before a push
 
-lint-all: ## Lint and vet as CI does: Linux (e2e tests too) and the macOS build
+# The Windows build (D85) is linted without the e2e tests, which come to
+# Windows with T90.9.
+WINDOWS_LINT ?= ./cmd/... ./internal/... ./scripts/...
+lint-all: ## Lint and vet as CI does: Linux (e2e tests too), the macOS build and the Windows build
 	golangci-lint run ./...
 	$(GO) vet ./... && $(GO) vet -tags e2e ./...
 	GOOS=darwin $(GO) vet ./...
+	GOOS=windows golangci-lint run $(WINDOWS_LINT)
+	GOOS=windows $(GO) vet ./...
 
 generate-check: ## Fail if go generate changes a file (CI: "Generated files are current")
 	@before=$$( (git diff --no-ext-diff; git status --porcelain=v1 -uall) | cksum ); \

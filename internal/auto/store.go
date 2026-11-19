@@ -5,12 +5,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Access is what a scheduled run may do.
@@ -98,10 +98,10 @@ func Update(fn func([]Schedule) ([]Schedule, error)) error {
 		return err
 	}
 	defer lf.Close()
-	if err := syscall.Flock(int(lf.Fd()), syscall.LOCK_EX); err != nil {
+	if _, err := sysx.Lock(lf, true); err != nil {
 		return err
 	}
-	defer syscall.Flock(int(lf.Fd()), syscall.LOCK_UN) //nolint:errcheck // released on close anyway
+	defer sysx.Unlock(lf) //nolint:errcheck // released on close anyway
 	ss, err := Load()
 	if err != nil {
 		return err

@@ -11,10 +11,10 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) first; [ARCHITECTURE.md](ARCHITECTURE.md
   CHANGELOG entries are always in English, tags use `vX.Y.Z`, and commits must **never** include
   `Co-Authored-By:` trailers for Claude or any other AI agent.
 - **Before a commit that will be pushed: `make ci`** (`.agents/skills/check-before-push/SKILL.md`):
-  what CI checks, here: lint for the Linux and macOS builds, the unit tests on Linux and with
-  macOS's symlinked temp folder, and e2e. Unit tests passing on Linux are not enough (v0.49.0
-  failed CI on macOS). Do not commit, tag or hand over a push while it fails, and say which
-  checks could not run here.
+  what CI checks, here: lint for the Linux, macOS and Windows builds, the unit tests on Linux
+  and with macOS's symlinked temp folder, and e2e. Unit tests passing on Linux are not enough
+  (v0.49.0 failed CI on macOS). Do not commit, tag or hand over a push while it fails, and say
+  which checks could not run here.
 - **Windows code sits behind small interfaces** (D85): i-mux runs natively on Windows on
   i-mux-core. Windows-only code lives in build-tagged files (`_windows.go`) behind small
   interfaces — never `runtime.GOOS` switches in core files — and CI's Windows jobs are required

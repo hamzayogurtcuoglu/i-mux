@@ -17,10 +17,10 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/clipimage"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
 )
 
@@ -150,7 +150,7 @@ func Paste(src, dir string, move bool) (string, error) {
 		if err == nil {
 			return to, nil
 		}
-		if !errors.Is(err, syscall.EXDEV) {
+		if !sysx.CrossDevice(err) {
 			return "", err
 		}
 		// Another disk: copy, then remove.

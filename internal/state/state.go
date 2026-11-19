@@ -12,10 +12,10 @@ import (
 	"errors"
 	"os"
 	"slices"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // SchemaVersion is the current state.json version.
@@ -149,10 +149,10 @@ func Update(fn func(s *State) error) error {
 		return err
 	}
 	defer lf.Close()
-	if err := flock(lf, syscall.LOCK_EX); err != nil {
+	if _, err := sysx.Lock(lf, true); err != nil {
 		return err
 	}
-	defer flock(lf, syscall.LOCK_UN) //nolint:errcheck // released on close anyway
+	defer sysx.Unlock(lf) //nolint:errcheck // released on close anyway
 
 	s, err := Read()
 	if err != nil {
@@ -167,15 +167,6 @@ func Update(fn func(s *State) error) error {
 		return err
 	}
 	return paths.WriteFile(paths.State(), append(b, '\n'))
-}
-
-func flock(f *os.File, how int) error {
-	for {
-		err := syscall.Flock(int(f.Fd()), how)
-		if !errors.Is(err, syscall.EINTR) {
-			return err
-		}
-	}
 }
 
 // Blocking reports whether the limit stops the agent (a "warn" record is

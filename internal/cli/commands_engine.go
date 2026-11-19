@@ -47,6 +47,7 @@ func engineSwitch(e *Env, value, pane, client string, force bool) error {
 	default:
 		return fmt.Errorf("engine: invalid value %q", value)
 	}
+	value = workspace.EngineValue(value) // on Windows always core (D85)
 	cfg, _, err := config.Load(paths.Config())
 	if err != nil {
 		return err

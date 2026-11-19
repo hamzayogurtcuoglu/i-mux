@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff/clean"
@@ -17,6 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -48,7 +48,7 @@ func (w *WS) lockPane(ctx context.Context, p *Pane) (*paneLock, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+	if ok, _ := sysx.Lock(f, false); !ok {
 		f.Close()
 		return nil, ErrBusy
 	}
@@ -64,10 +64,7 @@ func (l *paneLock) release(ctx context.Context) {
 	l.f.Close()
 }
 
-func alive(pid int) bool {
-	err := syscall.Kill(pid, 0)
-	return err == nil || errors.Is(err, syscall.EPERM)
-}
+func alive(pid int) bool { return sysx.Alive(pid) }
 
 // SwitchReq is one `imux switch`.
 type SwitchReq struct {

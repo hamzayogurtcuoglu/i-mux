@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
@@ -94,7 +95,11 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
 		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
 		MenuItem{Name: i18n.T("settings.hooks", onOffLabel(cfg.Hooks.Enabled)), Key: "h", Cmd: menu("hooks")},
-		MenuItem{Name: i18n.T("settings.engine", EngineLabel(EngineValue(cfg.Engine.Backend))), Key: "g", Cmd: menu("engine")},
+	)
+	if sysx.HasTmux { // on Windows i-mux-core is the only engine (D85)
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.engine", EngineLabel(EngineValue(cfg.Engine.Backend))), Key: "g", Cmd: menu("engine")})
+	}
+	m.Items = append(m.Items,
 		Separator(),
 		MenuItem{Name: i18n.T("settings.open"), Key: "o", Cmd: w.popupCmd("90%", "90%", "__settings", "edit")},
 	)
@@ -191,9 +196,10 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 	return nil
 }
 
-// EngineValue is the Engine row's value (D83): "" and "tmux" are tmux.
+// EngineValue is the Engine row's value (D83): "" and "tmux" are tmux,
+// where tmux runs; on Windows every value is core (D85).
 func EngineValue(v string) string {
-	if v == "core" {
+	if v == "core" || !sysx.HasTmux {
 		return "core"
 	}
 	return "tmux"

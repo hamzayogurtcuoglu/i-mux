@@ -10,12 +10,12 @@ import (
 	"path/filepath"
 	"strings"
 	"sync/atomic"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -118,7 +118,7 @@ func TestLoopWakesAndStops(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- d.Loop(context.Background()) }()
 	time.Sleep(20 * time.Millisecond)
-	wake <- syscall.SIGUSR1 // idle sleep is cut short
+	wake <- sysx.SIGUSR1 // idle sleep is cut short
 	deadline := time.Now().Add(time.Second)
 	for tk.calls() < 2 && time.Now().Before(deadline) {
 		time.Sleep(5 * time.Millisecond)
@@ -126,7 +126,7 @@ func TestLoopWakesAndStops(t *testing.T) {
 	if tk.calls() < 2 {
 		t.Fatal("SIGUSR1 did not wake the loop")
 	}
-	stop <- syscall.SIGTERM
+	stop <- sysx.SIGTERM
 	select {
 	case <-done:
 	case <-time.After(time.Second):

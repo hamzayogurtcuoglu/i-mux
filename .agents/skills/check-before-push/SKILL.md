@@ -1,6 +1,6 @@
 ---
 name: check-before-push
-description: Runs every check CI runs, here, before i-mux code is committed, tagged or pushed (lint for the Linux and macOS builds, generated files, unit tests on Linux and with macOS's symlinked temp folder, e2e) and fixes what fails. Use after any code change, before commit-and-release, and whenever a CI run is red.
+description: Runs every check CI runs, here, before i-mux code is committed, tagged or pushed (lint for the Linux, macOS and Windows builds, generated files, unit tests on Linux and with macOS's symlinked temp folder, e2e) and fixes what fails. Use after any code change, before commit-and-release, and whenever a CI run is red.
 ---
 
 # Check before push
@@ -9,8 +9,8 @@ CI (`.github/workflows/ci.yml`) runs the unit tests on Linux and macOS, the e2e 
 (Ubuntu) and 3.8 (macOS), golangci-lint, and more. Passing `make test` on Linux is not enough:
 v0.49.0 passed it and failed CI on macOS (a temp path compared with git's: macOS's `/var` is
 `/private/var`). A red CI run after a push is a bug in the change; catch it here. Native Windows
-runs on i-mux-core (D85); its checks join `make ci` and CI as M90 adds them (the Windows build and
-lint with T90.2, the Windows tests with T90.9).
+runs on i-mux-core (D85): `make ci` lints and vets the Windows build too; the Windows tests join
+with T90.9.
 
 ## When
 
@@ -29,7 +29,7 @@ It runs these in order and stops at the first failure (each is a target of its o
 
 | Target | What it catches |
 |---|---|
-| `make lint-all` | golangci-lint (e2e tests too); `go vet` for the Linux, e2e and macOS builds |
+| `make lint-all` | golangci-lint (e2e tests too) and for the Windows build; `go vet` for the Linux, e2e, macOS and Windows builds |
 | `make generate-check` | a stale `docs/CONFIG.md` (it regenerates it: review and commit it) |
 | `make check-fixtures` | real paths, secrets or emails in `testdata/` |
 | `make shellcheck` | the shell scripts, as CI checks them (prints that it skipped when shellcheck is missing: `pip install shellcheck-py`) |

@@ -136,7 +136,8 @@ browser           = ""
 # next to the imux binary is used, else the one on the PATH; IMUX_TMUX_BIN
 # overrides both. The two engines keep their sessions apart; switching asks
 # that the running sessions be closed first. Settings (⚙ on the rail) →
-# Engine (beta) chooses.
+# Engine (beta) chooses. On Windows, where tmux does not run, it is always
+# core (D85).
 backend           = "tmux"
 
 [completion]

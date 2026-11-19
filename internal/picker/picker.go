@@ -6,12 +6,11 @@ package picker
 import (
 	"io"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
@@ -315,8 +314,8 @@ func Run(o Options) (folders.Cand, bool, error) {
 		_, _ = io.WriteString(o.Out, b.String())
 	}
 	winch := make(chan os.Signal, 1)
-	signal.Notify(winch, syscall.SIGWINCH)
-	defer signal.Stop(winch)
+	sysx.Notify(winch, sysx.SIGWINCH)
+	defer sysx.Stop(winch)
 	input := make(chan []byte, 8)
 	go func() {
 		buf := make([]byte, 1024)

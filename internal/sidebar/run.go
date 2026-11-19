@@ -5,18 +5,17 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fileops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/selfexec"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/webview"
@@ -124,8 +123,8 @@ func Run(ctx context.Context, o Options) error {
 		tmux.Cmd{"set-option", "-p", "-t", o.Pane, "@imux_label", "i-mux"})
 
 	sigs := make(chan os.Signal, 4)
-	signal.Notify(sigs, syscall.SIGUSR1, syscall.SIGWINCH, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT)
-	defer signal.Stop(sigs)
+	sysx.Notify(sigs, sysx.SIGUSR1, sysx.SIGWINCH, sysx.SIGTERM, sysx.SIGHUP, sysx.SIGINT)
+	defer sysx.Stop(sigs)
 
 	input := make(chan []byte, 8)
 	go func() {
@@ -173,9 +172,9 @@ func Run(ctx context.Context, o Options) error {
 			return nil
 		case sig := <-sigs:
 			switch sig {
-			case syscall.SIGUSR1:
+			case sysx.SIGUSR1:
 				upgrade()
-			case syscall.SIGWINCH:
+			case sysx.SIGWINCH:
 				s.lastFrame = "" // the pane was resized: draw it whole
 				_, _ = io.WriteString(o.Out, askBackground())
 				if s.keepWidth(ctx) {

@@ -30,6 +30,24 @@ jobs:
       - name: Generated files are current
         run: go generate ./... && git diff --exit-code
 
+  lint-windows:
+    # The Windows build (D85): lint and vet; the e2e tests join with T90.9.
+    runs-on: ubuntu-latest
+    env:
+      GOOS: windows
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+          args: ./cmd/... ./internal/... ./scripts/...
+      - name: go vet
+        run: go vet ./...
+
   fixtures:
     runs-on: ubuntu-latest
     steps:

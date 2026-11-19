@@ -8,7 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 const (
@@ -20,11 +21,12 @@ const (
 
 // SetUmask makes every file and directory created by this process private.
 // It is called once at startup.
-func SetUmask() { syscall.Umask(0o077) }
+func SetUmask() { sysx.SetUmask() }
 
-// UserHome returns $HOME, falling back to os.UserHomeDir.
+// UserHome returns $HOME (%USERPROFILE% on Windows), falling back to
+// os.UserHomeDir.
 func UserHome() string {
-	if h := os.Getenv("HOME"); h != "" {
+	if h := os.Getenv(sysx.HomeEnv); h != "" {
 		return h
 	}
 	h, err := os.UserHomeDir()
@@ -88,7 +90,7 @@ func EnsureDir(dir string) error {
 	if !fi.IsDir() {
 		return fmt.Errorf("%s is not a directory", dir)
 	}
-	if fi.Mode().Perm()&0o077 != 0 {
+	if sysx.PermBits && fi.Mode().Perm()&0o077 != 0 {
 		return os.Chmod(dir, DirMode)
 	}
 	return nil

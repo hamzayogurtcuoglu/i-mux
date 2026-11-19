@@ -23,6 +23,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -182,7 +183,7 @@ func checkHome(r *Report) {
 	case err != nil:
 		r.add(Fail, "doctor.home_error", paths.Shorten(home), err)
 		return
-	case fi.Mode().Perm()&0o077 != 0:
+	case sysx.PermBits && fi.Mode().Perm()&0o077 != 0:
 		r.add(Warn, "doctor.home_perm", paths.Shorten(home), fmt.Sprintf("%#o", fi.Mode().Perm()))
 	default:
 		r.add(OK, "doctor.home_ok", paths.Shorten(home))
@@ -196,7 +197,7 @@ func checkHome(r *Report) {
 			return nil
 		}
 		info, err := d.Info()
-		if err == nil && info.Mode().Perm()&0o077 != 0 {
+		if err == nil && sysx.PermBits && info.Mode().Perm()&0o077 != 0 {
 			rel, _ := filepath.Rel(home, p)
 			loose = append(loose, rel)
 		}
@@ -223,7 +224,7 @@ func checkHome(r *Report) {
 // checkSelf warns when the binary or its directory is writable by others:
 // the generated tmux.conf runs it from key bindings and hooks.
 func checkSelf(r *Report, self string) {
-	if self == "" {
+	if self == "" || !sysx.PermBits {
 		return
 	}
 	for _, p := range []string{self, filepath.Dir(self)} {

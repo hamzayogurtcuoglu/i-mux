@@ -60,6 +60,7 @@ func Isolate(t testing.TB) *Homes {
 		}
 	}
 	t.Setenv("HOME", h.Home)
+	t.Setenv("USERPROFILE", h.Home) // the home on Windows
 	t.Setenv("IMUX_HOME", h.Imux)
 	t.Setenv("CLAUDE_CONFIG_DIR", h.Claude)
 	t.Setenv("CODEX_HOME", h.Codex)

@@ -5,11 +5,10 @@ package installview
 import (
 	"io"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -242,8 +241,8 @@ func Run(m *Model, in, out *os.File) (Result, error) {
 	_, _ = io.WriteString(out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h")
 	defer func() { _, _ = io.WriteString(out, "\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 	winch := make(chan os.Signal, 1)
-	signal.Notify(winch, syscall.SIGWINCH)
-	defer signal.Stop(winch)
+	sysx.Notify(winch, sysx.SIGWINCH)
+	defer sysx.Stop(winch)
 	draw := func() {
 		w, h := sidebar.Size(int(out.Fd()))
 		var sc sidebar.Screen

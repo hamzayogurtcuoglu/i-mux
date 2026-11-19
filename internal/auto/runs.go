@@ -5,10 +5,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Status is how a run ended.
@@ -163,13 +163,13 @@ func lock(id string) (*os.File, error) {
 		return nil, err
 	}
 	for try := 1; ; try++ {
-		err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
-		if err == nil {
+		ok, err := sysx.Lock(f, false)
+		if ok {
 			return f, nil
 		}
-		if !errors.Is(err, syscall.EWOULDBLOCK) || try == lockTries {
+		if err != nil || try == lockTries {
 			f.Close()
-			if errors.Is(err, syscall.EWOULDBLOCK) {
+			if err == nil {
 				return nil, ErrRunning
 			}
 			return nil, err
@@ -185,8 +185,8 @@ func Running(id string) (Current, bool) {
 		return Current{}, false
 	}
 	defer f.Close()
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err == nil {
-		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	if ok, _ := sysx.Lock(f, false); ok {
+		_ = sysx.Unlock(f)
 		return Current{}, false
 	}
 	var c Current
@@ -205,21 +205,21 @@ func writeCurrent(id string, c Current) error {
 }
 
 // Stop ends the schedule's run: its process group gets SIGTERM, then
-// SIGKILL when it is still there after two seconds. It reports whether one
-// ran.
+// SIGKILL when it is still there after two seconds (on Windows the process
+// and what it started end at once). It reports whether one ran.
 func Stop(id string) bool {
 	c, ok := Running(id)
 	if !ok || c.PGID <= 1 {
 		return false
 	}
 	_ = os.WriteFile(stopFile(id), nil, paths.FileMode)
-	_ = syscall.Kill(-c.PGID, syscall.SIGTERM)
+	_ = sysx.TermGroup(c.PGID)
 	for range 20 {
 		time.Sleep(100 * time.Millisecond)
 		if _, still := Running(id); !still {
 			return true
 		}
 	}
-	_ = syscall.Kill(-c.PGID, syscall.SIGKILL)
+	_ = sysx.KillGroup(c.PGID)
 	return true
 }

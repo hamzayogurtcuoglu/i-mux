@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
@@ -17,6 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/machine"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 )
@@ -93,8 +93,5 @@ func runRemoteAttach(e *Env, args []string) error {
 		return err
 	}
 	argv := append(append([]string{bin}, t.BaseArgs()...), "-u", "attach-session", "-t", "="+args[0])
-	if err := syscall.Exec(bin, argv, os.Environ()); err != nil {
-		return fmt.Errorf("tmux: %w", err)
-	}
-	return nil
+	return fmt.Errorf("tmux: %w", sysx.Exec(bin, argv, os.Environ())) // it returns only on failure
 }

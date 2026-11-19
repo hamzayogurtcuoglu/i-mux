@@ -1009,13 +1009,21 @@ tmux on macOS and Linux, exactly as before.
   - AC: D85 supersedes D60's rule; this milestone; AGENTS.md's rule replaced (Windows code in
     build-tagged files behind small interfaces, Windows CI required, tmux still the default on
     macOS and Linux); CONTRIBUTING's dependency rule and the check-before-push skill follow.
-- [ ] **T90.2 i-mux builds for Windows** · L
+- [x] **T90.2 i-mux builds for Windows** · L
   - AC: `GOOS=windows go build ./...` and `go vet` are clean; lint runs for `GOOS=windows` in
     CI and in `make ci`; every POSIX-only use is behind a small interface in build-tagged files
     (`syscall.Exec`, `Setsid`, `SIGTERM`/`SIGHUP`/`SIGWINCH`, `flock` → `LockFileEx`, Unix file
     modes, `/dev/null`, symlink assumptions, `$HOME` → `USERPROFILE`); the engine is `core` on
     Windows (whatever `backend` says, no engine row in Settings; D85); all existing tests pass
     on macOS and Linux unchanged.
+  - Status: `internal/sysx` (D85) holds every call that differs, and the sidebar's terminal on
+    Windows is the console through it (`term_windows.go`); `paths.UserHome` and the agents'
+    stores read `%USERPROFILE%` there, and `testutil.Isolate` sets it. `make lint-all` and CI's
+    `lint-windows` job lint and vet the Windows build (the e2e tests join with T90.9). The
+    `sysx` tests pass on Windows 11 as well (run through WSL), and `imux.exe` starts there.
+    `/dev/null` remains only in the command lines T90.3 replaces. Symlinks (a skill's link for
+    Claude) need Windows' Developer Mode; without it the link is not made, as when its place is
+    taken.
 - [ ] **T90.3 Command strings without a POSIX shell** · M · deps: T90.2
   - AC: `UICommand`, `Silent`, `ShQuote`, `ShJoin`, the `run-shell` strings in the generated
     config, the popups' commands and every `sh -c` use follow E14 (D85): on Windows the argv

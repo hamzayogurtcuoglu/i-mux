@@ -10,14 +10,13 @@ package pager
 import (
 	"io"
 	"os"
-	"os/signal"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -527,8 +526,8 @@ func Run(p *Pager, in, out *os.File) error {
 	_, _ = io.WriteString(out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1002h\x1b[?1006h")
 	defer func() { _, _ = io.WriteString(out, "\x1b[?1002l\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?1049l") }()
 	winch := make(chan os.Signal, 1)
-	signal.Notify(winch, syscall.SIGWINCH)
-	defer signal.Stop(winch)
+	sysx.Notify(winch, sysx.SIGWINCH)
+	defer sysx.Stop(winch)
 	last := ""
 	draw := func() {
 		w, h := sidebar.Size(int(out.Fd()))

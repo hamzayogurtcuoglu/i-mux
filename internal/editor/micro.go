@@ -14,6 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/fetch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // MicroVersion is the micro release i-mux gets (D45); MicroMB its download.
@@ -63,8 +64,8 @@ func MicroDir() string { return filepath.Join(paths.Tools(), "micro-"+MicroVersi
 
 // OurMicro is the micro i-mux got, "" when it has none.
 var OurMicro = func() string {
-	p := filepath.Join(MicroDir(), "micro")
-	if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && fi.Mode()&0o111 != 0 {
+	p := filepath.Join(MicroDir(), "micro"+sysx.ExeSuffix)
+	if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && sysx.Executable(fi) {
 		return p
 	}
 	return ""

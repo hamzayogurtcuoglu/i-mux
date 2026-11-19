@@ -4,15 +4,14 @@ import (
 	"context"
 	"io"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
@@ -283,8 +282,8 @@ func Run(o Options) (string, int, error) {
 		_, _ = io.WriteString(o.Out, b.String())
 	}
 	winch := make(chan os.Signal, 1)
-	signal.Notify(winch, syscall.SIGWINCH)
-	defer signal.Stop(winch)
+	sysx.Notify(winch, sysx.SIGWINCH)
+	defer sysx.Stop(winch)
 	// No reader goroutine: one left waiting after the popup hands the
 	// terminal to the editor would swallow the editor's first key.
 	fd := int(o.In.Fd())

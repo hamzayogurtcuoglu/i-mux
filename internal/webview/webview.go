@@ -24,10 +24,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // IsHTML reports a web page file: a click on it in the explorer opens its
@@ -257,10 +257,12 @@ func Ensure(ctx context.Context, self, root string) (*Info, error) {
 		return nil, err
 	}
 	defer logf.Close()
-	cmd := exec.Command(self, "__web-serve", root)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, logf
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if err := cmd.Start(); err != nil {
+	cmd, err := sysx.StartDetachedCmd(func() *exec.Cmd {
+		cmd := exec.Command(self, "__web-serve", root)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, logf
+		return cmd
+	})
+	if err != nil {
 		return nil, err
 	}
 	pid := cmd.Process.Pid
@@ -302,7 +304,7 @@ func All(ctx context.Context) []*Info {
 // Stop ends the server and removes its record.
 func (i *Info) Stop() {
 	if i.PID > 0 {
-		_ = syscall.Kill(i.PID, syscall.SIGTERM)
+		_ = sysx.Signal(i.PID, sysx.SIGTERM)
 	}
 	_ = os.Remove(recordFile(i.Root))
 }

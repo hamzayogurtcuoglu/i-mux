@@ -12,11 +12,11 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Execution is a run that holds its schedule's lock.
@@ -49,14 +49,14 @@ func (e *Execution) Finish(r Run) error {
 	err := addRun(e.id, r)
 	_ = os.Remove(currentFile(e.id))
 	_ = os.Remove(stopFile(e.id))
-	_ = syscall.Flock(int(e.lock.Fd()), syscall.LOCK_UN)
+	_ = sysx.Unlock(e.lock)
 	e.lock.Close()
 	return err
 }
 
 // Abort lets the lock go without a run: one that was not due any more.
 func (e *Execution) Abort() {
-	_ = syscall.Flock(int(e.lock.Fd()), syscall.LOCK_UN)
+	_ = sysx.Unlock(e.lock)
 	e.lock.Close()
 }
 
@@ -169,8 +169,7 @@ func Execute(ctx context.Context, argv, env []string, dir, logPath string, timeo
 	defer cancel()
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir, cmd.Env = dir, env
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	sysx.KillGroupOnCancel(cmd)
 	cmd.WaitDelay = 2 * time.Second
 	var mu sync.Mutex
 	outLog, errLog := &lines{mu: &mu, w: logf}, &lines{mu: &mu, w: logf}
@@ -279,13 +278,11 @@ func Launch(self, id string, manual bool) error {
 	if manual {
 		args = append(args, "--manual")
 	}
-	cmd := exec.Command(self, args...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	return cmd.Process.Release()
+	return sysx.StartDetached(func() *exec.Cmd {
+		cmd := exec.Command(self, args...)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
+		return cmd
+	})
 }
 
 // DueNow are the schedules to start at now: not paused, not running, their

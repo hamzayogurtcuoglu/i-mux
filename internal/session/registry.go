@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Env tells providers where the agents keep their stores. Empty fields use
@@ -18,12 +20,12 @@ type Env struct {
 	OpenCodeBin     string // the opencode binary; "" = from the PATH
 }
 
-// UserHome returns Env.Home or $HOME.
+// UserHome returns Env.Home or $HOME (%USERPROFILE% on Windows).
 func (e Env) UserHome() string {
 	if e.Home != "" {
 		return e.Home
 	}
-	if h := os.Getenv("HOME"); h != "" {
+	if h := os.Getenv(sysx.HomeEnv); h != "" {
 		return h
 	}
 	h, _ := os.UserHomeDir()
