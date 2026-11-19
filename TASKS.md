@@ -1014,7 +1014,7 @@ tmux on macOS and Linux, exactly as before.
     CI and in `make ci`; every POSIX-only use is behind a small interface in build-tagged files
     (`syscall.Exec`, `Setsid`, `SIGTERM`/`SIGHUP`/`SIGWINCH`, `flock` → `LockFileEx`, Unix file
     modes, `/dev/null`, symlink assumptions, `$HOME` → `USERPROFILE`); the engine is `core` on
-    Windows (`backend = "tmux"` warns, no engine row in Settings; D85); all existing tests pass
+    Windows (whatever `backend` says, no engine row in Settings; D85); all existing tests pass
     on macOS and Linux unchanged.
 - [ ] **T90.3 Command strings without a POSIX shell** · M · deps: T90.2
   - AC: `UICommand`, `Silent`, `ShQuote`, `ShJoin`, the `run-shell` strings in the generated
@@ -1053,8 +1053,8 @@ tmux on macOS and Linux, exactly as before.
     installs it silently, runs `imux doctor` and uninstalls cleanly.
 - [ ] **T90.9 Windows CI for i-mux** · S · deps: T90.5, T90.6
   - AC: a `windows` job runs the unit tests and the e2e suite on i-mux-core, with tests that
-    cannot apply skipped and each skip listed; green and blocking; CONTRIBUTING says how to run
-    them on Windows.
+    cannot apply skipped and each skip listed; green and blocking; the Windows lint covers the
+    e2e tests too; CONTRIBUTING says how to run them on Windows.
 - [ ] **T90.10 Windows check** · XS · deps: T90.9 · USER
   - AC: the owner installs from the installer, opens from the Start menu, installs an agent,
     checks the sidebar, tabs, popups, menus and mouse, image paste, notifications, updates from
