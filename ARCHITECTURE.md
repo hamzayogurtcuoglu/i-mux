@@ -161,6 +161,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D81 | **Aider is the sixth agent** (added 2026-11-17, v0.63.0, at the user's request; follows D28): Aider (`aider`, Python) joins Claude Code, Antigravity, Copilot, Codex and OpenCode everywhere an agent appears: the agent bar and menus (letter `i`), new tabs and splits, switching with a handoff in both directions, History, the limits panel, `imux doctor`, Versions and updates, notifications and Jobs. Aider has no flag that starts a chat with a first message and stays open (`--message` answers and exits), so the handoff is pasted once its screen is still (§9.5), and the handoff file is given to it with `--read=<file>`: Aider's model sees only the files in its chat and has no tool to open one. A paste waits while the agent's screen asks a question (Aider asks to add `.aider*` to `.gitignore` the first time in a repository), so the handoff never answers it. Aider's conversations are read from `.aider.chat.history.md` at the repository's root (one file per project, each run a `# aider chat started at …` part); coming back to Aider restores that history (`--restore-chat-history`) and pastes what happened meanwhile. **Removed in v0.64 (D82).** | The user asked for Aider "everywhere, properly, like Claude, Copilot and the others". Aider works with any model (like OpenCode) and is widely used. Its history file is the only record of a chat, with no session id, so a session is a part of that file named by its start time. Pasting into a question would have sent the handoff as its answer and lost it. |
 | D82 | **Aider is no longer an agent** (added 2026-11-18, v0.64.0, at the user's request; undoes D81): i-mux runs Claude Code, Antigravity, Copilot, Codex and OpenCode, as before v0.63. What was there for Aider goes with it: its session reader, limit patterns, colors and Jobs command, the handoff file given with `--read`, and the paste's wait while the screen asks a question (a paste again waits only for a still screen, at most 20 s, §9.5). A config that still names `aider` (`order`, `default_agent`, `[agents.aider]`) loads with a warning, as one naming Gemini does; a pane still running Aider shows under its id and can be switched to a known agent; snapshots' Aider panes are not restored; Aider's own files (`.aider.chat.history.md`, `.aider*`) stay in the repositories. OpenCode's short name on a narrow agent bar (`Oc`, v0.63) stays. | The user tried Aider in i-mux, found it bad and asked for it to be removed. OpenCode already works with any model endpoint, which was Aider's reason to be here. |
 | D83 | **Two engines: tmux (default) and i-mux-core, opt-in** (added 2026-11-18, unreleased, at the user's request; M88): i-mux keeps running on tmux exactly as before, and can also run on `imux-core`, a tmux-3.8-compatible engine built for i-mux (its repository sits beside this one; its Phase 6 gate holds — i-mux's whole e2e suite passes on it, its benchmarks are met, and a real-terminal comparison of the two engines' client output was identical line for line). `[engine] backend = "tmux"` or `"core"` picks; `"tmux"` is the default on macOS and Linux, and `IMUX_TMUX_BIN` overrides both, as today. With `core`, the `imux-core` binary next to imux's own is used, else the one on `PATH`; the two engines use different socket directories, so their sessions never collide. `imux-core -V` prints `tmux 3.8 (imux-core X.Y.Z)`: `ParseVersion` reads that as tmux 3.8, as today, and gains an `Engine` field from the bracketed part; `imux doctor` shows the engine and its version and warns when an imux-core older than i-mux's minimum is found. Switching engines while sessions run is refused, with an offer to close them; Settings shows the choice as "Engine (beta)". Releases ship both binaries in the same archives and the Homebrew formula, built from one pin: `go.mod` requires `github.com/hamzayogurtcuoglu/i-mux-core` at a fixed version and `cmd/imux-core` calls its `engine.Main` (i-mux-core's E16), so `make build`, `make install-local` and GoReleaser build both, the engine reports the pinned version, and Go's checksum database verifies its source; `make install-local` installs both, and the self-update replaces both checksum-verified as one step, rolling back if either fails; a running engine server keeps its old binary until its sessions end, and the update message says so. tmux stays supported and tested (dropping it is not planned); `imux doctor` suggests it when the engine fails to start. | One engine everywhere would make everything really the same on every machine, and is the only road to a native Windows build (D60 stands until that is asked for). i-mux-core has reached the parity to try; an opt-in switch keeps the risk with the one who turns it on. |
+| D84 | **Environments: saved `KEY=VALUE` sets that a pane runs with, from an Env view on the rail** (added 2026-11-19, unreleased, at the user's request; M89): an environment is a file `~/.imux/env/<name>.env` (0600). The rail's 🔑 **Env** view (after Jobs, key `7`) lists them; **+** makes one and opens it in the editor. A click applies one to the target pane (`@imux_env`): a plain shell at its prompt gets it at once (i-mux types ` . <file>` into it: a 0600 file that exports the variables and deletes itself); an agent pane asks first, then restarts its agent with it and resumes the conversation natively (the full handoff is the fallback, as for a return, §9.5); a pane that runs another program is left alone, with a message. Everything i-mux starts in that pane later (a switch, a return, the shell an agent exits to, a restored snapshot) gets the environment too, and **Remove from this pane** takes it away the same way. Nothing in it is specific to a provider: pointing Claude Code at another Anthropic-compatible endpoint (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`) is one use. | The user wanted Claude Code on a Z.ai GLM Coding Plan beside their Claude subscription, without a global setting that moves every Claude to the other provider, and without a proxy (the earlier "Router" idea). A running program's environment cannot be changed from outside, so applying restarts an agent (with a native resume it is a short reload) and types into an idle shell. One file per environment, a view that lists them and a click per pane need no resident process, and cover any variable (keys, endpoints, proxies), not one provider. |
 
 ## 4. Components
 
@@ -1761,6 +1762,59 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   takes it twice (tmux's way for one inside another). When the connection drops the pane says
   so and connects again every few seconds; detaching ends it.
 
+#### Environments (D84)
+
+An environment is a named set of variables that a pane's programs run with: an API key, another
+endpoint for an agent CLI, a proxy. The user saves it once and applies it to a pane with a click.
+
+- **Files:** `~/.imux/env/` (0700) holds one `<name>.env` (0600) per environment; a name is
+  `[a-z0-9][a-z0-9_-]{0,31}`. A line is `KEY=VALUE`, optionally after `export `; blank lines and
+  lines starting with `#` are skipped. A value in single quotes is taken as it is; in double
+  quotes, `\"` and `\\` are unescaped; there is no `$` expansion. A key is
+  `[A-Za-z_][A-Za-z0-9_]*`. `PATH`, `HOME`, `SHELL`, `PWD`, `TMUX`, `TMUX_PANE` and `IMUX_*`
+  are i-mux's or the shell's own and are not taken from an environment. A line that is not
+  understood is skipped and reported (the view's row shows ⚠, the menu says which lines).
+- **The Env view** (the rail's 🔑 **Env**, after Jobs; key `7`): the title `ENV` with **+**; a row
+  per environment, `🔑 glm`, with its number of variables on the right, or `● this pane` (and the
+  name in bold) for the target pane's. Values are never shown. With none, the view says what an
+  environment is for and offers **+ New environment…**.
+  - **+** asks a name (a command prompt), writes the file with commented examples
+    (`imux env new <name>`) and opens it in the editor (micro in a popup, as the explorer's Edit).
+  - **A click** applies the environment to the target pane (below). On the target pane's own
+    environment, a click opens its menu instead.
+  - **A right-click** opens its menu: **Apply to this pane** (or **Remove from this pane** when it
+    is this pane's), **Edit**, **Delete…** (asks first).
+- **Applying it to a pane** (`imux env apply <name> --pane P`) depends on what runs there:
+  - **An agent:** a menu asks first: "Restart Claude with glm? The conversation continues." While
+    the agent works (D71's `working`), it says that its current turn stops. On yes, `@imux_env` is
+    set and the agent restarts as a switch to itself would (§9.5): its current session resumes
+    natively, with the full handoff as the fallback for a resume that fails fast; an agent with no
+    conversation yet starts fresh. The message says "Claude restarted with glm".
+  - **A shell at its prompt** (`pane_current_command` is `bash`, `zsh`, `fish`, `sh`, `dash`,
+    `ksh`, `mksh` or the default shell's name): no question. i-mux writes
+    `~/.imux/env/.apply-<random>` (0600): `export KEY='value'` lines (fish: `set -gx KEY 'value'`),
+    `unset` (fish: `set -e`) for the variables of the pane's previous environment that the new one
+    does not set, and a last line that deletes the file. Then it sends `C-u` (an unfinished line
+    is cleared) and ` . <file>` (fish: ` source <file>`) with Enter. The leading space keeps it out
+    of the history where the shell skips such lines; only the file's path is typed, never a value.
+  - **The "No agents" pane:** only `@imux_env` is set; the agent started there gets it.
+  - **Anything else** (an editor, a server, a dead pane): nothing is applied, and the message says
+    to close that program first, since i-mux types into a shell at its prompt only.
+- **Remove from this pane** (`imux env clear --pane P`) does the same with no environment: the
+  agent restarts without it (asked first), the shell gets `unset` lines.
+- **What i-mux starts in the pane later** gets the pane's environment: `Launch.Env` adds its
+  variables to the launch spec (`respawn` takes the pane's `@imux_env`), so a switch, a return,
+  a fallback and an agent started in the "No agents" pane have them. The shell an agent exits to
+  (§9.5) starts through `imux __exec` with them. A workspace snapshot (D24) keeps the name and
+  a restored pane gets it back. A new pane split from it does not inherit it: each pane chooses.
+- **Editing** an environment changes what is applied next, not the programs that run with it
+  (apply it again). **Deleting** one unsets `@imux_env` from the panes that have it; their
+  programs keep what they got until they restart.
+- **The pane's border** shows it after the label: `Claude · 🔑 glm`.
+- **Privacy:** values are never shown in the view, menus, `imux env ls`, messages, logs,
+  handoffs or snapshots. They reach programs only through 0600 files (the launch spec, the apply
+  file), never on a tmux or shell command line, where `ps` would show them.
+
 #### AI completion in the editor (v0.25, D30)
 
 - `[completion] enabled = false` (default). When on, a file opened for editing (explorer, search,
@@ -2764,6 +2818,7 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
 | `@imux_trail` | JSON `[TrailEntry…]` | start/switch | history of runs in this pane (max 10) |
 | `@imux_fallback` | path to spec | switch (resume) | fallback LaunchSpec if a resume dies within 10 s |
 | `@imux_lock` | pid | switch | guards against concurrent switches on one pane |
+| `@imux_env` | `glm` | `imux env apply`/`clear` | the environment the pane's programs run with (D84) |
 
 ### 9.5 Launch, switch and exit mechanics
 
@@ -2930,6 +2985,7 @@ Agents use their own shell tool to call i-mux. Inside a pane, `TMUX`, `TMUX_PANE
 | `imux panes`, `read`, `send`, `wait`, `snippet` | Agent bus (§12). |
 | `imux doctor` | tmux presence/version and terminfo, agents installed (paths, versions, nvm PATH), `~/.imux` perms, socket, watcher status, key hints (VS Code), CLI flag sanity checks via `--help` parsing (never with a prompt). |
 | `imux web [open <file\|url>\|stop]` | The live preview (D47): the folders served and their pages; open a page; stop the servers. |
+| `imux env [ls\|new <name>\|edit <name>\|rm <name>\|apply <name> [--pane %N] [--yes]\|clear [--pane %N] [--yes]]` | Environments (D84): list them (names and keys, never values), make or edit one in the editor, delete one, apply one to a pane or remove it (an agent asks first unless `--yes`). |
 | `imux config [init\|path\|show]` | Write a commented default config / print the path / print the effective config. |
 | `imux version` | Version, commit, build date. |
 | internal | `__exec <spec>`, `__menu [--sessions\|--session <agent>:<id>]`, `__click <range-arg>`, `__pane-died`, `__watch run\|ensure\|stop\|status`, `__status` |
@@ -3146,6 +3202,7 @@ sequenceDiagram
 | `auto/<id>/` | 0700 | `imux __auto exec` | a schedule's runs: `runs.json` (the last 20, with their command line), `<start>.log` each (the CLI's output, line by line), `current.json` and `run.lock` while one runs |
 | `models.json` | 0600 | the Scheduler's Run panel | each agent CLI's models, for a day (D61) |
 | `commit/<hash>.txt` | 0600 | the Git view's commit message box (atomic rename) | a project's commit message while it is written; gone once committed (D65) |
+| `env/` | 0700 | the Env view, `imux env`; the user edits them | `<name>.env` (0600): an environment's `KEY=VALUE` lines (D84); `.apply-<random>` (0600) while a shell takes one, deleted by the shell |
 | tmux socket | tmux-managed | tmux | `$TMUX_TMPDIR/tmux-<uid>/imux` (dir 0700) |
 
 Read-only access (never written): `~/.claude/projects`, `~/.gemini/{projects.json,tmp}`,
@@ -3322,6 +3379,8 @@ If the watcher misses its CPU budget, the planned fix is a single control-mode c
   directory is writable by others.
 - **Tests and fixtures** are synthetic only. CI greps `testdata/` for home-directory paths
   (`/Users/`, `/home/`) other than the fake `/home/test`, and for real-looking secrets.
+- **Environments** (D84) hold API keys in `~/.imux/env/*.env` (0600). Their values are never
+  shown or logged and never put on a command line; programs get them through 0600 files.
 - **Source path in handoffs** reveals the home directory to the target provider. Minor;
   `handoff.include_source_path = false` removes it.
 

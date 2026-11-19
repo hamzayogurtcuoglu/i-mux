@@ -997,6 +997,41 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M89: Environments for a pane (added 2026-11-19)
+
+User request: an Env view on the left with saved environment files; one can be saved there, and
+applying one to the active terminal makes it take effect there: a running CLI restarts after a
+short warning, a shell gets it at once. The first use is Claude Code on a Z.ai Coding Plan beside
+the Claude subscription, but nothing is specific to a provider (D84).
+
+- [ ] **T89.1 Environment files** · S
+  - AC: D84: `internal/envfile`: names, `~/.imux/env` (0700) and `<name>.env` (0600); the parser
+    (`export`, comments, quotes, no expansion; bad lines and reserved keys reported with their
+    line numbers); list, read, create with the commented template, delete; the shell script that
+    applies one (POSIX and fish quoting, `unset` of the keys left behind, deletes itself); unit
+    tests and a fuzz test for the parser.
+- [ ] **T89.2 Launches take the pane's environment** · S · deps: T89.1
+  - AC: `@imux_env`; `Launch.Env` adds the variables to the spec (reserved ones never); `respawn`
+    takes the pane's; the shell an agent exits to starts through `__exec` with them; snapshots
+    keep the name and restore it; a split does not inherit it; unit tests.
+- [ ] **T89.3 Apply and remove** · M · deps: T89.2
+  - AC: `imux env apply|clear`: an agent pane asks (a menu; working: its turn stops) unless
+    `--yes`, then restarts its agent resuming its session (fallback: the full handoff; fresh when
+    it has none); a shell at its prompt gets the apply file through `send-keys`; the "No agents"
+    pane only takes the option; other programs are left alone with a message; `imux env ls`,
+    `new`, `edit`, `rm` (unsets it from its panes); the border shows `🔑 <name>`; unit tests.
+- [ ] **T89.4 The Env view** · M · deps: T89.3
+  - AC: 🔑 Env on the rail after Jobs (key `7`); `ENV` and **+**; rows with the number of
+    variables, `● this pane` for the target's, ⚠ for a file with bad lines; click applies (on
+    the target's own: its menu), right-click opens its menu (Apply / Remove from this pane,
+    Edit, Delete…); the empty view; i18n (en, tr); unit tests.
+- [ ] **T89.5 End to end** · S · deps: T89.4
+  - AC: e2e with the fake agents: applying to an agent pane restarts it with the variable in its
+    environment and its session resumed; applying to a shell pane sets it there (`echo` shows
+    it) and the apply file is gone; removing takes it away; no value in any tmux command.
+- [ ] **T89.6 Docs** · XS
+  - AC: README and README.tr, CHANGELOG.
+
 ## M88: The engine switch: i-mux-core, opt-in (added 2026-11-18)
 
 User request: run i-mux on i-mux-core behind a switch, with tmux the default (D83). The tasks
