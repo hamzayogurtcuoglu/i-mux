@@ -74,7 +74,9 @@ func TestEnvironments(t *testing.T) {
 	// A shell at its prompt gets it at once.
 	shell := strings.TrimSpace(h.mustTmux("split-window", "-d", "-t", pane, "-P", "-F", "#{pane_id}", "sh"))
 	h.waitFor("shell prompt", 5*time.Second, func() bool {
-		return h.paneOpt(shell, "#{pane_current_command}") == "sh" && strings.Contains(h.capture(shell), "$")
+		cmd := h.paneOpt(shell, "#{pane_current_command}")
+		return (cmd == "sh" || cmd == "bash") &&
+			(strings.Contains(h.capture(shell), "$") || strings.Contains(h.capture(shell), "#"))
 	})
 	out = h.mustImux("env", "apply", "glm", "--pane", shell)
 	if !strings.Contains(out, "glm applied to this shell") {

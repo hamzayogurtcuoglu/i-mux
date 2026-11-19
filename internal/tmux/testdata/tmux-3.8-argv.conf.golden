@@ -85,10 +85,10 @@ bind    b run-shell -b '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-m
 bind    v run-shell -b '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__menu","--split","h","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
 bind    - run-shell -b '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__menu","--split","v","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
 # Panes from the keyboard (D67): swap with the pane on a side, the resize mode, the help.
-bind    H run-shell -b '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__pane","swap","left","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
-bind    J run-shell -b '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__pane","swap","down","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
-bind    K run-shell -b '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__pane","swap","up","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
-bind    L run-shell -b '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__pane","swap","right","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
+bind    H run-shell '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__pane","swap","left","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
+bind    J run-shell '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__pane","swap","down","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
+bind    K run-shell '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__pane","swap","up","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
+bind    L run-shell '{"argv":["C:\\Users\\test\\AppData\\Local\\Programs\\i-mux\\imux.exe","__pane","swap","right","--pane","#{pane_id}","--client","#{client_name}"],"quiet":true}'
 bind    r { switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
 bind -T imux-resize h { resize-pane -L 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
 bind -T imux-resize j { resize-pane -D 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }

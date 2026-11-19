@@ -87,8 +87,8 @@ func TestGenerateConfOptions(t *testing.T) {
 	// D67: prefix H J K L swap, prefix r the resize mode, prefix ? the help;
 	// the keys without the prefix only when asked for.
 	for _, want := range []string{
-		"bind    H run-shell -b '/opt/imux/bin/imux __pane swap left --pane #{pane_id}",
-		"bind    L run-shell -b '/opt/imux/bin/imux __pane swap right",
+		"bind    H run-shell '/opt/imux/bin/imux __pane swap left --pane #{pane_id}",
+		"bind    L run-shell '/opt/imux/bin/imux __pane swap right",
 		"bind    r { switch-client -T imux-resize ; display-message -d 0 ",
 		"bind -T imux-resize h { resize-pane -L 2 ; switch-client -T imux-resize ; ",
 		"bind -T imux-resize S-Up { resize-pane -U 10 ; ",

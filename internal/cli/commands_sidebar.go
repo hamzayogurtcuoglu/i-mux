@@ -27,6 +27,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/usage"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -74,6 +75,13 @@ func runSidebar(e *Env, args []string) error {
 	src := &sidebar.Source{T: tmux.New(paths.TmuxConf()), Cfg: cfg, CfgPath: paths.Config(), Now: time.Now}
 	return sidebar.Run(context.Background(), sidebar.Options{
 		Source: src, Self: self, Pane: pane, Width: cfg.Tmux.SidebarWidth, In: os.Stdin, Out: os.Stdout,
+		// This sidebar is what brings the watcher back when it died with the
+		// server living on (D86): waking a running one would only poll it.
+		EnsureWatch: func() {
+			if running, _ := watch.Status(); !running {
+				_ = watch.Ensure(self)
+			}
+		},
 	})
 }
 

@@ -124,6 +124,7 @@ func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID,
 	})
 	if err == nil {
 		w.maybeSidebar(ctx, pane)
+		EnsureWatcher(w) // as Start: a window opened inside tmux revives a dead watcher (D86)
 	}
 	return pane, err
 }

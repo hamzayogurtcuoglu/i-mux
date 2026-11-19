@@ -6,6 +6,18 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A dead watcher comes back on its own.** The limit watcher is the only writer of the panes'
+  working/idle states (the sidebar's spinners and "N working" count, `imux panes`). When it died
+  with the tmux server living on — an `imux quit` that stopped it before failing to close the
+  server, a crash — every state froze: a client that stayed attached never runs `client-attached`
+  again, and working inside tmux runs no command that would bring it back, so agents stopped
+  showing as working at all (one stale spinner could stay forever). Every sidebar now checks the
+  watcher's lock every 15 s and at startup, and starts it when it finds it gone; `imux <agent>`
+  inside tmux ensures it as well. Nothing else changes: OpenCode's busy line ("esc interrupt")
+  was matched all along, whatever the provider (Z.ai included).
+
 ### Added
 
 - **Native Windows on i-mux-core.** i-mux runs natively on Windows 10 and 11 (x64 and ARM64) on

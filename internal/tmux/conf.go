@@ -135,6 +135,14 @@ func RunShell(self string, args ...string) string {
 
 func runShell(self string, args ...string) string { return RunShell(self, args...) }
 
+// RunShellWait returns a synchronous `run-shell '<imux> args...'`: the
+// command queue waits for it, so two keys pressed in a row run in the order
+// they were pressed. The pane swaps use it (D67): with -b, a second press
+// raced the first's background command and could swap by stale geometry.
+func RunShellWait(self string, args ...string) string {
+	return "run-shell " + Quote(UICommand(self, args...))
+}
+
 // SwapKeys are prefix H/J/K/L: swap the active pane with the one on that
 // side (`imux __pane swap <dir>`, D67).
 var SwapKeys = []struct{ Key, Dir string }{
@@ -359,7 +367,7 @@ func GenerateConf(in *ConfInput) string {
 	w("# Panes from the keyboard (D67): swap with the pane on a side, the resize mode, the help.")
 	if cfg.Tmux.SwapPaneKeys {
 		for _, sw := range SwapKeys {
-			w("bind    %s %s", Quote(sw.Key), runShell(in.Self, "__pane", "swap", sw.Dir, pane))
+			w("bind    %s %s", Quote(sw.Key), RunShellWait(in.Self, "__pane", "swap", sw.Dir, pane))
 		}
 	}
 	if k := cfg.Tmux.ResizeKey; k != "" {

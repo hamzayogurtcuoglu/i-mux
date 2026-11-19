@@ -85,10 +85,10 @@ bind    b run-shell -b '/opt/imux/bin/imux sidebar toggle --pane #{pane_id} --cl
 bind    v run-shell -b '/opt/imux/bin/imux __menu --split h --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    - run-shell -b '/opt/imux/bin/imux __menu --split v --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 # Panes from the keyboard (D67): swap with the pane on a side, the resize mode, the help.
-bind    H run-shell -b '/opt/imux/bin/imux __pane swap left --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
-bind    J run-shell -b '/opt/imux/bin/imux __pane swap down --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
-bind    K run-shell -b '/opt/imux/bin/imux __pane swap up --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
-bind    L run-shell -b '/opt/imux/bin/imux __pane swap right --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    H run-shell '/opt/imux/bin/imux __pane swap left --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    J run-shell '/opt/imux/bin/imux __pane swap down --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    K run-shell '/opt/imux/bin/imux __pane swap up --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
+bind    L run-shell '/opt/imux/bin/imux __pane swap right --pane #{pane_id} --client #{client_name} >/dev/null 2>&1 || true'
 bind    r { switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
 bind -T imux-resize h { resize-pane -L 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }
 bind -T imux-resize j { resize-pane -D 2 ; switch-client -T imux-resize ; display-message -d 0 'Resize: h j k l or arrows (Shift: faster) · Esc, Enter or q: done' }

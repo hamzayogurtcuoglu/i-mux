@@ -31,6 +31,13 @@ type Options struct {
 	Out    io.Writer
 	// Safety is the redraw interval without events (default 15 s).
 	Safety time.Duration
+	// EnsureWatch, when set, starts the limit watcher when it is gone. The
+	// cli wiring sets it (the watch package imports this one, so a sidebar
+	// cannot call it itself): a sidebar, alive as long as its window, is
+	// what brings the watcher back when it died with the server living on
+	// (a client that stayed attached never runs client-attached again,
+	// D86). It runs at startup and on the WatchEvery ticker.
+	EnsureWatch func()
 }
 
 // sidebar is a running sidebar's state.
@@ -91,6 +98,10 @@ var (
 	SpinEvery   = 120 * time.Millisecond
 	// FreshEvery: a sidebar a client shows gathers this often (FreshTTL).
 	FreshEvery = 3 * time.Second
+	// WatchEvery is how often a sidebar looks for a dead watcher to bring
+	// back (Options.EnsureWatch, D86); IMUX_WATCH_CHECK shortens it for
+	// tests.
+	WatchEvery = 15 * time.Second
 )
 
 // Run draws the sidebar until its window has no other pane, stdin closes or
@@ -155,6 +166,20 @@ func Run(ctx context.Context, o Options) error {
 	}
 	tick := time.NewTicker(o.Safety)
 	defer tick.Stop()
+	// The watcher's health is its own concern (D86): a slow look that
+	// never waits on the redraw's Safety interval.
+	healEvery := WatchEvery
+	if d, err := time.ParseDuration(os.Getenv("IMUX_WATCH_CHECK")); err == nil && d > 0 {
+		healEvery = d // tests
+	}
+	heal := time.NewTicker(healEvery)
+	defer heal.Stop()
+	healWatch := func() {
+		if o.EnsureWatch != nil {
+			o.EnsureWatch()
+		}
+	}
+	healWatch()
 	// The spinner of working agents turns from the cached model: no tmux
 	// exec, only while one is shown.
 	spin := time.NewTicker(SpinEvery)
@@ -190,6 +215,8 @@ func Run(ctx context.Context, o Options) error {
 		case <-tick.C:
 			upgrade()
 			_, _ = io.WriteString(o.Out, askBackground())
+		case <-heal.C:
+			healWatch()
 		case <-fresh.C:
 			if !s.win.Visible {
 				continue // nobody sees it; a switch to it signals a redraw

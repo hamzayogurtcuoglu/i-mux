@@ -246,6 +246,24 @@ func TestStartBatchesOptions(t *testing.T) {
 	}
 }
 
+// TestNewWindowEnsuresWatcher (T3.10, D86): a window opened inside tmux
+// (`imux <agent>` there) brings the watcher back when it died with the
+// server living on, as Start does.
+func TestNewWindowEnsuresWatcher(t *testing.T) {
+	w, f, h := testWS(t)
+	f.replies["display-message"] = "@9\n"
+	f.replies["new-window"] = "%7\n"
+	called := false
+	EnsureWatcher = func(*WS) { called = true }
+	defer func() { EnsureWatcher = func(*WS) {} }()
+	if _, err := w.NewWindow(context.Background(), "%3", "claude", h.Project); err != nil {
+		t.Fatal(err)
+	}
+	if !called {
+		t.Fatal("NewWindow did not ensure the watcher")
+	}
+}
+
 func TestPaneParsing(t *testing.T) {
 	w, f, _ := testWS(t)
 	f.replies["display-message"] = "%3\tantigravity\t1762352000123\t/home/test/proj\t/elsewhere\tAntigravity\t0\tproj-1a2b\t@1\tnode\t\t\t[{\"a\":\"claude\",\"s\":1,\"e\":2},{\"a\":\"antigravity\",\"s\":2}]\n"

@@ -47,3 +47,25 @@ func TestWatcherLifecycle(t *testing.T) {
 		t.Fatalf("watch.log:\n%s", log)
 	}
 }
+
+// TestSidebarRevivesWatcher (T3.10, D86): a watcher that dies with the server
+// living on comes back on its own. A client that stayed attached never runs
+// client-attached again, so a sidebar checks the watcher's lock and starts
+// it when it finds it gone.
+func TestSidebarRevivesWatcher(t *testing.T) {
+	t.Setenv("IMUX_WATCH_CHECK", "300ms")
+	h := newH(t, sidebarConfig)
+	h.startWithSidebar()
+	h.waitFor("watcher running", 5*time.Second, func() bool { return len(h.watchers()) == 1 })
+	old := h.watchers()[0]
+	if err := exec.Command("kill", "-9", old).Run(); err != nil {
+		t.Fatal(err)
+	}
+	h.waitFor("sidebar revives the watcher", 10*time.Second, func() bool {
+		w := h.watchers()
+		return len(w) == 1 && w[0] != old
+	})
+	if out := h.mustImux("__watch", "status"); !strings.Contains(out, "running (pid "+h.watchers()[0]+")") {
+		t.Fatalf("status %q", out)
+	}
+}
