@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -134,7 +135,7 @@ func TestEnvNewPopup(t *testing.T) {
 	}
 	h := newH(t, "editor = \""+ed+"\"\n"+sidebarConfig)
 	_, bar := h.startWithSidebar()
-	c, _ := h.attach(140, 40)
+	c, client := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
 	h.mustTmux("set-option", "-w", "-t", bar, "@imux_view", "env")
 	_, _, _ = h.imux("__sidebar", "--signal")
@@ -148,6 +149,16 @@ func TestEnvNewPopup(t *testing.T) {
 		c.Click(0, x+1, y)
 		c.waitScreenAfter(h, mark, "e.g. glm, work, proxy", 5*time.Second)
 		time.Sleep(200 * time.Millisecond)
+	}
+	// closed waits for the dialog's process to end. tmux 3.3+ holds a lone
+	// Esc 500 ms while a client has not answered its DA queries (this pty
+	// never does): a click before then would reach the popup with it.
+	closed := func() {
+		t.Helper()
+		h.waitFor("the dialog closed", 5*time.Second, func() bool {
+			out, err := exec.Command("ps", "-A", "-o", "args=").Output()
+			return err == nil && !strings.Contains(string(out), "env new --client "+client)
+		})
 	}
 	file := filepath.Join(h.Homes.Imux, "env", "glm-coding.env")
 
@@ -167,6 +178,7 @@ func TestEnvNewPopup(t *testing.T) {
 		t.Fatalf("file %v %v:\n%s", fi, err, text)
 	}
 	c.Write("\r")
+	closed()
 	h.rowOf(bar, "glm-coding")
 
 	// The same name again: refused; Esc closes.
@@ -181,13 +193,14 @@ func TestEnvNewPopup(t *testing.T) {
 		t.Fatal("a taken name opened the editor")
 	}
 	c.Write("\x1b")
+	closed()
 
 	// Esc with a name typed makes nothing.
 	open()
 	c.Write("scratch")
 	time.Sleep(300 * time.Millisecond)
 	c.Write("\x1b")
-	time.Sleep(800 * time.Millisecond)
+	closed()
 	if _, err := os.Stat(filepath.Join(h.Homes.Imux, "env", "scratch.env")); err == nil {
 		t.Fatal("Esc made an environment")
 	}
