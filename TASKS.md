@@ -1024,7 +1024,7 @@ tmux on macOS and Linux, exactly as before.
     `/dev/null` remains only in the command lines T90.3 replaces. Symlinks (a skill's link for
     Claude) need Windows' Developer Mode; without it the link is not made, as when its place is
     taken.
-- [ ] **T90.3 Command strings without a POSIX shell** · M · deps: T90.2
+- [x] **T90.3 Command strings without a POSIX shell** · M · deps: T90.2
   - AC: `UICommand`, `Silent`, `ShQuote`, `ShJoin`, the `run-shell` strings in the generated
     config, the popups' commands and every `sh -c` use follow E14 (D85, §9.2a): on Windows the
     argv form of `run-shell`/`if-shell` (i-mux-core's X1; the quiet form for
@@ -1036,6 +1036,17 @@ tmux on macOS and Linux, exactly as before.
     run what an agent or the user set up go with the tasks for them: Claude's status line and
     the install and fix commands (T90.5), the clipboard and the browser (T90.6), the update
     (T90.7).
+  - Status: `tmux.ArgvForm` (from `sysx.POSIXShell`, or `IMUX_ARGV_FORM=1`) picks the form.
+    `UICommand` gives the quiet argv form, splitting its sh words as sh would; `ShellLine`,
+    `Program` and `QuoteProgram` give the plain argv form and programs as separate words, and
+    every popup goes through them (`popmenu.Popup` takes an argv). The handoff preview pages
+    itself (`--pager`), a menu's answer file is pruned, the watcher's reap nudge is left out,
+    the shell an agent exits to is the engine's (`sysx.ShellArgv`), and `TMUX` is read from the
+    right. On Linux the sh form is unchanged (its goldens and the menu tests pass as before);
+    `tmux-3.8-argv.conf.golden` holds the argv form, and `make e2e-core-argv` passes in full on
+    i-mux-core, where the same run on tmux fails, as it must. On Windows 11 the `sysx` tests
+    and `internal/tmux`'s goldens pass; its tests of file modes, engine resolution and a real
+    tmux wait for T90.9.
 - [ ] **T90.4 Paths and agents' homes** · S · deps: T90.2
   - AC: `~/.imux` under `%USERPROFILE%`; each agent's config and session paths on Windows
     (Claude Code, Codex, Copilot, Antigravity, OpenCode), each verified from that agent's own

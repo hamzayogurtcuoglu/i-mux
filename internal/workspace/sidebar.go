@@ -264,7 +264,7 @@ func (w *WS) ChangesMenu(ctx context.Context, p *Pane, client string) *Menu {
 		if client != "" {
 			c += " -c " + tmux.Quote(client)
 		}
-		c += " -E -w 90% -h 90% -d " + tmux.Quote(p.CWD) + " " + tmux.Quote(sidebar.DiffShell(w.Self, r.Status, r.Path))
+		c += " -E -w 90% -h 90% -d " + tmux.Quote(p.CWD) + " " + tmux.QuoteProgram(sidebar.DiffArgv(w.Self, r.Status, r.Path)...)
 		m.Items = append(m.Items, MenuItem{Name: r.Status + "  " + r.Path, Cmd: c})
 	}
 	if more := gi.StatusTotal - len(rows); more > 0 {
@@ -299,8 +299,8 @@ func (w *WS) ShowLimits(client string) error {
 	if client != "" {
 		c = append(c, "-c", client)
 	}
-	c = append(c, "-E", "-w", "80%", "-h", "60%", tmux.ShJoin(w.Self, "limits", "--pager"))
-	return w.T.Spawn(c)
+	c = append(c, "-E", "-w", "80%", "-h", "60%")
+	return w.T.Spawn(append(c, tmux.Program(w.Self, "limits", "--pager")...))
 }
 
 // ShowInstall opens the popup for agent id, which is not installed: what
@@ -312,7 +312,7 @@ func (w *WS) ShowInstall(id session.AgentID, pane, client string) error {
 		c = append(c, "-c", client)
 	}
 	args := append([]string{w.Self, "__install", string(id)}, uiTarget(pane, client)...)
-	return w.T.Spawn(append(c, "-E", "-w", "72", "-h", "13", tmux.ShJoin(args...)))
+	return w.T.Spawn(append(append(c, "-E", "-w", "72", "-h", "13"), tmux.Program(args...)...))
 }
 
 // OptSidebarOff marks a window whose sidebar was turned off (prefix b): the

@@ -152,17 +152,21 @@ func Show(self string) func(ctx context.Context, c *tmux.Client, cmd tmux.Cmd) e
 		}
 		out := filepath.Join(dir, id+".tmux")
 		w, h := Size(m)
-		return Popup(ctx, c, m.Client, m.Pane, w, h, m.X, m.Y, tmux.ShJoin(self, "__menu-popup", id),
-			tmux.Cmd{"source-file", "-q", out},
-			tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat("rm -f " + tmux.ShQuote(out))})
+		after := []tmux.Cmd{{"source-file", "-q", out}}
+		if !tmux.ArgvForm {
+			// Without a shell (§9.2a) prune removes it later.
+			after = append(after, tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat("rm -f " + tmux.ShQuote(out))})
+		}
+		return Popup(ctx, c, m.Client, m.Pane, w, h, m.X, m.Y, []string{self, "__menu-popup", id}, after...)
 	}
 }
 
-// Popup shows program (a shell command) in a w×h popup at x, y on client,
-// from pane, and does not wait for it; after runs once the popup closed (a
-// popup cannot open over another). The tmux client that shows it starts
-// from pane (TMUX_PANE), as display-menu runs a choice there.
-func Popup(ctx context.Context, c *tmux.Client, client, pane string, w, h int, x, y, program string, after ...tmux.Cmd) error {
+// Popup shows program (argv: the program and its arguments) in a w×h popup
+// at x, y on client, from pane, and does not wait for it; after runs once
+// the popup closed (a popup cannot open over another). The tmux client that
+// shows it starts from pane (TMUX_PANE), as display-menu runs a choice
+// there.
+func Popup(ctx context.Context, c *tmux.Client, client, pane string, w, h int, x, y string, program []string, after ...tmux.Cmd) error {
 	pop := tmux.Cmd{"display-popup"}
 	if client != "" {
 		pop = append(pop, "-c", client)
@@ -170,7 +174,7 @@ func Popup(ctx context.Context, c *tmux.Client, client, pane string, w, h int, x
 	if pane != "" {
 		pop = append(pop, "-t", pane)
 	}
-	pop = append(pop, "-E", "-w", strconv.Itoa(w), "-h", strconv.Itoa(h), "-x", x, "-y", y, program)
+	pop = append(append(pop, "-E", "-w", strconv.Itoa(w), "-h", strconv.Itoa(h), "-x", x, "-y", y), tmux.Program(program...)...)
 	var cmds []tmux.Cmd
 	if c.MessageTakesClient(ctx) {
 		// A status-line message freezes the client's terminal, and tmux

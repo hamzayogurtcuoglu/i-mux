@@ -502,7 +502,7 @@ func (s *scm) openPopup(argv []string) error {
 		c = append(c, "-c", s.c.Client)
 	}
 	c = append(c, "-E", "-w", "80%", "-h", "70%", "-d", tmux.EscapeFormat(s.c.Dir))
-	return s.w.T.Spawn(append(c, tmux.ShJoin(append([]string{s.c.Self}, argv...)...)))
+	return s.w.T.Spawn(append(c, tmux.Program(append([]string{s.c.Self}, argv...)...)...))
 }
 
 // popup opens op's popup.
@@ -536,7 +536,7 @@ func (s *scm) popup(op string) error {
 			c = append(c, "-c", s.c.Client)
 		}
 		c = append(c, "-E", "-w", "95%", "-h", "90%", "-d", tmux.EscapeFormat(dir))
-		return s.w.T.Spawn(append(c, tmux.ShJoin(s.c.Self, "__diff", "--"+s.side, s.status, rel)))
+		return s.w.T.Spawn(append(c, tmux.Program(s.c.Self, "__diff", "--"+s.side, s.status, rel)...))
 	case "delete-remote-branch", "delete-remote-tag":
 		v := s.opt(scmui.OptArg)
 		if v == "" {

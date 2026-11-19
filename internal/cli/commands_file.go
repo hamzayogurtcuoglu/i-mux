@@ -106,8 +106,9 @@ func (f *fileCtx) rel(p string) string {
 
 func (f *fileCtx) say(msg string) { f.w.Message(f.ctx, f.client, f.pane, msg) }
 
-func (f *fileCtx) self(args ...string) string {
-	return tmux.ShJoin(append([]string{f.w.Self}, args...)...)
+// self is imux with args as a popup's or a pane's program (tmux.Program).
+func (f *fileCtx) self(args ...string) []string {
+	return tmux.Program(append([]string{f.w.Self}, args...)...)
 }
 
 // popup runs an imux command in a popup in folder dir.
@@ -121,8 +122,8 @@ func (f *fileCtx) popupSized(dir, w, h string, args ...string) error {
 	if f.client != "" {
 		c = append(c, "-c", f.client)
 	}
-	c = append(c, "-E", "-w", w, "-h", h, "-d", tmux.EscapeFormat(dir), f.self(args...))
-	return f.w.T.Spawn(c)
+	c = append(c, "-E", "-w", w, "-h", h, "-d", tmux.EscapeFormat(dir))
+	return f.w.T.Spawn(append(c, f.self(args...)...))
 }
 
 // prompt asks on the client for a name; the answer goes to OptFileName,
@@ -168,7 +169,7 @@ func (f *fileCtx) do(op string) error {
 		if f.pane != "" {
 			c = append(c, "-t", f.pane)
 		}
-		_, err := f.w.T.Run(ctx, append(c, "-c", tmux.EscapeFormat(f.root), f.self("__edit", f.path)))
+		_, err := f.w.T.Run(ctx, append(append(c, "-c", tmux.EscapeFormat(f.root)), f.self("__edit", f.path)...))
 		return err
 	case "preview":
 		return webOpen(ctx, f.w, f.path, f.pane, f.client, "", false)
@@ -209,8 +210,8 @@ func (f *fileCtx) do(op string) error {
 		if f.client != "" {
 			c = append(c, "-c", f.client)
 		}
-		return f.w.T.Spawn(append(c, "-E", "-w", "95%", "-h", "90%", "-d", tmux.EscapeFormat(f.root),
-			f.self("__diff", "--compare", f.cmp, f.path)))
+		c = append(c, "-E", "-w", "95%", "-h", "90%", "-d", tmux.EscapeFormat(f.root))
+		return f.w.T.Spawn(append(c, f.self("__diff", "--compare", f.cmp, f.path)...))
 	case "cut", "copy":
 		_, err := f.w.T.Run(ctx, tmux.Cmd{"set-option", "-g", sidebar.OptFileClip, op + ":" + f.path})
 		if err == nil {

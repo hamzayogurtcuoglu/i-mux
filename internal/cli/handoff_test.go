@@ -172,3 +172,14 @@ func TestPruneOncePerDay(t *testing.T) {
 		t.Fatal("prune after a day should run")
 	}
 }
+
+// The preview popup without a POSIX shell (§9.2a) pages what went wrong
+// too, as `2>&1 | less -R` shows it on Unix.
+func TestHandoffPagerShowsWhatWentWrong(t *testing.T) {
+	h := testutil.Isolate(t)
+	inProject(t, h)
+	out, _, code := runCLI(t, "handoff", "--print", "--pager")
+	if code != 0 || !strings.Contains(out, "imux: no agent session found") {
+		t.Fatalf("%d %q", code, out)
+	}
+}

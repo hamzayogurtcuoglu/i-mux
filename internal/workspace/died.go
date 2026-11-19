@@ -16,6 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -134,23 +135,23 @@ func (w *WS) useFallback(ctx context.Context, p *Pane, fast bool) (bool, error) 
 // environment env (D84) it starts through `imux __exec`, so the values go
 // through a 0600 spec file and never on a command line.
 func (w *WS) shellCmd(ctx context.Context, pane, dir, env string) []string {
-	sh := w.loginShell(ctx)
+	argv := sysx.ShellArgv(w.loginShell(ctx)) // sh -l; on Windows the engine's shell (§9.2a)
 	if env == "" || !envfile.Exists(env) {
-		return []string{sh, "-l"}
+		return argv
 	}
-	bin := sh
+	bin := argv[0]
 	if !filepath.IsAbs(bin) {
 		if p, err := exec.LookPath(bin); err == nil {
 			bin = p
 		}
 	}
-	spec := &launch.Spec{Bin: bin, Args: []string{"-l"}, Dir: dir, Env: envWith(map[string]string{}, env), Pane: pane}
+	spec := &launch.Spec{Bin: bin, Args: argv[1:], Dir: dir, Env: envWith(map[string]string{}, env), Pane: pane}
 	if spec.Validate() != nil {
-		return []string{sh, "-l"}
+		return argv
 	}
 	path, err := writeSpec(spec)
 	if err != nil {
-		return []string{sh, "-l"}
+		return argv
 	}
 	return w.execCmd(path)
 }

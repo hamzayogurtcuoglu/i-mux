@@ -5,6 +5,7 @@ package sysx
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -25,5 +26,31 @@ func TestExecutableByExtension(t *testing.T) {
 		if got := Executable(fi); got != want {
 			t.Errorf("Executable(%s) = %v, want %v", name, got, want)
 		}
+	}
+}
+
+// The shell an agent exits to is i-mux-core's choice (§9.2a): a
+// default-shell that does not exist (tmux's /bin/sh) gives PowerShell with
+// -NoLogo, else cmd.exe; one that exists is kept.
+func TestShellArgv(t *testing.T) {
+	argv := ShellArgv("/bin/sh")
+	if !filepath.IsAbs(argv[0]) {
+		t.Fatalf("not a path: %q", argv)
+	}
+	switch strings.TrimSuffix(strings.ToLower(filepath.Base(argv[0])), ".exe") {
+	case "pwsh", "powershell":
+		if len(argv) != 2 || argv[1] != "-NoLogo" {
+			t.Fatalf("%q", argv)
+		}
+	case "cmd":
+		if len(argv) != 1 {
+			t.Fatalf("%q", argv)
+		}
+	default:
+		t.Fatalf("not a Windows shell: %q", argv)
+	}
+	cmd := filepath.Join(systemRoot(), "System32", "cmd.exe")
+	if got := ShellArgv(cmd); len(got) != 1 || got[0] != cmd {
+		t.Fatalf("ShellArgv(cmd.exe) = %q", got)
 	}
 }

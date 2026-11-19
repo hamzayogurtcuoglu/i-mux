@@ -146,7 +146,7 @@ func (w *WS) picker(ctx context.Context, f *sources.Finder, p *Pane, client stri
 		if client != "" {
 			c += " -c " + tmux.Quote(client)
 		}
-		c += " -E -w 90% -h 80% -d " + tmux.Quote(tmux.EscapeFormat(p.CWD)) + " " + tmux.Quote(tmux.ShJoin(append([]string{w.Self, "__history"}, tgt...)...))
+		c += " -E -w 90% -h 80% -d " + tmux.Quote(tmux.EscapeFormat(p.CWD)) + " " + tmux.QuoteProgram(append([]string{w.Self, "__history"}, tgt...)...)
 		tail = append(tail, MenuItem{Name: i18n.T("history.search"), Key: "/", Cmd: c})
 	}
 	if len(tail) > 0 {

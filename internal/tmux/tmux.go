@@ -371,7 +371,14 @@ func (c *Client) Inside(tmuxEnv string) bool {
 	if tmuxEnv == "" {
 		return false
 	}
-	sock, _, _ := strings.Cut(tmuxEnv, ",")
+	// <socket path>,<pid>,<session>, read from the right: the path may hold a
+	// comma (a Windows profile's name, §9.2a).
+	sock := tmuxEnv
+	for range 2 {
+		if i := strings.LastIndexByte(sock, ','); i >= 0 {
+			sock = sock[:i]
+		}
+	}
 	return filepath.Base(sock) == c.Socket
 }
 

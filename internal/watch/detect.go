@@ -165,7 +165,7 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	if d.OnTick != nil {
 		extra = d.OnTick(ctx, panes, clients)
 	}
-	if nudge {
+	if nudge && !tmux.ArgvForm { // i-mux-core reaps its children itself (§9.2a)
 		extra = append(extra, reapNudge)
 	}
 	detached := len(clients) == 0

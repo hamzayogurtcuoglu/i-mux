@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff/clean"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/pager"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
@@ -27,7 +29,7 @@ import (
 func init() {
 	register(&command{
 		Name:    "handoff",
-		Args:    "[--from A] [--to B] [--cwd DIR] [--session ID|PATH] [--pane %N] [--print] [--budget N] [--delta-since T] [--reason manual|limit]",
+		Args:    "[--from A] [--to B] [--cwd DIR] [--session ID|PATH] [--pane %N] [--print [--pager]] [--budget N] [--delta-since T] [--reason manual|limit]",
 		Summary: "cmd.handoff",
 		Run:     runHandoff,
 	})
@@ -79,7 +81,7 @@ func getwd(flagVal string) (string, error) {
 // paneHandoff builds a handoff for a tmux pane (set by the workspace layer).
 var paneHandoff func(e *Env, cfg *config.Config, pane string, to session.AgentID, budget int) (string, error)
 
-func runHandoff(e *Env, args []string) error {
+func runHandoff(e *Env, args []string) (err error) {
 	fs := newFlags(e, "handoff")
 	fromF := fs.String("from", "", "source agent (default: newest session of any agent)")
 	toF := fs.String("to", "", "target agent")
@@ -87,11 +89,25 @@ func runHandoff(e *Env, args []string) error {
 	sessF := fs.String("session", "", "session id, agent:id or file path")
 	paneF := fs.String("pane", "", "build from a tmux pane (%N)")
 	printF := fs.Bool("print", false, "print the document instead of starting the target agent")
+	pagerF := fs.Bool("pager", false, "with --print, show what it prints in a pager (the preview popup without a POSIX shell)")
 	budgetF := fs.Int("budget", 0, "character budget (default: config handoff.budget_chars)")
 	deltaF := fs.String("delta-since", "", "delta mode: only entries after this time (RFC 3339 or unix ms)")
 	reasonF := fs.String("reason", "", "manual or limit")
 	if _, err := parseFlags(fs, args); err != nil {
 		return err
+	}
+	if *pagerF && *printF {
+		// The handoff preview where no shell pipes it into less (§9.2a):
+		// the document, or what went wrong, in i-mux's pager.
+		var buf bytes.Buffer
+		term := e
+		e = &Env{Stdin: e.Stdin, Stdout: &buf, Stderr: &buf}
+		defer func() {
+			if err != nil {
+				fmt.Fprintf(&buf, "imux: %v\n", err)
+			}
+			err = page(term, nil, pager.Text(buf.String()), 0)
+		}()
 	}
 	cfg, err := loadConfig(e)
 	if err != nil {

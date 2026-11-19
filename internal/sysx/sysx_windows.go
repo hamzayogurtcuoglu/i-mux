@@ -355,6 +355,46 @@ const HasTmux = false
 // ExeSuffix ends an executable's file name.
 const ExeSuffix = ".exe"
 
+// POSIXShell reports whether a POSIX sh runs the command lines i-mux gives
+// its engine: not on Windows, where they take the engine's argv form (§9.2a).
+const POSIXShell = false
+
+// ShellArgv is how the user's interactive shell starts in a pane, as
+// i-mux-core starts one: sh (default-shell) when it names a program that
+// exists, else pwsh, else Windows PowerShell, else %COMSPEC%. PowerShell
+// gets -NoLogo; Windows shells have no login form.
+func ShellArgv(sh string) []string {
+	if !filepath.IsAbs(sh) || !isFile(sh) {
+		sh = defaultShell()
+	}
+	switch strings.TrimSuffix(strings.ToLower(filepath.Base(sh)), ".exe") {
+	case "pwsh", "powershell":
+		return []string{sh, "-NoLogo"}
+	}
+	return []string{sh}
+}
+
+// defaultShell is i-mux-core's shell when default-shell names none.
+func defaultShell() string {
+	if p, err := exec.LookPath("pwsh.exe"); err == nil {
+		if abs, err := filepath.Abs(p); err == nil {
+			return abs
+		}
+	}
+	if ps := filepath.Join(systemRoot(), "System32", "WindowsPowerShell", "v1.0", "powershell.exe"); isFile(ps) {
+		return ps
+	}
+	if c := os.Getenv("COMSPEC"); c != "" && filepath.IsAbs(c) {
+		return c
+	}
+	return filepath.Join(systemRoot(), "System32", "cmd.exe")
+}
+
+func isFile(p string) bool {
+	fi, err := os.Stat(p)
+	return err == nil && fi.Mode().IsRegular()
+}
+
 // Executable reports whether a regular file can run: on Windows its
 // extension decides (PATHEXT: .exe, .cmd, .bat, .com ...).
 func Executable(fi os.FileInfo) bool {

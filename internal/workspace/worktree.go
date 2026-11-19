@@ -92,7 +92,7 @@ func (w *WS) worktreeItems(wt Worktree, s, client, pane string) []MenuItem {
 	if client != "" {
 		diff += " -c " + tmux.Quote(client)
 	}
-	diff += " -d " + tmux.Quote(tmux.EscapeFormat(wt.Main)) + " " + tmux.Quote(tmux.ShJoin(w.Self, "worktree", "diff", "--session", s))
+	diff += " -d " + tmux.Quote(tmux.EscapeFormat(wt.Main)) + " " + tmux.QuoteProgram(w.Self, "worktree", "diff", "--session", s)
 	return []MenuItem{
 		Separator(),
 		{Name: i18n.T("worktree.diff", wt.Base), Key: "d", Cmd: diff},

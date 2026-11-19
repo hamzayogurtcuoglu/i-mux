@@ -122,6 +122,14 @@ const HasTmux = true
 // ExeSuffix ends an executable's file name.
 const ExeSuffix = ""
 
+// POSIXShell reports whether a POSIX sh runs the command lines i-mux gives
+// its engine (§9.2a).
+const POSIXShell = true
+
+// ShellArgv is how the user's interactive shell sh (tmux's default-shell)
+// starts in a pane: as a login shell.
+func ShellArgv(sh string) []string { return []string{sh, "-l"} }
+
 // Executable reports whether a regular file's mode lets it run.
 func Executable(fi os.FileInfo) bool { return fi.Mode().Perm()&0o111 != 0 }
 

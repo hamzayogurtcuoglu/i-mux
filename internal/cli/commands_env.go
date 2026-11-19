@@ -93,7 +93,7 @@ func runEnv(e *Env, args []string) error {
 		if client != "" {
 			argv = append(argv, "--client", client)
 		}
-		return popmenu.Popup(ctx, w.T, client, "", min(cw, dialogW), min(ch, dialogH), "C", "C", tmux.ShJoin(argv...))
+		return popmenu.Popup(ctx, w.T, client, "", min(cw, dialogW), min(ch, dialogH), "C", "C", argv)
 	case "new":
 		name, err := named()
 		if err != nil {

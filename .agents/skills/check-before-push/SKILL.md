@@ -49,6 +49,9 @@ Not in `make ci`, run them when they apply (CI runs them):
 
 - `make fuzz-short` after changing a parser that has a `Fuzz` test.
 - `goreleaser release --snapshot --clean` after changing `.goreleaser.yml` or the release workflows.
+- `make e2e-core-argv` (CI does not run it) after changing a command line i-mux gives the engine
+  (a binding, hook, menu item or popup): the e2e suite on i-mux-core with Windows' argv forms
+  (§9.2a), here.
 
 ## Rules
 

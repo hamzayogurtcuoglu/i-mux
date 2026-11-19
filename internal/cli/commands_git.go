@@ -387,7 +387,7 @@ func (g *gitCall) commit(arg string, o gitops.CommitOpts, then string) (bool, er
 			c = append(c, "-c", g.client)
 		}
 		c = append(c, "-E", "-w", "80%", "-h", "70%", "-d", tmux.EscapeFormat(g.cwd))
-		return true, g.w.T.Spawn(append(c, tmux.ShJoin(self, "__git", then, "--cwd", g.cwd)))
+		return true, g.w.T.Spawn(append(c, tmux.Program(self, "__git", then, "--cwd", g.cwd)...))
 	}
 	return true, nil
 }

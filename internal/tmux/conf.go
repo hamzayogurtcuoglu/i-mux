@@ -114,11 +114,17 @@ func TabFormat(old bool) string {
 // pane's view mode, so imux reports results with display-message instead.
 const Silent = " >/dev/null 2>&1 || true"
 
-// UICommand returns the sh command line that runs imux with args silently.
-// args are sh words; formats (#{pane_id}) are expanded by run-shell before
-// the shell sees them, and the values imux puts there (pane ids, client
-// names, agent-bar ranges, exit statuses, agent:id) need no sh quoting.
+// UICommand returns the command line that runs imux with args silently: a
+// sh line, or i-mux-core's quiet argv form where no POSIX shell runs it
+// (§9.2a). args are sh words (several may share a string); formats
+// (#{pane_id}) are expanded by run-shell before the shell sees them (in each
+// element of the argv form), and the values imux puts there (pane ids,
+// client names, agent-bar ranges, exit statuses, agent:id) need no sh
+// quoting.
 func UICommand(self string, args ...string) string {
+	if ArgvForm {
+		return argvJSON(append([]string{self}, shWords(args)...), true)
+	}
 	return ShQuote(self) + " " + strings.Join(args, " ") + Silent
 }
 

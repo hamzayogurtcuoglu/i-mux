@@ -16,7 +16,7 @@ PKGS      ?= ./...
 
 export CGO_ENABLED = 0
 
-.PHONY: all build install test race e2e e2e-core lint fmt bench fuzz-short check-fixtures size clean generate \
+.PHONY: all build install test race e2e e2e-core e2e-core-argv lint fmt bench fuzz-short check-fixtures size clean generate \
 	ci lint-all generate-check shellcheck test-macos
 
 all: lint test build
@@ -94,6 +94,12 @@ e2e-core: build ## End-to-end tests on the i-mux-core engine (D83)
 	@test -x "$(IMUX_CORE_BIN)" || { echo >&2 "e2e-core: $(IMUX_CORE_BIN) not found"; exit 2; }
 	"$(IMUX_CORE_BIN)" -V
 	IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) IMUX_TMUX_BIN=$(IMUX_CORE_BIN) $(GO) test -tags e2e -count=1 -timeout 20m ./e2e/...
+
+# The same with the command lines of a system without a POSIX shell (§9.2a):
+# Windows' argv forms, checked here on i-mux-core (tmux cannot run them).
+e2e-core-argv: build ## End-to-end tests on i-mux-core with Windows' command lines (§9.2a)
+	@test -x "$(IMUX_CORE_BIN)" || { echo >&2 "e2e-core-argv: $(IMUX_CORE_BIN) not found"; exit 2; }
+	IMUX_ARGV_FORM=1 IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) IMUX_TMUX_BIN=$(IMUX_CORE_BIN) $(GO) test -tags e2e -count=1 -timeout 20m ./e2e/...
 
 lint: ## golangci-lint (vet, staticcheck, errcheck, gofumpt, misspell)
 	golangci-lint run ./...

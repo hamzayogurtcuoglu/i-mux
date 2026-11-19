@@ -157,15 +157,19 @@ func (w *WS) previewCmd(p *Pane, from string) string {
 	if from != "" {
 		args = []string{w.Self, "handoff", "--session", from, "--cwd", p.CWD, "--print"}
 	}
-	// LESSCHARSET: the document is UTF-8 whatever the popup's locale (under
-	// a C locale less shows "·" as <C2><B7>).
-	sh := tmux.ShJoin(args...) + " 2>&1 | LESSCHARSET=utf-8 less -R"
 	// Menu items run on the client that chose them: no -c (tmux 3.2a
 	// rejects -c inside menu item commands).
 	c := "display-popup -E -w 90% -h 90%"
 	if p.CWD != "" {
 		c += " -d " + tmux.Quote(p.CWD)
 	}
+	if tmux.ArgvForm {
+		// No pipe without a shell (§9.2a): it pages itself.
+		return c + " " + tmux.QuoteProgram(append(args, "--pager")...)
+	}
+	// LESSCHARSET: the document is UTF-8 whatever the popup's locale (under
+	// a C locale less shows "·" as <C2><B7>).
+	sh := tmux.ShJoin(args...) + " 2>&1 | LESSCHARSET=utf-8 less -R"
 	return c + " " + tmux.Quote(sh)
 }
 
@@ -175,9 +179,8 @@ var limitsPanel = true
 // limitsCmd opens the limits panel; until M4 it says it is coming.
 func (w *WS) limitsCmd() string {
 	if limitsPanel {
-		sh := tmux.ShJoin(w.Self, "limits", "--pager")
 		c := "display-popup -E -w 80% -h 60%"
-		return c + " " + tmux.Quote(sh)
+		return c + " " + tmux.QuoteProgram(w.Self, "limits", "--pager")
 	}
 	return "display-message " + tmux.Quote(tmux.EscapeMessage(i18n.T("menu.limits_soon")))
 }

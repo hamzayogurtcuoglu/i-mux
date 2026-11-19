@@ -63,7 +63,7 @@ func runGoto(e *Env, args []string) error {
 	if dir != "" {
 		c = append(c, "-d", tmux.EscapeFormat(dir)) // -d is a format
 	}
-	return w.T.Spawn(append(c, tmux.ShJoin(w.Self, "__goto", "--run")))
+	return w.T.Spawn(append(c, tmux.Program(w.Self, "__goto", "--run")...))
 }
 
 // paneDir is the folder of a pane's project: its agent's folder, else its

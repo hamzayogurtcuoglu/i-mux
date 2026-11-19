@@ -116,8 +116,8 @@ func (s *skillCtx) popup(args ...string) error {
 	if s.client != "" {
 		c = append(c, "-c", s.client)
 	}
-	sh := tmux.ShJoin(append([]string{s.w.Self}, args...)...)
-	return s.w.T.Spawn(append(c, "-E", "-w", "90%", "-h", "90%", "-d", tmux.EscapeFormat(s.root), sh))
+	c = append(c, "-E", "-w", "90%", "-h", "90%", "-d", tmux.EscapeFormat(s.root))
+	return s.w.T.Spawn(append(c, tmux.Program(append([]string{s.w.Self}, args...)...)...))
 }
 
 // dialog opens the New skill dialog (`__skill new`) in a popup sized to the
@@ -142,7 +142,8 @@ func (s *skillCtx) dialog() error {
 	if s.client != "" {
 		c = append(c, "-c", s.client)
 	}
-	return s.w.T.Spawn(append(c, "-E", "-w", w, "-h", h, "-d", tmux.EscapeFormat(s.root), tmux.ShJoin(args...)))
+	c = append(c, "-E", "-w", w, "-h", h, "-d", tmux.EscapeFormat(s.root))
+	return s.w.T.Spawn(append(c, tmux.Program(args...)...))
 }
 
 // newSkill runs the New skill dialog on this terminal (the popup) and acts

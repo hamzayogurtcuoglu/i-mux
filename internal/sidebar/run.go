@@ -790,7 +790,7 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		if client != "" {
 			args = append(args, "--client", client)
 		}
-		_ = s.t.Spawn(append(c, "-E", "-w", "80%", "-h", "70%", tmux.ShJoin(args...)))
+		_ = s.t.Spawn(append(append(c, "-E", "-w", "80%", "-h", "70%"), tmux.Program(args...)...))
 		return
 	case ActView:
 		// Show another view in this sidebar (@imux_view, per window). The
@@ -1085,11 +1085,11 @@ func (s *sidebar) diff(a Action, client string) {
 	if s.model.CWD != "" {
 		c = append(c, "-d", tmux.EscapeFormat(s.model.CWD)) // -d is a format
 	}
-	sh := DiffShell(s.o.Self, a.Status, a.Path)
+	argv := DiffArgv(s.o.Self, a.Status, a.Path)
 	if a.Section == "staged" || a.Section == "worktree" {
-		sh = tmux.ShJoin(s.o.Self, "__diff", "--"+a.Section, a.Status, a.Path)
+		argv = []string{s.o.Self, "__diff", "--" + a.Section, a.Status, a.Path}
 	}
-	_ = s.t.Spawn(append(c, sh))
+	_ = s.t.Spawn(append(c, tmux.Program(argv...)...))
 }
 
 // gitArgs is `imux __git op` for the project folder (and paths).
@@ -1183,13 +1183,13 @@ func (s *sidebar) popup(client, w, h string, args ...string) {
 	if s.model.CWD != "" {
 		c = append(c, "-d", tmux.EscapeFormat(s.model.CWD)) // -d is a format
 	}
-	_ = s.t.Spawn(append(c, tmux.ShJoin(append([]string{s.o.Self}, args...)...)))
+	_ = s.t.Spawn(append(c, tmux.Program(append([]string{s.o.Self}, args...)...)...))
 }
 
-// DiffShell is the sh command that shows a changed file's diff: the whole
-// file with the changes highlighted (imux __diff, D26).
-func DiffShell(self, status, path string) string {
-	return tmux.ShJoin(self, "__diff", status, path)
+// DiffArgv is the command that shows a changed file's diff: the whole file
+// with the changes highlighted (imux __diff, D26).
+func DiffArgv(self, status, path string) []string {
+	return []string{self, "__diff", status, path}
 }
 
 // htmlAsk reports whether a click on a opens the menu that asks how to

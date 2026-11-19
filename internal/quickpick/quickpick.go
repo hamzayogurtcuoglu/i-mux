@@ -84,8 +84,8 @@ func Show(ctx context.Context, c *tmux.Client, self string, p *Pick, cw, ch int)
 		return err
 	}
 	w, h := Size(p, cw, ch)
-	return popmenu.Popup(ctx, c, p.Client, p.Pane, w, h, "C", "C", tmux.ShJoin(self, "__quickpick", id),
-		tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat(tmux.ShJoin(self, "__quickpick", "--run", id))})
+	return popmenu.Popup(ctx, c, p.Client, p.Pane, w, h, "C", "C", []string{self, "__quickpick", id},
+		tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat(tmux.ShellLine(self, "__quickpick", "--run", id))})
 }
 
 func file(id string) string { return filepath.Join(paths.Menus(), id+".pick.json") }

@@ -407,8 +407,8 @@ func (a *autoCmd) panel(id string) error {
 	if a.atWhen {
 		args = append(args, "--at-when")
 	}
-	after := tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat(tmux.ShJoin(a.c.Self, "__quickpick", "--run", pid))}
-	return popmenu.Popup(a.ctx, a.w.T, a.c.Client, a.c.Pane, w, h, "C", "C", tmux.ShJoin(args...), after)
+	after := tmux.Cmd{"run-shell", "-b", tmux.EscapeFormat(tmux.ShellLine(a.c.Self, "__quickpick", "--run", pid))}
+	return popmenu.Popup(a.ctx, a.w.T, a.c.Client, a.c.Pane, w, h, "C", "C", args, after)
 }
 
 // panelOptions fill the Run panel for t: the installed CLIs (its own
@@ -565,7 +565,7 @@ func (a *autoCmd) logPopup(id string) error {
 	if t.root != "" {
 		c = append(c, "-d", tmux.EscapeFormat(t.root))
 	}
-	return a.w.T.Spawn(append(c, tmux.ShJoin(args...)))
+	return a.w.T.Spawn(append(c, tmux.Program(args...)...))
 }
 
 // startWait is how long the output view waits for a run it was opened for
@@ -733,7 +733,8 @@ func (a *autoCmd) open(id string) error {
 	if a.c.Client != "" {
 		c = append(c, "-c", a.c.Client)
 	}
-	return a.w.T.Spawn(append(c, "-E", "-w", "90%", "-h", "90%", "-d", tmux.EscapeFormat(t.root), tmux.ShJoin(a.c.Self, "__edit", p)))
+	c = append(c, "-E", "-w", "90%", "-h", "90%", "-d", tmux.EscapeFormat(t.root))
+	return a.w.T.Spawn(append(c, tmux.Program(a.c.Self, "__edit", p)...))
 }
 
 // cont continues the last run's conversation in a pane beside the one the

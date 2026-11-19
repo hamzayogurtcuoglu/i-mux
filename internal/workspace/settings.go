@@ -53,7 +53,7 @@ func settingsTarget(pane, client string) []string {
 
 // popupCmd runs imux with args in a popup with a terminal.
 func (w *WS) popupCmd(width, height string, args ...string) string {
-	return "display-popup -E -w " + width + " -h " + height + " " + tmux.Quote(tmux.ShJoin(append([]string{w.Self}, args...)...))
+	return "display-popup -E -w " + width + " -h " + height + " " + tmux.QuoteProgram(append([]string{w.Self}, args...)...)
 }
 
 // SettingsMenu lists the common settings with their values; a row opens a

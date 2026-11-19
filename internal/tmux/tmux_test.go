@@ -239,6 +239,10 @@ func TestInside(t *testing.T) {
 	if !c.Inside("/tmp/tmux-501/imux,1234,0") {
 		t.Fatal("should be inside")
 	}
+	// A comma in the socket's path (a Windows profile's name).
+	if !c.Inside("/Users/Doe, Jane/AppData/Local/Temp/imux-core/imux,1234,0") {
+		t.Fatal("should be inside (a comma in the path)")
+	}
 	if c.Inside("/tmp/tmux-501/default,1234,0") || c.Inside("") {
 		t.Fatal("should not be inside")
 	}

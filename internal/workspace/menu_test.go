@@ -8,6 +8,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 func TestPaneMenuDisplayMenuArgs(t *testing.T) {
@@ -89,5 +90,32 @@ func TestPaneMenuLimitedCurrentAndShell(t *testing.T) {
 	cmd := (&Menu{Title: "a#b", Items: []MenuItem{{Name: "x#{y}", Key: "1", Cmd: "c"}}}).Cmd("", "")
 	if strings.Join(cmd, " ") != "display-menu -T a##b -x C -y C -- x##{y} 1 c" {
 		t.Fatalf("escaping: %q", cmd)
+	}
+}
+
+// Without a POSIX shell (§9.2a) the pane menu's commands take i-mux-core's
+// argv form, popups their program as separate words, and the handoff
+// preview pages itself.
+func TestPaneMenuArgvForm(t *testing.T) {
+	old := tmux.ArgvForm
+	tmux.ArgvForm = true
+	t.Cleanup(func() { tmux.ArgvForm = old })
+	w, f, _ := testWS(t)
+	p := &Pane{ID: "%3", Agent: "claude", CWD: "/home/test/proj", Trail: Trail{{Agent: "claude"}}}
+	if err := w.Show(context.Background(), w.PaneMenu(p, "/dev/pts/4"), "/dev/pts/4", "%3"); err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(f.calls[len(f.calls)-1], "\x00")
+	for _, want := range []string{
+		`run-shell -b '{"argv":["/opt/imux/bin/imux","__menu","--sessions","--pane","%3","--client","/dev/pts/4"`,
+		"display-popup -E -w 90% -h 90% -d /home/test/proj /opt/imux/bin/imux handoff --pane %3 --print --pager",
+		"display-popup -E -w 80% -h 60% /opt/imux/bin/imux limits --pager",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("display-menu args lack %q\nargs: %q", want, got)
+		}
+	}
+	if strings.Contains(got, "/dev/null") || strings.Contains(got, "less") {
+		t.Errorf("a shell line is left: %q", got)
 	}
 }
