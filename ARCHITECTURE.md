@@ -1782,8 +1782,8 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
     (`imux env new <name>`) and opens it in the editor (micro in a popup, as the explorer's Edit).
   - **A click** applies the environment to the target pane (below). On the target pane's own
     environment, a click opens its menu instead.
-  - **A right-click** opens its menu: **Apply to this pane** (or **Remove from this pane** when it
-    is this pane's), **Edit**, **Delete…** (asks first).
+  - **A right-click** opens its menu: **Apply to this pane** (on this pane's own: **Apply again**,
+    which loads its changes, and **Remove from this pane**), **Edit**, **Delete…** (asks first).
 - **Applying it to a pane** (`imux env apply <name> --pane P`) depends on what runs there:
   - **An agent:** a menu asks first: "Restart Claude with glm? The conversation continues." While
     the agent works (D71's `working`), it says that its current turn stops. On yes, `@imux_env` is
@@ -1808,7 +1808,9 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
   (§9.5) starts through `imux __exec` with them. A workspace snapshot (D24) keeps the name and
   a restored pane gets it back. A new pane split from it does not inherit it: each pane chooses.
 - **Editing** an environment changes what is applied next, not the programs that run with it
-  (apply it again). **Deleting** one unsets `@imux_env` from the panes that have it; their
+  (**Apply again** loads it). A pane started with a command (`sh -c '…'`) is busy even when tmux
+  names the shell that runs it: a shell pane is one started as a shell (`pane_start_command`
+  empty or a shell) or by i-mux. **Deleting** one unsets `@imux_env` from the panes that have it; their
   programs keep what they got until they restart.
 - **The pane's border** shows it after the label: `Claude · 🔑 glm`.
 - **Privacy:** values are never shown in the view, menus, `imux env ls`, messages, logs,

@@ -380,7 +380,7 @@ func (s *sidebar) draw() {
 // isMenu reports actions that open a menu.
 func isMenu(k ActionKind) bool {
 	switch k {
-	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActSettings, ActSCMMenuAt, ActAutoMenu, ActMachineMenu:
+	case ActFileMenu, ActSkillMenu, ActProjectMenu, ActAgentMenu, ActSettings, ActSCMMenuAt, ActAutoMenu, ActMachineMenu, ActEnvMenu:
 		return true
 	}
 	return false
@@ -389,8 +389,10 @@ func isMenu(k ActionKind) bool {
 // waits reports whether a click's action waits OpenAfter (see there).
 func (s *sidebar) waits(ctx context.Context, a Action) bool {
 	switch a.Kind {
-	case ActRename, ActFileOp:
+	case ActRename, ActFileOp, ActEnvNew:
 		return true // the command prompt
+	case ActEnvApply:
+		return !s.t.MenuTakesMouse(ctx) // an agent's restart asks first (D84)
 	case ActSCM:
 		return a.Section == "ask" || !s.t.MenuTakesMouse(ctx)
 	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm:
@@ -537,6 +539,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 			menu = Action{Kind: ActMachineMenu, Path: name}
 		case ActMachineOpen:
 			menu = Action{Kind: ActMachineMenu, Path: a.Path}
+		case ActEnvApply, ActEnvMenu:
+			menu = Action{Kind: ActEnvMenu, Path: a.Path}
 		case ActToggleDir:
 			menu = Action{Kind: ActFileMenu, Path: a.Path, Section: MenuFolder}
 			s.selected = a.Path
@@ -673,6 +677,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		s.do(ctx, Action{Kind: ActView, Section: ViewRemote})
 	case "6":
 		s.do(ctx, Action{Kind: ActView, Section: ViewAuto})
+	case "7":
+		s.do(ctx, Action{Kind: ActView, Section: ViewEnv})
 	default:
 		for _, a := range s.model.Agents {
 			if a.Key == ev.Key {
@@ -977,6 +983,24 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		return
 	case ActMachineAdd:
 		s.popup(client, "80%", "60%", "machine", "add")
+		return
+	case ActEnvNew:
+		_, _ = s.t.Run(ctx, EnvNewCmds(s.o.Self, client)...)
+		return
+	case ActEnvApply, ActEnvMenu:
+		// Environments (D84): apply one to the target pane (an agent asks
+		// first), or its menu.
+		args := []string{"env", "apply", a.Path}
+		if a.Kind == ActEnvMenu {
+			args = []string{"env", "menu", a.Path}
+		}
+		if target != "" {
+			args = append(args, "--pane", target)
+		}
+		if client != "" {
+			args = append(args, "--client", client)
+		}
+		s.spawn(args)
 		return
 	case ActMachineMenu, ActMachineOpen:
 		// Another computer's machine menu, or one of its projects (D73).

@@ -6,8 +6,19 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.65.0] - 2026-11-19
+
 ### Added
 
+- **Environments for a pane: 🔑 Env on the rail.** Save sets of variables (an API key, another
+  endpoint for Claude Code, a proxy) as `KEY=VALUE` files in `~/.imux/env/`, then click one to
+  apply it to the pane you are in. An agent asks first, then restarts with it and continues the
+  same conversation (a native resume; the whole handoff if that fails); a shell at its prompt
+  gets it at once; a pane running another program is left alone. What i-mux starts in that pane
+  later keeps it, and the pane's border shows `🔑 name`. One use: Claude Code on a Z.ai GLM
+  Coding Plan or OpenRouter in one pane while your own Claude subscription runs in the others,
+  with no global setting and no proxy. Values are never shown, logged or put on a command line.
+  Also `imux env ls | new | edit | rm | apply | clear`; the view's key is `7`.
 - **A second engine, i-mux-core (beta).** i-mux can run on i-mux-core, a tmux-compatible engine
   made for i-mux, instead of tmux. It ships in the same release and Homebrew formula
   (`imux-core`, next to `imux`), and `imux update` and `make install-local` install both

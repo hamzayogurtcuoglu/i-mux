@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
@@ -71,7 +74,7 @@ func (w *WS) PaneDied(ctx context.Context, pane string, status int) error {
 	// respawn-pane without a command would re-run the pane's original
 	// command (imux __exec with a consumed spec): start the login shell.
 	_, err = w.T.Run(ctx,
-		tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD, w.loginShell(ctx), "-l"},
+		append(tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD}, w.shellCmd(ctx, p.ID, p.CWD, p.Env)...),
 		tmux.Cmd{"set-option", "-p", "-t", p.ID, "remain-on-exit", "off"},
 		tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, OptAgent},
 		tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, OptStart},
@@ -125,6 +128,31 @@ func (w *WS) useFallback(ctx context.Context, p *Pane, fast bool) (bool, error) 
 	}
 	w.Message(ctx, "", p.ID, i18n.T("died.fallback", session.ShortName(spec.Agent)))
 	return true, nil
+}
+
+// shellCmd is the pane command of the login shell in dir: with
+// environment env (D84) it starts through `imux __exec`, so the values go
+// through a 0600 spec file and never on a command line.
+func (w *WS) shellCmd(ctx context.Context, pane, dir, env string) []string {
+	sh := w.loginShell(ctx)
+	if env == "" || !envfile.Exists(env) {
+		return []string{sh, "-l"}
+	}
+	bin := sh
+	if !filepath.IsAbs(bin) {
+		if p, err := exec.LookPath(bin); err == nil {
+			bin = p
+		}
+	}
+	spec := &launch.Spec{Bin: bin, Args: []string{"-l"}, Dir: dir, Env: envWith(map[string]string{}, env), Pane: pane}
+	if spec.Validate() != nil {
+		return []string{sh, "-l"}
+	}
+	path, err := writeSpec(spec)
+	if err != nil {
+		return []string{sh, "-l"}
+	}
+	return w.execCmd(path)
 }
 
 // loginShell returns tmux's default-shell (else $SHELL, else /bin/sh).

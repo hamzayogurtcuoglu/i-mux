@@ -95,6 +95,10 @@ type SwitchResult struct {
 	// Reconstructed: no session file; the context came from the scrollback.
 	Reconstructed bool
 	Warnings      []string
+	// Restarted: the same agent started again in place, with the pane's
+	// environment Env (D84).
+	Restarted bool
+	Env       string
 }
 
 // Switch moves pane req.Pane to agent req.To with the conversation as
@@ -196,7 +200,7 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 				return nil, err
 			}
 			if built != nil {
-				spec, _, err := w.Spec(Launch{Agent: req.To, CWD: p.CWD, Prompt: w.firstMessage(built.Doc.Text, res.Handoff, built.From, req.To, built.Limit, false), Handoff: res.Handoff, Pane: p.ID})
+				spec, _, err := w.Spec(Launch{Agent: req.To, CWD: p.CWD, Prompt: w.firstMessage(built.Doc.Text, res.Handoff, built.From, req.To, built.Limit, false), Handoff: res.Handoff, Pane: p.ID, Env: p.Env})
 				if err != nil {
 					return nil, err
 				}
@@ -284,8 +288,10 @@ func recordSource(t Trail, ref session.Ref) Trail {
 
 // respawn replaces the pane's process with run l and updates its options.
 // fallback (a spec file) becomes @imux_fallback in the same exec, so a run
-// that dies at once cannot race it; "" clears it.
+// that dies at once cannot race it; "" clears it. The run gets the pane's
+// environment (D84).
 func (w *WS) respawn(ctx context.Context, p *Pane, l Launch, trail Trail, fallback string) error {
+	l.Env = p.Env
 	spec, te, err := w.Spec(l)
 	if err != nil {
 		return err

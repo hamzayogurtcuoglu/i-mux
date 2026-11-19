@@ -41,6 +41,7 @@ const (
 	RoleEmpty   = "empty"             // value of OptRole: "No agents" where a project's last agent closed
 	OptPID      = "@imux_sidebar_pid" // pane: the sidebar process, signaled to redraw
 	OptLast     = "@imux_last"        // window: the agent pane actions apply to
+	OptEnv      = "@imux_env"         // pane: the environment its programs run with (D84)
 	OptState    = "@imux_state"       // pane: "working", "idle" or "blocked", set by the watcher
 	OptStateAt  = "@imux_state_at"    // pane: when the state last changed (unix seconds)
 	OptDoneAt   = "@imux_done_at"     // pane: when its work last ended (unix seconds)
@@ -191,6 +192,8 @@ type Model struct {
 	SCMClosed map[string]bool // folded folders of the tree ("side:path"), per sidebar
 	Auto      []AutoItem      // the project's agents and skills with their schedules (Scheduler view)
 	Machines  []MachineView   // other computers and their projects (D73)
+	Envs      []EnvRow        // the environments (Env view, D84)
+	TargetEnv string          // the target pane's environment (@imux_env)
 	AutoRoot  string          // the Scheduler's project root
 	// AutoRunning counts the scheduled runs going on, in every project (the
 	// rail's badge).
@@ -225,9 +228,9 @@ type Window struct {
 	Appearance string
 }
 
-const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}\t#{@imux_state_at}\t#{@imux_done_at}\t#{@imux_seen}\t#{@imux_start}\t#{session_attached}\t#{pane_title}"
+const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}\t#{@imux_state_at}\t#{@imux_done_at}\t#{@imux_seen}\t#{@imux_start}\t#{session_attached}\t#{pane_title}\t#{@imux_env}"
 
-const paneFields = 21
+const paneFields = 22
 
 // OptRenamePane and OptRename carry a rename through the command prompt:
 // the pane to name and the answer. A prompt's template turns "%1" into the
@@ -417,7 +420,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		win.Appearance = strings.TrimSpace(rows[0][20])
 		if v := rows[0][9]; v == "skills" {
 			view = ViewAuto // the Skills view went into Jobs (v0.56, D66)
-		} else if v == ViewExplorer || v == ViewChanges || v == ViewAuto || v == ViewRemote {
+		} else if v == ViewExplorer || v == ViewChanges || v == ViewAuto || v == ViewRemote || v == ViewEnv {
 			view = v
 		}
 		closed, program = rows[0][10] == "1", rows[0][11]
@@ -457,7 +460,8 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		cwd     string
 		session string
 		window  string
-		empty   bool // the "No agents" pane
+		empty   bool   // the "No agents" pane
+		env     string // @imux_env (D84)
 	}
 	var all []raw
 	var seen []tmux.Cmd
@@ -468,7 +472,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		p := raw{
 			row:    PaneRow{ID: r[0], Agent: session.AgentID(r[2]), Label: r[3], Name: r[10]},
 			active: r[5] == "1" && r[12] == "1", cwd: r[7], session: r[9], window: r[11],
-			empty: r[1] == RoleEmpty,
+			empty: r[1] == RoleEmpty, env: r[21],
 		}
 		p.looked = p.active && r[19] != "" && r[19] != "0"
 		if p.cwd == "" {
@@ -541,7 +545,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 	}
 	panes[target].row.Target = true
 	m := Model{
-		Target: panes[target].row.ID, NoAgents: panes[target].empty, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program),
+		Target: panes[target].row.ID, NoAgents: panes[target].empty, TargetEnv: panes[target].env, Now: now, Fold: fold, View: view, Closed: closed, Icons: s.iconTheme(term, program),
 		SCMView: scmView, SCMSort: scmSort, SCMClosed: s.SCMClosed,
 	}
 	if m.Target != win.Last && win.ID != "" {
@@ -692,6 +696,9 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		}
 	}
 	gatherAuto(&m, cwd, skills.Root)
+	if m.View == ViewEnv {
+		m.Envs = gatherEnvs()
+	}
 	return m, win, nil
 }
 

@@ -20,6 +20,7 @@ const (
 	ViewChanges  = "changes"
 	ViewAuto     = "schedule" // the Scheduler: the project's agents and skills on a schedule (D61)
 	ViewRemote   = "remote"   // other computers over SSH (D74)
+	ViewEnv      = "env"      // the environments a pane runs with (D84)
 	OptView      = "@imux_view"
 	// OptClosed is "1" while the panel is closed (§9.3 "Closing the side
 	// panel"): the sidebar is only the rail.
@@ -325,12 +326,12 @@ const (
 )
 
 // railIcons are the rail's icons per theme: agents, files, search, git,
-// limits, help, settings, jobs, remote. Nerd Font codicons (v3): hubot,
-// files, search, source_control, dashboard, question, settings-gear,
-// watch, remote-explorer.
-var railIcons = map[string][9]string{
-	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueb7c", "\ueb39"},
-	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "⏰", "💻"},
+// limits, help, settings, jobs, remote, env. Nerd Font codicons (v3):
+// hubot, files, search, source_control, dashboard, question,
+// settings-gear, watch, remote-explorer, key.
+var railIcons = map[string][10]string{
+	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueb7c", "\ueb39", "\ueb11"},
+	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "⏰", "💻", "🔑"},
 }
 
 // railItems are the rail's icons: the views at the top, then the bottom
@@ -347,6 +348,7 @@ func railItems(theme string) (top, bottom []railItem) {
 		{icon: ic[3], label: "rail.git", view: ViewChanges},
 		{icon: ic[8], label: "rail.remote", view: ViewRemote},
 		{icon: ic[7], label: "rail.schedule", view: ViewAuto},
+		{icon: ic[9], label: "rail.env", view: ViewEnv},
 	}, []railItem{
 		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
 		{icon: ic[6], label: "rail.settings", action: Action{Kind: ActSettings}},

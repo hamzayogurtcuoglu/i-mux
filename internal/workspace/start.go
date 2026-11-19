@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
@@ -33,6 +34,9 @@ func (w *WS) launchNew(ctx context.Context, l Launch, create func(cmd []string) 
 	}
 	cmds := []tmux.Cmd{create(w.execCmd(p))}
 	cmds = append(cmds, optCmds("", te, append(append(Trail{}, l.Before...), te), l.CWD, w.Label(l.Agent))...)
+	if l.Env != "" && envfile.Exists(l.Env) {
+		cmds = append(cmds, tmux.Cmd{"set-option", "-p", OptEnv, l.Env})
+	}
 	out, err := w.T.Run(ctx, cmds...)
 	if err != nil {
 		os.Remove(p)

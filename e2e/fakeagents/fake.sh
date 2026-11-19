@@ -4,7 +4,7 @@
 #
 # Every run n (1, 2, ...) of agent A writes into $IMUX_FAKE_LOG:
 #   A-n.argv   arguments, NUL-separated (byte-exact)
-#   A-n.env    IMUX_PANE, IMUX_AGENT, TMUX_PANE, PATH and PWD
+#   A-n.env    IMUX_PANE, IMUX_AGENT, TMUX_PANE, PATH, PWD and E2E_ENV_PROBE (environments)
 #   A-n.stdin  lines read from the terminal (paste and bus tests)
 #   A-n.session  path of the session file it wrote (if any)
 #
@@ -152,6 +152,7 @@ done
 	echo "TMUX_PANE=${TMUX_PANE:-}"
 	echo "PATH=$PATH"
 	echo "PWD=$PWD"
+	echo "E2E_ENV_PROBE=${E2E_ENV_PROBE:-}"
 } >"$log/$agent-$n.env"
 
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }

@@ -248,7 +248,12 @@ func TestRailSchedule(t *testing.T) {
 				}
 			}
 		}
-		if len(views) != 5 || !views[ViewAuto] || !views[ViewRemote] {
+		// Env (D84) is the seventh: under 14 rows it is below the pane.
+		want := 6
+		if h < 14 {
+			want = 5
+		}
+		if len(views) != want || !views[ViewAuto] || !views[ViewRemote] {
 			t.Errorf("h=%d: views %v", h, views)
 		}
 	}

@@ -23,6 +23,7 @@ type PaneSnap struct {
 	Agent session.AgentID `json:"agent,omitempty"` // "" for a shell
 	Name  string          `json:"name,omitempty"`
 	Run   *TrailEntry     `json:"run,omitempty"` // the pane's current run
+	Env   string          `json:"env,omitempty"` // its environment's name (D84)
 }
 
 // TabSnap is one saved tab (window).
@@ -99,7 +100,7 @@ func (s *Snapshots) Save() error {
 	return os.Rename(tmp, paths.WorkspaceFile())
 }
 
-const snapFormat = "#{session_path}\t#{window_index}\t#{@imux_tab}\t#{window_layout}\t#{window_active}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_name}\t#{pane_dead}\t#{@imux_trail}"
+const snapFormat = "#{session_path}\t#{window_index}\t#{@imux_tab}\t#{window_layout}\t#{window_active}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_name}\t#{pane_dead}\t#{@imux_trail}\t#{@imux_env}"
 
 // ServerID identifies the running tmux server ("" when none runs).
 func (w *WS) ServerID(ctx context.Context) string {
@@ -119,7 +120,7 @@ func (w *WS) Capture(ctx context.Context) ([]ProjectSnap, error) {
 	var projects []ProjectSnap
 	byDir := map[string]int{}
 	tabOf := map[string]int{} // dir + window index → tab
-	for _, r := range tmux.Rows(out, 10) {
+	for _, r := range tmux.Rows(out, 11) {
 		dir := r[0]
 		pi, ok := byDir[dir]
 		if !ok {
@@ -143,7 +144,7 @@ func (w *WS) Capture(ctx context.Context) ([]ProjectSnap, error) {
 		if r[5] == sidebar.RoleEmpty {
 			continue // "No agents": nothing to bring back
 		}
-		ps := PaneSnap{Name: r[7]}
+		ps := PaneSnap{Name: r[7], Env: r[10]}
 		if r[8] != "1" && r[6] != "" {
 			ps.Agent = session.AgentID(r[6])
 			if l := ParseTrail(r[9]).Last(); l != nil && l.Agent == ps.Agent {
@@ -242,7 +243,7 @@ func (w *WS) Restore(ctx context.Context, f *sources.Finder, snap *ProjectSnap) 
 		}
 		first := ""
 		for i, p := range panes {
-			l := Launch{Agent: p.Agent, CWD: snap.Dir, ResumeID: w.resumeID(ctx, f, p, snap.Dir)}
+			l := Launch{Agent: p.Agent, CWD: snap.Dir, ResumeID: w.resumeID(ctx, f, p, snap.Dir), Env: p.Env}
 			var create func(cmd []string) tmux.Cmd
 			switch {
 			case i > 0:

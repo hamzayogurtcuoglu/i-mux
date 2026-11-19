@@ -13,6 +13,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/handoff/clean"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -45,6 +46,7 @@ var now = time.Now
 func housekeeping(cfg *config.Config) {
 	handoff.Prune(cfg.Handoff.KeepDays, now())
 	launch.Sweep(time.Hour)
+	envfile.SweepScripts(time.Hour)
 }
 
 func parseAgentFlag(name, v string) (session.AgentID, error) {

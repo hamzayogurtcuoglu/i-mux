@@ -323,7 +323,7 @@ func (w *WS) FillEmpty(ctx context.Context, p *Pane, id session.AgentID) error {
 		return w.respawn(ctx, p, Launch{Agent: id, CWD: p.CWD}, nil, "")
 	}
 	_, err := w.T.Run(ctx,
-		tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD, w.loginShell(ctx), "-l"},
+		append(tmux.Cmd{"respawn-pane", "-k", "-t", p.ID, "-c", p.CWD}, w.shellCmd(ctx, p.ID, p.CWD, p.Env)...),
 		tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, sidebar.OptRole},
 		tmux.Cmd{"set-option", "-p", "-u", "-t", p.ID, OptLabel})
 	return err

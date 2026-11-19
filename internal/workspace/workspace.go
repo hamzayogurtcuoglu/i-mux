@@ -21,6 +21,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agenthook"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
@@ -41,6 +42,8 @@ const (
 	OptTrail    = "@imux_trail"
 	OptFallback = "@imux_fallback"
 	OptLock     = "@imux_lock"
+	// OptEnv is the environment the pane's programs run with (D84).
+	OptEnv = sidebar.OptEnv
 )
 
 // MaxTrail is the number of runs kept in a pane's trail.
@@ -259,6 +262,9 @@ type Launch struct {
 	// Before starts a new pane's trail (a conversation picked in History
 	// that this run continues).
 	Before []TrailEntry
+	// Env is the environment the run gets (D84): the pane's, "" for none.
+	// respawn takes the pane's own.
+	Env string
 }
 
 // Spec builds the launch spec and the trail entry of a run.
@@ -311,12 +317,29 @@ func (w *WS) Spec(l Launch) (*launch.Spec, TrailEntry, error) {
 	}
 	spec := &launch.Spec{
 		Agent: l.Agent, Bin: r.Path, Args: argv, Dir: l.CWD,
-		Env: map[string]string{"PATH": pathEnv}, Pane: l.Pane, MaxArgBytes: w.Cfg.Handoff.MaxArgBytes,
+		Env: envWith(map[string]string{"PATH": pathEnv}, l.Env), Pane: l.Pane, MaxArgBytes: w.Cfg.Handoff.MaxArgBytes,
 	}
 	if err := spec.Validate(); err != nil {
 		return nil, TrailEntry{}, err
 	}
 	return spec, te, nil
+}
+
+// envWith adds environment name's variables to env (D84); reserved ones
+// never get in (envfile.Parse leaves them out). A name whose file is gone
+// adds nothing.
+func envWith(env map[string]string, name string) map[string]string {
+	if name == "" {
+		return env
+	}
+	e, err := envfile.Read(name)
+	if err != nil {
+		return env
+	}
+	for _, v := range e.Vars {
+		env[v.Key] = v.Value
+	}
+	return env
 }
 
 func hasPlaceholder(tpl []string, p string) bool {
@@ -376,19 +399,21 @@ type Pane struct {
 	Command  string // pane_current_command
 	Role     string // @imux_role: "sidebar" for sidebar panes
 	Name     string // @imux_name: the user's name for it
+	Env      string // @imux_env: the environment its programs run with (D84)
+	StartCmd string // pane_start_command: "" for the default shell
 }
 
 // paneFormat reads every pane field in one display-message.
 const paneFormat = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{@imux_cwd}\t#{pane_current_path}\t#{@imux_label}\t" +
-	"#{pane_dead}\t#{session_name}\t#{window_id}\t#{pane_current_command}\t#{@imux_fallback}\t#{@imux_lock}\t#{@imux_trail}\t#{@imux_role}\t#{@imux_name}"
+	"#{pane_dead}\t#{session_name}\t#{window_id}\t#{pane_current_command}\t#{@imux_fallback}\t#{@imux_lock}\t#{@imux_trail}\t#{@imux_role}\t#{@imux_name}\t#{@imux_env}\t#{pane_start_command}"
 
-const paneFields = 15
+const paneFields = 17
 
 func parsePane(f []string) *Pane {
 	p := &Pane{
 		ID: f[0], Agent: session.AgentID(f[1]), CWD: f[3], Label: f[5], Dead: f[6] == "1",
 		Session: f[7], Window: f[8], Command: f[9], Fallback: f[10], Lock: f[11], Trail: ParseTrail(f[12]),
-		Role: f[13], Name: f[14],
+		Role: f[13], Name: f[14], Env: f[15], StartCmd: f[16],
 	}
 	if ms, err := strconv.ParseInt(f[2], 10, 64); err == nil && ms > 0 {
 		p.Start = time.UnixMilli(ms)

@@ -57,6 +57,9 @@ const (
 	ActMachineMenu            // the menu of machine Path (D73)
 	ActMachineOpen            // open machine Path's project Session (its pane Pane) here (D73)
 	ActMachineAdd             // add a machine: a popup asks its destination (D74)
+	ActEnvApply               // apply environment Path to the target pane (D84)
+	ActEnvMenu                // the menu of environment Path (D84)
+	ActEnvNew                 // a new environment: a prompt asks its name (D84)
 )
 
 // Action is a row's action.
@@ -795,6 +798,8 @@ func Render(m Model, w, h int, sel Item) Screen {
 		content, list = renderAuto(m, cw, h)
 	case ViewRemote:
 		content, list = renderRemote(m, cw, h)
+	case ViewEnv:
+		content, list = renderEnv(m, cw, h)
 	default:
 		content = renderAgents(m, cw, h)
 	}

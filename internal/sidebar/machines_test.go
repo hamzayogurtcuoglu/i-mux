@@ -28,7 +28,7 @@ func TestRemoteView(t *testing.T) {
 	for _, it := range top {
 		views = append(views, it.label)
 	}
-	if strings.Join(views, " ") != "rail.agents rail.files rail.search rail.git rail.remote rail.schedule" {
+	if strings.Join(views, " ") != "rail.agents rail.files rail.search rail.git rail.remote rail.schedule rail.env" {
 		t.Fatalf("rail %v", views)
 	}
 	m := remoteModel()
