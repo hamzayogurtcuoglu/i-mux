@@ -755,6 +755,35 @@ Each agent installs with its own maker's Windows command, checked on 2026-11-19:
 - **The versions panel** shows the engine, i-mux-core, in tmux's row; it comes and updates with
   i-mux, so no package manager is offered.
 
+### 7.10 Windows integrations (D85, T90.6)
+
+Where i-mux talks to the system, native Windows does what i-mux already does under WSL, with
+Windows' own paths and no `wslpath`:
+
+- **Opening:** a URL, a file or a folder opens through `explorer.exe` (Windows' shell, which
+  hands it to the default program); a page in a window of its own opens in the default browser's
+  app window when it is Chromium-based, else Edge's (`--app=`), found under `%ProgramFiles%`,
+  `%ProgramFiles(x86)%` and `%LOCALAPPDATA%`; "Reveal in Explorer" is `explorer.exe /select,`;
+  a window comes to the front through `WScript.Shell`'s `AppActivate`.
+- **Clipboard:** text goes through Windows PowerShell's `Set-Clipboard`, as UTF-8 in base64 so
+  no code page touches it; an image paste reads the clipboard's image as PNG, or the copied image
+  files where they are, through PowerShell on an STA thread.
+- **Trash:** the Recycle Bin, through .NET's `Microsoft.VisualBasic.FileIO.FileSystem`
+  (`SendToRecycleBin`), so Explorer's Restore works.
+- **Notifications:** a Windows toast, shown by PowerShell through WinRT's
+  `ToastNotificationManager` under Windows PowerShell's own app id; `[notify] command` still
+  replaces it.
+- **Nerd Font:** installed for the user alone in `%LOCALAPPDATA%\Microsoft\Windows\Fonts` and
+  registered under `HKCU\…\Fonts`, with Windows Terminal's and VS Code's settings set to it when
+  the user agrees, as under WSL; Windows Terminal's font is read from its settings
+  (`WT_SESSION` says it is the terminal).
+- **Editor:** micro's Windows build (`win64`, a zip, its checksum pinned like the others), and
+  VS Code's `code.cmd` from `PATH` or `%LOCALAPPDATA%\Programs\Microsoft VS Code\bin`.
+- **Git:** Git for Windows is required (the source control views and worktrees use `git`);
+  `imux doctor` says when it is missing and where to get it.
+- **Test hooks:** `IMUX_COPY_COMMAND` and `IMUX_BROWSE_COMMAND` run in Windows PowerShell there,
+  the text on stdin and the URL as the command's last argument.
+
 ## 8. Handoff document
 
 ### 8.1 Storage

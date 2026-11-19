@@ -1083,7 +1083,7 @@ tmux on macOS and Linux, exactly as before.
     `agenthook`, `envfile`, which runs the apply files in Windows PowerShell and cmd.exe) pass on
     Windows 11 build 26200; Linux's behaviour is unchanged.
 - [ ] **T90.6 Windows integrations** · L · deps: T90.2
-  - AC: opening URLs and files (`ShellExecute`); clipboard text and image paste (Win32
+  - AC: §7.10; opening URLs and files (`ShellExecute`); clipboard text and image paste (Win32
     clipboard); notifications (a Windows toast); the Nerd Font install as a per-user font with
     the Windows Terminal profile set to it, with the user's consent; the editor launch; git
     (Git for Windows required, `imux doctor` checks); unit tests with fakes and Windows CI e2e
