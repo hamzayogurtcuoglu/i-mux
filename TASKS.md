@@ -1121,11 +1121,13 @@ tmux on macOS and Linux, exactly as before.
     the next start, the running-engine message, and rollback) pass on Linux and on Windows 11
     build 26200.
 - [ ] **T90.8 Installer** · L · deps: T90.7
-  - AC: a per-user NSIS installer needing no admin, cross-built on Linux CI: installs to
-    `%LOCALAPPDATA%\Programs\i-mux`, adds it to the user's `PATH`, adds a Start menu entry that
-    opens i-mux in Windows Terminal (conhost as the fallback), and an uninstaller in Apps &
-    features; `install.ps1` one-liner; a winget manifest; CI builds it and a Windows job
-    installs it silently, runs `imux doctor` and uninstalls cleanly.
+  - AC: §7.11, D85: a per-user NSIS installer needing no admin, cross-built on Linux CI
+    (`scripts/installer.nsi`, `scripts/build-installer.sh`): installs `imux.exe` and
+    `imux-core.exe` to `%LOCALAPPDATA%\Programs\i-mux`, adds it to the user's `PATH`, adds a Start
+    menu entry that opens i-mux in Windows Terminal (conhost as the fallback), and an uninstaller
+    in Apps & features; `install.ps1` one-liner; a winget manifest
+    (`packaging/winget/hamzayogurtcuoglu.i-mux.yaml`); CI builds it and a Windows job installs it
+    silently, runs `imux doctor` and uninstalls cleanly.
 - [ ] **T90.9 Windows CI for i-mux** · S · deps: T90.5, T90.6
   - AC: a `windows` job runs the unit tests and the e2e suite on i-mux-core, with tests that
     cannot apply skipped and each skip listed; the fake agents ported to Go (with T90.5's

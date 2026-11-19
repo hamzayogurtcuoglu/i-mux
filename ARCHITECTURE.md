@@ -784,6 +784,39 @@ Windows' own paths and no `wslpath`:
 - **Test hooks:** `IMUX_COPY_COMMAND` and `IMUX_BROWSE_COMMAND` run in Windows PowerShell there,
   the text on stdin and the URL as the command's last argument.
 
+### 7.11 Windows installer (D85, T90.8)
+
+Three ways install i-mux on Windows into `%LOCALAPPDATA%\Programs\i-mux`, for the current user
+with no administrator rights:
+
+- **NSIS installer (`imux_<version>_windows_<arch>_setup.exe`):** cross-built on Linux CI with
+  `makensis` (`scripts/installer.nsi`, `scripts/build-installer.sh`) and attached to each release:
+  - `RequestExecutionLevel user`, default folder `%LOCALAPPDATA%\Programs\i-mux`;
+  - installs `imux.exe`, `imux-core.exe`, `LICENSE`, `README.md` and `uninstall.exe` (moving any
+    running executable to `*.old` first so an in-place upgrade succeeds);
+  - adds the folder to the user's `PATH` in `HKCU\Environment` through PowerShell with
+    `DoNotExpandEnvironmentNames` (so NSIS's 1024-byte string cap cannot truncate `PATH` and
+    existing `%VAR%` entries stay unexpanded) and broadcasts `WM_WININICHANGE`;
+  - adds a Start menu shortcut (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\i-mux.lnk`) that
+    opens `imux.exe` in Windows Terminal (`%LOCALAPPDATA%\Microsoft\WindowsApps\wt.exe`) when it
+    is present, falling back to conhost (`imux.exe` directly);
+  - registers the uninstaller in Apps & features
+    (`HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\i-mux`); uninstalling removes the
+    files, the folder, the Start menu shortcut, the `PATH` entry and the registry key.
+- **`install.ps1` one-liner:**
+  `irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 | iex` (also
+  attached to each release). It downloads `imux_<version>_windows_<arch>.zip` and `checksums.txt`,
+  verifies the SHA-256 sum, installs `imux-core.exe` and `imux.exe` into
+  `%LOCALAPPDATA%\Programs\i-mux` as one step (renaming a running `.exe` to `.old` and rolling
+  back if either fails; `-FromSource` builds both with Go), puts the folder on the user's `PATH`,
+  and offers the Nerd Font (`imux font install`). Kept ASCII and free of backticks so Windows
+  PowerShell and AMSI read it cleanly.
+- **WinGet manifest (`packaging/winget/hamzayogurtcuoglu.i-mux.yaml`):** a `nullsoft` user-scope
+  manifest pointing at the `amd64` and `arm64` NSIS installers (`scripts/build-installer.sh`
+  renders a copy with the release's version and SHA-256 sums).
+- **Code signing** is an owner decision (certificate cost and identity check); until a certificate
+  is configured, the release notes explain Windows SmartScreen's "More info → Run anyway" prompt.
+
 ## 8. Handoff document
 
 ### 8.1 Storage
