@@ -355,7 +355,7 @@ Earliest standalone value: works without tmux (F5).
 - [x] **T3.9 Performance measurement** · S · deps: T3.8
   - AC: `scripts/measure-watch.sh` reports max RSS and mean CPU for both the attached and detached cases.
   - AC: the numbers are recorded in `docs/PERF.md` and are within §17. If not, an issue with the control-mode plan exists (Q21).
-- [ ] **T3.10 The sidebars bring a dead watcher back** · S · deps: T3.3, T10.1; D86
+- [x] **T3.10 The sidebars bring a dead watcher back** · S · deps: T3.3, T10.1; D86
   - The watcher can die with the tmux server living on (an `imux quit` that stopped it before
     failing to close the server, a crash), and a client that stayed attached runs `client-attached`
     never again: every sidebar checks the watcher's lock every 15 s (`IMUX_WATCH_CHECK`) and at
