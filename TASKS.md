@@ -1094,6 +1094,16 @@ the Claude subscription, but nothing is specific to a provider (D84).
     it) and the apply file is gone; removing takes it away; no value in any tmux command.
 - [x] **T89.6 Docs** · XS
   - AC: README and README.tr, CHANGELOG.
+- [ ] **T89.7 The New environment popup** · S · deps: T89.4
+  - User request (2026-11-19, after v0.65.0): **+** should open a popup to type the name in,
+    not ask at the top of the screen; and an environment is for any program, not Claude only.
+  - AC: D84: **+** opens the New environment dialog in a popup in the middle of the client
+    (`imux env dialog`, as New skill's): a Name box; under it the name what is typed makes
+    (`envfile.Slug`), or ⚠ when it is taken; Enter writes the template and opens the editor in
+    the same popup, on the line under it; Esc closes; `imux env new` with no name shows the dialog
+    in a terminal; the command prompt, `--from-option` and their options go; the template and the
+    empty view speak of any program, Claude Code's endpoints as one example; i18n (en, tr);
+    README and README.tr, CHANGELOG; unit tests (the name, the dialog, the popup's command).
 
 ## M88: The engine switch: i-mux-core, opt-in (added 2026-11-18)
 
