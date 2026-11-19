@@ -1101,11 +1101,12 @@ tmux on macOS and Linux, exactly as before.
     toast (not shown), micro's real zip installs and runs, and the new tests pass. Windows CI's
     e2e comes with T90.9.
 - [ ] **T90.7 Self-update on Windows** · M · deps: T90.2
-  - AC: Settings → Update downloads and verifies both `imux.exe` and `imux-core.exe`; replacing
-    a running executable renames the current one to `*.old`, writes the new one, deletes
-    `*.old` on the next start; rollback if any step fails; a running engine server keeps the
-    old binary until its sessions end (Settings says so); an update e2e on Windows CI with a
-    local release fixture.
+  - AC: §9.3 "Updates", D85: GoReleaser ships `imux_<version>_windows_<arch>.zip` with `imux.exe`
+    and `imux-core.exe`; Settings → Update (`imux update`) downloads and verifies both against
+    `checksums.txt`; replacing a running executable renames the current one to `*.old`, writes the
+    new one, deletes `*.old` on the next start; rollback if any step fails; a running engine
+    server keeps the old binary until its sessions end (Settings says so); an update e2e on
+    Windows CI with a local release fixture.
 - [ ] **T90.8 Installer** · L · deps: T90.7
   - AC: a per-user NSIS installer needing no admin, cross-built on Linux CI: installs to
     `%LOCALAPPDATA%\Programs\i-mux`, adds it to the user's `PATH`, adds a Start menu entry that

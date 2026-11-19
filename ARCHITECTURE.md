@@ -1997,12 +1997,21 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
 - **Badges (v0.45, D46):** while agents work, the Agents icon has their number right of it, one
   cell (two for `9+`) in bold white on blue (256-color 25), one column after the icon; Git keeps
   the changed files' count in its label.
-- **Updates:** `imux update` installs the latest release with the release's own installer
-  (`releases/download/<tag>/install.sh --version <tag> --prefix <imux's folder>`); `--check`
-  only tells. The watcher asks GitHub once a day (`update_check = true`; the latest tag from the
-  `releases/latest` redirect, kept in `state.json`). When a newer one is out, the rail's Settings
-  turns yellow and Settings starts with "Update i-mux: A → B" (u); else "Update i-mux… (A)". The
-  watcher and the sidebars restart with the new binary on their own.
+- **Updates:** `imux update` installs the latest release: on macOS and Linux with the release's
+  own `install.sh` (`releases/download/<tag>/install.sh --version <tag> --prefix <imux's folder>`);
+  on Windows (D85, T90.7) directly from the release's `imux_<version>_windows_<arch>.zip`, which
+  GoReleaser ships with `imux.exe` and `imux-core.exe` and lists in `checksums.txt`. There
+  `update.Install` downloads `checksums.txt` and the zip, checks the SHA-256 sum, unpacks it, and
+  replaces `imux-core.exe` and `imux.exe` as one step (`update.Replace`): each existing file is
+  renamed to `<name>.old` (Windows allows renaming a running executable, not overwriting or
+  deleting it) and the new one is put in its place from `<name>.new`, rolling back both if any
+  step fails; the next `imux` start removes any `*.old` that is no longer running
+  (`update.CleanOld`), while a running `imux-core.exe` server keeps its old binary until its
+  sessions end (and `imux update` says so). `--check` only tells. The watcher asks GitHub once a
+  day (`update_check = true`; the latest tag from the `releases/latest` redirect, kept in
+  `state.json`). When a newer one is out, the rail's Settings turns yellow and Settings starts
+  with "Update i-mux: A → B" (u); else "Update i-mux… (A)". The watcher and the sidebars restart
+  with the new binary on their own.
 - **Releases** build GoReleaser from the Go module proxy (`go install …/goreleaser/v2`), not a
   GitHub download: three releases (0.24.0–0.25.1) failed on a 504 from that download.
 
