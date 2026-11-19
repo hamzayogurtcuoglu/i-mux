@@ -15,7 +15,9 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) first; [ARCHITECTURE.md](ARCHITECTURE.md
   macOS's symlinked temp folder, and e2e. Unit tests passing on Linux are not enough (v0.49.0
   failed CI on macOS). Do not commit, tag or hand over a push while it fails, and say which
   checks could not run here.
-- **No native Windows** (D60): i-mux runs on macOS and Linux, and on Windows in WSL. Do not add
-  Windows-only code, builds or CI jobs.
+- **Windows code sits behind small interfaces** (D85): i-mux runs natively on Windows on
+  i-mux-core. Windows-only code lives in build-tagged files (`_windows.go`) behind small
+  interfaces — never `runtime.GOOS` switches in core files — and CI's Windows jobs are required
+  and block. On macOS and Linux nothing changes: tmux stays the default engine there (D83).
 - Tests use synthetic fixtures only: never read the real `~/.claude`, `~/.gemini`, `~/.copilot`,
   `~/.codex` or `~/.imux`, and never start an agent CLI with a real prompt.

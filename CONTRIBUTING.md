@@ -36,8 +36,10 @@ place (`SIGKILL (Code Signature Invalid)`), so the sidebars and the watcher die 
 On Windows, work inside WSL. End-to-end tests copy the binary to the Linux file system, because
 programs under `/mnt/c` start slowly.
 
-The dependency rule is strict: the standard library plus `github.com/BurntSushi/toml`. Do not add
-modules (test helpers included; the e2e pty helper uses raw ioctls for this reason).
+The dependency rule is strict: the standard library, `github.com/BurntSushi/toml`, the engine
+`github.com/hamzayogurtcuoglu/i-mux-core` (D83) and, in Windows-only files, `golang.org/x/sys/windows`,
+which the engine already brings (D85). Do not add modules (test helpers included; the e2e pty
+helper uses raw ioctls for this reason).
 
 Every user-facing string goes through `internal/i18n` (a test fails on a missing key). The handoff
 document is model-facing and always English.

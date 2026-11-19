@@ -997,6 +997,69 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M90: Native Windows on i-mux-core (added 2026-11-19)
+
+User request: finish the remaining plan — i-mux on Windows (D85). The tasks mirror Phase 9
+(C9.1–C9.10) of i-mux-core's plan; the engine's own Windows work is done (its Phase 8), and its
+e2e suite passes on Windows 11 (its Windows Terminal check, C8.9, waits for the owner; this
+milestone starts before it at the owner's word). All through this, `make ci` keeps passing with
+tmux on macOS and Linux, exactly as before.
+
+- [x] **T90.1 Docs** · XS
+  - AC: D85 supersedes D60's rule; this milestone; AGENTS.md's rule replaced (Windows code in
+    build-tagged files behind small interfaces, Windows CI required, tmux still the default on
+    macOS and Linux); CONTRIBUTING's dependency rule and the check-before-push skill follow.
+- [ ] **T90.2 i-mux builds for Windows** · L
+  - AC: `GOOS=windows go build ./...` and `go vet` are clean; lint runs for `GOOS=windows` in
+    CI and in `make ci`; every POSIX-only use is behind a small interface in build-tagged files
+    (`syscall.Exec`, `Setsid`, `SIGTERM`/`SIGHUP`/`SIGWINCH`, `flock` → `LockFileEx`, Unix file
+    modes, `/dev/null`, symlink assumptions, `$HOME` → `USERPROFILE`); the engine is `core` on
+    Windows (`backend = "tmux"` warns, no engine row in Settings; D85); all existing tests pass
+    on macOS and Linux unchanged.
+- [ ] **T90.3 Command strings without a POSIX shell** · M · deps: T90.2
+  - AC: `UICommand`, `Silent`, `ShQuote`, `ShJoin`, the `run-shell` strings in the generated
+    config, the popups' commands and every `sh -c` use follow E14 (D85): on Windows the argv
+    form of `run-shell`/`if-shell` (i-mux-core's X1; the quiet form for
+    `… >/dev/null 2>&1 || true`) and popups'/panes' programs as separate arguments, with no
+    `rm -f` or other shell utilities; on macOS and Linux byte-identical to before (golden
+    tests); `TMUX` and `TMUX_PANE` parsed in their Windows form.
+- [ ] **T90.4 Paths and agents' homes** · S · deps: T90.2
+  - AC: `~/.imux` under `%USERPROFILE%`; each agent's config and session paths on Windows
+    (Claude Code, Codex, Copilot, Antigravity, OpenCode), each verified from that agent's own
+    documentation and recorded in ARCHITECTURE.md; path separators in session names, git paths
+    and the sidebar; unit tests with synthetic Windows-style homes, reading no real files.
+- [ ] **T90.5 Agents on Windows** · M · deps: T90.3, T90.4
+  - AC: detection, installation, starting, resuming and hooking each agent works: npm's `.cmd`
+    and `.ps1` shims and `.exe` files are found; install commands for Windows; hook installation
+    into each agent's settings with Windows paths and commands; resume commands; e2e on Windows
+    CI with the fake agents, ported to Windows (Go or `.cmd`).
+- [ ] **T90.6 Windows integrations** · L · deps: T90.2
+  - AC: opening URLs and files (`ShellExecute`); clipboard text and image paste (Win32
+    clipboard); notifications (a Windows toast); the Nerd Font install as a per-user font with
+    the Windows Terminal profile set to it, with the user's consent; the editor launch; git
+    (Git for Windows required, `imux doctor` checks); unit tests with fakes and Windows CI e2e
+    where the OS allows.
+- [ ] **T90.7 Self-update on Windows** · M · deps: T90.2
+  - AC: Settings → Update downloads and verifies both `imux.exe` and `imux-core.exe`; replacing
+    a running executable renames the current one to `*.old`, writes the new one, deletes
+    `*.old` on the next start; rollback if any step fails; a running engine server keeps the
+    old binary until its sessions end (Settings says so); an update e2e on Windows CI with a
+    local release fixture.
+- [ ] **T90.8 Installer** · L · deps: T90.7
+  - AC: a per-user NSIS installer needing no admin, cross-built on Linux CI: installs to
+    `%LOCALAPPDATA%\Programs\i-mux`, adds it to the user's `PATH`, adds a Start menu entry that
+    opens i-mux in Windows Terminal (conhost as the fallback), and an uninstaller in Apps &
+    features; `install.ps1` one-liner; a winget manifest; CI builds it and a Windows job
+    installs it silently, runs `imux doctor` and uninstalls cleanly.
+- [ ] **T90.9 Windows CI for i-mux** · S · deps: T90.5, T90.6
+  - AC: a `windows` job runs the unit tests and the e2e suite on i-mux-core, with tests that
+    cannot apply skipped and each skip listed; green and blocking; CONTRIBUTING says how to run
+    them on Windows.
+- [ ] **T90.10 Windows check** · XS · deps: T90.9 · USER
+  - AC: the owner installs from the installer, opens from the Start menu, installs an agent,
+    checks the sidebar, tabs, popups, menus and mouse, image paste, notifications, updates from
+    Settings and uninstalls; signs off or files issues.
+
 ## M89: Environments for a pane (added 2026-11-19)
 
 User request: an Env view on the left with saved environment files; one can be saved there, and

@@ -8,8 +8,9 @@ description: Runs every check CI runs, here, before i-mux code is committed, tag
 CI (`.github/workflows/ci.yml`) runs the unit tests on Linux and macOS, the e2e tests on tmux 3.4
 (Ubuntu) and 3.8 (macOS), golangci-lint, and more. Passing `make test` on Linux is not enough:
 v0.49.0 passed it and failed CI on macOS (a temp path compared with git's: macOS's `/var` is
-`/private/var`). A red CI run after a push is a bug in the change; catch it here. i-mux does not
-run natively on Windows (D60): there it runs in WSL, which is Linux.
+`/private/var`). A red CI run after a push is a bug in the change; catch it here. Native Windows
+runs on i-mux-core (D85); its checks join `make ci` and CI as M90 adds them (the Windows build and
+lint with T90.2, the Windows tests with T90.9).
 
 ## When
 
