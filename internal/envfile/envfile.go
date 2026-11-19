@@ -39,6 +39,40 @@ var ErrName = errors.New("envfile: bad name")
 // ValidName reports whether name can name an environment.
 func ValidName(name string) bool { return nameRe.MatchString(name) }
 
+// maxName is the longest name.
+const maxName = 32
+
+// accents are the letters Slug takes the accents from, before ToLower (which
+// makes "İ" an "i" and a combining dot) and after it ("É").
+var accents = strings.NewReplacer("ç", "c", "ğ", "g", "ı", "i", "ö", "o", "ş", "s", "ü", "u",
+	"Ç", "c", "Ğ", "g", "İ", "i", "Ö", "o", "Ş", "s", "Ü", "u",
+	"ä", "a", "ß", "ss", "é", "e", "è", "e", "á", "a", "ñ", "n")
+
+// Slug makes a name of free text, as the New environment dialog does:
+// "GLM Coding" → "glm-coding", "İş_proxy" → "is_proxy" ("" when nothing is
+// left). Letters lose their case and accents, `_` stays, anything else is
+// a `-`; at most 32.
+func Slug(text string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range accents.Replace(strings.ToLower(accents.Replace(text))) {
+		if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '_' && b.Len() > 0 {
+			if dash && b.Len() > 0 {
+				b.WriteByte('-')
+			}
+			dash = false
+			b.WriteRune(r)
+		} else {
+			dash = true
+		}
+	}
+	s := b.String()
+	if len(s) > maxName {
+		s = s[:maxName]
+	}
+	return strings.TrimRight(s, "-_")
+}
+
 // Dir is the folder of the environments.
 func Dir() string { return filepath.Join(paths.Home(), "env") }
 

@@ -54,11 +54,11 @@ func TestEnvView(t *testing.T) {
 		t.Errorf("rows %+v", rows[1].Action)
 	}
 
-	// None yet: what it is for, and New environment….
+	// None yet: what it is for (any program), and New environment….
 	m.Envs = nil
 	rows, _ = renderEnv(m, 41, 0)
 	text = screenText(Screen{Lines: rows})
-	if !strings.Contains(text, "API key") || rows[len(rows)-1].Action.Kind != ActEnvNew {
+	if !strings.Contains(strings.Join(strings.Fields(text), " "), "for any program: API keys") || rows[len(rows)-1].Action.Kind != ActEnvNew {
 		t.Errorf("empty view:\n%s", text)
 	}
 }
@@ -70,20 +70,5 @@ func TestGatherEnvs(t *testing.T) {
 	got := gatherEnvs()
 	if len(got) != 1 || got[0] != (EnvRow{Name: "glm", Vars: 2, Problems: 1}) {
 		t.Fatalf("%+v", got)
-	}
-}
-
-// The + asks a name in a prompt whose answer goes to an option; the
-// client is kept beside it.
-func TestEnvNewCmds(t *testing.T) {
-	i18n.SetLocale("en")
-	cmds := EnvNewCmds("/opt/imux", "/dev/pts/1")
-	if strings.Join(cmds[0], " ") != "set-option -g "+OptEnvClient+" /dev/pts/1" {
-		t.Fatalf("client %q", cmds[0])
-	}
-	c := strings.Join(cmds[1], " ")
-	if !strings.HasPrefix(c, "command-prompt -t /dev/pts/1 -p Name of the new environment") ||
-		!strings.Contains(c, OptEnvAnswer+` "%%%"`) || !strings.Contains(c, "env new --from-option") {
-		t.Fatalf("prompt %q", c)
 	}
 }

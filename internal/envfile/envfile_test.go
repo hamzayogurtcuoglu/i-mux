@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -68,6 +69,55 @@ func TestNames(t *testing.T) {
 	for _, n := range []string{"", "GLM", "-x", "_x", "a b", "a/b", "../x", ".apply-1", strings.Repeat("a", 33)} {
 		if ValidName(n) {
 			t.Errorf("%q should not be valid", n)
+		}
+	}
+}
+
+// TestSlug: what is typed in the New environment dialog becomes a valid
+// name, or "".
+func TestSlug(t *testing.T) {
+	for in, want := range map[string]string{
+		"glm":                      "glm",
+		"GLM Coding":               "glm-coding",
+		"  Z.ai / GLM  ":           "z-ai-glm",
+		"İş_proxy":                 "is_proxy",
+		"Çalışma Ortamı":           "calisma-ortami",
+		"Équipe":                   "equipe",
+		"_x":                       "x",
+		"a--b":                     "a-b",
+		"日本":                       "",
+		"":                         "",
+		strings.Repeat("a", 40):    strings.Repeat("a", 32),
+		strings.Repeat("abc-", 10): strings.TrimRight(strings.Repeat("abc-", 8), "-"),
+		strings.Repeat("ab_", 11):  strings.Repeat("ab_", 10) + "ab",
+	} {
+		got := Slug(in)
+		if got != want {
+			t.Errorf("Slug(%q) = %q, want %q", in, got, want)
+		}
+		if got != "" && !ValidName(got) {
+			t.Errorf("Slug(%q) = %q is not a valid name", in, got)
+		}
+	}
+}
+
+// TestTemplateExamples: the template is all comments, and its examples,
+// uncommented, set what they show (a trailing comment is not a value).
+func TestTemplateExamples(t *testing.T) {
+	defer i18n.SetLocale("en")
+	example := regexp.MustCompile(`(?m)^# ([A-Z_]+=)`)
+	for _, l := range []string{"en", "tr"} {
+		i18n.SetLocale(l)
+		text := Template("glm")
+		if e := Parse("glm", text); len(e.Vars) != 0 || len(e.Problems) != 0 {
+			t.Fatalf("%s: the template sets nothing: %+v", l, e)
+		}
+		e := Parse("glm", example.ReplaceAllString(text, "$1"))
+		m := e.Map()
+		if len(e.Problems) != 0 || m["HTTPS_PROXY"] != "http://proxy.example.com:8080" ||
+			m["NO_PROXY"] != "localhost,127.0.0.1" || m["ANTHROPIC_BASE_URL"] != "https://openrouter.ai/api" ||
+			strings.ContainsAny(m["GITHUB_TOKEN"], " #") || m["GITHUB_TOKEN"] == "" {
+			t.Fatalf("%s: examples %+v", l, e)
 		}
 	}
 }

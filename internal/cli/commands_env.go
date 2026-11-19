@@ -5,23 +5,26 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
+	"strconv"
 	"strings"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/envdialog"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/popmenu"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
-const envUsage = "env [ls | new <name> | edit <name> | rm <name> | apply <name> [--pane P] [--yes] | clear [--pane P] [--yes]]"
+const envUsage = "env [ls | new [<name>] | edit <name> | rm <name> | apply <name> [--pane P] [--yes] | clear [--pane P] [--yes]]"
 
 func init() {
 	register(&command{
 		Name:    "env",
-		Args:    "[ls | new <name> | edit <name> | rm <name> | apply <name> [--pane P] [--yes] | clear [--pane P] [--yes]]",
+		Args:    "[ls | new [<name>] | edit <name> | rm <name> | apply <name> [--pane P] [--yes] | clear [--pane P] [--yes]]",
 		Summary: "cmd.env",
 		Run:     runEnv,
 	})
@@ -33,7 +36,6 @@ func runEnv(e *Env, args []string) error {
 	paneF := fl.String("pane", "", "the pane (default: this pane, $TMUX_PANE)")
 	clientF := fl.String("client", "", "the client to show it on")
 	yes := fl.Bool("yes", false, "apply, clear: restart an agent without asking")
-	fromOpt := fl.Bool("from-option", false, "new: the name from the prompt's option")
 	pos, err := parseFlags(fl, args)
 	if err != nil {
 		return err
@@ -51,10 +53,10 @@ func runEnv(e *Env, args []string) error {
 		}
 		return pos[1], nil
 	}
-	switch pos[0] {
-	case "ls":
+	switch {
+	case pos[0] == "ls":
 		return envList(e)
-	case "edit":
+	case pos[0] == "edit":
 		name, err := named()
 		if err != nil {
 			return err
@@ -62,11 +64,14 @@ func runEnv(e *Env, args []string) error {
 		if !envfile.Exists(name) {
 			return fmt.Errorf("%s: %w", name, fs.ErrNotExist)
 		}
-		err = runEdit(e, []string{envfile.Path(name)})
-		if w, _, werr := newWorkspace(e, false); werr == nil {
-			w.RefreshSidebars(context.Background()) // its count may have changed
+		return envEdit(e, name, 0)
+	case pos[0] == "new" && len(pos) == 1:
+		in, inOK := e.Stdin.(*os.File)
+		out, outOK := e.Stdout.(*os.File)
+		if !inOK || !outOK || !isTerminal(in) || !isTerminal(out) {
+			return usage
 		}
-		return err
+		return envNewDialog(e, in, out, *clientF)
 	}
 	w, cfg, err := newWorkspace(e, false)
 	if err != nil {
@@ -75,24 +80,23 @@ func runEnv(e *Env, args []string) error {
 	ctx := context.Background()
 	client := *clientF
 	switch pos[0] {
+	case "dialog":
+		// The Env view's +: the New environment dialog (`imux env new`) in
+		// a popup in the middle of the client, New skill's size (T89.7).
+		cw, ch := 80, 24
+		if client != "" {
+			if out, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-c", client, "#{client_width}\t#{client_height}"}); err == nil {
+				_, _ = fmt.Sscanf(strings.TrimSpace(out), "%d\t%d", &cw, &ch)
+			}
+		}
+		argv := []string{w.Self, "env", "new"}
+		if client != "" {
+			argv = append(argv, "--client", client)
+		}
+		return popmenu.Popup(ctx, w.T, client, "", min(cw, dialogW), min(ch, dialogH), "C", "C", tmux.ShJoin(argv...))
 	case "new":
-		name := ""
-		if *fromOpt {
-			// The Env view's + (its prompt's answer).
-			opt := func(k string) string {
-				out, _ := w.T.Run(ctx, tmux.Cmd{"show-options", "-gqv", k})
-				return strings.TrimSpace(out)
-			}
-			name, client = opt(sidebar.OptEnvAnswer), opt(sidebar.OptEnvClient)
-			_, _ = w.T.Run(ctx, tmux.Cmd{"set-option", "-gu", sidebar.OptEnvAnswer})
-			if name == "" {
-				return nil // the prompt was left empty
-			}
-			if !envfile.ValidName(name) {
-				w.Message(ctx, client, "", i18n.T("env.bad_name", name))
-				return &UsageError{Msg: i18n.T("env.bad_name", name)}
-			}
-		} else if name, err = named(); err != nil {
+		name, err := named()
+		if err != nil {
 			return err
 		}
 		path, err := envfile.Create(name)
@@ -100,13 +104,6 @@ func runEnv(e *Env, args []string) error {
 			return err
 		}
 		w.RefreshSidebars(ctx)
-		if *fromOpt {
-			c := tmux.Cmd{"display-popup"}
-			if client != "" {
-				c = append(c, "-c", client)
-			}
-			return w.T.Spawn(append(c, "-E", "-w", "90%", "-h", "90%", tmux.ShJoin(w.Self, "env", "edit", name)))
-		}
 		fmt.Fprintln(e.Stdout, path)
 		return nil
 	case "rm":
@@ -174,6 +171,43 @@ func runEnv(e *Env, args []string) error {
 		return nil
 	}
 	return usage
+}
+
+// envNewDialog is `imux env new` with no name, on a terminal (in, out: the
+// Env view's popup): the New environment dialog asks the name, then the
+// new file opens in the editor, on the line under its template (T89.7).
+func envNewDialog(e *Env, in, out *os.File, client string) error {
+	name, err := envdialog.Run(envdialog.New(envfile.Exists), in, out)
+	if err != nil || name == "" {
+		return err
+	}
+	path, err := envfile.Create(name)
+	w, _, werr := newWorkspace(e, false)
+	if err != nil {
+		if werr == nil && client != "" {
+			w.Message(context.Background(), client, "", i18n.T("file.failed", err.Error()))
+		}
+		return err
+	}
+	if werr == nil {
+		w.RefreshSidebars(context.Background()) // the view lists it while it is edited
+	}
+	b, _ := os.ReadFile(path)
+	return envEdit(e, name, strings.Count(string(b), "\n")+1)
+}
+
+// envEdit opens environment name in the editor, at line (0: its first),
+// then has the sidebars count its variables again.
+func envEdit(e *Env, name string, line int) error {
+	args := []string{envfile.Path(name)}
+	if line > 0 {
+		args = append([]string{"--line", strconv.Itoa(line)}, args...)
+	}
+	err := runEdit(e, args)
+	if w, _, werr := newWorkspace(e, false); werr == nil {
+		w.RefreshSidebars(context.Background()) // its count may have changed
+	}
+	return err
 }
 
 // envList prints the environments: names and keys, never values.

@@ -3,7 +3,9 @@
 package e2e
 
 import (
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -116,5 +118,91 @@ func TestEnvironments(t *testing.T) {
 		if strings.Contains(strings.Join(r.Args, " "), envSecret) {
 			t.Fatalf("a value on a tmux command line: %q", r.Args)
 		}
+	}
+}
+
+// TestEnvNewPopup (T89.7): the Env view's + opens the New environment
+// dialog in a popup in the middle of the client: what is typed shows as
+// the name it makes; Enter writes the file and opens it in the editor in
+// that popup, on the line under its template, and the view lists it. A
+// taken name is refused, and Esc closes the dialog making nothing.
+func TestEnvNewPopup(t *testing.T) {
+	ed := filepath.Join(t.TempDir(), "fake-editor")
+	testutil.WriteFile(t, ed, []byte("#!/bin/sh\necho \"EDIT $1 $(basename \"$2\")\"\nread x\n"))
+	if err := os.Chmod(ed, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	h := newH(t, "editor = \""+ed+"\"\n"+sidebarConfig)
+	_, bar := h.startWithSidebar()
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+	h.mustTmux("set-option", "-w", "-t", bar, "@imux_view", "env")
+	_, _, _ = h.imux("__sidebar", "--signal")
+	h.rowOf(bar, "New environment…")
+
+	open := func() {
+		t.Helper()
+		time.Sleep(400 * time.Millisecond)
+		x, y := h.buttonOf(bar, "ENV", "➕")
+		mark := c.Mark()
+		c.Click(0, x+1, y)
+		c.waitScreenAfter(h, mark, "e.g. glm, work, proxy", 5*time.Second)
+		time.Sleep(200 * time.Millisecond)
+	}
+	file := filepath.Join(h.Homes.Imux, "env", "glm-coding.env")
+
+	open()
+	mark := c.Mark()
+	c.Write("GLM Coding")
+	c.waitScreenAfter(h, mark, "~/.imux/env/glm-coding.env", 5*time.Second)
+	mark = c.Mark()
+	c.Write("\r")
+	h.waitFor("the new file", 5*time.Second, func() bool {
+		_, err := os.Stat(file)
+		return err == nil
+	})
+	text := h.readFile(file)
+	c.waitScreenAfter(h, mark, "EDIT +"+strconv.Itoa(strings.Count(text, "\n")+1)+" glm-coding.env", 5*time.Second)
+	if fi, err := os.Stat(file); err != nil || fi.Mode().Perm() != 0o600 || !strings.Contains(text, "# ANTHROPIC_BASE_URL=") {
+		t.Fatalf("file %v %v:\n%s", fi, err, text)
+	}
+	c.Write("\r")
+	h.rowOf(bar, "glm-coding")
+
+	// The same name again: refused; Esc closes.
+	open()
+	mark = c.Mark()
+	c.Write("glm-coding")
+	c.waitScreenAfter(h, mark, "An environment named glm-coding already exists", 5*time.Second)
+	mark = c.Mark()
+	c.Write("\r")
+	time.Sleep(500 * time.Millisecond)
+	if strings.Contains(stripANSI(c.Output()[mark:]), "EDIT ") {
+		t.Fatal("a taken name opened the editor")
+	}
+	c.Write("\x1b")
+
+	// Esc with a name typed makes nothing.
+	open()
+	c.Write("scratch")
+	time.Sleep(300 * time.Millisecond)
+	c.Write("\x1b")
+	time.Sleep(800 * time.Millisecond)
+	if _, err := os.Stat(filepath.Join(h.Homes.Imux, "env", "scratch.env")); err == nil {
+		t.Fatal("Esc made an environment")
+	}
+
+	popups := 0
+	for _, r := range h.records() {
+		a := strings.Join(r.Args, " ")
+		if strings.Contains(a, "command-prompt") {
+			t.Fatalf("a command prompt: %q", r.Args)
+		}
+		if strings.Contains(a, "display-popup") && strings.Contains(a, "-w 78 -h 22 -x C -y C") && strings.Contains(a, "env new") {
+			popups++
+		}
+	}
+	if popups != 3 {
+		t.Fatalf("%d New environment popups, want 3", popups)
 	}
 }

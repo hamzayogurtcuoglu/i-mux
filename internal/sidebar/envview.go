@@ -6,7 +6,6 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 // EnvRow is one environment in the Env view (D84): its name and how many
@@ -24,27 +23,6 @@ func gatherEnvs() []EnvRow {
 		out = append(out, EnvRow{Name: e.Name, Vars: len(e.Vars), Problems: len(e.Problems)})
 	}
 	return out
-}
-
-// Options that carry the new environment prompt's answer and client (a
-// prompt's template turns "%1" into the answer, so they cannot be in it).
-const (
-	OptEnvAnswer = "@imux_env_answer"
-	OptEnvClient = "@imux_env_client"
-)
-
-// EnvNewCmds asks on client for a new environment's name, then runs `imux
-// env new --from-option`, which writes it and opens it in the editor.
-func EnvNewCmds(self, client string) []tmux.Cmd {
-	c := tmux.Cmd{"command-prompt"}
-	if client != "" {
-		c = append(c, "-t", client)
-	}
-	tmpl := "set-option -g " + OptEnvAnswer + " \"%%%\" ; " + tmux.RunShell(self, "env", "new", "--from-option")
-	return []tmux.Cmd{
-		{"set-option", "-g", OptEnvClient, client},
-		append(c, "-p", i18n.T("env.name_prompt"), tmpl),
-	}
 }
 
 // renderEnv is the Env view (D84): ENV and + (a new environment); a row

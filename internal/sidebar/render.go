@@ -59,7 +59,7 @@ const (
 	ActMachineAdd             // add a machine: a popup asks its destination (D74)
 	ActEnvApply               // apply environment Path to the target pane (D84)
 	ActEnvMenu                // the menu of environment Path (D84)
-	ActEnvNew                 // a new environment: a prompt asks its name (D84)
+	ActEnvNew                 // a new environment: the New environment dialog asks its name (D84, T89.7)
 )
 
 // Action is a row's action.
@@ -184,6 +184,9 @@ func runes(s string) int { return DisplayWidth(s) }
 
 // Fit is fit for other packages' screens.
 func Fit(s string, w int) string { return fit(s, w) }
+
+// WrapWords is wrapWords for other packages' screens.
+func WrapWords(text string, w int) []string { return wrapWords(text, w) }
 
 // fit cuts s to w columns (with "…") or pads it with spaces.
 func fit(s string, w int) string {

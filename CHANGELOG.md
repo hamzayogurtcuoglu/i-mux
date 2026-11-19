@@ -6,6 +6,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Env's + asks in a popup.** A new environment's name is typed in a New environment popup in
+  the middle of the screen, which shows the file it makes and warns when the name is taken,
+  instead of tmux's prompt on the status line. Then the editor opens in that popup, on the line
+  where its variables go. Environments are for any program: the new file's examples start with
+  a token and a proxy, Claude Code on another endpoint being one use. `imux env new` with no
+  name shows the same dialog in a terminal.
+
 ## [0.65.0] - 2026-11-19
 
 ### Added

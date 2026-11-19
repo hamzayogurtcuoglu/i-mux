@@ -1094,7 +1094,7 @@ the Claude subscription, but nothing is specific to a provider (D84).
     it) and the apply file is gone; removing takes it away; no value in any tmux command.
 - [x] **T89.6 Docs** · XS
   - AC: README and README.tr, CHANGELOG.
-- [ ] **T89.7 The New environment popup** · S · deps: T89.4
+- [x] **T89.7 The New environment popup** · S · deps: T89.4
   - User request (2026-11-19, after v0.65.0): **+** should open a popup to type the name in,
     not ask at the top of the screen; and an environment is for any program, not Claude only.
   - AC: D84: **+** opens the New environment dialog in a popup in the middle of the client

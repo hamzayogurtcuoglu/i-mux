@@ -389,7 +389,7 @@ func isMenu(k ActionKind) bool {
 // waits reports whether a click's action waits OpenAfter (see there).
 func (s *sidebar) waits(ctx context.Context, a Action) bool {
 	switch a.Kind {
-	case ActRename, ActFileOp, ActEnvNew:
+	case ActRename, ActFileOp:
 		return true // the command prompt
 	case ActEnvApply:
 		return !s.t.MenuTakesMouse(ctx) // an agent's restart asks first (D84)
@@ -985,7 +985,8 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.popup(client, "80%", "60%", "machine", "add")
 		return
 	case ActEnvNew:
-		_, _ = s.t.Run(ctx, EnvNewCmds(s.o.Self, client)...)
+		// The New environment dialog, in a popup (T89.7).
+		s.spawn(append([]string{"env", "dialog"}, clientArgs(client)...))
 		return
 	case ActEnvApply, ActEnvMenu:
 		// Environments (D84): apply one to the target pane (an agent asks
