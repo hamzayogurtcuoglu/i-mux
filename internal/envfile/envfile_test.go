@@ -183,17 +183,17 @@ func TestFiles(t *testing.T) {
 
 func TestScript(t *testing.T) {
 	e := Parse("x", "A=1\nB=it's\n")
-	got := Script(e, []string{"A", "OLD", "PATH", "bad key"}, false, "/h/.imux/env/.apply-1")
+	got := Script(e, []string{"A", "OLD", "PATH", "bad key"}, ShellSh, "/h/.imux/env/.apply-1")
 	want := "unset OLD\nexport A='1'\nexport B='it'\\''s'\ncommand rm -f -- '/h/.imux/env/.apply-1'\n"
 	if got != want {
 		t.Fatalf("posix\n got %q\nwant %q", got, want)
 	}
-	got = Script(e, []string{"OLD"}, true, "/f")
+	got = Script(e, []string{"OLD"}, ShellFish, "/f")
 	want = "set -e OLD\nset -gx A '1'\nset -gx B 'it\\'s'\ncommand rm -f -- '/f'\n"
 	if got != want {
 		t.Fatalf("fish\n got %q\nwant %q", got, want)
 	}
-	if got := Script(nil, []string{"A"}, false, "/f"); got != "unset A\ncommand rm -f -- '/f'\n" {
+	if got := Script(nil, []string{"A"}, ShellSh, "/f"); got != "unset A\ncommand rm -f -- '/f'\n" {
 		t.Fatalf("clear %q", got)
 	}
 }
@@ -208,7 +208,7 @@ func TestScriptInShell(t *testing.T) {
 	}
 	value := `it's "quoted" $HOME \n ` + "`x`; two\nlines"
 	e := &Env{Vars: []Var{{"ENVTEST_A", value}, {"ENVTEST_B", "b"}}}
-	p, err := WriteScript(e, []string{"ENVTEST_OLD"}, false)
+	p, err := WriteScript(e, []string{"ENVTEST_OLD"}, ShellSh)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestScriptInShell(t *testing.T) {
 		t.Fatal("the apply file must delete itself")
 	}
 	if fish, err := exec.LookPath("fish"); err == nil {
-		p, _ := WriteScript(e, nil, true)
+		p, _ := WriteScript(e, nil, ShellFish)
 		out, err := exec.Command(fish, "-c", `source $argv[1]; printf '%s|%s' "$ENVTEST_A" "$ENVTEST_B"`, p).Output()
 		if err != nil || string(out) != value+"|b" {
 			t.Fatalf("fish: %q %v", out, err)
@@ -238,7 +238,7 @@ func TestScriptInShell(t *testing.T) {
 
 func TestSweepScripts(t *testing.T) {
 	testutil.Isolate(t)
-	p, err := WriteScript(nil, nil, false)
+	p, err := WriteScript(nil, nil, ShellSh)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,4 +266,49 @@ func FuzzParse(f *testing.F) {
 			seen[v.Key] = true
 		}
 	})
+}
+
+// The apply files for PowerShell and cmd.exe (§7.9, D84): values quoted for each, the old keys
+// removed, the file deleting itself; only the file's path goes in the typed line.
+func TestScriptWindowsShells(t *testing.T) {
+	e := Parse("w", "A=\"it's 100% & <done> ^|\"\nB=x\"y\nOLD2=z\n")
+	if e.Map()["A"] != "it's 100% & <done> ^|" {
+		t.Fatalf("parsed %q", e.Map())
+	}
+	ps := Script(e, []string{"OLD", "B"}, ShellPowerShell, `C:\h\.apply-1.ps1`)
+	for _, want := range []string{
+		"Remove-Item Env:OLD -ErrorAction SilentlyContinue\n",
+		"$env:A = '" + strings.ReplaceAll(e.Map()["A"], "'", "''") + "'\n",
+		"$env:B = 'x\"y'\n",
+		"Remove-Item -LiteralPath 'C:\\h\\.apply-1.ps1' -Force -ErrorAction SilentlyContinue\n",
+	} {
+		if !strings.Contains(ps, want) {
+			t.Errorf("PowerShell script lacks %q:\n%s", want, ps)
+		}
+	}
+	if strings.Contains(ps, "Env:B ") {
+		t.Error("PowerShell removed a key it sets")
+	}
+	cmd := Script(e, []string{"OLD"}, ShellCmd, `C:\h\.apply-1.cmd`)
+	for _, want := range []string{
+		"@set \"OLD=\"\r\n",
+		"@set \"A=" + strings.ReplaceAll(e.Map()["A"], "%", "%%") + "\"\r\n",
+		"@(goto) 2>nul & del \"%~f0\"\r\n",
+	} {
+		if !strings.Contains(cmd, want) {
+			t.Errorf("cmd.exe script lacks %q:\n%s", want, cmd)
+		}
+	}
+	for sh, line := range map[Shell]string{
+		ShellPowerShell: " . ([scriptblock]::Create([IO.File]::ReadAllText('C:\\a b\\.apply-1.ps1')))",
+		ShellCmd:        ` call "C:\a b\.apply-1.cmd"`,
+	} {
+		path := `C:\a b\.apply-1` + sh.ext()
+		if got := sh.Line(path); got != line {
+			t.Errorf("line %q, want %q", got, line)
+		}
+	}
+	if ShellOf("cmd.exe") != ShellCmd || ShellOf("pwsh") != ShellPowerShell || ShellOf("PowerShell.exe") != ShellPowerShell || ShellOf("/bin/zsh") != ShellSh {
+		t.Error("ShellOf")
+	}
 }

@@ -521,11 +521,11 @@ func (w *WS) claudeSettings() (string, error) {
 	p := paths.ClaudeSettings()
 	settings := map[string]any{}
 	if w.Cfg.Limits.ClaudeStatusline {
-		settings["statusLine"] = map[string]any{"type": "command", "command": tmux.ShQuote(w.Self) + " __statusline claude", "padding": 0}
+		settings["statusLine"] = map[string]any{"type": "command", "command": agenthook.ClaudeStatusLine(w.Self), "padding": 0}
 	}
 	if w.Cfg.Hooks.Enabled {
 		// Claude tells i-mux what it does (D71).
-		settings["hooks"] = agenthook.ClaudeHooks(tmux.ShQuote(w.Self) + " __hook claude")
+		settings["hooks"] = agenthook.ClaudeHooks(agenthook.ClaudeHook(w.Self))
 	}
 	b, err := json.Marshal(settings)
 	if err != nil {

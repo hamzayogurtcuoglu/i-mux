@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -76,7 +78,8 @@ func runVersions(e *Env, args []string) error {
 			continue
 		}
 		fmt.Fprintln(e.Stdout, "\n$ "+row.Show)
-		cmd := exec.Command(row.Fix[0], row.Fix[1:]...)
+		argv := sysx.Command(row.Fix[0], row.Fix[1:]...) // an agent's own updater may be an npm shim
+		cmd := exec.Command(argv[0], argv[1:]...)
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, e.Stdout, e.Stderr
 		if err := cmd.Run(); err != nil {
 			fmt.Fprintln(e.Stdout, "\n"+i18n.T("versions.failed", err.Error()))

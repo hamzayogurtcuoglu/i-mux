@@ -19,6 +19,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
 // Ext is an environment file's extension.
@@ -80,8 +81,16 @@ func Dir() string { return filepath.Join(paths.Home(), "env") }
 func Path(name string) string { return filepath.Join(Dir(), name+Ext) }
 
 // Reserved reports whether key is i-mux's or the shell's own: an
-// environment never sets it.
+// environment never sets it. Windows' names are not case-sensitive (Path is
+// PATH), and Windows has its own folders and shell to keep.
 func Reserved(key string) bool {
+	if !sysx.POSIXShell {
+		key = strings.ToUpper(key)
+		switch key {
+		case "USERPROFILE", "APPDATA", "LOCALAPPDATA", "SYSTEMROOT", "COMSPEC", "TEMP", "TMP", "PATHEXT":
+			return true
+		}
+	}
 	switch key {
 	case "PATH", "HOME", "SHELL", "PWD", "OLDPWD", "TMUX", "TMUX_PANE", "SHLVL", "USER", "LOGNAME":
 		return true
@@ -307,13 +316,65 @@ func Delete(name string) error {
 	return os.Remove(Path(name))
 }
 
+// Shell is the kind of shell an apply file is written for.
+type Shell int
+
+// The shells i-mux types an apply file into.
+const (
+	ShellSh         Shell = iota // a POSIX shell: bash, zsh, sh…
+	ShellFish                    // fish
+	ShellPowerShell              // pwsh or Windows PowerShell
+	ShellCmd                     // cmd.exe
+)
+
+// ShellOf is the kind of shell (a path or a name, with or without .exe).
+func ShellOf(shell string) Shell {
+	switch strings.TrimSuffix(strings.ToLower(filepath.Base(shell)), ".exe") {
+	case "fish":
+		return ShellFish
+	case "pwsh", "powershell":
+		return ShellPowerShell
+	case "cmd":
+		return ShellCmd
+	}
+	return ShellSh
+}
+
 // Fish reports whether shell (a path or a name) is fish.
-func Fish(shell string) bool { return filepath.Base(shell) == "fish" }
+func Fish(shell string) bool { return ShellOf(shell) == ShellFish }
+
+// ext is the apply file's extension for sh: cmd.exe runs only a .cmd as a batch file.
+func (sh Shell) ext() string {
+	switch sh {
+	case ShellPowerShell:
+		return ".ps1"
+	case ShellCmd:
+		return ".cmd"
+	}
+	return ""
+}
+
+// Line is what is typed into the shell to run the apply file at path: only its path, never a
+// value. PowerShell reads it into a script block, which no execution policy stops; cmd.exe calls
+// it, so it runs in the same shell.
+func (sh Shell) Line(path string) string {
+	switch sh {
+	case ShellFish:
+		return " source " + ShQuote(path)
+	case ShellPowerShell:
+		return " . ([scriptblock]::Create([IO.File]::ReadAllText(" + PSQuote(path) + ")))"
+	case ShellCmd:
+		return ` call "` + path + `"`
+	}
+	return " . " + ShQuote(path)
+}
 
 // Script is the text a shell sources to take env (nil: none) instead of
 // the keys in prev (the pane's previous environment): its variables
 // exported, prev's other keys unset, and the file deleted by its last line.
-func Script(env *Env, prev []string, fish bool, self string) string {
+// cmd.exe cannot hold a line break in a variable, so a value with one is
+// left out there.
+func Script(env *Env, prev []string, sh Shell, self string) string {
 	var b strings.Builder
 	set := map[string]bool{}
 	if env != nil {
@@ -325,24 +386,53 @@ func Script(env *Env, prev []string, fish bool, self string) string {
 		if set[k] || !keyRe.MatchString(k) || Reserved(k) {
 			continue
 		}
-		if fish {
+		switch sh {
+		case ShellFish:
 			fmt.Fprintf(&b, "set -e %s\n", k)
-		} else {
+		case ShellPowerShell:
+			fmt.Fprintf(&b, "Remove-Item Env:%s -ErrorAction SilentlyContinue\n", k)
+		case ShellCmd:
+			fmt.Fprintf(&b, "@set \"%s=\"\r\n", k)
+		default:
 			fmt.Fprintf(&b, "unset %s\n", k)
 		}
 	}
 	if env != nil {
 		for _, v := range env.Vars {
-			if fish {
+			switch sh {
+			case ShellFish:
 				fmt.Fprintf(&b, "set -gx %s %s\n", v.Key, FishQuote(v.Value))
-			} else {
+			case ShellPowerShell:
+				fmt.Fprintf(&b, "$env:%s = %s\n", v.Key, PSQuote(v.Value))
+			case ShellCmd:
+				if !strings.ContainsAny(v.Value, "\r\n") {
+					fmt.Fprintf(&b, "@set \"%s=%s\"\r\n", v.Key, CmdQuote(v.Value))
+				}
+			default:
 				fmt.Fprintf(&b, "export %s=%s\n", v.Key, ShQuote(v.Value))
 			}
 		}
 	}
-	fmt.Fprintf(&b, "command rm -f -- %s\n", ShQuote(self))
+	switch sh {
+	case ShellPowerShell:
+		fmt.Fprintf(&b, "Remove-Item -LiteralPath %s -Force -ErrorAction SilentlyContinue\n", PSQuote(self))
+	case ShellCmd:
+		// A batch file deleting itself: the goto ends it first, so cmd.exe reads no more of it.
+		// Every line starts with @, so cmd.exe echoes none (a value would show in the pane),
+		// without turning echo off for the shell.
+		b.WriteString("@(goto) 2>nul & del \"%~f0\"\r\n")
+	default:
+		fmt.Fprintf(&b, "command rm -f -- %s\n", ShQuote(self))
+	}
 	return b.String()
 }
+
+// PSQuote quotes s for PowerShell: in single quotes, a quote doubled.
+func PSQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
+
+// CmdQuote is s inside a batch file's set "K=…": % doubled, which a batch file would expand;
+// the quotes keep & | < > ^ as they are, and set takes everything to the last quote.
+func CmdQuote(s string) string { return strings.ReplaceAll(s, "%", "%%") }
 
 // ShQuote quotes s for a POSIX shell: in single quotes, a quote as '\”.
 func ShQuote(s string) string {
@@ -356,7 +446,7 @@ func FishQuote(s string) string {
 
 // WriteScript writes the apply file for a shell (Script) and returns its
 // path.
-func WriteScript(env *Env, prev []string, fish bool) (string, error) {
+func WriteScript(env *Env, prev []string, sh Shell) (string, error) {
 	if err := paths.EnsureDir(Dir()); err != nil {
 		return "", err
 	}
@@ -364,8 +454,8 @@ func WriteScript(env *Env, prev []string, fish bool) (string, error) {
 	if _, err := rand.Read(r[:]); err != nil {
 		return "", err
 	}
-	p := filepath.Join(Dir(), applyPrefix+hex.EncodeToString(r[:]))
-	if err := paths.WriteFile(p, []byte(Script(env, prev, fish, p))); err != nil {
+	p := filepath.Join(Dir(), applyPrefix+hex.EncodeToString(r[:])+sh.ext())
+	if err := paths.WriteFile(p, []byte(Script(env, prev, sh, p))); err != nil {
 		return "", err
 	}
 	return p, nil

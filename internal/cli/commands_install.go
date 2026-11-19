@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/installview"
@@ -57,7 +59,8 @@ func runInstall(e *Env, args []string) error {
 		return err
 	}
 	fmt.Fprintf(e.Stdout, "\x1b[H\x1b[2J\x1b[1m$ %s\x1b[0m\n\n", cmd)
-	c := exec.Command("sh", "-c", cmd)
+	argv := sysx.InstallShell(cmd) // sh -c, or Windows PowerShell (§7.9)
+	c := exec.Command(argv[0], argv[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, e.Stdout, e.Stderr
 	runErr := c.Run()
 	ok := runErr == nil && agent.Resolve(cfg, id, nil).Installed
@@ -114,7 +117,7 @@ func needs(cmd string) string {
 		return ""
 	}
 	switch f[0] {
-	case "npm", "curl", "brew":
+	case "npm", "curl", "brew", "winget":
 		if _, err := exec.LookPath(f[0]); err != nil {
 			return f[0]
 		}

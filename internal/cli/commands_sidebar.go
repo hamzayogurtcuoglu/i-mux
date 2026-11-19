@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -487,7 +489,8 @@ func runStatusline(e *Env, args []string) error {
 	if cmd := usage.UserStatusLine(paths.UserHome(), dir); cmd != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), StatuslineTimeout)
 		defer cancel()
-		c := exec.CommandContext(ctx, "sh", "-c", cmd)
+		argv := sysx.UserShell(cmd) // as Claude runs it: sh, or Git Bash or PowerShell (§7.9)
+		c := exec.CommandContext(ctx, argv[0], argv[1:]...)
 		c.Stdin, c.Stdout, c.Stderr = bytes.NewReader(in), e.Stdout, io.Discard
 		if dir != "" {
 			c.Dir = dir

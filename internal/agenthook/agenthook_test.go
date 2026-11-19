@@ -64,7 +64,7 @@ func TestCodex(t *testing.T) {
 // TestClaudeHooks (T76.1): every listened event runs the command; none on
 // every tool call.
 func TestClaudeHooks(t *testing.T) {
-	b, _ := json.Marshal(ClaudeHooks("'/x/imux' __hook claude"))
+	b, _ := json.Marshal(ClaudeHooks(map[string]any{"type": "command", "command": "'/x/imux' __hook claude"}))
 	var h map[string][]struct {
 		Hooks []struct{ Type, Command string }
 	}

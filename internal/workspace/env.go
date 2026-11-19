@@ -13,6 +13,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -30,8 +31,21 @@ const (
 )
 
 // shells are the programs at a prompt that i-mux types an apply file
-// into: POSIX shells and fish.
-var shells = map[string]bool{"bash": true, "zsh": true, "fish": true, "sh": true, "dash": true, "ksh": true, "mksh": true}
+// into: POSIX shells, fish, PowerShell and cmd.exe.
+var shells = map[string]bool{
+	"bash": true, "zsh": true, "fish": true, "sh": true, "dash": true, "ksh": true, "mksh": true,
+	"pwsh": true, "powershell": true, "cmd": true,
+}
+
+// shellName is a program's name as shells has it: no path, no .exe, lower case on Windows
+// (pane_current_command there is the image name, in its case on disk).
+func shellName(s string) string {
+	s = filepath.Base(s)
+	if !sysx.POSIXShell {
+		s = strings.TrimSuffix(strings.ToLower(s), ".exe")
+	}
+	return s
+}
 
 // EnvKindOf says what applying an environment to pane p does.
 func (w *WS) EnvKindOf(ctx context.Context, p *Pane) EnvKind {
@@ -43,8 +57,8 @@ func (w *WS) EnvKindOf(ctx context.Context, p *Pane) EnvKind {
 	case p.Agent != "":
 		return EnvAgent
 	}
-	login := filepath.Base(w.loginShell(ctx))
-	isShell := func(name string) bool { return shells[name] || name == login }
+	login := shellName(w.loginShell(ctx))
+	isShell := func(name string) bool { name = shellName(name); return shells[name] || name == login }
 	if !isShell(strings.TrimPrefix(p.Command, "-")) { // a login shell's "-bash"
 		return EnvBusy
 	}
@@ -153,15 +167,12 @@ func (w *WS) setEnvOpt(ctx context.Context, pane, name string) error {
 // the file's path is typed, after a space (out of the history where the
 // shell skips such lines) and C-u (a half-typed line is cleared).
 func (w *WS) sourceEnv(ctx context.Context, p *Pane, env *envfile.Env, prev []string) error {
-	fish := envfile.Fish(strings.TrimPrefix(p.Command, "-"))
-	path, err := envfile.WriteScript(env, prev, fish)
+	sh := envfile.ShellOf(strings.TrimPrefix(p.Command, "-"))
+	path, err := envfile.WriteScript(env, prev, sh)
 	if err != nil {
 		return err
 	}
-	line := " . " + envfile.ShQuote(path)
-	if fish {
-		line = " source " + envfile.ShQuote(path)
-	}
+	line := sh.Line(path)
 	_, err = w.T.Run(ctx,
 		tmux.Cmd{"send-keys", "-t", p.ID, "C-u"},
 		tmux.Cmd{"send-keys", "-t", p.ID, "-l", line},

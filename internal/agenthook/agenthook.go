@@ -11,6 +11,9 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 // States a hook reports (the sidebar's names).
@@ -86,13 +89,42 @@ func Codex(arg string) (Report, bool) {
 }
 
 // ClaudeHooks is the "hooks" object of Claude's settings: each event runs
-// command.
-func ClaudeHooks(command string) map[string]any {
+// hook (ClaudeHook).
+func ClaudeHooks(hook map[string]any) map[string]any {
 	h := map[string]any{}
 	for _, ev := range ClaudeEvents {
-		h[ev] = []any{map[string]any{"hooks": []any{map[string]any{"type": "command", "command": command}}}}
+		h[ev] = []any{map[string]any{"hooks": []any{hook}}}
 	}
 	return h
+}
+
+// ClaudeHook is the hook that runs `self __hook claude`: a command line for
+// sh where there is one; on Windows Claude's exec form, the program and its
+// arguments, which runs with no shell (§7.9).
+func ClaudeHook(self string) map[string]any {
+	if sysx.POSIXShell {
+		return map[string]any{"type": "command", "command": tmux.ShQuote(self) + " __hook claude"}
+	}
+	return map[string]any{"type": "command", "command": self, "args": []string{"__hook", "claude"}}
+}
+
+// ClaudeStatusLine is the status line's command, `self __statusline claude`.
+// Claude has only a shell form for it, which runs in sh, or on Windows in Git
+// Bash or else PowerShell: there the path goes with / and no quotes, in its
+// 8.3 form when it has a space, and as `imux` from PATH when even that has one
+// (§7.9).
+func ClaudeStatusLine(self string) string {
+	if sysx.POSIXShell {
+		return tmux.ShQuote(self) + " __statusline claude"
+	}
+	p := self
+	if strings.ContainsRune(p, ' ') {
+		p = sysx.ShortPath(p)
+	}
+	if strings.ContainsRune(p, ' ') {
+		p = "imux"
+	}
+	return filepath.ToSlash(p) + " __statusline claude"
 }
 
 // CodexHome is Codex's folder: $CODEX_HOME, else ~/.codex.

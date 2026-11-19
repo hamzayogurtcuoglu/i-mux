@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 )
@@ -64,7 +66,8 @@ func listModels(ctx context.Context, cli session.AgentID, bin, pathEnv string) [
 	run := func(args ...string) string {
 		ctx, cancel := context.WithTimeout(ctx, modelsTimeout)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, bin, args...)
+		argv := sysx.Command(bin, args...)
+		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 		cmd.Env = append(os.Environ(), "NO_COLOR=1")
 		if pathEnv != "" {
 			cmd.Env = append(cmd.Env, "PATH="+pathEnv)

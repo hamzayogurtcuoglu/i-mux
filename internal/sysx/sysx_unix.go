@@ -134,6 +134,20 @@ const POSIXShell = true
 // starts in a pane: as a login shell.
 func ShellArgv(sh string) []string { return []string{sh, "-l"} }
 
+// Command is how the program at path runs with args, with no shell between:
+// argv[0] is what is run. On Unix, path itself.
+func Command(path string, args ...string) []string { return append([]string{path}, args...) }
+
+// InstallShell is how an install or fix command line runs: sh -c.
+func InstallShell(cmd string) []string { return []string{"sh", "-c", cmd} }
+
+// UserShell is how a command line the user wrote for an agent (Claude's
+// status line) runs, as the agent runs it: sh -c.
+func UserShell(cmd string) []string { return []string{"sh", "-c", cmd} }
+
+// ShortPath is p in a form with no spaces where the system has one; p.
+func ShortPath(p string) string { return p }
+
 // Executable reports whether a regular file's mode lets it run.
 func Executable(fi os.FileInfo) bool { return fi.Mode().Perm()&0o111 != 0 }
 

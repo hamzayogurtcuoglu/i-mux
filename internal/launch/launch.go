@@ -174,7 +174,9 @@ func Exec(s *Spec) error {
 	if s.Dir != "" {
 		env = setEnv(env, "PWD", s.Dir)
 	}
-	return execFunc(s.Bin, s.Argv(), env)
+	// An npm shim runs as what it runs, so cmd.exe never parses the prompt (§7.9).
+	argv := sysx.Command(s.Bin, s.Args...)
+	return execFunc(argv[0], argv, env)
 }
 
 func setEnv(env []string, k, v string) []string {

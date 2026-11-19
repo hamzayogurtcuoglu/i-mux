@@ -167,6 +167,7 @@ func Execute(ctx context.Context, argv, env []string, dir, logPath string, timeo
 	defer logf.Close()
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	argv = sysx.Command(argv[0], argv[1:]...) // an npm shim's program (§7.9)
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir, cmd.Env = dir, env
 	sysx.KillGroupOnCancel(cmd)

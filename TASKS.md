@@ -1061,13 +1061,27 @@ tmux on macOS and Linux, exactly as before.
     title use the system's separator; `search.Files` lists with `/` without git as with it; and a
     session's name comes from its folder lower-cased on Windows (`sysx.PathKey`). The new
     Windows tests pass on Windows 11 (through WSL), the `..\` one failing before the fix.
-- [ ] **T90.5 Agents on Windows** · M · deps: T90.3, T90.4
+- [x] **T90.5 Agents on Windows** · M · deps: T90.3, T90.4
   - AC: detection, installation, starting, resuming and hooking each agent works: npm's `.cmd`
     and `.ps1` shims and `.exe` files are found; install commands for Windows; hook installation
     into each agent's settings with Windows paths and commands; resume commands; an environment
     (D84) applied to PowerShell or cmd.exe at its prompt (a `.ps1` or `.cmd` apply file; until
     then such a pane is left alone, with a message); unit tests; their e2e on Windows comes with
     T90.9's suite, whose fake agents are ported to Go.
+  - Status: each agent installs with its maker's Windows command (run by Windows PowerShell,
+    `sysx.InstallShell`) and is found on `PATH`, then in that command's folder or npm's, with
+    `PATHEXT`; an npm shim runs as what it runs (`sysx.Command`: node and the package's script,
+    or its `.exe`), when an agent starts, is probed, lists its models, runs as a job or updates;
+    WinGet's Codex updates with `winget upgrade`; a missing winget says how to get it. Claude's
+    hooks use its exec form and its status line imux's path with `/` (8.3 when it has a space),
+    and the user's own status line runs in Git Bash or PowerShell (`sysx.UserShell`). The
+    versions panel shows the engine in tmux's row, with no package manager. An environment
+    (D84) reaches PowerShell through a script block read from a `.ps1` apply file and cmd.exe
+    through `call` of a `.cmd` one: only the path is typed, the file deletes itself, cmd.exe
+    echoes none of its lines (each starts with `@`), and `Reserved` matches Windows' names
+    whatever their case, with its folders and shell kept. Windows tests (`sysx`, `agent`,
+    `agenthook`, `envfile`, which runs the apply files in Windows PowerShell and cmd.exe) pass on
+    Windows 11 build 26200; Linux's behaviour is unchanged.
 - [ ] **T90.6 Windows integrations** · L · deps: T90.2
   - AC: opening URLs and files (`ShellExecute`); clipboard text and image paste (Win32
     clipboard); notifications (a Windows toast); the Nerd Font install as a per-user font with

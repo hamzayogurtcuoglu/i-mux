@@ -59,6 +59,7 @@ func init() {
 	for i := range registry {
 		registry[i].Name = session.DisplayName(registry[i].ID)
 		registry[i].Short = session.ShortName(registry[i].ID)
+		platformInfo(&registry[i])
 	}
 }
 
@@ -256,13 +257,14 @@ func Resolve(cfg *config.Config, id session.AgentID, st *state.State) Resolved {
 // inInstallDirs finds name in the folders the agent's own install script
 // puts it in ("" when it is in none).
 func inInstallDirs(info Info, name string) string {
-	home, err := os.UserHomeDir()
-	if err != nil || filepath.Base(name) != name {
+	if filepath.Base(name) != name {
 		return ""
 	}
-	for _, d := range info.Dirs {
-		if p := filepath.Join(home, d, name); isExecutable(p) {
-			return p
+	for _, d := range installDirs(info) {
+		for _, p := range programFiles(d, name) {
+			if isExecutable(p) {
+				return p
+			}
 		}
 	}
 	return ""
@@ -319,7 +321,8 @@ func SetProbeTimeout(d time.Duration) (restore func()) {
 func Probe(ctx context.Context, path, pathEnv string, withStderr bool, args ...string) []byte {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, path, args...)
+	argv := sysx.Command(path, args...) // an npm shim's program, with no cmd.exe between
+	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Env = append(os.Environ(), "PATH="+pathEnv, "NO_COLOR=1")
 	cmd.Stdin = nil
 	var out bytes.Buffer

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -89,6 +91,9 @@ func imuxRow(e Env) Row {
 }
 
 func tmuxRow(ctx context.Context, e Env) Row {
+	if !sysx.HasTmux {
+		return engineRow(ctx, e)
+	}
 	r := Row{Key: "t", Name: "tmux", Tmux: true}
 	path, err := e.LookPath("tmux")
 	if err != nil {
@@ -137,6 +142,24 @@ func tmuxRow(ctx context.Context, e Env) Row {
 	return r
 }
 
+// engineRow is tmux's row where there is no tmux (Windows, D85): the engine, i-mux-core, which
+// comes and updates with i-mux, so no package manager is offered (§7.9).
+func engineRow(ctx context.Context, e Env) Row {
+	r := Row{Key: "t", Name: "i-mux-core", Tmux: true}
+	path := tmux.BackendBin("core")
+	if !filepath.IsAbs(path) {
+		r.Status, r.Note = Missing, i18n.T("versions.engine_missing")
+		return r
+	}
+	v, ok := tmux.ParseVersion(e.Output(ctx, path, "-V"))
+	if !ok || v.EngineVersion() == "" {
+		r.Status, r.Note = Unknown, i18n.T("versions.unknown")
+		return r
+	}
+	r.Version = v.EngineVersion()
+	return r
+}
+
 // brewTmux reports whether tmux at path is Homebrew's.
 func brewTmux(e Env, path string) bool {
 	if _, err := e.LookPath("brew"); err != nil {
@@ -147,6 +170,12 @@ func brewTmux(e Env, path string) bool {
 		real = path
 	}
 	return fromBrew(real)
+}
+
+// fromWinGet reports whether a binary's path is WinGet's (its Links folder or a package it
+// installed), as Codex's WinGet install is on Windows (§7.9).
+func fromWinGet(path string) bool {
+	return strings.Contains(strings.ToLower(filepath.ToSlash(path)), "/microsoft/winget/")
 }
 
 // fromBrew reports whether a binary's real path is in a Homebrew prefix.
@@ -242,7 +271,7 @@ func agentRow(e Env, a agent.Info) Row {
 		if p := needs(e, cmd); p != "" {
 			r.Note += "\n" + i18n.T("install.needs", a.Short, p) + "\n" + howTo(p)
 		} else {
-			r.Fix = []string{"sh", "-c", cmd}
+			r.Fix = sysx.InstallShell(cmd) // sh -c, or Windows PowerShell (§7.9)
 		}
 		return r
 	}
@@ -262,7 +291,7 @@ func needs(e Env, cmd string) string {
 		return ""
 	}
 	switch f[0] {
-	case "npm", "curl", "brew":
+	case "npm", "curl", "brew", "winget":
 		if _, err := e.LookPath(f[0]); err != nil {
 			return f[0]
 		}
@@ -279,6 +308,8 @@ func howTo(tool string) string {
 		return i18n.T("install.needs_curl")
 	case "brew":
 		return i18n.T("install.needs_brew")
+	case "winget":
+		return i18n.T("install.needs_winget")
 	}
 	return ""
 }
@@ -302,6 +333,10 @@ func agentUpdate(a agent.Info, path, version string) ([]string, string) {
 	}
 	if fromBrew(real) {
 		return []string{"brew", "upgrade", "codex"}, "brew upgrade codex"
+	}
+	if fromWinGet(real) {
+		cmd := []string{"winget", "upgrade", "--id", "OpenAI.Codex", "-e"}
+		return cmd, shellText(cmd)
 	}
 	cmd := []string{"npm", "install", "-g", "@openai/codex@latest"}
 	return cmd, shellText(cmd)
