@@ -6,6 +6,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/update"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 )
 
@@ -30,6 +31,7 @@ func init() {
 // setup runs once per process before dispatch.
 func setup() {
 	paths.SetUmask()
+	update.CleanOld()
 	i18n.Init("")
 }
 

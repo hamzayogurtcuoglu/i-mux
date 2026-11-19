@@ -1100,13 +1100,26 @@ tmux on macOS and Linux, exactly as before.
     Unit tests with fakes run everywhere; on Windows 11 build 26200 the toast's script builds its
     toast (not shown), micro's real zip installs and runs, and the new tests pass. Windows CI's
     e2e comes with T90.9.
-- [ ] **T90.7 Self-update on Windows** · M · deps: T90.2
+- [x] **T90.7 Self-update on Windows** · M · deps: T90.2
   - AC: §9.3 "Updates", D85: GoReleaser ships `imux_<version>_windows_<arch>.zip` with `imux.exe`
     and `imux-core.exe`; Settings → Update (`imux update`) downloads and verifies both against
     `checksums.txt`; replacing a running executable renames the current one to `*.old`, writes the
     new one, deletes `*.old` on the next start; rollback if any step fails; a running engine
     server keeps the old binary until its sessions end (Settings says so); an update e2e on
     Windows CI with a local release fixture.
+  - Status: GoReleaser builds `imux.exe` and `imux-core.exe` for `windows/amd64` and
+    `windows/arm64` into `.zip` archives listed in `checksums.txt`. On Windows `update.Install`
+    calls `update.InstallArchive` (on Unix it runs `install.sh` as before): it downloads
+    `checksums.txt` and the release zip, checks the SHA-256 sum, unpacks it and calls
+    `update.Replace`, which stages each binary to `<name>.new`, renames the existing executable
+    to `<name>.old` and puts `<name>.new` in place, rolling back every binary already moved if
+    any step fails; `setup()` runs `update.CleanOld()` on each start to remove `*.old` files
+    no longer held open by a running process, and `BinVersion` honours the client's 5 s timeout
+    so Windows Defender's first-run scan of a newly extracted `imux-core.exe` does not time out
+    when `imux update` checks whether an engine server is running. `TestInstallArchiveAndRollback`
+    and `TestSelfUpdateEndToEnd` (with a live running `imux.exe` and `imux-core.exe`, cleanup on
+    the next start, the running-engine message, and rollback) pass on Linux and on Windows 11
+    build 26200.
 - [ ] **T90.8 Installer** · L · deps: T90.7
   - AC: a per-user NSIS installer needing no admin, cross-built on Linux CI: installs to
     `%LOCALAPPDATA%\Programs\i-mux`, adds it to the user's `PATH`, adds a Start menu entry that

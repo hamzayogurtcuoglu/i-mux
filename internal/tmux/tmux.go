@@ -535,7 +535,11 @@ var MinCoreVersion = "0.0.0"
 
 // BinVersion runs `tmux -V`.
 func (c *Client) BinVersion(ctx context.Context) (Version, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	to := c.Timeout
+	if to <= 0 {
+		to = 5 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(ctx, to)
 	defer cancel()
 	r := c.Runner
 	if r == nil {

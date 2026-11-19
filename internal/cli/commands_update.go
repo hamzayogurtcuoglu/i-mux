@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -71,10 +70,7 @@ func runUpdate(e *Env, args []string) error {
 		return nil
 	}
 	fmt.Fprintln(e.Stdout, i18n.T("update.updating", cur, latest)+"\n")
-	argv := update.InstallCmd(latest, dir)
-	cmd := exec.Command(argv[0], argv[1:]...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, e.Stdout, e.Stderr
-	if err := cmd.Run(); err != nil {
+	if err := update.Install(context.Background(), latest, dir, os.Stdin, e.Stdout, e.Stderr); err != nil {
 		fmt.Fprintln(e.Stdout, "\n"+i18n.T("update.failed", err.Error()))
 		return err
 	}
