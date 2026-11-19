@@ -1026,11 +1026,16 @@ tmux on macOS and Linux, exactly as before.
     taken.
 - [ ] **T90.3 Command strings without a POSIX shell** · M · deps: T90.2
   - AC: `UICommand`, `Silent`, `ShQuote`, `ShJoin`, the `run-shell` strings in the generated
-    config, the popups' commands and every `sh -c` use follow E14 (D85): on Windows the argv
-    form of `run-shell`/`if-shell` (i-mux-core's X1; the quiet form for
+    config, the popups' commands and every `sh -c` use follow E14 (D85, §9.2a): on Windows the
+    argv form of `run-shell`/`if-shell` (i-mux-core's X1; the quiet form for
     `… >/dev/null 2>&1 || true`) and popups'/panes' programs as separate arguments, with no
-    `rm -f` or other shell utilities; on macOS and Linux byte-identical to before (golden
-    tests); `TMUX` and `TMUX_PANE` parsed in their Windows form.
+    `rm -f`, pipe or other shell utility (the handoff preview pages itself); on macOS and Linux
+    byte-identical to before (golden tests); `TMUX` and `TMUX_PANE` parsed in their Windows
+    form; the shell an agent exits to is the engine's choice there; `make e2e-core-argv` runs the
+    e2e suite on i-mux-core with the Windows forms (`IMUX_ARGV_FORM=1`). The `sh -c` uses that
+    run what an agent or the user set up go with the tasks for them: Claude's status line and
+    the install and fix commands (T90.5), the clipboard and the browser (T90.6), the update
+    (T90.7).
 - [ ] **T90.4 Paths and agents' homes** · S · deps: T90.2
   - AC: `~/.imux` under `%USERPROFILE%`; each agent's config and session paths on Windows
     (Claude Code, Codex, Copilot, Antigravity, OpenCode), each verified from that agent's own
@@ -1039,8 +1044,10 @@ tmux on macOS and Linux, exactly as before.
 - [ ] **T90.5 Agents on Windows** · M · deps: T90.3, T90.4
   - AC: detection, installation, starting, resuming and hooking each agent works: npm's `.cmd`
     and `.ps1` shims and `.exe` files are found; install commands for Windows; hook installation
-    into each agent's settings with Windows paths and commands; resume commands; e2e on Windows
-    CI with the fake agents, ported to Windows (Go or `.cmd`).
+    into each agent's settings with Windows paths and commands; resume commands; an environment
+    (D84) applied to PowerShell or cmd.exe at its prompt (a `.ps1` or `.cmd` apply file; until
+    then such a pane is left alone, with a message); e2e on Windows CI with the fake agents,
+    ported to Windows (Go or `.cmd`).
 - [ ] **T90.6 Windows integrations** · L · deps: T90.2
   - AC: opening URLs and files (`ShellExecute`); clipboard text and image paste (Win32
     clipboard); notifications (a Windows toast); the Nerd Font install as a per-user font with

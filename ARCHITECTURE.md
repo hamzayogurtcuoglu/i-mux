@@ -957,6 +957,36 @@ source-file -q ~/.imux/tmux.local.conf
   `terminal-overrides` when a client attaches: a terminal attached before an upgrade gets a new
   override after detaching and attaching again.
 
+### 9.2a Command lines on Windows (D85)
+
+Windows has no POSIX shell, so the command lines i-mux gives the engine take the forms
+i-mux-core runs without one (its E14 and X1). On macOS and Linux every line stays as above, byte
+for byte; `internal/tmux`'s golden files hold both forms.
+
+- **i-mux's own commands** (bindings, hooks, menu items) use the quiet argv form:
+  `run-shell -b '{"argv":["C:\\…\\imux.exe","__menu","--pane","#{pane_id}"],"quiet":true}'`.
+  It does what `>/dev/null 2>&1 || true` does. `UICommand`'s args stay sh words: the argv form
+  splits them as sh would, quotes taken away, and formats are expanded in each element on its
+  own.
+- **A command whose output is shown** (the Jobs' quick pick after its popup) uses the plain argv
+  form, `["C:\\…\\imux.exe","__quickpick","--run","<id>"]`.
+- **Popups' and panes' programs** are separate arguments after the options
+  (`display-popup -E … C:\…\imux.exe __history --pane %3`), which the engine runs without a
+  shell. On Unix they stay one sh line, as before.
+- **No pipes or shell utilities:**
+  - the handoff preview pages itself (`imux handoff … --print --pager`, the pager the limits
+    panel uses) instead of `| less -R`;
+  - a menu popup's answer file is left to the menus folder's pruning instead of `rm -f`;
+  - the watcher sends no `run-shell -b true` to make the server reap its children: i-mux-core
+    reaps them itself (that nudge is for tmux builds with libutempter).
+- **The shell an agent exits to** is the engine's own choice there: pwsh, else Windows
+  PowerShell (both with `-NoLogo`), else `%COMSPEC%`. A `default-shell` that names an existing
+  program wins, as on Unix, where it stays `<default-shell> -l`.
+- **`TMUX`** is `<socket path>,<pid>,<session>`. It is read from the right, since a Windows
+  profile's path may hold a comma.
+- `IMUX_ARGV_FORM=1` gives macOS and Linux the Windows forms, so i-mux-core's e2e run there
+  checks them (`make e2e-core-argv`); tmux cannot run them.
+
 ### 9.3 UI: agent bar, menus, session picker, keys
 
 **Switching from the UI is the primary interface.** tmux draws everything below; i-mux only
