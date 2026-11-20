@@ -8,6 +8,15 @@ All notable changes to i-mux are listed here. The format follows
 
 ### Fixed
 
+- **Windows: the engine in the Windows builds runs.** The imux-core that i-mux's Windows builds
+  carried predated the engine's Windows server and refused to start one; i-mux now builds the
+  engine that has it, which also works from an elevated ("Run as administrator") terminal.
+- **Windows: removing a worktree whose agents run in it works.** The project now closes before
+  its folder is removed (Windows deletes no folder a program works in). On every system, a
+  worktree with changes still asks first.
+- **Windows: a `file:///C:/…` URL opens the file** in the web view, and a schedule's past runs
+  move with it when its skill's file moves.
+
 - **A dead watcher comes back on its own.** The limit watcher is the only writer of the panes'
   working/idle states (the sidebar's spinners and "N working" count, `imux panes`). When it died
   with the tmux server living on — an `imux quit` that stopped it before failing to close the
