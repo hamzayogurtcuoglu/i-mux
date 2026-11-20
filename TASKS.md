@@ -1004,6 +1004,25 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M91: CI-green: the watcher's pid and menus after a gesture (added 2026-11-20)
+
+CI has been red on `e2e` since M72: the pane-swap race (fixed with the swap bindings made
+synchronous) and, remaining, two timing bugs that the Ubuntu 26.04 runner (tmux 3.6, slower)
+turned deterministic. Both are engine-independent i-mux bugs, seen on tmux and i-mux-core alike.
+
+- [ ] **T91.1 The watcher writes its pid without an empty window** · S
+  - AC: `internal/watch`: the pid file is space-padded over, never truncated first, so
+    `__watch status` cannot read a wiped file and report `pid 0` while the new watcher holds the
+    lock (seen on the runner: `status "watcher running (pid 0)"`); a unit test covers the
+    overwrite; `TestSidebarRevivesWatcher` waits for the status, not only for the process.
+- [ ] **T91.2 Menus open past the gesture's tail** · S
+  - AC: `internal/sidebar`: on tmux 3.5+ a click that opens a menu waits `MenuBurst` (150 ms)
+    before opening it, so the rest of the same burst — which tmux 3.6 interleaves with the
+    menu's opening — is consumed first (the second press on the same row drops via
+    `ClickIgnore`) and cannot land outside the drawn menu and close it (§9.3); before 3.5 the
+    `OpenAfter` wait stays; `TestSidebarDoubleClick` passes on tmux 3.4, 3.5a, 3.6 and
+    i-mux-core.
+
 ## M90: Native Windows on i-mux-core (added 2026-11-19)
 
 User request: finish the remaining plan — i-mux on Windows (D85). The tasks mirror Phase 9

@@ -2232,6 +2232,12 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
   menu too. There a double click's second press,
   when it comes after the menu is drawn, lands outside it and closes it, as a second click outside
   a menu does (the e2e test presses twice at once).
+  On tmux 3.5+ a menu-opening click waits 150 ms (`MenuBurst`, v0.65.1) before opening the menu:
+  tmux 3.6 interleaves the rest of the same gesture (a second press of the same burst) with the
+  menu's opening, so it landed outside the drawn menu and closed it — on every version the pause
+  lets the sidebar consume the gesture's tail first (a second press on the same row is dropped by
+  `ClickIgnore`), which also mends a quick double click: the menu now opens and stays.
+  Before 3.5 the wait stays `OpenAfter` (the release itself closes a menu there).
 - **A double click's second press:** it acts again only where the first one did.
   `MouseDown1Pane` is tmux's own plus `set -gF @imux_press '#{mouse_pane}'`; `SecondClick1Pane`
   and i-mux's `TripleClick1Pane` pass the press to a sidebar only when it is that pane (any other
@@ -3038,7 +3044,10 @@ written (in the agent CLIs, or by hand; i-mux does not write agents).
 ## 10. Watcher daemon (limit detection)
 
 - **Singleton:** `~/.imux/watch.pid` held with `flock(LOCK_EX|LOCK_NB)` for the process lifetime.
-  A stale file is harmless because the lock dies with the process.
+  A stale file is harmless because the lock dies with the process. The watcher writes its pid
+  space-padded over the file, never truncating it first (v0.65.1): in the window between a
+  truncate and the write, `__watch status` — the lock held, so running — read an empty file and
+  reported `pid 0`.
 - **Start:** `imux __watch ensure` (called when a project starts, restores or attaches, and by the
   `client-attached` hook) takes the lock or, if it is held, sends `SIGUSR1` (wake).
   Every sidebar also looks for a dead watcher every 15 s and starts it (D86).
