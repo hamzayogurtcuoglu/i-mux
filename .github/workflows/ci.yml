@@ -84,9 +84,19 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - name: Install tmux (Linux)
+      # tmux is pinned, not the runner's (T91.2): Ubuntu 26.04's tmux 3.6
+      # closes menus by itself (docs/TROUBLESHOOTING.md).
+      - name: tmux cache
         if: runner.os == 'Linux'
-        run: sudo apt-get update -q && sudo apt-get install -y -q tmux
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/tmux-3.8
+          key: tmux-3.8-${{ runner.os }}-${{ runner.arch }}
+      - name: Build the pinned tmux (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libevent-dev libncurses-dev bison pkg-config
+          scripts/ci-tmux.sh
       - name: Install tmux (macOS)
         if: runner.os == 'macOS'
         run: brew install tmux

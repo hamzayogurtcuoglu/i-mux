@@ -1016,7 +1016,7 @@ runner exposes on either engine (T91.1), a tmux 3.6 bug that Ubuntu 26.04's runn
     `__watch status` cannot read a wiped file and report `pid 0` while the new watcher holds the
     lock (seen on the runner: `status "watcher running (pid 0)"`); a unit test covers the
     overwrite; `TestSidebarRevivesWatcher` waits for the status, not only for the process.
-- [ ] **T91.2 The tmux 3.6 menu bug is recorded and fenced off** · S
+- [x] **T91.2 The tmux 3.6 menu bug is recorded and fenced off** · S
   - AC: `TestSidebarDoubleClick` skips on tmux 3.6 with a pointer to docs/TROUBLESHOOTING.md
     ("Menus close by themselves"), which records the bug and the way out (verified with a
     plain-session probe: no i-mux command, key or mouse involved — 9.3); CI's `e2e` job
