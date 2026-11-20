@@ -1011,7 +1011,7 @@ synchronous) and, remaining, three failures: a timing bug of i-mux's watcher tha
 runner exposes on either engine (T91.1), a tmux 3.6 bug that Ubuntu 26.04's runner brought in
 (T91.2), and a test that raced tmux's own query timeout on macOS (T91.3).
 
-- [ ] **T91.1 The watcher writes its pid without an empty window** · S
+- [x] **T91.1 The watcher writes its pid without an empty window** · S
   - AC: `internal/watch`: the pid file is space-padded over, never truncated first, so
     `__watch status` cannot read a wiped file and report `pid 0` while the new watcher holds the
     lock (seen on the runner: `status "watcher running (pid 0)"`); a unit test covers the

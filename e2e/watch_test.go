@@ -65,7 +65,12 @@ func TestSidebarRevivesWatcher(t *testing.T) {
 		w := h.watchers()
 		return len(w) == 1 && w[0] != old
 	})
-	if out := h.mustImux("__watch", "status"); !strings.Contains(out, "running (pid "+h.watchers()[0]+")") {
-		t.Fatalf("status %q", out)
-	}
+	// The process is visible before it holds the lock and writes its pid, so
+	// wait for the status to name it (M91), not only for pgrep to see it.
+	var status string
+	h.waitFor("status names the new watcher", 10*time.Second, func() bool {
+		status = h.mustImux("__watch", "status")
+		w := h.watchers()
+		return len(w) == 1 && strings.Contains(status, "running (pid "+w[0]+")")
+	})
 }

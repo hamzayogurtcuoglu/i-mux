@@ -80,6 +80,33 @@ func TestStatusFollowsTheLock(t *testing.T) {
 	}
 }
 
+// TestWritePidOverwrites (M91): the new watcher's pid is padded over the
+// file, so a reader between the write's start and its end sees either the
+// old pid or the new one — never an empty file (pid 0) or leftover digits.
+func TestWritePidOverwrites(t *testing.T) {
+	testutil.Isolate(t)
+	_ = os.MkdirAll(paths.Home(), 0o700)
+	_ = os.WriteFile(paths.WatchPid(), []byte("9999999\n"), 0o600)
+	f, locked, err := lockPid()
+	if err != nil || !locked {
+		t.Fatalf("lock: %v %v", locked, err)
+	}
+	defer f.Close()
+	if err := writePid(f, 42); err != nil {
+		t.Fatal(err)
+	}
+	if running, pid := Status(); !running || pid != 42 {
+		t.Fatalf("after the overwrite: %v %d", running, pid)
+	}
+	// A shorter pid over a longer one leaves no digits behind.
+	if err := writePid(f, 7); err != nil {
+		t.Fatal(err)
+	}
+	if running, pid := Status(); !running || pid != 7 {
+		t.Fatalf("short pid over a long one: %v %d", running, pid)
+	}
+}
+
 type scriptedTicker struct {
 	n        atomic.Int32
 	attached bool

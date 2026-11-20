@@ -52,6 +52,15 @@ func readPid(f *os.File) int {
 	return pid
 }
 
+// writePid writes pid space-padded over the file, never truncating it
+// first: Status() — the lock held — then never reads an empty file and
+// reports pid 0 while the watcher is starting (M91). The padding also
+// overwrites a longer pid a previous watcher left.
+func writePid(f *os.File, pid int) error {
+	_, err := f.WriteAt([]byte(fmt.Sprintf("%-20d\n", pid)), 0)
+	return err
+}
+
 // Status reports whether the watcher runs, and its pid. The flock is the
 // truth: a stale pid file of a dead watcher is not running.
 func Status() (bool, int) {
@@ -242,10 +251,10 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 		return nil // another watcher runs
 	}
 	defer f.Close()
-	if err := f.Truncate(0); err != nil {
-		return err
-	}
-	if _, err := f.WriteAt([]byte(strconv.Itoa(os.Getpid())+"\n"), 0); err != nil {
+	// Padded over, never truncated first: in the window between a truncate
+	// and this write, Status() — the lock held, so running — would read an
+	// empty file and report pid 0 (M91).
+	if err := writePid(f, os.Getpid()); err != nil {
 		return err
 	}
 	runtime.GOMAXPROCS(1)
