@@ -183,13 +183,33 @@ func Move(project, from, to string) error {
 		return err
 	}
 	// Its runs, unless one goes on (it writes where it started).
-	if l, err := lock(oldID); err == nil {
-		defer l.Close()
-		if _, err := os.Stat(Dir(newID)); os.IsNotExist(err) {
-			return os.Rename(Dir(oldID), Dir(newID))
+	l, err := lock(oldID)
+	if err != nil {
+		return nil
+	}
+	defer l.Close()
+	if _, err := os.Stat(Dir(newID)); !os.IsNotExist(err) {
+		return nil
+	}
+	// Entry by entry, the lock left behind: Windows renames no folder with a
+	// file open in it, and the lock is open until the runs are across.
+	ents, err := os.ReadDir(Dir(oldID))
+	if err != nil {
+		return err
+	}
+	if err := paths.EnsureDir(Dir(newID)); err != nil {
+		return err
+	}
+	for _, e := range ents {
+		if e.Name() == filepath.Base(lockFile(oldID)) {
+			continue
+		}
+		if err := os.Rename(filepath.Join(Dir(oldID), e.Name()), filepath.Join(Dir(newID), e.Name())); err != nil {
+			return err
 		}
 	}
-	return nil
+	l.Close()
+	return os.RemoveAll(Dir(oldID))
 }
 
 // Remove deletes the schedule with id and its runs.
