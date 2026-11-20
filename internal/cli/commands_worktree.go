@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -190,17 +191,25 @@ func (c *worktreeCmd) merge(wt workspace.Worktree) error {
 	return nil
 }
 
-// remove removes the worktree (the branch stays) and closes its project;
-// with changes it asks again, with --force.
+// remove closes the worktree's project and removes the worktree (the branch
+// stays); with changes it asks again, with --force. The project closes
+// first: its panes work in the folder, and Windows deletes no folder a
+// process works in (its processes end a moment after the panes close).
 func (c *worktreeCmd) remove(wt workspace.Worktree, s string, force bool) error {
-	err := gitops.RemoveWorktree(c.ctx, wt.Main, wt.Path, force)
-	if err != nil && !force && strings.Contains(err.Error(), "--force") {
+	if !force && !gitops.Clean(c.ctx, wt.Path) {
 		return c.w.Show(c.ctx, c.w.WorktreeConfirm(wt, "remove-force", s, c.client, c.pane), c.client, c.pane)
+	}
+	_ = c.w.CloseProject(c.ctx, s)
+	var err error
+	for deadline := time.Now().Add(3 * time.Second); ; {
+		if err = gitops.RemoveWorktree(c.ctx, wt.Main, wt.Path, force); err == nil || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 	if err != nil {
 		return c.fail(err)
 	}
-	_ = c.w.CloseProject(c.ctx, s)
 	c.say(i18n.T("worktree.removed", wt.Branch))
 	return nil
 }
