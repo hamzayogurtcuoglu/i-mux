@@ -1181,6 +1181,14 @@ tmux on macOS and Linux, exactly as before.
     cannot apply skipped and each skip listed; the fake agents ported to Go (with T90.5's
     agents: installs, shims, hooks); green and blocking; the Windows lint covers the e2e tests
     too; CONTRIBUTING says how to run them on Windows.
+  - Plan (2026-11-20): on Windows the harness builds `e2e/fakeagents/fakeagent`, fake.sh ported
+    to Go (the agent is the program's name: `fake-claude.exe`, …; a test's control script,
+    `A.sh` or `FAKE_SCRIPT`, runs in Git for Windows' sh, as i-mux-core's suite does), and
+    drives its clients through ConPTY (`golang.org/x/sys/windows`, no new module). fake.sh
+    stays the fake on macOS and Linux; a unit test runs both on the same arguments and compares
+    what they log, so the two cannot drift. Tests that cannot apply on Windows skip through one
+    list, `e2e/skips_windows_test.go`, each with its reason. The `windows` job runs
+    `go test ./...` and `make e2e-core`'s suite.
 - [ ] **T90.10 Windows check** · XS · deps: T90.9 · USER
   - AC: the owner installs from the installer, opens from the Start menu, installs an agent,
     checks the sidebar, tabs, popups, menus and mouse, image paste, notifications, updates from

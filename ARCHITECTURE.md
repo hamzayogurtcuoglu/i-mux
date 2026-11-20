@@ -240,7 +240,8 @@ imux/
 │   └── bus/                      # panes/read/send/wait, target resolution, idle detection
 ├── testdata/                     # SYNTHETIC fixtures only (see TASKS.md, testing strategy)
 ├── e2e/                          # end-to-end tests: separate tmux socket, fake agents
-│   └── fakeagents/               # shell scripts that record argv/env and print screens
+│   └── fakeagents/               # shell scripts that record argv/env and print screens;
+│       └── fakeagent/            #   their Go port, the fake agents on Windows (T90.9)
 ├── scripts/                      # measure-watch.sh, gen-large-fixture, etc.
 ├── .goreleaser.yaml
 ├── install.sh
