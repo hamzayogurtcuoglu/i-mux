@@ -27,7 +27,7 @@ f='`+dir+`/shot '$n'.png'; printf 'png' >"$f"; echo "$f"
 		t.Fatal(err)
 	}
 	testutil.WriteFile(t, filepath.Join(dir, "has-image"), nil)
-	return dir, "[paste]\nimages = true\ncommand = \"" + cmd + "\"\n"
+	return dir, "[paste]\nimages = true\ncommand = " + tomlStr(cmd) + "\n"
 }
 
 // TestPasteImage (T33.3): Ctrl+V and Alt+V in an agent's pane paste the

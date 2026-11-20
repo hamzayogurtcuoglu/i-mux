@@ -5,10 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func TestChanged(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "imux")
+	p := filepath.Join(t.TempDir(), testutil.Exe("imux"))
 	if err := os.WriteFile(p, []byte("old"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +36,7 @@ func TestChanged(t *testing.T) {
 	}
 	_ = os.Chtimes(p, old, old)
 	_ = os.Chmod(p, 0o644)
-	if s.Changed() {
+	if testutil.ModesApply && s.Changed() { // Windows has no execute bit
 		t.Fatal("not executable")
 	}
 	_ = os.Remove(p)

@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	if bin := os.Getenv("IMUX_E2E_BIN"); bin != "" {
-		stagedBin = filepath.Join(dir, "imux")
+		stagedBin = filepath.Join(dir, "imux"+exeSuffix)
 		if err := copyFile(bin, stagedBin, 0o755); err != nil {
 			panic(err)
 		}
@@ -48,14 +48,8 @@ func TestMain(m *testing.M) {
 	if err := os.Mkdir(stagedFakes, 0o755); err != nil {
 		panic(err)
 	}
-	ents, err := os.ReadDir("fakeagents")
-	if err != nil {
+	if err := stageFakes(stagedFakes); err != nil {
 		panic(err)
-	}
-	for _, e := range ents {
-		if err := copyFile(filepath.Join("fakeagents", e.Name()), filepath.Join(stagedFakes, e.Name()), 0o755); err != nil {
-			panic(err)
-		}
 	}
 	code := m.Run()
 	os.RemoveAll(dir)

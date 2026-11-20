@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 )
 
@@ -170,7 +172,7 @@ func TestWriteConfOnlyOnChange(t *testing.T) {
 	if err != nil || !changed {
 		t.Fatalf("new content: %v %v", changed, err)
 	}
-	if fi, _ := os.Stat(p); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(p); testutil.ModesApply && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", fi.Mode().Perm())
 	}
 }

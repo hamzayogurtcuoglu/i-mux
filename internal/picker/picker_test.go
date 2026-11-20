@@ -9,6 +9,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/folders"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
@@ -67,6 +69,7 @@ func TestPickByName(t *testing.T) {
 }
 
 func TestBrowseAndTab(t *testing.T) {
+	testutil.SkipOnWindows(t, "'/'-separated completions")
 	i18n.SetLocale("en")
 	m, home := model(t)
 	typeIn(m, "~/co")
@@ -99,6 +102,7 @@ func TestBrowseAndTab(t *testing.T) {
 }
 
 func TestRender(t *testing.T) {
+	testutil.SkipOnWindows(t, "'/'-separated paths (~/code)")
 	i18n.SetLocale("en")
 	m, _ := model(t)
 	for _, w := range []int{30, 80} {
@@ -185,6 +189,7 @@ func TestSections(t *testing.T) {
 // The folder imux started in is offered after Restore, as "this folder",
 // and not listed twice (D49).
 func TestHere(t *testing.T) {
+	testutil.SkipOnWindows(t, "'/'-separated paths (~/code)")
 	i18n.SetLocale("en")
 	m, home := model(t)
 	m.Restore = &folders.Cand{Kind: folders.KindRestore, Label: "Restore last session", Detail: "2 projects"}

@@ -53,7 +53,7 @@ func TestMachines(t *testing.T) {
 	if err := os.Chmod(notifier, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	h := newH(t, sidebarConfig+"\n[notify]\nenabled = true\nsound = false\ncommand = \""+notifier+"\"\n")
+	h := newH(t, sidebarConfig+"\n[notify]\nenabled = true\nsound = false\ncommand = "+tomlStr(notifier)+"\n")
 
 	// The machine: its own i-mux home, tmux server and a project.
 	r := filepath.Join(h.Homes.Root, "box")

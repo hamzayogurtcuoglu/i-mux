@@ -3,6 +3,8 @@ package cli
 import (
 	"os"
 	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 // TestMain pins the UI language: tests compare English output, and imux
@@ -14,5 +16,7 @@ func TestMain(m *testing.M) {
 		}
 	}
 	os.Setenv("IMUX_LANG", "en")
+	// The sh form whatever the system (T90.9), as internal/tmux's tests.
+	tmux.ArgvForm = false
 	os.Exit(m.Run())
 }

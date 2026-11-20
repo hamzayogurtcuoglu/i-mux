@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestValidate(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX program paths (/bin/echo)")
 	ok := &Spec{Bin: "/bin/echo", Args: []string{"a"}, MaxArgBytes: 10}
 	if err := ok.Validate(); err != nil {
 		t.Fatal(err)
@@ -66,7 +67,7 @@ func TestWriteReadSweep(t *testing.T) {
 		t.Fatal(err)
 	}
 	fi, err := os.Stat(p)
-	if err != nil || fi.Mode().Perm() != 0o600 {
+	if err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("%v %v", err, fi.Mode())
 	}
 	s, err := Read(p, true)
@@ -94,6 +95,7 @@ func TestWriteReadSweep(t *testing.T) {
 // TestExecByteExactArgv execs a fake agent in a child process and checks
 // that argv arrives byte for byte, without any shell involvement.
 func TestExecByteExactArgv(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake agent is an sh script")
 	h := testutil.Isolate(t)
 	fake := filepath.Join(h.Home, "bin", "fake-agent")
 	out := filepath.Join(h.Home, "argv.bin")
@@ -134,6 +136,7 @@ func TestExecByteExactArgv(t *testing.T) {
 }
 
 func TestExecRejectsTooLarge(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX program paths (/bin/echo)")
 	called := false
 	orig := execFunc
 	execFunc = func(string, []string, []string) error { called = true; return nil }

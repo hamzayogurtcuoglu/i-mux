@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
@@ -51,7 +53,7 @@ func TestSwitchClaudeToAntigravity(t *testing.T) {
 		t.Fatalf("trail %+v", trail)
 	}
 	fi, err := os.Stat(trail[1].Handoff)
-	if err != nil || fi.Mode().Perm() != 0o600 {
+	if err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("handoff file: %v %v", fi, err)
 	}
 	if b, _ := os.ReadFile(trail[1].Handoff); string(b) != doc {
@@ -82,7 +84,11 @@ func TestSwitchClaudeToAntigravity(t *testing.T) {
 		t.Fatal("locked switch started codex")
 	}
 
-	// A failure to write the handoff leaves the old agent running.
+	// A failure to write the handoff leaves the old agent running. A folder
+	// that cannot be written is made with unix permissions only.
+	if !testutil.ModesApply {
+		return
+	}
 	hd := filepath.Join(h.Homes.Imux, "handoffs")
 	if err := os.Chmod(hd, 0o500); err != nil {
 		t.Fatal(err)

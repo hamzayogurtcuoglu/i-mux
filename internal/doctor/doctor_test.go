@@ -58,6 +58,7 @@ func find(r *Report, sub string) *Result {
 }
 
 func TestDoctor(t *testing.T) {
+	testutil.SkipOnWindows(t, "macOS and Linux install commands and agents as sh scripts")
 	h := testutil.Isolate(t)
 	i18n.SetLocale("en")
 	if err := os.MkdirAll(h.Imux, 0o700); err != nil {
@@ -171,6 +172,7 @@ func TestDoctor(t *testing.T) {
 // failure with the upgrade command. A cached 1.x version is re-probed first:
 // the bin cache lags an in-place `opencode upgrade --major` by up to a day.
 func TestDoctorOpenCode1(t *testing.T) {
+	testutil.SkipOnWindows(t, "macOS and Linux install commands and agents as sh scripts")
 	h := testutil.Isolate(t)
 	i18n.SetLocale("en")
 	if err := os.MkdirAll(h.Imux, 0o700); err != nil {

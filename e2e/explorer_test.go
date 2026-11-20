@@ -24,7 +24,7 @@ func TestExplorerAndSearch(t *testing.T) {
 	if err := os.Chmod(ed, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	h := newH(t, "editor = \""+ed+"\"\n"+sidebarConfig)
+	h := newH(t, "editor = "+tomlStr(ed)+"\n"+sidebarConfig)
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "src", "app.go"), []byte("package app\n\n// the needle is here\nfunc Run() {}\n"))
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "README.md"), []byte("hello\n"))
 	_, bar := h.startWithSidebar()

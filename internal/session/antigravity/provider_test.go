@@ -62,6 +62,7 @@ func history(t *testing.T, root string, entries ...histEntry) {
 }
 
 func TestLoadTranscript(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (src/auth.ts)")
 	h := testutil.Isolate(t)
 	root := filepath.Join(h.Home, ".gemini", "antigravity-cli")
 	at := testutil.FrozenTime

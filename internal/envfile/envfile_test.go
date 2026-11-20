@@ -135,10 +135,10 @@ func TestFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	fi, err := os.Stat(p)
-	if err != nil || fi.Mode().Perm() != 0o600 {
+	if err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("file mode %v %v", fi, err)
 	}
-	if di, err := os.Stat(Dir()); err != nil || di.Mode().Perm() != 0o700 {
+	if di, err := os.Stat(Dir()); err != nil || (testutil.ModesApply && di.Mode().Perm() != 0o700) {
 		t.Fatalf("dir mode %v %v", di, err)
 	}
 	e, err := Read("glm")
@@ -212,7 +212,7 @@ func TestScriptInShell(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi, err := os.Stat(p); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(p); err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("apply file %v %v", fi, err)
 	}
 	cmd := exec.Command(sh, "-c", `. "$1"; printf '%s|%s|%s' "$ENVTEST_A" "$ENVTEST_B" "${ENVTEST_OLD-unset}"`, "sh", p)

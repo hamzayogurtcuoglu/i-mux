@@ -23,7 +23,7 @@ func TestStatusline(t *testing.T) {
 	old := StatuslineTimeout
 	StatuslineTimeout = 30 * time.Second
 	t.Cleanup(func() { StatuslineTimeout = old })
-	in := `{"workspace":{"current_dir":"` + h.Project + `"},"rate_limits":{"five_hour":{"used_percentage":72.4,"resets_at":1999999999},"seven_day":{"used_percentage":18}}}`
+	in := `{"workspace":{"current_dir":"` + testutil.JSONStr(h.Project) + `"},"rate_limits":{"five_hour":{"used_percentage":72.4,"resets_at":1999999999},"seven_day":{"used_percentage":18}}}`
 	run := func() string {
 		var o, e bytes.Buffer
 		if code := Run(&Env{Stdin: strings.NewReader(in), Stdout: &o, Stderr: &e}, []string{"__statusline", "claude"}); code != ExitOK {
@@ -39,6 +39,7 @@ func TestStatusline(t *testing.T) {
 		t.Fatalf("saved %+v", u)
 	}
 	// The user's status line gets the same input.
+	testutil.SkipOnWindows(t, "the user's status line here is an sh script")
 	script := filepath.Join(h.Home, "line.sh")
 	testutil.WriteFile(t, script, []byte("#!/bin/sh\nprintf 'mine:'; head -c 13\n"))
 	_ = os.Chmod(script, 0o755)

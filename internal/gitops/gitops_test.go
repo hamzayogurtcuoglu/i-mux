@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func repo(t *testing.T) string {
@@ -16,6 +18,8 @@ func repo(t *testing.T) string {
 	}
 	dir := t.TempDir()
 	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(dir, ".gitconfig-none"))
+	// Not the system's either: Git for Windows' sets core.autocrlf (T90.9).
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	t.Setenv("GIT_AUTHOR_NAME", "t")
 	t.Setenv("GIT_AUTHOR_EMAIL", "t@example.com")
 	t.Setenv("GIT_COMMITTER_NAME", "t")
@@ -188,6 +192,7 @@ func TestParseNumstat(t *testing.T) {
 // TestNonASCIIPaths (T71.3): files with Turkish letters, spaces and quotes
 // in their names get their line counts, staged, unstaged and renamed.
 func TestNonASCIIPaths(t *testing.T) {
+	testutil.SkipOnWindows(t, "a file name with '\"', which Windows forbids")
 	ctx := context.Background()
 	dir := repo(t)
 	tr, q := "ğüşıöç dosya.go", `q"t.go`

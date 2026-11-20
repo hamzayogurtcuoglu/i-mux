@@ -135,7 +135,7 @@ func TestEnvNewPopup(t *testing.T) {
 	if err := os.Chmod(ed, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	h := newH(t, "editor = \""+ed+"\"\n"+sidebarConfig)
+	h := newH(t, "editor = "+tomlStr(ed)+"\n"+sidebarConfig)
 	_, bar := h.startWithSidebar()
 	c, client := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)

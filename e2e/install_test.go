@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
@@ -83,6 +82,7 @@ func runInstall(t *testing.T, base, path string, args ...string) (string, error)
 // --prefix, and puts the prefix on PATH in the shell profile exactly once; a
 // wrong checksum aborts.
 func TestInstallScript(t *testing.T) {
+	skipOnSystem(t)
 	bin := imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")
@@ -134,6 +134,7 @@ func TestInstallScript(t *testing.T) {
 // TestInstallScriptWithoutTmux: without tmux and without a known package
 // manager the script only explains what to do; it never runs sudo.
 func TestInstallScriptWithoutTmux(t *testing.T) {
+	skipOnSystem(t)
 	bin := imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")
@@ -160,6 +161,7 @@ func TestInstallScriptWithoutTmux(t *testing.T) {
 // a terminal to ask on (the release smoke job on Intel macOS, a script), the
 // installer skips tmux and never runs brew.
 func TestInstallScriptAsksForTmux(t *testing.T) {
+	skipOnSystem(t)
 	bin := imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")
@@ -179,7 +181,7 @@ func TestInstallScriptAsksForTmux(t *testing.T) {
 	prefix := filepath.Join(t.TempDir(), "bin")
 	cmd := exec.Command("sh", filepath.Join(testutil.ModuleRoot(t), "install.sh"), "--prefix", prefix, "--version", "v9.9.9", "--no-modify-path")
 	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+fakeRelease(t, bin, false), "PATH="+tools+":"+prefix, "IMUX_NO_FONT=1")
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} // no terminal to ask on
+	cmd.SysProcAttr = noTerminal() // no terminal to ask on
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, out)
@@ -200,6 +202,7 @@ func TestInstallScriptAsksForTmux(t *testing.T) {
 // without --yes it only says how; --yes runs `imux font install --yes`;
 // --no-font, or a font already in place (`imux font --check`), skips it.
 func TestInstallScriptOffersFont(t *testing.T) {
+	skipOnSystem(t)
 	imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")
@@ -225,7 +228,7 @@ func TestInstallScriptOffersFont(t *testing.T) {
 			"--prefix", prefix, "--version", "v9.9.9", "--no-modify-path",
 		}, args...)...)
 		cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH="+filepath.Dir(tm)+":/usr/bin:/bin", "IMUX_NO_FONT=")
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} // no terminal to ask on
+		cmd.SysProcAttr = noTerminal() // no terminal to ask on
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("install %v: %v\n%s", args, err, out)
@@ -255,6 +258,7 @@ func TestInstallScriptOffersFont(t *testing.T) {
 // i-mux-core engine together, and when one cannot be replaced neither
 // changes. A release without the engine still installs imux alone.
 func TestInstallScriptReplacesBoth(t *testing.T) {
+	skipOnSystem(t)
 	bin := imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")

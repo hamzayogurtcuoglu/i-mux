@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
@@ -182,6 +184,7 @@ func (v versionRunner) Run(context.Context, string, []string) ([]byte, []byte, e
 // freeze the popup on tmux 3.4), then that client sources the choice and
 // removes it.
 func TestShow(t *testing.T) {
+	testutil.SkipOnWindows(t, "the sh form's rm of a Windows path is quoted")
 	home := t.TempDir()
 	t.Setenv("IMUX_HOME", home)
 	sp := &fakeSpawner{}
@@ -199,7 +202,7 @@ func TestShow(t *testing.T) {
 	if err := json.Unmarshal(b, &m); err != nil || m.Pane != "%3" || len(m.Items) != 6 {
 		t.Fatalf("written menu %s: %v", b, err)
 	}
-	if fi, _ := os.Stat(files[0]); fi.Mode().Perm() != 0o600 || !ValidID(id) {
+	if fi, _ := os.Stat(files[0]); (testutil.ModesApply && fi.Mode().Perm() != 0o600) || !ValidID(id) {
 		t.Fatalf("file %s", fi.Mode())
 	}
 	w, h := Size(&m)

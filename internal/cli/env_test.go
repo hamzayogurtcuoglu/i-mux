@@ -15,6 +15,7 @@ import (
 // runs `imux env new` for that client; with no name and no terminal,
 // `imux env new` is a usage error.
 func TestEnvDialogPopup(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake tmux is an sh script")
 	testutil.Isolate(t)
 	dir := t.TempDir()
 	log := filepath.Join(dir, "log")

@@ -1176,7 +1176,7 @@ tmux on macOS and Linux, exactly as before.
     removes the files, folder, shortcut, `PATH` entry and registry key cleanly; `TestInstallPS1Windows`
     passes on Windows 11 as well. CI's `release-snapshot` and `windows-installer` jobs run the
     same check.
-- [ ] **T90.9 Windows CI for i-mux** · S · deps: T90.5, T90.6
+- [x] **T90.9 Windows CI for i-mux** · S · deps: T90.5, T90.6
   - AC: a `windows` job runs the unit tests and the e2e suite on i-mux-core, with tests that
     cannot apply skipped and each skip listed; the fake agents ported to Go (with T90.5's
     agents: installs, shims, hooks); green and blocking; the Windows lint covers the e2e tests

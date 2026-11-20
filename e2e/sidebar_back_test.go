@@ -5,7 +5,6 @@ package e2e
 import (
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -36,7 +35,7 @@ func TestSidebarComesBack(t *testing.T) {
 	if pid <= 1 {
 		t.Fatalf("sidebar pid %d", pid)
 	}
-	if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
+	if err := killPid(pid); err != nil {
 		t.Fatal(err)
 	}
 	h.waitFor("the killed sidebar's pane gone", 5*time.Second, func() bool { return h.sidebars()[win] == 0 })

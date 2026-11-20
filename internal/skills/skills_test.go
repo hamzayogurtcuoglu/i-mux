@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 )
 
@@ -143,6 +145,7 @@ func TestNames(t *testing.T) {
 }
 
 func TestPrompts(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX path fixtures (/repo)")
 	p := WritePrompt("/repo", "  write\r\nrelease notes\n", "Turkish")
 	for _, want := range []string{"/repo/.agents/skills/<name>/SKILL.md", "description", "1024", "What the skill should do:\nwrite\nrelease notes"} {
 		if !strings.Contains(p, want) {

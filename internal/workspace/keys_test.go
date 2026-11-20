@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agenthook"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -201,6 +203,7 @@ func TestSetAppearance(t *testing.T) {
 // (and the status line when that is on), and Codex its notify program,
 // unless the user's Codex config has one.
 func TestAgentHooks(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, _, _ := testWS(t)
 	w.Cfg.Hooks.Enabled = true
 	w.SetBins(map[session.AgentID]agent.Resolved{

@@ -28,7 +28,7 @@ import (
 func tmuxBin(t *testing.T) string {
 	t.Helper()
 	if b := os.Getenv("IMUX_TMUX_BIN"); b != "" {
-		if st, err := os.Stat(b); err != nil || st.IsDir() || st.Mode()&0o111 == 0 {
+		if st, err := os.Stat(b); err != nil || st.IsDir() || !executable(st) {
 			t.Fatalf("IMUX_TMUX_BIN %s is not an executable file", b)
 		}
 		return b
@@ -56,6 +56,7 @@ type H struct {
 // newH sets up the environment. extraConfig is appended to config.toml.
 func newH(t *testing.T, extraConfig string) *H {
 	t.Helper()
+	skipOnSystem(t)
 	bin := imuxBin(t)
 	tm := tmuxBin(t)
 	homes := testutil.Isolate(t)
@@ -82,10 +83,11 @@ func newH(t *testing.T, extraConfig string) *H {
 	t.Setenv("IMUX_WINDOWS_HOME", filepath.Join(h.Log, "windows-home"))
 	t.Setenv("TMUX", "")
 	t.Setenv("TMUX_PANE", "")
-	t.Setenv("SHELL", "/bin/sh")
+	t.Setenv("SHELL", posixShell())
+	t.Setenv("IMUX_E2E_SH", posixShell()) // the Go fake agents' control scripts (Windows)
 	t.Setenv("TERM", "xterm-256color")
 	// PATH holds tmux and the base system only: never a real agent CLI.
-	t.Setenv("PATH", filepath.Dir(tm)+":/usr/bin:/bin")
+	t.Setenv("PATH", basePath(tm))
 	var cfg strings.Builder
 	// Top-level keys of extraConfig must come before any table.
 	top, tables := extraConfig, ""
@@ -108,7 +110,7 @@ func newH(t *testing.T, extraConfig string) *H {
 		if strings.Contains(tables, "[agents."+a+"]") {
 			continue // the test configures this agent itself
 		}
-		fmt.Fprintf(&cfg, "[agents.%s]\nbin = %q\n\n", a, filepath.Join(h.Fakes, "fake-"+a))
+		fmt.Fprintf(&cfg, "[agents.%s]\nbin = %q\n\n", a, filepath.Join(h.Fakes, "fake-"+a+exeSuffix))
 	}
 	if !strings.Contains(tables, "[tmux]") {
 		// The tests written before the sidebar (v0.4) expect its absence
@@ -459,8 +461,7 @@ func (h *H) noRun(agent string, n int, d time.Duration) {
 func (h *H) waitQuiet() {
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		out, _ := exec.Command("pgrep", "-f", "^"+regexp.QuoteMeta(h.Bin)).Output()
-		if len(strings.TrimSpace(string(out))) == 0 {
+		if !binRunning(h.Bin) {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -510,3 +511,6 @@ func (h *H) uiRecords() int {
 	}
 	return n
 }
+
+// tomlStr is s as a TOML basic string: Windows paths' backslashes escaped.
+func tomlStr(s string) string { return strconv.Quote(s) }

@@ -369,6 +369,7 @@ func TestRender(t *testing.T) {
 // Hidden files show only when asked (D63); .git, the system's files and
 // the skip list never.
 func TestExplorer(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX path fixtures (/home/test/p)")
 	i18n.SetLocale("en")
 	root := t.TempDir()
 	for _, d := range []string{"src/auth", "node_modules/x", ".git", "docs", ".github/workflows", ".vscode", "CVS"} {
@@ -608,6 +609,7 @@ func TestExplorerTitleLabel(t *testing.T) {
 // in the project's, with no path in their command; Collapse Folders closes
 // every folder and scrolls up; Refresh reads the git status anew.
 func TestExplorerTitleActions(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX path fixtures (/home/test/p)")
 	ctx := context.Background()
 	r := &cmdRunner{}
 	reads := 0
@@ -1446,6 +1448,7 @@ func TestLeaving(t *testing.T) {
 // TestFileMenus (T34.2): the explorer's menus have the editor's items, only
 // those that apply, and no path in their commands.
 func TestFileMenus(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX path fixtures (/home/test/p)")
 	i18n.SetLocale("en")
 	names := func(items []string) string {
 		var out []string

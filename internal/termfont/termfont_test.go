@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func TestIsNerdName(t *testing.T) {
@@ -73,6 +75,7 @@ func TestNerdFont(t *testing.T) {
 // settings decide; started from the Start menu (no TERM_PROGRAM) either
 // does.
 func TestNerdFontWSL(t *testing.T) {
+	testutil.SkipOnWindows(t, "WSL's Windows Terminal; native Windows has its own tests")
 	win := filepath.Join(t.TempDir(), "Users", "me")
 	oldHome, oldWSL, oldHomes := Home, WSL, WindowsHomes
 	defer func() { Home, WSL, WindowsHomes = oldHome, oldWSL, oldHomes }()
@@ -112,6 +115,7 @@ func TestNerdFontWSL(t *testing.T) {
 }
 
 func TestWindowsHomes(t *testing.T) {
+	testutil.SkipOnWindows(t, "WSL's /mnt/c homes")
 	t.Setenv("PATH", "/usr/bin:/mnt/c/Users/hamza.y/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/hamza.y/.dotnet/tools:/mnt/c/WINDOWS")
 	if got := WindowsHomes(); len(got) != 1 || got[0] != "/mnt/c/Users/hamza.y" {
 		t.Fatalf("%q", got)

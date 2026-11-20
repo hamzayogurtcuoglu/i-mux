@@ -34,6 +34,7 @@ func TestMicroAssets(t *testing.T) {
 // ~/.imux/tools and runs it; a download that is not the release's leaves
 // nothing.
 func TestInstallMicro(t *testing.T) {
+	testutil.SkipOnWindows(t, "micro's macOS and Linux tarball; Windows takes its zip")
 	if !CanGetMicro() {
 		t.Skip("no micro for this system")
 	}

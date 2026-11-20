@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
@@ -23,6 +25,7 @@ func paneRow(p *Pane) string {
 // the pane resumes its session with a delta; the full handoff is the
 // fallback; --no-resume starts a new session.
 func TestSwitchResumesWithDelta(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, f, h := testWS(t)
 	w.SetBins(map[session.AgentID]agent.Resolved{
 		"claude": {Agent: "claude", Installed: true, Path: "/opt/bin/claude", PathEnv: "/opt/bin"},

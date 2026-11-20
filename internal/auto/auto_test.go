@@ -295,6 +295,9 @@ func TestMove(t *testing.T) {
 	if len(Runs(moved)) != 1 || len(Runs(old)) != 0 {
 		t.Errorf("runs: %d at the new id, %d at the old", len(Runs(moved)), len(Runs(old)))
 	}
+	if _, err := os.Stat(Dir(old)); !os.IsNotExist(err) {
+		t.Errorf("the old id's folder is left: %v", err)
+	}
 	// Nothing to move, or a schedule already at the new id: unchanged.
 	if err := Move("/p", from, to); err != nil {
 		t.Fatal(err)
@@ -358,6 +361,7 @@ func TestRuns(t *testing.T) {
 // TestExecute (T66.1): the output goes to the log and the result; an error
 // exit and a timeout are told apart; the timeout kills the whole group.
 func TestExecute(t *testing.T) {
+	testutil.SkipOnWindows(t, "sh's $PWD is an MSYS path and a group is a unix process group")
 	sh, err := exec.LookPath("sh")
 	if err != nil {
 		t.Skip("no sh")
@@ -450,6 +454,7 @@ func TestModelLists(t *testing.T) {
 
 // TestModelsCache: a CLI's list is asked once a day.
 func TestModelsCache(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake CLI is an sh script")
 	testutil.Isolate(t)
 	sh, err := exec.LookPath("sh")
 	if err != nil {

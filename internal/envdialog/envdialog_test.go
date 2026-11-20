@@ -1,6 +1,7 @@
 package envdialog
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -37,7 +38,7 @@ func TestName(t *testing.T) {
 		t.Fatalf("its uses:\n%s", s)
 	}
 	typeText(m, "GLM Coding")
-	if s := screen(m, 60, 18); !strings.Contains(s, "→ ") || !strings.Contains(s, "/env/glm-coding.env") {
+	if s := screen(m, 60, 18); !strings.Contains(s, "→ ") || !strings.Contains(s, filepath.FromSlash("/env/glm-coding.env")) {
 		t.Fatalf("the name it makes:\n%s", s)
 	}
 	if name, done := m.Key("enter"); !done || name != "glm-coding" {

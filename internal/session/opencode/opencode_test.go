@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 )
 
@@ -174,6 +176,7 @@ func TestParseGoUsage(t *testing.T) {
 }
 
 func TestGoUsageRunsOpenCode(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake opencode is an sh script")
 	dir := t.TempDir()
 	argv := filepath.Join(dir, "argv")
 	fake := filepath.Join(dir, "opencode")

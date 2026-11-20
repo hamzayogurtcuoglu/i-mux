@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -57,7 +58,7 @@ func TestConfigCommands(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("IMUX_HOME", home)
 	out, _, code := runCLI(t, "config", "path")
-	if code != 0 || strings.TrimSpace(out) != home+"/config.toml" {
+	if code != 0 || strings.TrimSpace(out) != filepath.Join(home, "config.toml") {
 		t.Fatalf("path: %q %d", out, code)
 	}
 	if _, _, code := runCLI(t, "config", "init"); code != 0 {

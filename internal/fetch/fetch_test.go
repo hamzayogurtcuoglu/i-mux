@@ -16,6 +16,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
 
@@ -70,10 +72,10 @@ func TestUntar(t *testing.T) {
 	if err := Untar(good, dir); err != nil {
 		t.Fatal(err)
 	}
-	if fi, err := os.Stat(filepath.Join(dir, "micro-2.0.15", "micro")); err != nil || fi.Mode()&0o100 == 0 {
+	if fi, err := os.Stat(filepath.Join(dir, "micro-2.0.15", "micro")); err != nil || (testutil.ModesApply && fi.Mode()&0o100 == 0) {
 		t.Fatalf("the program: %v %v", fi, err)
 	}
-	if fi, err := os.Stat(filepath.Join(dir, "micro-2.0.15", "LICENSE")); err != nil || fi.Mode()&0o100 != 0 {
+	if fi, err := os.Stat(filepath.Join(dir, "micro-2.0.15", "LICENSE")); err != nil || (testutil.ModesApply && fi.Mode()&0o100 != 0) {
 		t.Errorf("the license: %v %v", fi, err)
 	}
 	for _, bad := range []Entry{

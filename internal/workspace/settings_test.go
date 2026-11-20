@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
@@ -34,6 +36,7 @@ func noMicro(t *testing.T) {
 // TestSettingsMenu (D50): each row shows its value and opens a menu of
 // its values; actions open popups.
 func TestSettingsMenu(t *testing.T) {
+	testutil.SkipOnWindows(t, "Windows has no engine row (D85)")
 	i18n.SetLocale("en")
 	w, f, _ := testWS(t)
 	noMicro(t)

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func TestHomeOverride(t *testing.T) {
@@ -14,6 +16,7 @@ func TestHomeOverride(t *testing.T) {
 	}
 	t.Setenv("IMUX_HOME", "")
 	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir) // the home on Windows
 	if got := Home(); got != filepath.Join(dir, ".imux") {
 		t.Fatalf("Home() = %q", got)
 	}
@@ -31,7 +34,7 @@ func TestModes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if fi.Mode().Perm() != DirMode {
+		if testutil.ModesApply && fi.Mode().Perm() != DirMode {
 			t.Errorf("%s mode %v, want %v", d, fi.Mode().Perm(), DirMode)
 		}
 	}
@@ -42,7 +45,7 @@ func TestModes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode().Perm() != FileMode {
+	if testutil.ModesApply && fi.Mode().Perm() != FileMode {
 		t.Errorf("file mode %v, want %v", fi.Mode().Perm(), FileMode)
 	}
 	// A plain create under the umask is private too.
@@ -51,7 +54,7 @@ func TestModes(t *testing.T) {
 		t.Fatal(err)
 	}
 	fi, _ = os.Stat(p)
-	if fi.Mode().Perm() != 0o600 {
+	if testutil.ModesApply && fi.Mode().Perm() != 0o600 {
 		t.Errorf("umask not applied: %v", fi.Mode().Perm())
 	}
 }
@@ -68,12 +71,13 @@ func TestEnsureTightensPermissiveDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	fi, _ := os.Stat(dir)
-	if fi.Mode().Perm() != DirMode {
+	if testutil.ModesApply && fi.Mode().Perm() != DirMode {
 		t.Fatalf("mode %v", fi.Mode().Perm())
 	}
 }
 
 func TestShorten(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX path fixtures (/home/test)")
 	t.Setenv("HOME", "/home/test")
 	if got := Shorten("/home/test/proj"); got != "~/proj" {
 		t.Fatalf("got %q", got)

@@ -29,7 +29,7 @@ func explorerH(t *testing.T, extra ...string) (*H, *Client, string) {
 	if err := os.Chmod(ed, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	h := newH(t, "editor = \""+ed+"\"\n"+sidebarConfig)
+	h := newH(t, "editor = "+tomlStr(ed)+"\n"+sidebarConfig)
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "src", "app.go"), []byte("package app\n"))
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "README.md"), []byte("hello\n"))
 	testutil.WriteFile(t, filepath.Join(h.Homes.Project, "my #notes.md"), []byte("notes\n"))

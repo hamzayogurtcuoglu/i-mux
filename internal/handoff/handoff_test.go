@@ -11,6 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 )
@@ -113,6 +115,7 @@ func build(t *testing.T, src []*session.Session, o Options) *Doc {
 }
 
 func TestGoldenShort(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (/home/test/proj)")
 	o := opts()
 	o.Reason = Reason{Limit: true, ResetAt: time.Date(2026, 11, 5, 15, 0, 0, 0, time.UTC)}
 	d := build(t, []*session.Session{shortSession()}, o)
@@ -123,6 +126,7 @@ func TestGoldenShort(t *testing.T) {
 }
 
 func TestGoldenLong(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (/home/test/proj)")
 	o := opts()
 	o.Budget = 8000
 	d := build(t, []*session.Session{longSession(120)}, o)
@@ -141,6 +145,7 @@ func TestGoldenCompacted(t *testing.T) {
 }
 
 func TestGoldenChained(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (/home/test/proj)")
 	first := build(t, []*session.Session{shortSession()}, opts()).Text
 	s := &session.Session{
 		Ref: session.Ref{Agent: session.Antigravity, ID: "g1", Path: "/home/test/.gemini/antigravity-cli/brain/g1/.system_generated/logs/transcript_full.jsonl", CWD: cwd},
@@ -176,6 +181,7 @@ func TestGoldenChained(t *testing.T) {
 }
 
 func TestGoldenDelta(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (/home/test/proj)")
 	g := &session.Session{Ref: session.Ref{Agent: session.Antigravity, ID: "g", CWD: cwd}, Entries: []session.Entry{
 		user(30, "rename the helper"), asst(31, "Renamed to parseNext.", tc("replace", map[string]any{"file_path": cwd + "/src/auth.ts"})),
 	}}
@@ -198,6 +204,7 @@ func TestGoldenDelta(t *testing.T) {
 // block, not the document with its instructions; the last user request is
 // the one made there.
 func TestMeanwhile(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (/home/test/proj)")
 	g := &session.Session{Ref: session.Ref{Agent: session.Antigravity, ID: "g", CWD: cwd}, Entries: []session.Entry{
 		user(30, "rename the helper"), asst(31, "Renamed to parseNext."),
 	}}

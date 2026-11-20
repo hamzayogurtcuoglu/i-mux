@@ -53,7 +53,16 @@ func TestInstallPS1Windows(t *testing.T) {
 			"-InstallDir", dir,
 			"-NoModifyPath", "-NoFont",
 		)
-		cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL="+srv.URL)
+		// Without PSModulePath: from pwsh 7 (CI's shell) it names pwsh's
+		// modules, and Windows PowerShell then finds no Get-FileHash. A
+		// PowerShell started from cmd or Explorer has none either.
+		var env []string
+		for _, kv := range os.Environ() {
+			if !strings.HasPrefix(strings.ToUpper(kv), "PSMODULEPATH=") {
+				env = append(env, kv)
+			}
+		}
+		cmd.Env = append(env, "IMUX_INSTALL_BASE_URL="+srv.URL)
 		out, err := cmd.CombinedOutput()
 		return string(out), err
 	}

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func mk(t *testing.T, root string, dirs ...string) {
@@ -86,6 +88,7 @@ func TestMergeAndRank(t *testing.T) {
 }
 
 func TestBrowse(t *testing.T) {
+	testutil.SkipOnWindows(t, "'/'-separated completions; Windows' are in folders_windows_test.go")
 	home := t.TempDir()
 	mk(t, home, "code/acme-api", "code/Acme-web", "code/blog", "code/.cache")
 	if err := os.WriteFile(filepath.Join(home, "code/acme.txt"), nil, 0o600); err != nil {

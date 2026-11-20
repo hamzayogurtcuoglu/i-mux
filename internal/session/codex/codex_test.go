@@ -116,7 +116,7 @@ func TestRateLimitsAbsent(t *testing.T) {
 func TestFind(t *testing.T) {
 	h := testutil.Isolate(t)
 	meta := func(id, cwd string) string {
-		return `{"timestamp":"2026-11-01T00:00:00Z","type":"session_meta","payload":{"id":"` + id + `","cwd":"` + cwd + `"}}` + "\n"
+		return `{"timestamp":"2026-11-01T00:00:00Z","type":"session_meta","payload":{"id":"` + id + `","cwd":"` + testutil.JSONStr(cwd) + `"}}` + "\n"
 	}
 	ids := []string{
 		"aaaaaaaa-0000-4000-8000-000000000001",

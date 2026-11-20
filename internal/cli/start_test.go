@@ -1,11 +1,16 @@
 package cli
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+)
 
 // TestStartPick (D49): imux started in an open project attaches; elsewhere
 // it asks when projects are open or the last session can be restored, and
 // in the home folder; "this folder" is offered except for the home folder.
 func TestStartPick(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX path fixtures (/home/u/code)")
 	const home = "/home/u"
 	open := map[string]bool{"/home/u/code/api": true}
 	for _, c := range []struct {

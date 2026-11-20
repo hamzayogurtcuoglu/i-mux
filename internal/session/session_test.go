@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func TestMarkerRoundTrip(t *testing.T) {
@@ -78,6 +80,7 @@ func TestRegistryOrder(t *testing.T) {
 }
 
 func TestEnvResolve(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX home fixtures (/home/test)")
 	t.Setenv("HOME", "/home/test")
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
 	t.Setenv("CODEX_HOME", "/x/codex")

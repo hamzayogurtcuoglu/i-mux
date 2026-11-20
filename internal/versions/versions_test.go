@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
@@ -54,6 +56,7 @@ func row(t *testing.T, rows []Row, name string) Row {
 const aptTmux = "env LC_ALL=C apt-cache policy tmux"
 
 func TestTmuxRow(t *testing.T) {
+	testutil.SkipOnWindows(t, "tmux's rows (apt, Homebrew); Windows has no tmux")
 	i18n.SetLocale("en")
 	ctx := context.Background()
 	for _, c := range []struct {
@@ -143,6 +146,7 @@ func TestTmuxRow(t *testing.T) {
 }
 
 func TestAgentAndImuxRows(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX install paths (/home/test/.local/bin)")
 	i18n.SetLocale("en")
 	e := fakeEnv(map[string]string{"tmux": "/usr/bin/tmux"}, map[string]string{"/usr/bin/tmux -V": "tmux 3.5a"}, map[session.AgentID]string{
 		"claude": "2.1.319", "copilot": "1.0.107", "codex": "brew:0.50.0", "opencode": "1.4.2",

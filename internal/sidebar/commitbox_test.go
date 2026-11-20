@@ -274,7 +274,7 @@ func TestCommitDraft(t *testing.T) {
 	if CommitDraft(a) != "fix: one\n\nbody ü" || CommitDraft(b) != "feat: two" || CommitDraft(a+"/") != CommitDraft(a) {
 		t.Fatalf("read back %q %q", CommitDraft(a), CommitDraft(b))
 	}
-	if fi, err := os.Stat(draftPath(a)); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(draftPath(a)); err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("file %v %v", fi, err)
 	}
 	ClearCommitDraft(b, "feat: changed")

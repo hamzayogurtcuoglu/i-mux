@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func write(t *testing.T, p, s string) {
@@ -21,6 +23,7 @@ func write(t *testing.T, p, s string) {
 }
 
 func TestCreate(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX path fixtures (/etc/x)")
 	d := t.TempDir()
 	p, err := Create(d, "a.txt", false)
 	if err != nil || p != filepath.Join(d, "a.txt") {
@@ -68,6 +71,7 @@ func TestRename(t *testing.T) {
 }
 
 func TestFreeNameAndPaste(t *testing.T) {
+	testutil.SkipOnWindows(t, "symbolic links need a privilege on Windows")
 	d := t.TempDir()
 	write(t, filepath.Join(d, "a.go"), "x")
 	write(t, filepath.Join(d, ".env"), "e")
@@ -138,6 +142,7 @@ func TestFreeNameAndPaste(t *testing.T) {
 }
 
 func TestTrash(t *testing.T) {
+	testutil.SkipOnWindows(t, "the freedesktop Trash; Windows uses the Recycle Bin (fileops_windows_test.go)")
 	d := t.TempDir()
 	trash := filepath.Join(d, "trash")
 	s := &System{Getenv: func(k string) string {
@@ -249,6 +254,7 @@ func TestCopyTextAndReveal(t *testing.T) {
 // when it is Chromium-based (Windows' under WSL), else Edge; in a tab with
 // explorer.exe, open or xdg-open; nowhere over SSH.
 func TestOpenPage(t *testing.T) {
+	testutil.SkipOnWindows(t, "WSL's browsers; native Windows is in fileops_windows_test.go")
 	ctx := context.Background()
 	var ran []string
 	sys := func(goos string, env map[string]string, progID string, files, tools []string) *System {

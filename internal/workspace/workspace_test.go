@@ -68,6 +68,7 @@ func testWS(t *testing.T) (*WS, *fakeTmux, *testutil.Homes) {
 }
 
 func TestSessionName(t *testing.T) {
+	testutil.SkipOnWindows(t, "Windows folds session names' case (names_windows_test.go)")
 	cases := map[string]string{
 		"/home/test/proj":      "proj-",
 		"/home/test/my.app":    "my_app-",
@@ -117,6 +118,7 @@ func TestTrail(t *testing.T) {
 }
 
 func TestSpecNewResumeAndMissing(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, _, h := testWS(t)
 	s, te, err := w.Spec(Launch{Agent: "claude", CWD: h.Project})
 	if err != nil {
@@ -185,6 +187,7 @@ func TestLabelAndDefaultAgent(t *testing.T) {
 // TestStartBatchesOptions: the new session and its pane options are set in
 // one tmux exec, targeting the pane the first command created.
 func TestStartBatchesOptions(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, f, h := testWS(t)
 	f.errs["has-session"] = "can't find session: x"
 	f.replies["new-session"] = "%5\n"
@@ -234,7 +237,7 @@ func TestStartBatchesOptions(t *testing.T) {
 		}
 	}
 	fi, err := os.Stat(spec)
-	if err != nil || fi.Mode().Perm() != 0o600 || filepath.Dir(spec) != filepath.Join(h.Imux, "launch") {
+	if err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) || filepath.Dir(spec) != filepath.Join(h.Imux, "launch") {
 		t.Fatalf("spec %s: %v %v", spec, fi, err)
 	}
 	// An existing session is found, not recreated.
@@ -250,6 +253,7 @@ func TestStartBatchesOptions(t *testing.T) {
 // (`imux <agent>` there) brings the watcher back when it died with the
 // server living on, as Start does.
 func TestNewWindowEnsuresWatcher(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, f, h := testWS(t)
 	f.replies["display-message"] = "@9\n"
 	f.replies["new-window"] = "%7\n"
@@ -285,6 +289,7 @@ func TestPaneParsing(t *testing.T) {
 }
 
 func TestPasteModeKeepsPromptOutOfArgv(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, _, h := testWS(t)
 	w.Cfg.Handoff.Inject = "paste"
 	s, _, err := w.Spec(Launch{Agent: "antigravity", CWD: h.Project, Prompt: "the handoff"})
@@ -308,6 +313,7 @@ func TestPasteModeKeepsPromptOutOfArgv(t *testing.T) {
 // Claude starts with imux's status line (D25): --settings= names a file that
 // only sets a status line running imux; other agents get nothing.
 func TestClaudeStatuslineSettings(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, _, h := testWS(t)
 	w.Cfg.Limits.ClaudeStatusline = true
 	s, _, err := w.Spec(Launch{Agent: "claude", CWD: h.Project})

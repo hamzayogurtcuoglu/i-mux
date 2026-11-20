@@ -26,7 +26,7 @@ func TestSkillsInJobs(t *testing.T) {
 	if err := os.Chmod(ed, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	h := newH(t, "editor = \""+ed+"\"\n"+sidebarConfig)
+	h := newH(t, "editor = "+tomlStr(ed)+"\n"+sidebarConfig)
 	p := h.Homes.Project
 	testutil.WriteFile(t, filepath.Join(p, ".claude", "skills", "claude-only", "SKILL.md"),
 		[]byte("---\nname: claude-only\ndescription: Helps with local migrations.\n---\n\n# Body\n"))

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 // FakeRunner records invocations and returns scripted output.
@@ -100,7 +102,7 @@ func TestRecorder(t *testing.T) {
 		t.Fatalf("record metadata: %+v", got[0])
 	}
 	fi, _ := os.Stat(rec)
-	if fi.Mode().Perm() != 0o600 {
+	if testutil.ModesApply && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("recorder mode %v", fi.Mode().Perm())
 	}
 }
@@ -174,6 +176,7 @@ func TestParseVersion(t *testing.T) {
 }
 
 func TestBackendBin(t *testing.T) {
+	testutil.SkipOnWindows(t, "the engine is always i-mux-core on Windows (D85)")
 	if b := BackendBin(""); b != "tmux" {
 		t.Fatalf("empty backend: %q", b)
 	}
@@ -207,6 +210,7 @@ func TestBackendBin(t *testing.T) {
 }
 
 func TestNewResolvesEngine(t *testing.T) {
+	testutil.SkipOnWindows(t, "the engine is always i-mux-core on Windows (D85)")
 	t.Setenv("IMUX_HOME", t.TempDir()) // never the real ~/.imux
 	t.Setenv("IMUX_TMUX_BIN", "/somewhere/tmux")
 	if c := New(""); c.Bin != "/somewhere/tmux" {

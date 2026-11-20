@@ -84,6 +84,7 @@ func TestMergeSnapshots(t *testing.T) {
 // its sidebar, starting no agent (D75); opening its folder on its own starts
 // the default agent, as for a new project.
 func TestRestoreWithoutAgents(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, f, h := testWS(t)
 	ctx := context.Background()
 	f.errs["has-session"] = "can't find session: x"

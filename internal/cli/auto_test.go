@@ -67,6 +67,7 @@ func quoteJSON(s string) string {
 // tells; one already going on or not due is not started; a definition
 // that went is skipped. The output view prints the run's steps.
 func TestAutoExec(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake claude is an sh script")
 	h := testutil.Isolate(t)
 	fake := fakeClaude(t)
 	root := h.Project

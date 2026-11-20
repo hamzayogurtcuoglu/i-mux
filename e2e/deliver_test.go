@@ -54,7 +54,7 @@ func TestShortHandoffChain(t *testing.T) {
 	if !strings.Contains(doc, "## Earlier history") || !strings.Contains(doc, "fake codex reply 1") {
 		t.Fatalf("second handoff %.600q", doc)
 	}
-	if fi, err := os.Stat(second[2]); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(second[2]); err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("handoff file mode: %v %v", fi, err)
 	}
 }

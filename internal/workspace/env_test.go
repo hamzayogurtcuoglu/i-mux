@@ -70,6 +70,7 @@ func specOf(t *testing.T, f *fakeTmux) *launch.Spec {
 // A run gets its environment's variables in its spec; reserved keys and a
 // name whose file is gone add nothing.
 func TestSpecEnv(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, _, h := testWS(t)
 	writeEnv(t, "glm", "ANTHROPIC_BASE_URL=https://api.example.test\nANTHROPIC_AUTH_TOKEN="+secret+"\nPATH=/evil\n")
 	s, _, err := w.Spec(Launch{Agent: "claude", CWD: h.Project, Env: "glm"})
@@ -87,6 +88,7 @@ func TestSpecEnv(t *testing.T) {
 
 // respawn takes the pane's environment, whatever the caller's launch says.
 func TestRespawnTakesPaneEnv(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, f, h := testWS(t)
 	writeEnv(t, "glm", "TOKEN="+secret+"\n")
 	p := &Pane{ID: "%1", CWD: h.Project, Env: "glm"}
@@ -206,6 +208,7 @@ func TestApplyEnvBusy(t *testing.T) {
 // An agent restarts with the environment and resumes its conversation; the
 // full handoff is the fallback.
 func TestApplyEnvAgentRestarts(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, f, h := testWS(t)
 	i18n.SetLocale("en")
 	w.SetBins(map[session.AgentID]agent.Resolved{
@@ -321,6 +324,7 @@ func TestDeleteEnv(t *testing.T) {
 // The shell an agent exits to keeps the pane's environment: it starts
 // through __exec with it.
 func TestPaneDiedShellKeepsEnv(t *testing.T) {
+	testutil.SkipOnWindows(t, "the POSIX login shell; Windows' shell is PowerShell")
 	w, f, h := testWS(t)
 	i18n.SetLocale("en")
 	writeEnv(t, "glm", "TOKEN="+secret+"\n")

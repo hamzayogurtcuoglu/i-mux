@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 var png = []byte("\x89PNG\r\n\x1a\nfake")
@@ -33,6 +35,7 @@ func reader(t *testing.T, goos string, env map[string]string, tools []string, an
 }
 
 func TestX11AndWayland(t *testing.T) {
+	testutil.SkipOnWindows(t, "X11 and Wayland clipboard tools as sh scripts")
 	ctx := context.Background()
 	for _, c := range []struct {
 		env  map[string]string
@@ -65,7 +68,7 @@ func TestX11AndWayland(t *testing.T) {
 		if b, _ := os.ReadFile(got[0]); string(b) != string(png) {
 			t.Fatalf("%s: content", c.tool)
 		}
-		if fi, _ := os.Stat(got[0]); fi.Mode().Perm() != 0o600 {
+		if fi, _ := os.Stat(got[0]); testutil.ModesApply && fi.Mode().Perm() != 0o600 {
 			t.Fatalf("%s: mode %v", c.tool, fi.Mode().Perm())
 		}
 	}

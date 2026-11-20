@@ -40,7 +40,7 @@ func TestLogRotation(t *testing.T) {
 	if cur.Size() > LogMax || old.Size() > LogMax || cur.Size() == 0 {
 		t.Fatalf("sizes: current %d, rotated %d", cur.Size(), old.Size())
 	}
-	if cur.Mode().Perm() != 0o600 {
+	if testutil.ModesApply && cur.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", cur.Mode().Perm())
 	}
 	// A full log is rotated when it is opened, too.

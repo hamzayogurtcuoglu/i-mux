@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -40,7 +41,7 @@ func TestStartAttachLs(t *testing.T) {
 		t.Fatalf("fake claude argv %q, want --session-id %s", argv, trail[0].SessionID)
 	}
 	env := h.runEnv("claude", 1)
-	if !strings.HasPrefix(env["PATH"], h.Fakes+":") {
+	if !strings.HasPrefix(env["PATH"], h.Fakes+string(os.PathListSeparator)) {
 		t.Fatalf("PATH does not start with the agent's dir: %q", env["PATH"])
 	}
 	if env["IMUX_PANE"] != pane || env["IMUX_AGENT"] != "claude" {

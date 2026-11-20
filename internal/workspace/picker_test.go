@@ -20,19 +20,20 @@ import (
 func writeClaudeSession(t *testing.T, h *testutil.Homes, id, text string, mtime time.Time) {
 	t.Helper()
 	p := filepath.Join(h.Claude, "projects", claude.EncodeCWD(h.Project), id+".jsonl")
-	testutil.WriteFile(t, p, []byte(`{"type":"user","sessionId":"`+id+`","cwd":"`+h.Project+`","timestamp":"2026-11-05T10:00:00Z","uuid":"a","message":{"role":"user","content":"`+text+`"}}`+"\n"))
+	testutil.WriteFile(t, p, []byte(`{"type":"user","sessionId":"`+id+`","cwd":"`+testutil.JSONStr(h.Project)+`","timestamp":"2026-11-05T10:00:00Z","uuid":"a","message":{"role":"user","content":"`+text+`"}}`+"\n"))
 	testutil.Touch(t, p, mtime)
 }
 
 func writeCodexSession(t *testing.T, h *testutil.Homes, id, text string, mtime time.Time) {
 	t.Helper()
 	p := filepath.Join(h.Codex, "sessions", "2026", "11", "05", "rollout-2026-11-05T09-00-00-"+id+".jsonl")
-	testutil.WriteFile(t, p, []byte(`{"timestamp":"2026-11-05T09:00:00Z","type":"session_meta","payload":{"id":"`+id+`","cwd":"`+h.Project+`"}}`+"\n"+
+	testutil.WriteFile(t, p, []byte(`{"timestamp":"2026-11-05T09:00:00Z","type":"session_meta","payload":{"id":"`+id+`","cwd":"`+testutil.JSONStr(h.Project)+`"}}`+"\n"+
 		`{"timestamp":"2026-11-05T09:00:01Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"`+text+`"}]}}`+"\n"))
 	testutil.Touch(t, p, mtime)
 }
 
 func TestPickerMenuPagesInstalledAgents(t *testing.T) {
+	testutil.SkipOnWindows(t, "'/'-separated titles (~/proj)")
 	w, _, h := testWS(t)
 	f := sources.New(config.Default())
 	now := testutil.FrozenTime
@@ -193,6 +194,7 @@ func TestPickerPinned(t *testing.T) {
 // TestPinMenu: the picker for pinning marks pinned rows and toggles them;
 // previews lose <pasted_content> tags; the agent column lines up.
 func TestPinMenu(t *testing.T) {
+	testutil.SkipOnWindows(t, "'/'-separated titles (~/proj)")
 	w, _, h := testWS(t)
 	f := sources.New(config.Default())
 	now := testutil.FrozenTime

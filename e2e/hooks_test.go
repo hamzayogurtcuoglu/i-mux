@@ -25,7 +25,7 @@ func TestAgentHooks(t *testing.T) {
 			settings = f
 		}
 	}
-	if b, _ := os.ReadFile(settings); !strings.Contains(string(b), `__hook claude`) || !strings.Contains(string(b), `"Notification"`) {
+	if b, _ := os.ReadFile(settings); (!strings.Contains(string(b), `__hook claude`) && !strings.Contains(string(b), `"args":["__hook","claude"]`)) || !strings.Contains(string(b), `"Notification"`) {
 		t.Fatalf("claude's settings %q: %s", settings, b)
 	}
 	c, _ := h.attach(140, 40)

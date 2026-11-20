@@ -54,6 +54,8 @@ func Isolate(t testing.TB) *Homes {
 		filepath.Join(h.Antigravity, "brain"),
 		filepath.Join(h.Copilot, "session-state"),
 		filepath.Join(h.Codex, "sessions"),
+		filepath.Join(h.Home, "AppData", "Local"), // LOCALAPPDATA and APPDATA exist on Windows
+		filepath.Join(h.Home, "AppData", "Roaming"),
 	} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
 			t.Fatal(err)
@@ -61,6 +63,10 @@ func Isolate(t testing.TB) *Homes {
 	}
 	t.Setenv("HOME", h.Home)
 	t.Setenv("USERPROFILE", h.Home) // the home on Windows
+	// And Windows' application data: the engine's sockets, Windows
+	// Terminal's settings (never the real ones, T90.9).
+	t.Setenv("LOCALAPPDATA", filepath.Join(h.Home, "AppData", "Local"))
+	t.Setenv("APPDATA", filepath.Join(h.Home, "AppData", "Roaming"))
 	t.Setenv("IMUX_HOME", h.Imux)
 	t.Setenv("CLAUDE_CONFIG_DIR", h.Claude)
 	t.Setenv("CODEX_HOME", h.Codex)
@@ -154,4 +160,11 @@ func WriteAntigravity(t testing.TB, h *Homes, id, cwd string, mtime time.Time, t
 		t.Fatal(err)
 	}
 	return p
+}
+
+// JSONStr is s as the inside of a JSON string, for fixtures that build JSON
+// around a path: Windows' backslashes must be escaped there (T90.9).
+func JSONStr(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b[1 : len(b)-1])
 }

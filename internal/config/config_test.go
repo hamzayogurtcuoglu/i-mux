@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func TestDefaultsOnly(t *testing.T) {
@@ -191,7 +193,7 @@ func TestWriteTemplateRefusesOverwrite(t *testing.T) {
 		t.Fatal("force did not overwrite")
 	}
 	fi, _ := os.Stat(p)
-	if fi.Mode().Perm() != 0o600 {
+	if testutil.ModesApply && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %v", fi.Mode().Perm())
 	}
 }

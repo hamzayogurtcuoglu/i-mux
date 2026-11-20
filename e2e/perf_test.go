@@ -6,9 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -53,12 +51,7 @@ func TestHandoffPrintLargeSession(t *testing.T) {
 		if best == 0 || d < best {
 			best = d
 		}
-		ru := cmd.ProcessState.SysUsage().(*syscall.Rusage)
-		r := ru.Maxrss
-		if runtime.GOOS == "linux" {
-			r *= 1024 // kilobytes on Linux, bytes on macOS
-		}
-		if r > rss {
+		if r := maxRSS(cmd.ProcessState); r > rss {
 			rss = r
 		}
 	}

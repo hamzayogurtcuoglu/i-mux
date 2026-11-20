@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
+
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 )
 
@@ -13,6 +15,7 @@ const cwd = "/home/test/proj"
 type A = map[string]any
 
 func TestRules(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (/home/test/proj)")
 	patch := "*** Begin Patch\n*** Update File: src/a.ts\n@@\n-x\n+y\n*** Add File: src/new.ts\n+z\n*** Delete File: old.ts\n*** End Patch"
 	cases := []struct {
 		agent, name string
@@ -81,6 +84,7 @@ func TestLineCap(t *testing.T) {
 }
 
 func TestActivity(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (/home/test/proj)")
 	entries := []session.Entry{
 		{Tools: []session.ToolCall{
 			{Name: "Read", Args: A{"file_path": cwd + "/a.go"}},
@@ -129,6 +133,7 @@ func FuzzSummarize(f *testing.F) {
 // TestHandoffFileReads: reading imux's own handoff file is how the agent got
 // its context; it is neither a conversation line nor a file read.
 func TestHandoffFileReads(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX transcript fixtures (/home/test/proj)")
 	hf := "/home/test/.imux/handoffs/20261108-093139-claude-to-opencode.md"
 	for _, tc := range []session.ToolCall{
 		{Name: "read", Args: A{"file_path": hf}},

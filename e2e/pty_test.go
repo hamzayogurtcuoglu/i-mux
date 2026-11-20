@@ -4,68 +4,46 @@ package e2e
 
 import (
 	"bytes"
+	"io"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
-	"unsafe"
 )
 
 // Client is a terminal client (`tmux attach`, `imux`) running on a pty of a
-// fixed size. Tests write key bytes and mouse sequences to it, exactly as a
-// terminal emulator would.
+// fixed size (a pseudo console on Windows). Tests write key bytes and mouse
+// sequences to it, exactly as a terminal emulator would.
 type Client struct {
-	t      *testing.T
-	master *os.File
-	cmd    *exec.Cmd
-	mu     sync.Mutex
-	out    bytes.Buffer
-	done   chan struct{}
+	t    *testing.T
+	term terminal
+	mu   sync.Mutex
+	out  bytes.Buffer
+	done chan struct{}
 }
 
-type winsize struct{ Row, Col, X, Y uint16 }
-
-func ioctl(fd, req, arg uintptr) error {
-	if _, _, e := syscall.Syscall(syscall.SYS_IOCTL, fd, req, arg); e != 0 {
-		return e
-	}
-	return nil
+// terminal is a program on a pty: what it prints is read, keys are written.
+type terminal interface {
+	io.ReadWriter
+	kill()      // ends the program; it does not wait
+	closeTerm() // closes the terminal; a blocked Read returns
+	wait()      // waits for the program to end
 }
 
 // startClient runs argv on a new pty of cols×rows in dir.
 func (h *H) startClient(cols, rows int, dir string, argv ...string) *Client {
 	h.t.Helper()
-	master, slaveName, err := openPty()
+	env := append(os.Environ(), "TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8")
+	term, err := startTerminal(cols, rows, dir, env, argv)
 	if err != nil {
-		h.t.Fatalf("pty: %v", err)
-	}
-	slave, err := os.OpenFile(slaveName, os.O_RDWR|syscall.O_NOCTTY, 0)
-	if err != nil {
-		h.t.Fatalf("open %s: %v", slaveName, err)
-	}
-	// Set the size on the slave: macOS rejects TIOCSWINSZ on a master whose
-	// slave is not open yet (ENOTTY).
-	ws := winsize{Row: uint16(rows), Col: uint16(cols)}
-	if err := ioctl(slave.Fd(), syscall.TIOCSWINSZ, uintptr(unsafe.Pointer(&ws))); err != nil {
-		h.t.Fatalf("TIOCSWINSZ: %v", err)
-	}
-	cmd := exec.Command(argv[0], argv[1:]...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "LANG=C.UTF-8", "LC_ALL=C.UTF-8")
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = slave, slave, slave
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true, Ctty: 0}
-	if err := cmd.Start(); err != nil {
 		h.t.Fatalf("start %v: %v", argv, err)
 	}
-	slave.Close()
-	c := &Client{t: h.t, master: master, cmd: cmd, done: make(chan struct{})}
+	c := &Client{t: h.t, term: term, done: make(chan struct{})}
 	go func() {
 		buf := make([]byte, 32<<10)
 		for {
-			n, err := master.Read(buf)
+			n, err := term.Read(buf)
 			if n > 0 {
 				c.mu.Lock()
 				c.out.Write(buf[:n])
@@ -84,7 +62,7 @@ func (h *H) startClient(cols, rows int, dir string, argv ...string) *Client {
 // Write sends raw bytes (keys, mouse sequences) to the client.
 func (c *Client) Write(b string) {
 	c.t.Helper()
-	if _, err := c.master.Write([]byte(b)); err != nil {
+	if _, err := c.term.Write([]byte(b)); err != nil {
 		c.t.Fatalf("pty write: %v", err)
 	}
 }
@@ -96,25 +74,21 @@ func (c *Client) Output() string {
 	return c.out.String()
 }
 
-// Close kills the client. The master goes first and the wait is bounded: a
+// Close kills the client. The terminal goes first and the wait is bounded: a
 // client killed while its terminal still holds output it wrote (macOS
 // waits for that to drain as the terminal closes) once hung the whole run
 // here until its 15-minute timeout.
 func (c *Client) Close() {
-	if c.cmd.Process != nil {
-		_ = c.cmd.Process.Kill()
-	}
-	c.master.Close()
-	if c.cmd.Process != nil {
-		waited := make(chan struct{})
-		go func() {
-			_, _ = c.cmd.Process.Wait()
-			close(waited)
-		}()
-		select {
-		case <-waited:
-		case <-time.After(5 * time.Second):
-		}
+	c.term.kill()
+	c.term.closeTerm()
+	waited := make(chan struct{})
+	go func() {
+		c.term.wait()
+		close(waited)
+	}()
+	select {
+	case <-waited:
+	case <-time.After(5 * time.Second):
 	}
 	select {
 	case <-c.done:

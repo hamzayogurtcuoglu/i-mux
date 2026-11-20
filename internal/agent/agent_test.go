@@ -93,6 +93,7 @@ func writeExe(t *testing.T, path, script string) {
 }
 
 func TestResolveSymlinkKeepsUnresolvedDir(t *testing.T) {
+	testutil.SkipOnWindows(t, "agents as sh scripts on a ':' PATH; Windows' resolution is TestWindowsInstallAndFolders'")
 	h := testutil.Isolate(t)
 	nvmBin := filepath.Join(h.Home, "nvm", "bin")
 	libDir := filepath.Join(h.Home, "nvm", "lib", "claude-code")
@@ -117,6 +118,7 @@ func TestResolveSymlinkKeepsUnresolvedDir(t *testing.T) {
 }
 
 func TestResolveConfigBinWins(t *testing.T) {
+	testutil.SkipOnWindows(t, "agents as sh scripts on a ':' PATH; Windows' resolution is TestWindowsInstallAndFolders'")
 	h := testutil.Isolate(t)
 	onPath := filepath.Join(h.Home, "bin", "agy")
 	custom := filepath.Join(h.Home, "custom", "my-agy")
@@ -139,6 +141,7 @@ func TestResolveConfigBinWins(t *testing.T) {
 // the PATH does not have it yet, with the folder first on its PATH (D79);
 // an agent installed by npm has no such folder.
 func TestResolveInstallerDir(t *testing.T) {
+	testutil.SkipOnWindows(t, "agents as sh scripts on a ':' PATH; Windows' resolution is TestWindowsInstallAndFolders'")
 	h := testutil.Isolate(t)
 	t.Setenv("PATH", "/usr/bin:/bin")
 	if r := Resolve(config.Default(), session.OpenCode, nil); r.Installed {
@@ -162,6 +165,7 @@ func TestResolveInstallerDir(t *testing.T) {
 }
 
 func TestResolveFromCache(t *testing.T) {
+	testutil.SkipOnWindows(t, "agents as sh scripts on a ':' PATH; Windows' resolution is TestWindowsInstallAndFolders'")
 	h := testutil.Isolate(t)
 	bin := filepath.Join(h.Home, "nvm", "bin", "codex")
 	writeExe(t, bin, "echo codex-cli 0.38.0")
@@ -178,6 +182,7 @@ func TestResolveFromCache(t *testing.T) {
 }
 
 func TestRefreshCache(t *testing.T) {
+	testutil.SkipOnWindows(t, "agents as sh scripts on a ':' PATH; Windows' resolution is TestWindowsInstallAndFolders'")
 	h := testutil.Isolate(t)
 	bin := filepath.Join(h.Home, "bin", "claude")
 	counter := filepath.Join(h.Home, "count")
@@ -238,6 +243,7 @@ func TestReadDirArgs(t *testing.T) {
 // The config's install command wins over i-mux's; OpenCode's hint is prose,
 // its command is not, and it installs OpenCode 2 (D79).
 func TestInstallCommand(t *testing.T) {
+	testutil.SkipOnWindows(t, "macOS and Linux install commands; Windows' are in TestWindowsInstallAndFolders")
 	cfg := config.Default()
 	if got := Install(cfg, session.Codex); got != "npm i -g @openai/codex" {
 		t.Errorf("codex: %q", got)

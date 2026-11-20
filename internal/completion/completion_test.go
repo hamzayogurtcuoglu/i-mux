@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 // fakeHome points HOME and the XDG folders at a temp dir and LookPath at
@@ -58,6 +60,7 @@ func TestInitLua(t *testing.T) {
 }
 
 func TestPathsAndNode(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake node and nvim are sh scripts")
 	home, _ := fakeHome(t)
 	if ProfileDir() != filepath.Join(home, ".config", "imux-nvim") ||
 		PluginDir() != filepath.Join(home, ".local", "share", "imux-nvim", "site", "pack", "imux", "start", "copilot.vim") {
@@ -76,6 +79,7 @@ func TestPathsAndNode(t *testing.T) {
 }
 
 func TestReadyAndEditor(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake node and nvim are sh scripts")
 	_, _ = fakeHome(t, "nvim")
 	if Ready() {
 		t.Fatal("ready without the plugin")
@@ -98,6 +102,7 @@ func TestReadyAndEditor(t *testing.T) {
 }
 
 func TestSetup(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake node and nvim are sh scripts")
 	_, bin := fakeHome(t, "node")
 	var ran []string
 	var out bytes.Buffer
@@ -145,6 +150,7 @@ func TestSetup(t *testing.T) {
 }
 
 func TestNvimOverride(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake node and nvim are sh scripts")
 	home, _ := fakeHome(t)
 	p := filepath.Join(home, "elsewhere", "nvim")
 	script(t, p, "#!/bin/sh\n")

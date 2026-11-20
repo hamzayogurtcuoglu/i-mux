@@ -29,7 +29,7 @@ func TestNotifications(t *testing.T) {
 	if err := os.Chmod(cmd, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	h := newH(t, "[notify]\nenabled = true\nsound = false\ncommand = \""+cmd+"\"\n")
+	h := newH(t, "[notify]\nenabled = true\nsound = false\ncommand = "+tomlStr(cmd)+"\n")
 	h.control("claude", workThenAsk)
 	h.startSession("claude")
 	h.run("claude", 1)

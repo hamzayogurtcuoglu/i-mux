@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
 func TestCheckTarget(t *testing.T) {
@@ -76,7 +78,7 @@ func TestStore(t *testing.T) {
 		t.Fatalf("an option as a destination: %v", err)
 	}
 	fi, err := os.Stat(File())
-	if err != nil || fi.Mode().Perm() != 0o600 {
+	if err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("machines.json mode %v, %v", fi.Mode(), err)
 	}
 	ms, _ := Load()
@@ -86,7 +88,7 @@ func TestStore(t *testing.T) {
 	if err := WriteState("a", State{Status: StatusOK}); err != nil {
 		t.Fatal(err)
 	}
-	if fi, err := os.Stat(CacheFile("a")); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(CacheFile("a")); err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("state mode %v, %v", fi.Mode(), err)
 	}
 	if err := Remove("a"); err != nil {
@@ -110,6 +112,7 @@ func TestStore(t *testing.T) {
 }
 
 func TestArgs(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX ssh control paths (/h/ssh)")
 	t.Setenv("IMUX_HOME", "/h")
 	m := Machine{Name: "s", Target: "ali@s"}
 	a := Args(m, Background, "__remote-state")
@@ -261,6 +264,7 @@ func TestFailed(t *testing.T) {
 
 // Fetch with a fake ssh: the report read, an error classified.
 func TestFetch(t *testing.T) {
+	testutil.SkipOnWindows(t, "the fake ssh is an sh script")
 	t.Setenv("IMUX_HOME", t.TempDir())
 	dir := t.TempDir()
 	fake := filepath.Join(dir, "ssh")
@@ -276,7 +280,7 @@ func TestFetch(t *testing.T) {
 	if st.Status != StatusOK || r == nil || len(st.Projects) != 1 || st.Projects[0].Panes[0].State != "blocked" || st.Version != "v9" {
 		t.Fatalf("ok: %+v %+v", r, st)
 	}
-	if fi, err := os.Stat(ControlDir()); err != nil || fi.Mode().Perm() != 0o700 {
+	if fi, err := os.Stat(ControlDir()); err != nil || (testutil.ModesApply && fi.Mode().Perm() != 0o700) {
 		t.Fatalf("control dir: %v %v", fi, err)
 	}
 	if _, st := Fetch(context.Background(), Machine{Name: "d", Target: "denied"}); st.Status != StatusAuth {
