@@ -58,7 +58,12 @@ func Target(s, dir string) (file, u string) {
 	}
 	if strings.HasPrefix(s, "file://") {
 		if pu, err := url.Parse(s); err == nil {
-			return pu.Path, ""
+			p := pu.Path
+			// file:///C:/x is C:\x on Windows (VolumeName is "" elsewhere).
+			if filepath.VolumeName(strings.TrimPrefix(p, "/")) != "" {
+				p = strings.TrimPrefix(p, "/")
+			}
+			return filepath.FromSlash(p), ""
 		}
 	}
 	if strings.Contains(s, "://") {
