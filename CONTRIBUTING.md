@@ -33,8 +33,21 @@ onto the `imux` that is running: macOS kills every process of a program whose fi
 place (`SIGKILL (Code Signature Invalid)`), so the sidebars and the watcher die at once.
 `make install-local` writes a new file and moves it over the old one, as `imux update` does.
 
-On Windows, work inside WSL. End-to-end tests copy the binary to the Linux file system, because
-programs under `/mnt/c` start slowly.
+On Windows, i-mux runs natively on i-mux-core (D85), and CI's `windows` job checks it. To run the
+same here, with Go and Git for Windows installed, in PowerShell:
+
+```powershell
+go test ./...
+go build -o bin\imux.exe ./cmd/imux; go build -o bin\imux-core.exe ./cmd/imux-core
+$env:IMUX_E2E_BIN = "$PWD\bin\imux.exe"; $env:IMUX_TMUX_BIN = "$PWD\bin\imux-core.exe"
+go test -tags e2e -count=1 ./e2e/...
+```
+
+The e2e harness builds the Go fake agents (`e2e/fakeagents/fakeagent`), drives its clients
+through ConPTY and runs the tests' scripts in Git for Windows' sh (`IMUX_E2E_SH` picks
+another). Tests that cannot apply on Windows skip with a reason (`testutil.SkipOnWindows`,
+`e2e/skips_windows_test.go`). Inside WSL, i-mux is the Linux build: e2e tests there copy the
+binary to the Linux file system, because programs under `/mnt/c` start slowly.
 
 The dependency rule is strict: the standard library, `github.com/BurntSushi/toml`, the engine
 `github.com/hamzayogurtcuoglu/i-mux-core` (D83) and, in Windows-only files,

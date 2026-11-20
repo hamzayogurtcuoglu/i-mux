@@ -1189,6 +1189,20 @@ tmux on macOS and Linux, exactly as before.
     what they log, so the two cannot drift. Tests that cannot apply on Windows skip through one
     list, `e2e/skips_windows_test.go`, each with its reason. The `windows` job runs
     `go test ./...` and `make e2e-core`'s suite.
+  - Status (2026-11-20): done. The `windows` job runs `go test ./...` and the e2e suite on
+    i-mux-core: all unit tests pass (76 skip on Windows with `testutil.SkipOnWindows` and a
+    reason: sh scripts as fakes, POSIX path fixtures, WSL); e2e, 80 pass and 35 are listed in
+    `e2e/skips_windows_test.go` with reasons, 3 of them known issues (T90.11). Found on the way:
+    the engine pin had no Windows server (031fbf5); three i-mux bugs, fixed in their own commits
+    (a schedule's runs could not move, a `file:///C:/…` URL, removing a worktree its agents work
+    in); the tests' homes now include `LOCALAPPDATA` and `APPDATA`, so no test touches the
+    owner's Windows Terminal settings or engine sockets.
+- [ ] **T90.11 The Windows e2e known issues** · M · deps: T90.9
+  - AC: the three tests T90.9 lists as known Windows issues pass on the `windows` job and leave
+    the list: `TestPaneDiedFallsBackToShell` (the server is gone after the agent exits; on
+    macOS and Linux the pane falls back to the shell), `TestDiffMarks` (the diff view does not
+    show), `TestThemeTerminalBackground` (a theme change's OSC 11 does not reach the client
+    through ConPTY). Each: the cause found, a fix or, if it cannot apply, a reason.
 - [ ] **T90.10 Windows check** · XS · deps: T90.9 · USER
   - AC: the owner installs from the installer, opens from the Start menu, installs an agent,
     checks the sidebar, tabs, popups, menus and mouse, image paste, notifications, updates from
