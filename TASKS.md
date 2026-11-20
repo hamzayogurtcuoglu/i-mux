@@ -1007,8 +1007,9 @@ slow (about a second).
 ## M91: CI-green: the watcher's pid and menus after a gesture (added 2026-11-20)
 
 CI has been red on `e2e` since M72: the pane-swap race (fixed with the swap bindings made
-synchronous) and, remaining, two timing bugs that the Ubuntu 26.04 runner (tmux 3.6, slower)
-turned deterministic. Both are engine-independent i-mux bugs, seen on tmux and i-mux-core alike.
+synchronous) and, remaining, three failures: a timing bug of i-mux's watcher that the slower
+runner exposes on either engine (T91.1), a tmux 3.6 bug that Ubuntu 26.04's runner brought in
+(T91.2), and a test that raced tmux's own query timeout on macOS (T91.3).
 
 - [ ] **T91.1 The watcher writes its pid without an empty window** · S
   - AC: `internal/watch`: the pid file is space-padded over, never truncated first, so
@@ -1022,6 +1023,13 @@ turned deterministic. Both are engine-independent i-mux bugs, seen on tmux and i
     installs a pinned tmux (3.8, built from the release tarball, checksum-checked, cached)
     instead of the runner's, so the suite no longer depends on the distribution's tmux (3.6 on
     Ubuntu 26.04 broke it); the test passes on 3.5a, 3.8 and i-mux-core.
+- [ ] **T91.3 The theme test waits out tmux's terminal query** · XS
+  - AC: `TestThemeTerminalBackground` gives the attach step (`Enfcs`: focus events on and the
+    theme's background) more than tmux's 5 s terminal-query timeout: the harness's terminal
+    answers no DA query, so tmux writes `Enfcs` only when that timer fires (`TTY_QUERY_TIMEOUT`,
+    tty.c; measured 5.01 s after attach on tmux 3.8), while the step waited 5 s from the first
+    screen (~0.18 s after attach), a 0.16 s margin that macOS runners lost 4 times in 12 runs. A
+    real terminal answers at once; nothing changes for users.
 
 ## M90: Native Windows on i-mux-core (added 2026-11-19)
 
