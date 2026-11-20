@@ -118,12 +118,17 @@ func TestThemeTerminalBackground(t *testing.T) {
 	h.run("claude", 1)
 	c, client := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
-	sent := func(what string, mark int, seq string) {
+	sentWithin := func(what string, timeout time.Duration, mark int, seq string) {
 		t.Helper()
-		h.waitFor(what, 5*time.Second, func() bool { return strings.Contains(c.Output()[mark:], seq) })
+		h.waitFor(what, timeout, func() bool { return strings.Contains(c.Output()[mark:], seq) })
 	}
-	// From tmux, with the focus events it turns on.
-	sent("Nord's background when the client attaches", 0, "\x1b[?1004h\x1b]11;rgb:27/2c/36\x07")
+	sent := func(what string, mark int, seq string) { t.Helper(); sentWithin(what, 5*time.Second, mark, seq) }
+	// From tmux, with the focus events it turns on. The harness's terminal
+	// answers no DA query, so tmux writes Enfcs only when its 5 s query timer
+	// fires (TTY_QUERY_TIMEOUT, tty.c): 5 s after the attach, a real terminal
+	// at once. Waiting 5 s from the first screen left a 0.16 s margin that
+	// macOS runners lost (T91.3).
+	sentWithin("Nord's background when the client attaches", 15*time.Second, 0, "\x1b[?1004h\x1b]11;rgb:27/2c/36\x07")
 
 	mark := c.Mark()
 	h.mustImux("__settings", "set", "theme", "catppuccin")

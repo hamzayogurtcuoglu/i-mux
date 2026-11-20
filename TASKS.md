@@ -1023,7 +1023,7 @@ runner exposes on either engine (T91.1), a tmux 3.6 bug that Ubuntu 26.04's runn
     installs a pinned tmux (3.8, built from the release tarball, checksum-checked, cached)
     instead of the runner's, so the suite no longer depends on the distribution's tmux (3.6 on
     Ubuntu 26.04 broke it); the test passes on 3.5a, 3.8 and i-mux-core.
-- [ ] **T91.3 The theme test waits out tmux's terminal query** · XS
+- [x] **T91.3 The theme test waits out tmux's terminal query** · XS
   - AC: `TestThemeTerminalBackground` gives the attach step (`Enfcs`: focus events on and the
     theme's background) more than tmux's 5 s terminal-query timeout: the harness's terminal
     answers no DA query, so tmux writes `Enfcs` only when that timer fires (`TTY_QUERY_TIMEOUT`,
