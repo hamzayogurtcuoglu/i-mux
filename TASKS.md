@@ -1269,7 +1269,7 @@ passing with tmux, exactly as before, all through this.
     back if either fails; a running engine server keeps its old binary until its sessions end,
     and the update message says so; a goreleaser snapshot contains both; an update e2e with a
     local release fixture replaces both.
-- [ ] **T88.5 CI for both engines** · S · deps: T88.4
+- [x] **T88.5 CI for both engines** · S · deps: T88.4
   - AC: an `e2e-core` job builds i-mux-core at `go.mod`'s pin (`make build`, D83) and runs
     `make e2e-core` on Linux and macOS; `make e2e-core` defaults to that build
     (`IMUX_CORE_BIN` still picks another, such as the engine's working tree); the job is
