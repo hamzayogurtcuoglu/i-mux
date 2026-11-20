@@ -3,6 +3,21 @@
 Start with `imux doctor`: it checks tmux, the agent CLIs, `~/.imux` and the watcher, and prints the
 keys. It never starts an agent with a prompt.
 
+## Menus close by themselves (tmux 3.6)
+
+On tmux 3.6 — Ubuntu 26.04 ships it — a menu opened from the sidebar (➕, a right-click menu,
+⋮, …) can close right after it draws, so a choice never arrives. That is a tmux 3.6 bug, not
+i-mux's: a probe against a plain tmux session shows the menu vanishing with no i-mux command,
+key or mouse event involved (ARCHITECTURE §9.3). Every other supported tmux (3.2a, 3.4, 3.5a,
+3.8) and the i-mux-core engine are fine.
+
+- **Fix:** install another tmux and point i-mux at it: `brew install tmux` (macOS) or
+  [tmux 3.8 from source](https://github.com/tmux/tmux/releases) (Linux), then
+  `IMUX_TMUX_BIN=/usr/local/bin/tmux imux` — or set `[engine] backend = "core"` (D83) and run
+  on i-mux-core, which has no such bug.
+- `imux doctor` shows which tmux runs the session.
+
+
 ## `Ctrl+\` does nothing (VS Code and other terminals)
 
 Some terminals keep `Ctrl+\` for themselves. **`prefix a`** (`Ctrl+b`, then `a`) always opens the

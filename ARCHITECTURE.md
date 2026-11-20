@@ -2232,12 +2232,12 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
   menu too. There a double click's second press,
   when it comes after the menu is drawn, lands outside it and closes it, as a second click outside
   a menu does (the e2e test presses twice at once).
-  On tmux 3.5+ a menu-opening click waits 150 ms (`MenuBurst`, v0.65.1) before opening the menu:
-  tmux 3.6 interleaves the rest of the same gesture (a second press of the same burst) with the
-  menu's opening, so it landed outside the drawn menu and closed it — on every version the pause
-  lets the sidebar consume the gesture's tail first (a second press on the same row is dropped by
-  `ClickIgnore`), which also mends a quick double click: the menu now opens and stays.
-  Before 3.5 the wait stays `OpenAfter` (the release itself closes a menu there).
+  Menus close by themselves on tmux 3.6 (v0.65.1, a tmux bug, not i-mux's: verified with a
+  plain-session probe — no i-mux command, key or mouse event is involved; the menu draws and
+  then vanishes, the client and session untouched; on 3.2a, 3.4, 3.5a, 3.8 and i-mux-core it
+  stays). i-mux records it in docs/TROUBLESHOOTING.md ("Menus close by themselves"),
+  `TestSidebarDoubleClick` skips on 3.6 with a pointer there, and CI installs a pinned tmux
+  instead of the runner's, so the suite does not depend on the distribution's tmux du jour.
 - **A double click's second press:** it acts again only where the first one did.
   `MouseDown1Pane` is tmux's own plus `set -gF @imux_press '#{mouse_pane}'`; `SecondClick1Pane`
   and i-mux's `TripleClick1Pane` pass the press to a sidebar only when it is that pane (any other
