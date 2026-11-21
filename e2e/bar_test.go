@@ -6,18 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
-
-func tmuxVersion(t *testing.T, h *H) tmux.Version {
-	t.Helper()
-	v, ok := tmux.ParseVersion(h.mustTmux("-V"))
-	if !ok {
-		t.Fatal("unparseable tmux -V")
-	}
-	return v
-}
 
 // TestAgentBar (T2.8a): the second status line shows the agents, highlights
 // the active pane's agent with tmux formats alone, dims missing agents,
@@ -32,7 +21,7 @@ func TestAgentBar(t *testing.T) {
 	if got := strings.TrimSpace(h.mustTmux("show-options", "-gv", "status")); got != "2" {
 		t.Fatalf("status = %q, want 2", got)
 	}
-	clickable := tmuxVersion(t, h).AtLeast(tmux.ClickMinVersion[0], tmux.ClickMinVersion[1])
+	const clickable = true
 	keys := h.mustTmux("list-keys", "-T", "root")
 	if strings.Contains(keys, "MouseDown1Status") && strings.Contains(keys, "__click") != clickable {
 		t.Fatalf("MouseDown1Status binding (clickable=%v):\n%s", clickable, keys)

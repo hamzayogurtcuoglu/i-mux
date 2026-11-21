@@ -417,16 +417,12 @@ func (s *sidebar) waits(ctx context.Context, a Action) bool {
 	switch a.Kind {
 	case ActRename, ActFileOp:
 		return true // the command prompt
-	case ActEnvApply:
-		return !s.t.MenuTakesMouse(ctx) // an agent's restart asks first (D84)
 	case ActSCM:
-		return a.Section == "ask" || !s.t.MenuTakesMouse(ctx)
-	case ActNewAgent, ActSplitH, ActSplitV, ActSessions, ActKeys, ActChanges, ActGitConfirm:
-		return !s.t.MenuTakesMouse(ctx)
-	case ActOpenFile:
-		return s.htmlAsk(a) && !s.t.MenuTakesMouse(ctx) // a menu: how to open it (D51)
+		return a.Section == "ask"
 	}
-	return isMenu(a.Kind) && !s.t.MenuTakesMouse(ctx)
+	// Menus take the mouse and ignore the button's release (-O): they open
+	// at once.
+	return false
 }
 
 // here reports whether pane id is in this sidebar's window.
@@ -604,14 +600,8 @@ func (s *sidebar) handle(ctx context.Context, ev Event) {
 		if menu.Kind == ActFileMenu || menu.Kind == ActSkillMenu {
 			s.draw() // the row the menu is about, selected
 		}
-		if s.t.MenuTakesMouse(ctx) {
-			// The menu ignores the button's release (-O): open it now.
-			s.do(ctx, menu)
-			return
-		}
-		// Older tmux: wait until the button is released, or the release
-		// closes the menu.
-		time.AfterFunc(OpenAfter, func() { s.clicks <- menu })
+		// The menu ignores the button's release (-O): open it now.
+		s.do(ctx, menu)
 		return
 	}
 	if ev.Kind == EvClick {

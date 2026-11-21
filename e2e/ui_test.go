@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
-
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 const (
@@ -90,14 +88,11 @@ func TestUIPickerToCodex(t *testing.T) {
 }
 
 // TestUIAgentBarClick (T2.8d): a left click on "Antigravity" in the agent bar
-// switches the active pane. Needs tmux >= 3.4 (user ranges). Its range is
+// switches the active pane. Its range is
 // "imux:agy": "imux:antigravity" (16 bytes) exceeded tmux's 15-byte limit,
 // so tmux dropped the range and the click did nothing.
 func TestUIAgentBarClick(t *testing.T) {
 	h := newH(t, "")
-	if v := tmuxVersion(t, h); !v.AtLeast(tmux.ClickMinVersion[0], tmux.ClickMinVersion[1]) {
-		t.Skipf("tmux %s has no clickable status ranges (needs %d.%d)", v, tmux.ClickMinVersion[0], tmux.ClickMinVersion[1])
-	}
 	pane := h.startSession("claude")
 	h.run("claude", 1)
 	c, client := h.attach(uiCols, uiRows)

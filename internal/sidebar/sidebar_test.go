@@ -802,14 +802,14 @@ func TestMoveWraps(t *testing.T) {
 }
 
 // TestClickAtOnce: a click acts at once, also when it shows another window
-// or project or opens a popup; one that opens a tmux menu waits where menus
-// take no mouse (before tmux 3.5), one that opens the command prompt always.
+// or project or opens a popup or a menu (menus take the mouse and ignore the
+// release); one that opens the command prompt waits.
 func TestClickAtOnce(t *testing.T) {
 	defer func(d time.Duration) { OpenAfter = d }(OpenAfter)
 	OpenAfter = time.Hour
 	ctx := context.Background()
 	tc := &tmux.Client{Bin: testutil.Engine(t), Runner: tmux.ExecRunner{}}
-	menus := !tc.MenuTakesMouse(ctx)
+	const menus = false
 	s := &sidebar{t: tc, sel: NoItem, clicks: make(chan Action, 4), model: Model{Panes: []PaneRow{{ID: "%1"}}}}
 	for i, c := range []struct {
 		a    Action

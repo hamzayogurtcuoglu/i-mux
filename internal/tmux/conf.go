@@ -14,13 +14,9 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 )
 
-// ClickMinVersion is the oldest tmux with `#[range=user|X]` style ranges and
-// the mouse_status_range format (absent from the 3.2a man page; Q26). Below
-// it the agent bar is an indicator only and switching stays in the menus.
-var ClickMinVersion = [2]int{3, 4}
-
-// MinVersion is the oldest supported tmux (popups, extended keys).
-var MinVersion = [2]int{3, 2}
+// MinVersion is the tmux the engine must speak: i-mux-core reports itself as
+// tmux 3.8 (D87); i-mux no longer has code for older ones.
+var MinVersion = [2]int{3, 8}
 
 // ConfInput is everything the generated tmux.conf depends on.
 type ConfInput struct {
@@ -38,16 +34,7 @@ type ConfInput struct {
 // Clickable reports whether the status line (agent bar, tab bar) gets
 // click handling.
 func (in *ConfInput) Clickable() bool {
-	return (in.AgentBar != "" || in.Cfg.Tmux.Tabs) && in.Cfg.Tmux.Mouse && in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
-}
-
-// oldTabClicks reports whether the tab bar's × and + take clicks through
-// tmux's status-left and status-right ranges: tmux 3.2 and 3.3 have no user
-// ranges, but these two areas make mouse keys of their own
-// (MouseUp1StatusLeft, MouseUp1StatusRight), which nothing else in imux's
-// status lines uses.
-func (in *ConfInput) oldTabClicks() bool {
-	return in.Cfg.Tmux.Tabs && in.Cfg.Tmux.Mouse && !in.Version.AtLeast(ClickMinVersion[0], ClickMinVersion[1])
+	return (in.AgentBar != "" || in.Cfg.Tmux.Tabs) && in.Cfg.Tmux.Mouse
 }
 
 // TabPad is the tab bar's start: a blank as wide as the window's sidebar and
@@ -81,17 +68,10 @@ func MovedCmds(client string) []Cmd {
 // wide as the sidebar (TabPad), the session's windows as tabs " <n> <name>
 // <state> ", the current one highlighted, each a window range (a click
 // selects it), then a "+" (range=user|imux:tab), and on the right ⏻ Exit
-// (range=user|imux:quit, D48). With old (tmux before 3.4, no user ranges)
-// the × is a status-left range, the Exit a status-right one, and the +
-// stays outside any range (MouseUp1StatusDefault); the blank is then the
-// current window's range, so a click on it does nothing.
-func TabFormat(old bool) string {
+// (range=user|imux:quit, D48).
+func TabFormat() string {
 	closeRange, tabRange, quitRange := "#[range=user|imux:close]", "#[range=user|imux:tab]", "#[range=user|imux:quit]"
 	pad := TabPad
-	if old {
-		closeRange, tabRange, quitRange = "#[range=left]", "", "#[range=right]"
-		pad = "#[range=window|#{window_index}]" + TabPad + "#[norange]"
-	}
 	// The state glyph always takes its column (a space when idle), so the
 	// × and the next tabs do not move when an agent starts or stops.
 	tab := " #I #{?@imux_tab,#{@imux_tab},#{?@imux_tab_auto,#{@imux_tab_auto},#W}} #{?@imux_tab_state,#{@imux_tab_state}, }"
@@ -240,9 +220,6 @@ func BoundKeys(in *ConfInput) []string {
 	if in.Clickable() {
 		ks = append(ks, "root MouseDown1Status", "root MouseUp1Status")
 	}
-	if in.oldTabClicks() {
-		ks = append(ks, "root MouseUp1StatusLeft", "root MouseUp1StatusRight", "root MouseUp1StatusDefault")
-	}
 	if t.Mouse {
 		ks = append(ks, "root MouseDown3Border", "root MouseDown1Pane", "root SecondClick1Pane", "root DoubleClick1Pane", "root TripleClick1Pane")
 	}
@@ -303,7 +280,7 @@ func GenerateConf(in *ConfInput) string {
 	if cfg.Tmux.Tabs {
 		w("# Tab bar at the top: the session's windows, and + for a new tab.")
 		w("set -g  status-position top")
-		w("set -g  status-format[0] %s", Quote(TabFormat(in.oldTabClicks())))
+		w("set -g  status-format[0] %s", Quote(TabFormat()))
 	} else {
 		w("set -g  status-position bottom")
 		w("set -gu status-format[0]")
@@ -413,13 +390,6 @@ func GenerateConf(in *ConfInput) string {
 			Quote("#{m:imux:*,#{mouse_status_range}}"),
 			QuoteDouble(runShell(in.Self, "__click", "#{mouse_status_range}", pane)))
 	}
-	if in.oldTabClicks() {
-		w("# tmux before 3.4: the tab bar's × is its status-left range, ⏻ Exit its status-right range and the +")
-		w("# the bar outside any range; clicks go to imux when the button is released.")
-		w("bind -n MouseUp1StatusLeft %s", runShell(in.Self, "__click", "imux:close", pane))
-		w("bind -n MouseUp1StatusRight %s", runShell(in.Self, "__click", "imux:quit", pane))
-		w("bind -n MouseUp1StatusDefault %s", runShell(in.Self, "__click", "imux:tab", pane))
-	}
 	if cfg.Tmux.Mouse {
 		w("# Right-click on a pane border opens that pane's menu (-t = is the pane under the mouse).")
 		w("bind -n MouseDown3Border run-shell -t = -b %s", Quote(UICommand(in.Self, "__menu", pane)))
@@ -449,11 +419,9 @@ func GenerateConf(in *ConfInput) string {
 	w("# Pane lifecycle and watcher.")
 	w("set-hook -g pane-died %s", QuoteDouble(runShell(in.Self, "__pane-died", "#{pane_id}", "#{pane_dead_status}")))
 	w("set-hook -g client-attached %s", QuoteDouble(runShell(in.Self, "__watch", "ensure")))
-	if in.Version.AtLeast(3, 6) {
-		w("# The terminal turned light or dark (tmux 3.6+, DEC mode 2031): the theme may follow it (D68).")
-		w("set-hook -g client-light-theme %s", QuoteDouble(runShell(in.Self, "__theme", "appearance", "light")))
-		w("set-hook -g client-dark-theme %s", QuoteDouble(runShell(in.Self, "__theme", "appearance", "dark")))
-	}
+	w("# The terminal turned light or dark (DEC mode 2031): the theme may follow it (D68).")
+	w("set-hook -g client-light-theme %s", QuoteDouble(runShell(in.Self, "__theme", "appearance", "light")))
+	w("set-hook -g client-dark-theme %s", QuoteDouble(runShell(in.Self, "__theme", "appearance", "dark")))
 	if cfg.Tmux.Sidebar {
 		w("# Sidebars redraw when panes change (they sleep otherwise).")
 		for _, h := range []string{"pane-focus-in", "after-split-window", "after-kill-pane", "pane-exited", "window-pane-changed"} {

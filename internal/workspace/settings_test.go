@@ -35,7 +35,7 @@ func noMicro(t *testing.T) {
 // its values; actions open popups.
 func TestSettingsMenu(t *testing.T) {
 	i18n.SetLocale("en")
-	w, f, _ := testWS(t)
+	w, _, _ := testWS(t)
 	noMicro(t)
 	m := w.SettingsMenu("%1", "c1")
 	var names []string
@@ -61,22 +61,6 @@ func TestSettingsMenu(t *testing.T) {
 			t.Errorf("%s: %q", key, c)
 		}
 	}
-	// A tmux that lacks features says so on the row (tmux -V's reply); 3.4
-	// has them all (menus take the mouse on every tmux, D54).
-	for v, want := range map[string]string{
-		"tmux 3.2a": "⚠ Versions and updates… (tmux 3.2a is old)",
-		"tmux 3.3a": "⚠ Versions and updates… (tmux 3.3a is old)",
-		"tmux 3.4":  "Versions and updates…",
-		"tmux 3.5a": "Versions and updates…",
-	} {
-		f.replies[""] = v
-		for _, it := range w.SettingsMenu("%1", "c1").Items {
-			if it.Key == "c" && it.Name != want {
-				t.Errorf("%s: row %q, want %q", v, it.Name, want)
-			}
-		}
-	}
-	f.replies[""] = ""
 	// Values change the rows; with AI completion on, Copilot's sign-in.
 	w.Cfg.Completion.Enabled = true
 	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival = "emoji", "off", "continue"

@@ -169,7 +169,7 @@ func init() {
 		if !w.Cfg.Tmux.AgentBar {
 			return ""
 		}
-		clickable := w.Cfg.Tmux.Mouse && v.AtLeast(tmux.ClickMinVersion[0], tmux.ClickMinVersion[1])
+		clickable := w.Cfg.Tmux.Mouse
 		return AgentBar(w.barAgents(), clickable)
 	}
 }

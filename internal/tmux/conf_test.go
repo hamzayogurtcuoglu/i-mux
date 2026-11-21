@@ -50,8 +50,7 @@ func confInput(ver string) *ConfInput {
 }
 
 func TestGenerateConfGolden(t *testing.T) {
-	golden(t, "tmux-3.4.conf.golden", GenerateConf(confInput("3.4")))
-	golden(t, "tmux-3.2.conf.golden", GenerateConf(confInput("3.2a")))
+	golden(t, "tmux-3.8.conf.golden", GenerateConf(confInput("3.8")))
 }
 
 func TestGenerateConfOptions(t *testing.T) {

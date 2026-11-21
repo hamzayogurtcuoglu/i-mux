@@ -3,8 +3,6 @@
 package e2e
 
 import (
-	"os/exec"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -47,23 +45,18 @@ func TestThemes(t *testing.T) {
 		return strings.Contains(c, "38;2;205;214;244") && strings.Contains(c, "48;2;24;24;37") // #cdd6f4 on #181825
 	})
 
-	// The terminal turns light: its own report (DEC mode 2031, which tmux
-	// 3.6+ asks terminals for); tmux runs its client-light-theme hook and
-	// the theme follows. Before 3.6 nothing tells i-mux (a pane's OSC 11
-	// answer is the theme's own background).
-	if !tmuxAtLeast(h, 3, 6) {
-		t.Log("tmux before 3.6: no light/dark hooks; following the terminal is not tested")
-	} else {
-		c.Write("\x1b[?997;2n")
-		h.waitFor("light: Catppuccin Latte", 10*time.Second, func() bool {
-			return opt("@imux_appearance") == "light" && opt("@imux_c_accent") == "#1e66f5"
-		})
-		h.waitFor("the sidebar on Latte's panel", 5*time.Second, func() bool {
-			return strings.Contains(colors(), "48;2;239;241;245") // #eff1f5
-		})
-		if w := opt("window-style"); !strings.HasPrefix(w, "bg=#eff1f5,fg=#") {
-			t.Fatalf("the panes on Latte: %q", w)
-		}
+	// The terminal turns light: its own report (DEC mode 2031, which the
+	// engine asks terminals for); it runs its client-light-theme hook and
+	// the theme follows.
+	c.Write("\x1b[?997;2n")
+	h.waitFor("light: Catppuccin Latte", 10*time.Second, func() bool {
+		return opt("@imux_appearance") == "light" && opt("@imux_c_accent") == "#1e66f5"
+	})
+	h.waitFor("the sidebar on Latte's panel", 5*time.Second, func() bool {
+		return strings.Contains(colors(), "48;2;239;241;245") // #eff1f5
+	})
+	if w := opt("window-style"); !strings.HasPrefix(w, "bg=#eff1f5,fg=#") {
+		t.Fatalf("the panes on Latte: %q", w)
 	}
 
 	// Settings → Theme → Nord: tmux at once, and no more following.
@@ -88,23 +81,6 @@ func TestThemes(t *testing.T) {
 		c := colors()
 		return strings.Contains(c, "38;5;247") && !strings.Contains(c, "38;2;") && !strings.Contains(c, "48;2;")
 	})
-}
-
-// tmuxAtLeast reports whether the tests' tmux is maj.min or later.
-func tmuxAtLeast(h *H, maj, min int) bool {
-	out, err := exec.Command(h.Tmux, "-V").Output()
-	if err != nil {
-		return false
-	}
-	f := strings.Fields(string(out))
-	if len(f) < 2 {
-		return false
-	}
-	v := strings.TrimRight(f[1], "abcdefghijklmnopqrstuvwxyz")
-	a, b, _ := strings.Cut(v, ".")
-	x, _ := strconv.Atoi(a)
-	y, _ := strconv.Atoi(b)
-	return x > maj || x == maj && y >= min
 }
 
 // TestThemeTerminalBackground (T82.2, D77): the terminal's own background

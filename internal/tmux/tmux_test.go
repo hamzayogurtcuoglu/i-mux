@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
@@ -403,54 +402,22 @@ func (s *envSpawner) SpawnEnv(_ string, args, env []string) error {
 	return nil
 }
 
-// TestShowMenu (D54): before tmux 3.5 a menu goes to MenuPopup, which takes
-// the mouse; from 3.5 tmux's own menu is spawned as it is.
-// TestMessageTakesClient: display-message -c names a client from tmux 3.3;
-// unknown versions are taken as new.
-func TestMessageTakesClient(t *testing.T) {
-	defer func() { msgClient.Once, msgClient.ok = sync.Once{}, false }()
-	for _, c := range []struct {
-		r    *fakeRunner
-		want bool
-	}{
-		{&fakeRunner{out: "tmux 3.2a\n"}, false},
-		{&fakeRunner{out: "tmux 3.3a\n"}, true},
-		{&fakeRunner{out: "tmux 3.4\n"}, true},
-		{&fakeRunner{err: errors.New("no tmux")}, true},
-	} {
-		msgClient.Once, msgClient.ok = sync.Once{}, false
-		cl := &Client{Bin: "tmux", Socket: "s", Runner: c.r}
-		if got := cl.MessageTakesClient(context.Background()); got != c.want {
-			t.Errorf("%q %v: %v", c.r.out, c.r.err, got)
-		}
-	}
-}
-
+// TestShowMenu: menus take the mouse and ignore the button's release
+// (-M -O), and are spawned as they are (D87: the engine's menus).
 func TestShowMenu(t *testing.T) {
-	defer func(f func(context.Context, *Client, Cmd) error) { MenuPopup = f }(MenuPopup)
-	defer func() { menuMouse.Once, menuMouse.ok = sync.Once{}, false }()
 	ctx := context.Background()
-	var popped Cmd
-	MenuPopup = func(_ context.Context, _ *Client, cmd Cmd) error { popped = cmd; return nil }
-	for _, c := range []struct {
-		version string
-		popup   bool
-	}{{"tmux 3.2a\n", true}, {"tmux 3.4\n", true}, {"tmux 3.5\n", false}} {
-		menuMouse.Once, menuMouse.ok = sync.Once{}, false
-		popped = nil
-		sp := &envSpawner{}
-		cl := &Client{Bin: "tmux", Socket: "s", Runner: &fakeRunner{out: c.version}, Spawner: sp}
-		menu := append(cl.Menu(ctx), "-T", "Title", "--", "One", "o", "run-shell true")
-		if err := cl.ShowMenu(ctx, menu); err != nil {
-			t.Fatal(err)
-		}
-		if c.popup != (popped != nil) || c.popup == (sp.args != nil) || !cl.MenuTakesMouse(ctx) {
-			t.Errorf("%s: popup %q, spawned %q", c.version, popped, sp.args)
-		}
+	sp := &envSpawner{}
+	cl := &Client{Bin: "imux-core", Socket: "s", Spawner: sp}
+	menu := append(cl.Menu(ctx), "-T", "Title", "--", "One", "o", "run-shell true")
+	if !reflect.DeepEqual(menu[:3], Cmd{"display-menu", "-M", "-O"}) {
+		t.Fatalf("menu %q", menu)
+	}
+	if err := cl.ShowMenu(ctx, menu); err != nil || sp.args == nil {
+		t.Fatalf("spawned %q, %v", sp.args, err)
 	}
 	// SpawnEnv hands the environment to a Spawner that takes it.
-	sp := &envSpawner{}
-	cl := &Client{Bin: "tmux", Socket: "s", Spawner: sp}
+	sp = &envSpawner{}
+	cl = &Client{Bin: "imux-core", Socket: "s", Spawner: sp}
 	if err := cl.SpawnEnv([]string{"TMUX_PANE=%3"}, Cmd{"source-file", "-q", "/x"}); err != nil || !reflect.DeepEqual(sp.env, []string{"TMUX_PANE=%3"}) {
 		t.Fatalf("env %q, %v", sp.env, err)
 	}

@@ -155,7 +155,8 @@ func TestShowLoad(t *testing.T) {
 	}
 	id := strings.TrimSuffix(filepath.Base(files[0]), ".pick.json")
 	want := []string{
-		"-L", "s", "-u", "display-popup", "-c", "/dev/pts/3", "-t", "%3", "-E", "-w", "48", "-h", "13", "-x", "C", "-y", "C",
+		"-L", "s", "-u", "display-message", "-d", "1", "-c", "/dev/pts/3", "", ";",
+		"display-popup", "-c", "/dev/pts/3", "-t", "%3", "-E", "-w", "48", "-h", "13", "-x", "C", "-y", "C",
 		tmux.ShJoin("/opt/imux", "__quickpick", id), ";",
 		"run-shell", "-b", tmux.EscapeFormat(tmux.ShJoin("/opt/imux", "__quickpick", "--run", id)),
 	}

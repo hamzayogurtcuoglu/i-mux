@@ -28,7 +28,7 @@ func colorRef(token string) string { return "#{" + ColorOpt(token) + "}" }
 
 // ThemeOptions are the set-option commands that give tmux the palette: the
 // colors the tab bar reads, and the styles of the status line, borders,
-// messages, the copy mode, popups (tmux 3.3+) and menus (3.4+).
+// messages, the copy mode, popups and menus.
 func ThemeOptions(p theme.Palette, v Version) []Cmd {
 	var out []Cmd
 	for _, t := range theme.Tokens {
@@ -63,10 +63,8 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 		pane := "bg=" + p.PanelBg.Tmux() + ",fg=" + p.Text.Tmux()
 		style("window-style", pane)
 		style("window-active-style", pane)
-		if v.AtLeast(3, 3) {
-			for i, c := range ANSIColors(p) {
-				out = append(out, Cmd{"set-option", "-g", OptPaneColors + "[" + strconv.Itoa(i) + "]", c.Tmux()})
-			}
+		for i, c := range ANSIColors(p) {
+			out = append(out, Cmd{"set-option", "-g", OptPaneColors + "[" + strconv.Itoa(i) + "]", c.Tmux()})
 		}
 		style("status-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Subtext0.Tmux())
 		style("pane-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
@@ -82,36 +80,26 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 	style("message-style", "bg="+p.Surface0.Tmux()+",fg="+p.Text.Tmux())
 	style("message-command-style", "bg="+p.Surface0.Tmux()+",fg="+p.Text.Tmux())
 	style("mode-style", "bg="+p.SelectionBg.Tmux()+",fg="+p.Text.Tmux())
-	if v.AtLeast(3, 3) {
-		style("popup-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Text.Tmux())
-		style("popup-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
-	}
-	if v.AtLeast(3, 4) {
-		style("menu-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Text.Tmux())
-		style("menu-selected-style", "bg="+p.SelectionBg.Tmux()+",fg="+p.Text.Tmux())
-		style("menu-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
-	}
+	style("popup-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Text.Tmux())
+	style("popup-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
+	style("menu-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Text.Tmux())
+	style("menu-selected-style", "bg="+p.SelectionBg.Tmux()+",fg="+p.Text.Tmux())
+	style("menu-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
 	return out
 }
 
 // classicUnset are the styles the i-mux theme leaves to tmux.
 func classicUnset(v Version) []string {
 	out := append(paneUnset(v), "pane-border-style", "pane-active-border-style", "message-style", "message-command-style", "mode-style")
-	if v.AtLeast(3, 3) {
-		out = append(out, "popup-style", "popup-border-style")
-	}
-	if v.AtLeast(3, 4) {
-		out = append(out, "menu-style", "menu-selected-style", "menu-border-style")
-	}
+	out = append(out, "popup-style", "popup-border-style")
+	out = append(out, "menu-style", "menu-selected-style", "menu-border-style")
 	return out
 }
 
 // paneUnset are the panes' colors a theme on the terminal's leaves to it.
 func paneUnset(v Version) []string {
 	out := []string{"window-style", "window-active-style"}
-	if v.AtLeast(3, 3) {
-		out = append(out, OptPaneColors)
-	}
+	out = append(out, OptPaneColors)
 	return out
 }
 

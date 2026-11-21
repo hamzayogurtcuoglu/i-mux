@@ -604,64 +604,15 @@ func EscapeMessage(s string) string {
 	return strings.NewReplacer("#", "##", "%", "%%").Replace(s)
 }
 
-// menuMouse caches whether this process's tmux takes display-menu -M.
-var menuMouse struct {
-	sync.Once
-	ok bool
+// Menu is a display-menu command, with -M -O, so a menu i-mux opens is
+// clicked like the editor's (it stays open until a click; a click outside
+// closes it).
+func (c *Client) Menu(context.Context) Cmd {
+	return Cmd{"display-menu", "-M", "-O"}
 }
-
-// MenuMinVersion is the first tmux whose menus answer the mouse when they
-// were not opened by a mouse binding (display-menu -M); older ones take keys
-// only there.
-var MenuMinVersion = [2]int{3, 5}
-
-// Menu is a display-menu command: with -M -O where tmux has them, so a menu
-// i-mux opens is clicked like the editor's (it stays open until a click; a
-// click outside closes it).
-func (c *Client) Menu(ctx context.Context) Cmd {
-	menuMouse.Do(func() {
-		v, err := c.BinVersion(ctx)
-		menuMouse.ok = err == nil && v.AtLeast(MenuMinVersion[0], MenuMinVersion[1])
-	})
-	if menuMouse.ok {
-		return Cmd{"display-menu", "-M", "-O"}
-	}
-	return Cmd{"display-menu"}
-}
-
-// msgClient caches whether this process's tmux takes display-message -c.
-var msgClient struct {
-	sync.Once
-	ok bool
-}
-
-// MessageTakesClient reports whether display-message -c names a client
-// (tmux 3.3+). In tmux 3.2 -c is a flag: "-c /dev/pts/1 text" is a usage
-// error, and tmux picks the client.
-func (c *Client) MessageTakesClient(ctx context.Context) bool {
-	msgClient.Do(func() {
-		v, err := c.BinVersion(ctx)
-		msgClient.ok = err != nil || v.AtLeast(3, 3)
-	})
-	return msgClient.ok
-}
-
-// MenuPopup shows a display-menu command (as Menu and its arguments make
-// it) in a popup that takes the mouse, for tmux whose menus do not (D54).
-// imux sets it; nil leaves menus to tmux.
-var MenuPopup func(ctx context.Context, c *Client, cmd Cmd) error
 
 // ShowMenu shows a display-menu command built on Menu, without waiting for
-// it: tmux's own menu where it takes the mouse (3.5+), else MenuPopup's.
-func (c *Client) ShowMenu(ctx context.Context, cmd Cmd) error {
-	if len(c.Menu(ctx)) == 1 && MenuPopup != nil {
-		return MenuPopup(ctx, c, cmd)
-	}
+// it.
+func (c *Client) ShowMenu(_ context.Context, cmd Cmd) error {
 	return c.Spawn(cmd)
-}
-
-// MenuTakesMouse reports whether ShowMenu's menus answer the mouse and open
-// on the press (a button's release does not close them).
-func (c *Client) MenuTakesMouse(ctx context.Context) bool {
-	return len(c.Menu(ctx)) > 1 || MenuPopup != nil
 }

@@ -77,7 +77,7 @@ func TestDoctor(t *testing.T) {
 		"copilot": {Agent: "copilot", Installed: true, Path: copilotBin, PathEnv: bin, Version: "1.0.0"},
 	}
 	o := Options{
-		Cfg: cfg, Tmux: &tmux.Client{Bin: "tmux", Socket: "x", Runner: fakeTmux{"3.2a"}}, Self: claudeBin,
+		Cfg: cfg, Tmux: &tmux.Client{Bin: "tmux", Socket: "x", Runner: fakeTmux{"3.8"}}, Self: claudeBin,
 		Resolved: res, Users: func() []string { return []string{"alice"} },
 		Watcher: func() (bool, int) { return true, 4242 },
 	}
@@ -89,8 +89,7 @@ func TestDoctor(t *testing.T) {
 		sub   string
 		level Level
 	}{
-		{"tmux 3.2a", OK},
-		{"agent bar is not clickable", Info},
+		{"tmux 3.8", OK},
 		{"is private (0700)", OK},
 		{"Claude Code 1.0.110", OK},
 		{"Claude Code 1.0.110 is older than 2.0.0", Warn},

@@ -12,9 +12,6 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/popmenu"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
 )
 
 // Exit codes.
@@ -65,10 +62,6 @@ func (x *ExitCodeError) Error() string { return x.Msg }
 
 // Main runs imux with os.Args-style arguments and returns the exit code.
 func Main(args []string) int {
-	// Menus take the mouse on every tmux: before 3.5 in i-mux's popup (D54).
-	if self, err := workspace.Self(); err == nil {
-		tmux.MenuPopup = popmenu.Show(self)
-	}
 	return Run(&Env{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}, args[1:])
 }
 

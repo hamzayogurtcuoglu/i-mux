@@ -33,15 +33,6 @@ func TestThemeOptions(t *testing.T) {
 			t.Errorf("lacks %q:\n%s", want, got)
 		}
 	}
-	if old := join(ThemeOptions(theme.Builtin("nord"), v("3.2a"))); strings.Contains(old, "popup-") || strings.Contains(old, "menu-") || strings.Contains(old, OptPaneColors) {
-		t.Errorf("3.2 gets popup or menu styles:\n%s", old)
-	}
-	if mid := join(ThemeOptions(theme.Builtin("nord"), v("3.3a"))); !strings.Contains(mid, "popup-style") || strings.Contains(mid, "menu-style") {
-		t.Errorf("3.3:\n%s", mid)
-	}
-	if old := join(ThemeOptions(theme.Builtin("nord"), v("3.2a"))); strings.Contains(old, OptPaneColors) || !strings.Contains(old, "window-style") {
-		t.Errorf("3.2: pane colors (3.3+), or no pane colors:\n%s", old)
-	}
 	// The terminal theme leaves the panes the terminal's colors.
 	if term := join(ThemeOptions(theme.Builtin("terminal"), v("3.4"))); !strings.Contains(term, "@imux_c_accent blue") || !strings.Contains(term, "status-style bg=default,fg=brightblack") ||
 		strings.Contains(term, "window-style bg") || !strings.Contains(term, "window-style") || !strings.Contains(term, OptPaneColors) {
@@ -64,7 +55,7 @@ func TestThemeOptions(t *testing.T) {
 		t.Errorf("classic unsets %d styles, want 13", unset)
 	}
 	// The tab bar reads the options, so a change needs no new config.
-	if f := TabFormat(false); !strings.Contains(f, "#[fg=#{@imux_c_subtext0}]") || strings.Contains(f, "fg=c") {
+	if f := TabFormat(); !strings.Contains(f, "#[fg=#{@imux_c_subtext0}]") || strings.Contains(f, "fg=c") {
 		t.Errorf("tab bar %q", f)
 	}
 }
@@ -98,13 +89,10 @@ func TestTerminalBg(t *testing.T) {
 // TestThemeHooks (T73.4): tmux 3.6+ tells imux when the terminal turns
 // light or dark; older tmux has no such hooks (they would fail to load).
 func TestThemeHooks(t *testing.T) {
-	in := confInput("3.6")
+	in := confInput("3.8")
 	if got := GenerateConf(in); !strings.Contains(got, "set-hook -g client-light-theme \"run-shell -b '/opt/imux/bin/imux __theme appearance light") ||
 		!strings.Contains(got, "client-dark-theme") {
-		t.Error("3.6: no theme hooks")
-	}
-	if got := GenerateConf(confInput("3.5a")); strings.Contains(got, "client-light-theme") {
-		t.Error("3.5: theme hooks")
+		t.Error("no theme hooks")
 	}
 	// Following the terminal, the config has the theme for its appearance.
 	in.Cfg.Theme = theme.Config{Name: "catppuccin", AutoSwitch: true}

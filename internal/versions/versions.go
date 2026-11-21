@@ -58,11 +58,7 @@ type Env struct {
 	Probe   func(r agent.Resolved) string // the agent's version ("" unknown)
 }
 
-// TmuxWants is the tmux that gives every feature: the agent bar takes
-// clicks. Menus take the mouse on every tmux (D54).
-var TmuxWants = tmux.ClickMinVersion
-
-// Collect reads every row: i-mux, tmux, then the agents in config order.
+// Collect reads every row: i-mux, its engine, then the agents in config order.
 func Collect(ctx context.Context, e Env) []Row {
 	rows := []Row{imuxRow(e), engineRow(ctx, e)}
 	agents := agent.Ordered(e.Cfg)

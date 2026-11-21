@@ -135,7 +135,7 @@ set -g  @imux_keys 'root C-\,root C-p,prefix a,prefix S,imux-resize h,imux-resiz
 # Pane lifecycle and watcher.
 set-hook -g pane-died "run-shell -b '{\"argv\":[\"C:\\\\Users\\\\test\\\\AppData\\\\Local\\\\Programs\\\\i-mux\\\\imux.exe\",\"__pane-died\",\"#{pane_id}\",\"#{pane_dead_status}\"],\"quiet\":true}'"
 set-hook -g client-attached "run-shell -b '{\"argv\":[\"C:\\\\Users\\\\test\\\\AppData\\\\Local\\\\Programs\\\\i-mux\\\\imux.exe\",\"__watch\",\"ensure\"],\"quiet\":true}'"
-# The terminal turned light or dark (tmux 3.6+, DEC mode 2031): the theme may follow it (D68).
+# The terminal turned light or dark (DEC mode 2031): the theme may follow it (D68).
 set-hook -g client-light-theme "run-shell -b '{\"argv\":[\"C:\\\\Users\\\\test\\\\AppData\\\\Local\\\\Programs\\\\i-mux\\\\imux.exe\",\"__theme\",\"appearance\",\"light\"],\"quiet\":true}'"
 set-hook -g client-dark-theme "run-shell -b '{\"argv\":[\"C:\\\\Users\\\\test\\\\AppData\\\\Local\\\\Programs\\\\i-mux\\\\imux.exe\",\"__theme\",\"appearance\",\"dark\"],\"quiet\":true}'"
 # Sidebars redraw when panes change (they sleep otherwise).

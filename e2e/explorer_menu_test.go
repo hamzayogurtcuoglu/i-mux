@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -16,7 +15,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 // explorerH starts a project with files (and the extra ones, paths in the
@@ -98,17 +96,6 @@ func TestExplorerHover(t *testing.T) {
 	h.waitFor("README.md selected", 5*time.Second, func() bool { return strings.Contains(h.barLine(bar, "README.md"), sel) })
 }
 
-// menuMouse reports whether this tmux's menus take clicks when i-mux opens
-// them (display-menu -M, tmux 3.5).
-func (h *H) menuMouse() bool {
-	out, err := exec.Command(h.Tmux, "-V").Output()
-	if err != nil {
-		return false
-	}
-	v, ok := tmux.ParseVersion(string(out))
-	return ok && v.AtLeast(tmux.MenuMinVersion[0], tmux.MenuMinVersion[1])
-}
-
 // menu right-clicks the sidebar row holding text and waits for its menu.
 func (h *H) menu(c *Client, bar, text string, x, y int) int {
 	h.t.Helper()
@@ -145,17 +132,15 @@ func TestExplorerMenus(t *testing.T) {
 			t.Errorf("file menu lacks %q", item)
 		}
 	}
-	if h.menuMouse() {
-		// As a hand does: onto the item (tmux chooses the item the pointer
-		// last moved to), then a click.
-		mark = c.Mark()
-		c.Write(sgrMouse(35, x+3, y+1, 'M'))
-		time.Sleep(100 * time.Millisecond)
-		c.Click(0, x+3, y+1)
-		c.waitScreenAfter(h, mark, "EDIT README.md", 5*time.Second)
-		c.Write("\r")
-		h.menu(c, bar, "README.md", 0, 0)
-	}
+	// As a hand does: onto the item (tmux chooses the item the pointer
+	// last moved to), then a click.
+	mark = c.Mark()
+	c.Write(sgrMouse(35, x+3, y+1, 'M'))
+	time.Sleep(100 * time.Millisecond)
+	c.Click(0, x+3, y+1)
+	c.waitScreenAfter(h, mark, "EDIT README.md", 5*time.Second)
+	c.Write("\r")
+	h.menu(c, bar, "README.md", 0, 0)
 	c.Write("l") // Copy Relative Path
 	h.waitFor("relative path copied", 5*time.Second, func() bool { return copied() == "README.md" })
 	if b := strings.TrimSpace(h.mustTmux("show-buffer")); b != "README.md" {
@@ -287,9 +272,6 @@ func TestExplorerTitle(t *testing.T) {
 	c.waitScreenAfter(h, mark, "Show Hidden Files", 5*time.Second)
 	time.Sleep(600 * time.Millisecond) // past the popup's first 400 ms
 	item := y + 3
-	if !h.menuMouse() {
-		item++
-	}
 	c.Write(sgrMouse(35, x+4, item, 'M'))
 	time.Sleep(100 * time.Millisecond)
 	c.Click(0, x+4, item)

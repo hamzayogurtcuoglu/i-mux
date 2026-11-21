@@ -14,7 +14,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	upd "github.com/hamzayogurtcuoglu/i-mux/internal/update"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/versions"
 )
 
 // labels name the values Settings shows.
@@ -70,12 +69,8 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 	if latest := w.State().Latest; upd.Newer(latest, cur) {
 		row.Name = i18n.T("settings.update_available", cur, latest)
 	}
-	// Versions and updates: i-mux, tmux, the agents; a tmux that lacks
-	// features says so here.
+	// Versions and updates: i-mux, its engine, the agents.
 	vers := MenuItem{Name: i18n.T("settings.versions"), Key: "c", Cmd: w.popupCmd("90%", "80%", "versions", "--popup")}
-	if v, err := w.TmuxVersion(context.Background()); err == nil && !v.AtLeast(versions.TmuxWants[0], versions.TmuxWants[1]) {
-		vers.Name = i18n.T("settings.versions_old", v.String())
-	}
 	m.Items = append(m.Items, row, vers, Separator(),
 		MenuItem{Name: i18n.T("settings.editor", w.editorLabel()), Key: "e", Cmd: menu("editor")})
 	if cfg.Completion.Enabled {
