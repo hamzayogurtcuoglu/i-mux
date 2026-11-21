@@ -917,15 +917,17 @@ User request: in the Git view the changed files show as `…omation-framework/`,
 `…ls/.env.example`: paths cut at their start hide the names; and the panel cannot be made wider
 by dragging its edge (it snaps back).
 
-- [ ] **T36.1 File names** · S
+- [x] **T36.1 File names** · S
   - AC: §9.3 "Resizing the panel, file names in Source Control": the name first, its folder in
     gray, the folder cut first, then the middle of the name; unit tests at the default width and
     wider; every row exactly the panel's width.
-- [ ] **T36.2 Dragging the edge** · S · deps: T36.1
+- [x] **T36.2 Dragging the edge** · S · deps: T36.1
   - AC: a dragged width is kept (20-80), saved to `tmux.sidebar_width` once the drag rests and
     taken by the other tabs' panels and new tabs; a resized window, a closed neighbor and the
     closed rail keep the width (unit test against a real tmux); e2e: a real mouse drag on the
     border through tmux; README.
+
+Status: done in b7dbff8 ("Drag the panel wider; file names first in Source Control"); the boxes were ticked on 2026-11-21.
 
 ## M37: A project without agents, the tab bar on tmux 3.2 (added 2026-11-09)
 
@@ -933,45 +935,51 @@ User report: closing the agents closed the project ("I did not close the project
 stay and say that it has no agents. And the + of the tab bar does nothing (tmux 3.2a, Ubuntu
 22.04's).
 
-- [ ] **T37.1 The tab bar's + and × before tmux 3.4** · S
+- [x] **T37.1 The tab bar's + and × before tmux 3.4** · S
   - AC: §9.3 "A project without agents, the tab bar on tmux 3.2": status-left / status-right
     ranges and their MouseUp1 bindings below 3.4, golden configs; the tab e2e tests pass on tmux
     3.2a.
-- [ ] **T37.2 "No agents"** · M · deps: T37.1
+- [x] **T37.2 "No agents"** · M · deps: T37.1
   - AC: Close agent… on the project's last agent and the last pane going otherwise leave the
     "No agents" pane; its keys and clicks start an agent or a terminal in its place, and so do
     `imux split` and the + of AGENTS; the sidebar lists the project with "No agents" and offers
     nothing to continue; snapshots skip it; another tab's last agent still closes its tab; unit
     tests (drawing, Gather against a real tmux) and e2e.
 
+Status: done in 1236452 ("Closing the last agent keeps the project; tab + on tmux 3.2"); the boxes were ticked on 2026-11-21.
+
 ## M38: Versions and updates in Settings (added 2026-11-09)
 
 User request: a place in Settings that shows the versions of what i-mux runs on (tmux was old, a
 CLI was old) and updates them, or at least gives the command and a warning.
 
-- [ ] **T38.1 The list** · S
+- [x] **T38.1 The list** · S
   - AC: §9.3 "Versions and updates": i-mux, tmux, the agents in config order with the version read
     now; tmux's thresholds (3.2 needed, 3.4 agent bar clicks, 3.5 menus with the mouse) and the
     package manager's command, apt's candidate compared by upstream version; each agent's own
     updater (Codex: npm or Homebrew by its path; OpenCode 1: `upgrade --major`); unit tests.
-- [ ] **T38.2 Settings row and popup** · S · deps: T38.1
+- [x] **T38.2 Settings row and popup** · S · deps: T38.1
   - AC: the row (with the tmux warning) opens `imux versions --popup`; a letter runs the command
     with the terminal, the list is read again and the bin cache takes the new versions; e2e with
     the fake agents' updaters; README.
+
+Status: done in 1ee892a ("Versions and updates in Settings"); the boxes were ticked on 2026-11-21.
 
 ## M39: Named conversations in History (added 2026-11-09)
 
 User request: agents can be named in the sidebar, but History does not show those names, so a
 conversation is hard to find again ("I forget which name I gave"); maybe rename in History too.
 
-- [ ] **T39.1 Names on conversations** · S
+- [x] **T39.1 Names on conversations** · S
   - AC: §9.3 "Named conversations": `state.json` names by conversation key; a named pane's trail
     runs take its name (on rename, when History opens, before an agent, tab or project closes, on
     `on_exit = "close"`); History rows show the name before the preview; unit tests.
-- [ ] **T39.2 Rename in History, the name back** · S · deps: T39.1
+- [x] **T39.2 Rename in History, the name back** · S · deps: T39.1
   - AC: the conversation menu's Rename… (options, never the prompt's template, carry the key and
     the pane); the open agent running it takes the name; continuing a named conversation names its
     pane; e2e through the real menu and prompt.
+
+Status: done in 77b20cf ("Named conversations in History"); the boxes were ticked on 2026-11-21.
 
 ## M41: Sidebars come back (added 2026-11-09)
 
