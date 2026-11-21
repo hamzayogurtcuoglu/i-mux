@@ -1012,6 +1012,24 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M92: i-mux-core only; tmux is gone (added 2026-11-21)
+
+The owner's decision (D87): i-mux runs on i-mux-core on every system, whether tmux is installed or
+not; tmux is no longer an engine.
+
+- [ ] **T92.1 One engine** · M
+  - AC: the engine is always `imux-core` (beside imux, else on `PATH`; `IMUX_TMUX_BIN` still
+    wins); `[engine] backend = "tmux"` is ignored with a warning; no engine row in Settings and
+    no `imux engine`; doctor and Versions check the engine, not tmux; install.sh and the
+    Homebrew formula neither need nor install tmux; CI's e2e runs on i-mux-core only and the
+    pinned tmux build is gone; README says so and how to close a tmux server left from before;
+    unit and e2e tests pass.
+- [ ] **T92.2 No tmux compatibility left** · M · deps: T92.1
+  - AC: the branches for tmux older than 3.8 (3.2's tab bar ranges, menus without the mouse
+    before 3.5, the agent bar before 3.4, the light/dark hooks before 3.6, …) and their golden
+    configs are gone; the engine's version is still checked against i-mux's minimum; unit and
+    e2e tests pass.
+
 ## M91: CI-green: the watcher's pid and menus after a gesture (added 2026-11-20)
 
 CI has been red on `e2e` since M72: the pane-swap race (fixed with the swap bindings made
