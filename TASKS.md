@@ -1322,7 +1322,7 @@ passing with tmux, exactly as before, all through this.
     `make e2e-core` on Linux and macOS; `make e2e-core` defaults to that build
     (`IMUX_CORE_BIN` still picks another, such as the engine's working tree); the job is
     blocking and green.
-- [ ] **T88.6 Beta release** · S · deps: T88.5
+- [x] **T88.6 Beta release** · S · deps: T88.5
   - AC: the release notes explain the switch and how to go back; an "Engine (beta)" issue
     template asks for the terminal, the OS and `imux doctor` output; the owner approves and
     tags (USER).

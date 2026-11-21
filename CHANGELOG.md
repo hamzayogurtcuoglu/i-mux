@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.66.0] - 2026-11-21
+
 ### Changed
 
 - **i-mux runs on its own engine, i-mux-core, and no longer on tmux.** The engine ships with
