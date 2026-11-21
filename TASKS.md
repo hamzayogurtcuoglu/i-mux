@@ -1036,6 +1036,11 @@ not; tmux is no longer an engine.
     i-mux-core. Nothing happens without tmux or without that server, and nothing from inside
     one of its panes; tmux itself and other servers are never touched; a unit test with a fake
     tmux covers it.
+- [ ] **T92.4 No tmux left in the docs and messages** · S · deps: T92.1
+  - AC: without imux-core the error says to install i-mux again (not tmux), with a unit test;
+    the README installs natively on Windows (setup.exe, `install.ps1`) and `go install` builds
+    imux-core too; TROUBLESHOOTING drops the tmux-only fixes and explains the move from tmux;
+    tests that ran on real tmux are named for the engine and no test leans on tmux's `PATH`.
 
 ## M91: CI-green: the watcher's pid and menus after a gesture (added 2026-11-20)
 

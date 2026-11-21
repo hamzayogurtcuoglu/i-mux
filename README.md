@@ -25,7 +25,7 @@ tmux needed, and a tmux you have is left untouched. Everything stays on your mac
 
 ## Install
 
-One line on macOS, Linux, or Windows through WSL (open a WSL terminal):
+One line on macOS, Linux, or WSL:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
@@ -38,10 +38,18 @@ Options go after `sh -s --`, for example `... | sh -s -- --yes` to install the f
 asking, `--version v0.1.0`,
 `--prefix DIR`, `--no-modify-path` or `--no-font`.
 
+On Windows (10 1809 or newer) i-mux runs natively: download `imux_<version>_windows_<cpu>_setup.exe`
+from the [latest release](https://github.com/hamzayogurtcuoglu/i-mux/releases/latest) (no admin
+rights needed), or in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 | iex
+```
+
 With Go 1.27+ you can also build it yourself:
 
 ```sh
-go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
+go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest github.com/hamzayogurtcuoglu/i-mux/cmd/imux-core@latest
 ```
 
 Then install at least one agent CLI and check the setup. For Google's models, install

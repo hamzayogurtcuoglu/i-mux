@@ -19,7 +19,7 @@ gerekmez, kurulu bir tmux'a da dokunmaz. Her şey makinenizde kalır.
 
 ## Kurulum
 
-macOS, Linux ya da WSL ile Windows'ta (bir WSL terminali açın) tek satır:
+macOS, Linux ya da WSL'de tek satır:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
@@ -32,10 +32,19 @@ Ardından yeni bir terminal açın. Seçenekler `sh -s --` sonrasına yazılır,
 kurmak için `... | sh -s -- --yes`, ya da
 `--version v0.1.0`, `--prefix DİZİN`, `--no-modify-path`, `--no-font`.
 
+Windows'ta (10 1809 ve sonrası) i-mux doğrudan çalışır:
+[son sürümden](https://github.com/hamzayogurtcuoglu/i-mux/releases/latest)
+`imux_<sürüm>_windows_<işlemci>_setup.exe` dosyasını indirin (yönetici hakkı gerekmez) ya da
+PowerShell'de:
+
+```powershell
+irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 | iex
+```
+
 Go 1.27+ ile kendiniz de derleyebilirsiniz:
 
 ```sh
-go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
+go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest github.com/hamzayogurtcuoglu/i-mux/cmd/imux-core@latest
 ```
 
 Sonra en az bir agent CLI'ı kurun ve kurulumu denetleyin. Google modelleri için

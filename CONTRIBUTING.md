@@ -14,7 +14,7 @@ make build         # bin/imux
 make test          # unit tests
 make test-macos    # unit tests with TMPDIR behind a symlink, as on macOS
 make race          # unit tests with the race detector
-make e2e           # end-to-end tests against a real tmux on a private socket
+make e2e           # end-to-end tests against i-mux-core on a private socket
 make lint          # golangci-lint (vet, staticcheck, errcheck, gofumpt, misspell)
 make generate      # regenerate docs/CONFIG.md; CI fails when it is stale
 make fuzz-short    # every fuzz target for 60 s
