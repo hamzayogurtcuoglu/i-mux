@@ -889,9 +889,10 @@ func TestSwitchMarksTheClient(t *testing.T) {
 // realTmux starts a private server of the engine (i-mux-core, D87) for the test.
 func realTmux(t *testing.T) *tmux.Client {
 	t.Helper()
+	testutil.SkipOnWindows(t, "its panes run sh; the engine's Windows tests are i-mux-core's and the e2e suite's")
 	b := make([]byte, 6)
 	_, _ = rand.Read(b)
-	c := &tmux.Client{Bin: testutil.Engine(t), Socket: "imux-sidebar-test-" + hex.EncodeToString(b), Config: "/dev/null", Runner: tmux.ExecRunner{}}
+	c := &tmux.Client{Bin: testutil.Engine(t), Socket: "imux-sidebar-test-" + hex.EncodeToString(b), Config: os.DevNull, Runner: tmux.ExecRunner{}}
 	t.Cleanup(func() { _, _ = c.Do(tmux.Cmd{"kill-server"}) })
 	return c
 }

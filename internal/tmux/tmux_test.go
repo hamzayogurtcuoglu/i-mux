@@ -2,6 +2,8 @@ package tmux
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
@@ -296,27 +298,18 @@ func FuzzSectionsRows(f *testing.F) {
 
 func realClient(t *testing.T) *Client {
 	t.Helper()
-	c := &Client{Bin: testutil.Engine(t), Socket: "imux-test-" + randHex(t), Config: "/dev/null", Runner: ExecRunner{}}
+	testutil.SkipOnWindows(t, "its panes run sh and sleep; the engine's Windows tests are i-mux-core's and the e2e suite's")
+	c := &Client{Bin: testutil.Engine(t), Socket: "imux-test-" + randHex(t), Config: os.DevNull, Runner: ExecRunner{}}
 	t.Cleanup(func() { _, _ = c.Do(Cmd{"kill-server"}) })
 	return c
 }
 
 func randHex(t *testing.T) string {
 	b := make([]byte, 6)
-	f, err := os.Open("/dev/urandom")
-	if err != nil {
+	if _, err := rand.Read(b); err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
-	if _, err := f.Read(b); err != nil {
-		t.Fatal(err)
-	}
-	const hex = "0123456789abcdef"
-	s := make([]byte, 0, 12)
-	for _, x := range b {
-		s = append(s, hex[x>>4], hex[x&15])
-	}
-	return string(s)
+	return hex.EncodeToString(b)
 }
 
 func TestIntegrationRealTmux(t *testing.T) {
