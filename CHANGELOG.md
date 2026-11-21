@@ -14,6 +14,8 @@ All notable changes to i-mux are listed here. The format follows
 - **Windows: removing a worktree whose agents run in it works.** The project now closes before
   its folder is removed (Windows deletes no folder a program works in). On every system, a
   worktree with changes still asks first.
+- **Windows: the shell after an agent exits stays.** With a shell under `C:\Program Files` (Git
+  for Windows' sh, among others) the pane closed instead, and with the last one the session.
 - **Windows: a `file:///C:/…` URL opens the file** in the web view, and a schedule's past runs
   move with it when its skill's file moves.
 
