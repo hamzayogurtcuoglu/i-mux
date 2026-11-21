@@ -7,11 +7,11 @@ package e2e
 var windowsSkips = map[string]string{
 	// install.sh is the installer of macOS and Linux; install.ps1 has its own test
 	// (internal/update, TestInstallPS1Windows) and CI's windows-installer job.
-	"TestInstallScript":             "install.sh (macOS and Linux)",
-	"TestInstallScriptWithoutTmux":  "install.sh (macOS and Linux)",
-	"TestInstallScriptAsksForTmux":  "install.sh (macOS and Linux)",
-	"TestInstallScriptOffersFont":   "install.sh (macOS and Linux)",
-	"TestInstallScriptReplacesBoth": "install.sh (macOS and Linux)",
+	"TestInstallScript":                "install.sh (macOS and Linux)",
+	"TestInstallScriptWithoutTmux":     "install.sh (macOS and Linux)",
+	"TestInstallScriptOldTmuxSessions": "install.sh (macOS and Linux)",
+	"TestInstallScriptOffersFont":      "install.sh (macOS and Linux)",
+	"TestInstallScriptReplacesBoth":    "install.sh (macOS and Linux)",
 
 	// They find i-mux's processes by command line with pgrep or ps.
 	"TestWatcherLifecycle":      "pgrep finds the watcher by its command line",
