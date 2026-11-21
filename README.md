@@ -20,8 +20,8 @@ press one key and the same pane restarts with another agent. The new agent recei
 handoff: the original request, the task list, files touched, repository state and where the work
 stopped. No re-explaining, no copy-paste.
 
-It is a single binary, `imux`, built on [tmux](https://github.com/tmux/tmux) (on its own socket, so your
-tmux setup is untouched). Everything stays on your machine.
+It is a single binary, `imux`, with its own terminal engine, `imux-core`, installed beside it: no
+tmux needed, and a tmux you have is left untouched. Everything stays on your machine.
 
 ## Install
 
@@ -32,10 +32,10 @@ curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/instal
 ```
 
 It downloads the release for your OS and CPU, verifies its checksum, installs `imux` to
-`~/.local/bin`, adds that directory to your shell's PATH (zsh, bash or fish), offers to install
-tmux (3.2+; 3.4+ for the clickable agent bar) if it is missing, and offers the Nerd Font the
-sidebar's icons need (below). Open a new terminal afterwards. Options go after `sh -s --`, for
-example `... | sh -s -- --yes` to install tmux and the font without asking, `--version v0.1.0`,
+`~/.local/bin` with its engine `imux-core`, adds that directory to your shell's PATH (zsh, bash or
+fish), and offers the Nerd Font the sidebar's icons need (below). Open a new terminal afterwards.
+Options go after `sh -s --`, for example `... | sh -s -- --yes` to install the font without
+asking, `--version v0.1.0`,
 `--prefix DIR`, `--no-modify-path` or `--no-font`.
 
 With Go 1.27+ you can also build it yourself:
@@ -78,9 +78,9 @@ edge to make it wider or narrower: every tab takes the width, and i-mux remember
 **🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: your editor,
 notifications, icons, the color theme, what a new agent does after a handoff, what happens
 at a limit, and the config file. Enter or a click on a row opens a menu of its values (● marks the
-current one); pick one or press its number. **Versions and updates** there (or `imux versions`) lists i-mux, tmux
+current one); pick one or press its number. **Versions and updates** there (or `imux versions`) lists i-mux, its engine
 and every agent CLI with its version and the command that updates it, or installs it when it is
-missing; press its letter to run it right there. It says what an older tmux lacks and how to get a newer one on your system. **AI completion in the editor** works like Copilot in VS Code: choose
+missing; press its letter to run it right there. **AI completion in the editor** works like Copilot in VS Code: choose
 **Editor → Neovim + Copilot** there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
 Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
 in to GitHub Copilot once.
@@ -89,7 +89,7 @@ in to GitHub Copilot once.
 colors, the default), Catppuccin, Catppuccin Latte, Tokyo Night (and Day), Dracula, Nord, Gruvbox (and Light), One Dark and
 One Light, Solarized (and Light), Kanagawa (and Lotus), Rosé Pine (and Dawn), Vesper, or Terminal
 (your terminal's own colors). Settings → **Theme** picks one; **Follow the terminal's light/dark**
-switches between a theme's light and dark versions when your terminal does (tmux 3.6 or later). A
+switches between a theme's light and dark versions when your terminal does. A
 theme colors the whole window, the agents' panes and the terminal's edges too, as a terminal theme
 would (your terminal gets its own background back when you leave i-mux); i-mux and Terminal keep
 your terminal's own colors. Single colors can be
@@ -209,21 +209,16 @@ what happens next in `~/.imux/config.toml` (`imux config init` writes a commente
 on_limit = "ask"   # ask (default) | auto: switch to the next agent in `order` | off: only show it
 ```
 
-## The i-mux-core engine (beta)
+## The engine
 
-i-mux runs on tmux. It can also run on **i-mux-core**, a tmux-compatible engine made for i-mux,
-which ships in the same release (`imux-core`, next to `imux`). tmux stays the default; to try the
-engine, choose Settings (⚙ on the rail) → Engine (beta), or set it in `~/.imux/config.toml`:
+i-mux runs on **i-mux-core**, a terminal engine made for i-mux that speaks tmux's commands; it
+ships in the same release (`imux-core`, next to `imux`) and is the only engine, whether tmux is
+installed or not. `imux doctor` shows its version. An `[engine] backend = "tmux"` left in
+`~/.imux/config.toml` from an earlier version is ignored, with a warning.
 
-```toml
-[engine]
-backend = "core"   # "tmux" (default) | "core"
-```
-
-The two engines keep their sessions apart, so i-mux asks you to close the running sessions before
-it switches. To go back, choose tmux again (or set `backend = "tmux"`). `imux doctor` shows which
-engine is in use and its version. Something looks or behaves differently from tmux? Please open an
-issue with the "Engine (beta)" template.
+Updating from a version that ran on tmux: i-mux no longer sees the sessions that tmux server still
+runs. Your projects come back from i-mux's snapshots (Restore last session); close the old server
+when you are done with it: `tmux -L imux kill-server`.
 
 ## Privacy
 

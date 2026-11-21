@@ -352,10 +352,6 @@ func SetUmask() {}
 // and a file's mode only says whether it is read-only.
 const PermBits = false
 
-// HasTmux reports whether tmux runs on this system: not on Windows, where
-// i-mux-core is the only engine (D85).
-const HasTmux = false
-
 // ExeSuffix ends an executable's file name.
 const ExeSuffix = ".exe"
 

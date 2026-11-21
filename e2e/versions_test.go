@@ -10,14 +10,14 @@ import (
 	"testing"
 )
 
-// TestVersions (T38.2): `imux versions` lists i-mux, tmux and the agents with
+// TestVersions (T38.2): `imux versions` lists i-mux, its engine and the agents with
 // their versions and update commands; in the popup (Settings → Versions and
 // updates) a row's letter runs its update there, and the list is read again.
 func TestVersions(t *testing.T) {
 	h := newH(t, "")
 	out := h.mustImux("versions")
 	t.Logf("\n%s", out)
-	for _, want := range []string{"i-mux", "tmux", "Claude Code", "9.9.9-fake", "update: claude update", "update: agy update", "update: opencode upgrade"} {
+	for _, want := range []string{"i-mux", "i-mux-core", "Claude Code", "9.9.9-fake", "update: claude update", "update: agy update", "update: opencode upgrade"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("versions lacks %q", want)
 		}

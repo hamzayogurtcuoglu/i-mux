@@ -13,7 +13,6 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 const sidebarConfig = "[tmux]\nsidebar = true\nagent_bar = false\n"
@@ -208,9 +207,6 @@ func TestSidebar(t *testing.T) {
 // menu, not to the sidebar, where "x" would switch the agent pane instead.
 func TestSidebarDoubleClick(t *testing.T) {
 	h := newH(t, sidebarConfig)
-	if v, ok := tmux.ParseVersion(h.mustTmux("-V")); ok && v.Major == 3 && v.Minor == 6 {
-		t.Skip("tmux 3.6 closes menus by itself (docs/TROUBLESHOOTING.md); i-mux cannot test this there")
-	}
 	agentPane, bar := h.startWithSidebar()
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)

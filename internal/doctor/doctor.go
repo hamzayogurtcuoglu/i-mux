@@ -167,13 +167,6 @@ func checkTmux(ctx context.Context, r *Report, o Options) {
 	if !v.AtLeast(tmux.ClickMinVersion[0], tmux.ClickMinVersion[1]) {
 		r.add(Info, "doctor.tmux_no_click", v.String(), fmt.Sprintf("%d.%d", tmux.ClickMinVersion[0], tmux.ClickMinVersion[1]))
 	}
-	if sysx.HasTmux {
-		if tmux.TerminfoExists("tmux-256color") {
-			r.add(OK, "doctor.terminfo_ok")
-		} else {
-			r.add(Warn, "doctor.terminfo_missing")
-		}
-	}
 }
 
 func checkHome(r *Report) {

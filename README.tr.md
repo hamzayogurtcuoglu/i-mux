@@ -14,8 +14,8 @@ siz istediğinizde tek tuşa basarsınız; aynı bölme başka bir agent ile yen
 özetlenmiş bir devir belgesi alır: ilk istek, görev listesi, dokunulan dosyalar, depo durumu ve
 işin kaldığı yer. Yeniden anlatmak ya da kopyalayıp yapıştırmak yok.
 
-[tmux](https://github.com/tmux/tmux) üzerinde çalışan tek bir programdır, komutu `imux` (kendi
-soketinde; sizin tmux ayarlarınıza dokunmaz). Her şey makinenizde kalır.
+Tek bir programdır, komutu `imux`; yanında kendi terminal motoru `imux-core` ile kurulur: tmux
+gerekmez, kurulu bir tmux'a da dokunmaz. Her şey makinenizde kalır.
 
 ## Kurulum
 
@@ -26,10 +26,10 @@ curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/instal
 ```
 
 Betik işletim sisteminize ve işlemcinize uygun sürümü indirir, sağlama toplamını doğrular, `imux`'u
-`~/.local/bin` dizinine kurar, bu dizini kabuğunuzun PATH'ine ekler (zsh, bash ya da fish), tmux
-eksikse (3.2+; tıklanabilir agent çubuğu için 3.4+) kurmayı önerir ve kenar panelin simgelerinin
-istediği Nerd Font'u önerir (aşağıda). Ardından yeni bir terminal açın. Seçenekler `sh -s --`
-sonrasına yazılır, örneğin tmux'u ve fontu sormadan kurmak için `... | sh -s -- --yes`, ya da
+motoru `imux-core` ile birlikte `~/.local/bin` dizinine kurar, bu dizini kabuğunuzun PATH'ine ekler
+(zsh, bash ya da fish) ve kenar panelin simgelerinin istediği Nerd Font'u önerir (aşağıda).
+Ardından yeni bir terminal açın. Seçenekler `sh -s --` sonrasına yazılır, örneğin fontu sormadan
+kurmak için `... | sh -s -- --yes`, ya da
 `--version v0.1.0`, `--prefix DİZİN`, `--no-modify-path`, `--no-font`.
 
 Go 1.27+ ile kendiniz de derleyebilirsiniz:
@@ -73,9 +73,8 @@ i-mux onu hatırlar (`tmux.sidebar_width`).
 düzenleyicin, bildirimler, simgeler, renk teması, geçişten sonra yeni ajanın ne
 yapacağı, limitte ne olacağı ve ayar dosyası. Bir satıra Enter ya da tıklama, değerlerinin menüsünü
 açar (● şu ankini gösterir); birini seç ya da numarasına bas. Oradaki **Sürümler ve güncellemeler** (ya da `imux
-versions`) i-mux'u, tmux'u ve her agent CLI'ını sürümü ve onu güncelleyen (kurulu değilse kuran)
-komutla listeler; harfine basınca komut orada çalışır. Eski bir tmux'ta neyin eksik olduğunu ve sisteminde yenisini nasıl
-alacağını da söyler. **Editörde yapay zekâ tamamlama** VS Code'daki Copilot
+versions`) i-mux'u, motorunu ve her agent CLI'ını sürümü ve onu güncelleyen (kurulu değilse kuran)
+komutla listeler; harfine basınca komut orada çalışır. **Editörde yapay zekâ tamamlama** VS Code'daki Copilot
 gibi çalışır: oradan **Düzenleyici → Neovim + Copilot**'u seçince düzenlediğin dosyalar GitHub'ın
 Copilot eklentili Neovim'inde açılır (Tab
 öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
@@ -85,8 +84,8 @@ GitHub Copilot'a bir kez giriş yaptırır.
 i-mux (kendi renkleri, varsayılan), Catppuccin, Catppuccin Latte, Tokyo Night (ve Day), Dracula, Nord, Gruvbox (ve Light),
 One Dark ve One Light, Solarized (ve Light), Kanagawa (ve Lotus), Rosé Pine (ve Dawn), Vesper ya da
 Terminal (terminalinin kendi renkleri). Ayarlar → **Tema** birini seçer; **Terminalin açık/koyu
-moduna uy**, terminalin açık ya da koyuya geçince temanın açık ve koyu sürümleri arasında geçer
-(tmux 3.6 ve sonrası). Tema, bir terminal teması gibi bütün pencereyi, ajanların panellerini ve
+moduna uy**, terminalin açık ya da koyuya geçince temanın açık ve koyu sürümleri arasında geçer.
+Tema, bir terminal teması gibi bütün pencereyi, ajanların panellerini ve
 terminalin kenarlarını da boyar (i-mux'tan çıkınca terminal kendi arka planına döner); i-mux ve
 Terminal temaları terminalinin kendi renklerini korur. Tek
 tek renkler `[theme.custom]` içinde değiştirilebilir (bkz. [docs/CONFIG.md](docs/CONFIG.md)).
@@ -211,22 +210,16 @@ yazar):
 on_limit = "ask"   # ask (varsayılan) | auto: `order` içindeki sıradaki agent'a geç | off: yalnızca göster
 ```
 
-## i-mux-core motoru (beta)
+## Motor
 
-i-mux tmux üzerinde çalışır. Aynı sürümle gelen **i-mux-core** üzerinde de çalışabilir: i-mux için
-yapılmış, tmux ile uyumlu bir motor (`imux-core`, `imux`'un yanında). Varsayılan tmux olarak
-kalır; motoru denemek için Ayarlar (raydaki ⚙) → Engine (beta) seçin ya da `~/.imux/config.toml`
-içinde ayarlayın:
+i-mux, i-mux için yapılmış ve tmux'un komutlarını konuşan bir terminal motoru olan **i-mux-core**
+üzerinde çalışır; aynı sürümle gelir (`imux-core`, `imux`'un yanında) ve tmux kurulu olsa da
+olmasa da tek motordur. `imux doctor` sürümünü gösterir. Önceki bir sürümden
+`~/.imux/config.toml` içinde kalan `[engine] backend = "tmux"` bir uyarıyla yok sayılır.
 
-```toml
-[engine]
-backend = "core"   # "tmux" (varsayılan) | "core"
-```
-
-İki motor oturumlarını ayrı tutar; bu yüzden i-mux geçmeden önce açık oturumları kapatmanızı ister.
-Geri dönmek için yeniden tmux'u seçin (ya da `backend = "tmux"`). `imux doctor` hangi motorun
-kullanıldığını ve sürümünü gösterir. tmux'tan farklı görünen ya da davranan bir şey mi var?
-"Engine (beta)" şablonuyla bir issue açın.
+tmux üzerinde çalışan bir sürümden güncelliyorsanız: i-mux o tmux sunucusunun hâlâ çalıştırdığı
+oturumları artık görmez. Projeleriniz i-mux'un anlık görüntülerinden geri gelir (Son oturumu geri
+yükle); eski sunucuyla işiniz bitince kapatın: `tmux -L imux kill-server`.
 
 ## Gizlilik
 

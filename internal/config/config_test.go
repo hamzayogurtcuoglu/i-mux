@@ -111,23 +111,21 @@ func TestUnknownKeyWarns(t *testing.T) {
 	}
 }
 
+// TestEngineBackend (D87): the engine is i-mux-core; a backend of "tmux",
+// from earlier versions, or any other is read, ignored and warned about.
 func TestEngineBackend(t *testing.T) {
 	cfg, warns, err := Parse([]byte("[engine]\nbackend = \"core\"\n"))
-	if err != nil || len(warns) != 0 {
-		t.Fatalf("core: %v %v", warns, err)
+	if err != nil || len(warns) != 0 || cfg.Engine.Backend != "core" {
+		t.Fatalf("core: %+v %v %v", cfg.Engine, warns, err)
 	}
-	if cfg.Engine.Backend != "core" {
-		t.Fatalf("core: %+v", cfg.Engine)
-	}
-	if cfg, _, err := Parse(nil); err != nil || cfg.Engine.Backend != "tmux" {
+	if cfg, _, err := Parse(nil); err != nil || cfg.Engine.Backend != "core" {
 		t.Fatalf("default: %+v %v", cfg.Engine, err)
 	}
-	_, warns, err = Parse([]byte("[engine]\nbackend = \"psmux\"\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(warns) != 1 || !strings.Contains(warns[0], "engine.backend") {
-		t.Fatalf("invalid: %q", strings.Join(warns, "\n"))
+	for _, v := range []string{"tmux", "screen"} {
+		cfg, warns, err := Parse([]byte("[engine]\nbackend = \"" + v + "\"\n"))
+		if err != nil || cfg.Engine.Backend != "core" || len(warns) != 1 || !strings.Contains(warns[0], "i-mux runs on i-mux-core") {
+			t.Fatalf("%s: %+v %q %v", v, cfg.Engine, warns, err)
+		}
 	}
 }
 

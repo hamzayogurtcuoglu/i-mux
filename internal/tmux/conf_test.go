@@ -199,7 +199,7 @@ func TestConfLoadsInRealTmux(t *testing.T) {
 		t.Fatal(err)
 	}
 	// start-server with the generated file must not complain.
-	cmd := exec.Command("tmux", "-L", c.Socket, "-f", conf, "start-server")
+	cmd := exec.Command(c.Bin, "-L", c.Socket, "-f", conf, "start-server")
 	if out, err := cmd.CombinedOutput(); err != nil || len(out) > 0 {
 		t.Fatalf("start-server: %v %s", err, out)
 	}

@@ -6,8 +6,23 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **i-mux runs on its own engine, i-mux-core, and no longer on tmux.** The engine ships with
+  i-mux (`imux-core`, next to `imux`) and is used on every system, whether tmux is installed or
+  not; the installer and the Homebrew formula no longer install tmux. An `[engine] backend =
+  "tmux"` left in your config is ignored with a warning, and the Settings engine row is gone.
+  Sessions an earlier i-mux still runs on tmux are not seen any more: your projects come back
+  from i-mux's snapshots (Restore last session), and `tmux -L imux kill-server` closes the old
+  server (the installer says so when it finds one).
+
 ### Fixed
 
+- **A theme chosen right after another stays.** Choosing two themes quickly could leave the first
+  one in tmux: the watcher, restarting for the first change, took the second for the one it had
+  read. On i-mux-core, a command that reaches a server while it is closing now says "no server
+  running", as tmux does, and the engine's server uses at most two threads, which keeps key
+  latency low on small machines.
 - **Windows: the engine in the Windows builds runs.** The imux-core that i-mux's Windows builds
   carried predated the engine's Windows server and refused to start one; i-mux now builds the
   engine that has it, which also works from an elevated ("Run as administrator") terminal.

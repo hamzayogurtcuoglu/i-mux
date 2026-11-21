@@ -131,14 +131,11 @@ open              = "window"
 browser           = ""
 
 [engine]
-# What runs everything on screen (D83): "tmux" (the default) or "core", the
-# i-mux-core engine that ships with i-mux. With "core", the imux-core binary
-# next to the imux binary is used, else the one on the PATH; IMUX_TMUX_BIN
-# overrides both. The two engines keep their sessions apart; switching asks
-# that the running sessions be closed first. Settings (⚙ on the rail) →
-# Engine (beta) chooses. On Windows, where tmux does not run, it is always
-# core (D85).
-backend           = "tmux"
+# What runs everything on screen: i-mux-core, the engine that ships with
+# i-mux (D87), whether tmux is installed or not. The imux-core binary next to
+# the imux binary is used, else the one on the PATH; IMUX_TMUX_BIN overrides
+# both. "tmux", from earlier versions, is ignored with a warning.
+backend           = "core"
 
 [completion]
 # Copilot-like suggestions while you edit a file (Tab accepts): files open in

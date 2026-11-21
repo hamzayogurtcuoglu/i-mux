@@ -16,7 +16,7 @@ PKGS      ?= ./...
 
 export CGO_ENABLED = 0
 
-.PHONY: all build install test race e2e e2e-core e2e-core-argv lint fmt bench fuzz-short check-fixtures size clean generate \
+.PHONY: all build install test race e2e e2e-core-argv lint fmt bench fuzz-short check-fixtures size clean generate \
 	ci lint-all generate-check shellcheck test-macos
 
 all: lint test build
@@ -82,20 +82,17 @@ test-macos: ## Unit tests with TMPDIR behind a symlink, as on macOS
 	trap 'rm -rf "$$real" "$$real.link"' EXIT && \
 	TMPDIR="$$real.link" $(GO) test -count=1 $(PKGS)
 
-e2e: build ## End-to-end tests against a real tmux on a private socket
-	IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) $(GO) test -tags e2e -count=1 -timeout 15m ./e2e/...
-
-# The i-mux-core engine (D83): by default bin/imux-core, built by `make build`
+# The engine, i-mux-core (D87): by default bin/imux-core, built by `make build`
 # from go.mod's pin, which is what releases ship; IMUX_CORE_BIN picks another,
 # e.g. IMUX_CORE_BIN=../i-mux-core/bin/imux-core for the engine's working tree.
 IMUX_CORE_BIN ?= $(CURDIR)/bin/$(CORE)
-e2e-core: build ## End-to-end tests on the i-mux-core engine (D83)
-	@test -x "$(IMUX_CORE_BIN)" || { echo >&2 "e2e-core: $(IMUX_CORE_BIN) not found"; exit 2; }
+e2e: build ## End-to-end tests on the engine (i-mux-core) on a private socket
+	@test -x "$(IMUX_CORE_BIN)" || { echo >&2 "e2e: $(IMUX_CORE_BIN) not found"; exit 2; }
 	"$(IMUX_CORE_BIN)" -V
 	IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) IMUX_TMUX_BIN=$(IMUX_CORE_BIN) $(GO) test -tags e2e -count=1 -timeout 20m ./e2e/...
 
 # The same with the command lines of a system without a POSIX shell (§9.2a):
-# Windows' argv forms, checked here on i-mux-core (tmux cannot run them).
+# Windows' argv forms, checked here on macOS and Linux.
 e2e-core-argv: build ## End-to-end tests on i-mux-core with Windows' command lines (§9.2a)
 	@test -x "$(IMUX_CORE_BIN)" || { echo >&2 "e2e-core-argv: $(IMUX_CORE_BIN) not found"; exit 2; }
 	IMUX_ARGV_FORM=1 IMUX_E2E_BIN=$(CURDIR)/bin/$(BINARY) IMUX_TMUX_BIN=$(IMUX_CORE_BIN) $(GO) test -tags e2e -count=1 -timeout 20m ./e2e/...

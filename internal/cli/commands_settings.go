@@ -58,7 +58,6 @@ var settingKeys = map[string]settingKey{
 	"hidden_files": {"explorer", "show_hidden", []string{"on", "off"}, false}, // the explorer's ⋯ (D63)
 	"theme_auto":   {"theme", "auto_switch", []string{"on", "off"}, false},    // follow the terminal's light/dark (D68)
 	"hooks":        {"hooks", "enabled", []string{"on", "off"}, false},        // agents' states from their hooks (D71)
-	"engine":       {"engine", "backend", []string{"tmux", "core"}, true},     // what runs everything on screen (D83)
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane
@@ -104,10 +103,6 @@ func runSettings(e *Env, args []string) error {
 	case "set":
 		if len(pos) != 3 {
 			return usage
-		}
-		if pos[1] == "engine" {
-			// The engine switch has a guard of its own (D83).
-			return engineSwitch(e, pos[2], *paneF, *clientF, false)
 		}
 		if err := setSetting(pos[1], pos[2]); err != nil {
 			w, _, werr := newWorkspace(e, false)

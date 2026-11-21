@@ -38,9 +38,7 @@ var windowsSkips = map[string]string{
 	// What only macOS and Linux have.
 	"TestClick":                       "macOS and Linux install commands (npm); Windows' are winget's",
 	"TestInstallMissingAgent":         "macOS and Linux install commands (npm); Windows' are winget's",
-	"TestVersions":                    "tmux's row; Windows has no tmux",
-	"TestDoctor":                      "the engine row on tmux; Windows' engine is always i-mux-core (D85)",
-	"TestEngineSwitch":                "switching to tmux; Windows' engine is always i-mux-core (D85)",
+	"TestOnlyTheEngine":               "the fake tmux and engine are sh scripts",
 	"TestOpenPickerAndClose":          "'/'-separated folders (~/code/acme-api)",
 	"TestSidebarProjectsNamesChanges": "'/'-separated folders (~/blog)",
 

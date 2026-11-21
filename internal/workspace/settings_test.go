@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
-
 	"github.com/hamzayogurtcuoglu/i-mux/internal/editor"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 )
@@ -36,7 +34,6 @@ func noMicro(t *testing.T) {
 // TestSettingsMenu (D50): each row shows its value and opens a menu of
 // its values; actions open popups.
 func TestSettingsMenu(t *testing.T) {
-	testutil.SkipOnWindows(t, "Windows has no engine row (D85)")
 	i18n.SetLocale("en")
 	w, f, _ := testWS(t)
 	noMicro(t)
@@ -47,7 +44,7 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	got := strings.Join(names, "|")
 	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|t Theme: i-mux|a Follow the terminal's light/dark: Off|" +
-		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me|h Agent states from their hooks: Off|g Engine (beta): tmux (default)| |o Open the config file…"
+		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me|h Agent states from their hooks: Off| |o Open the config file…"
 	if m.Title != "i-mux · Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
 	}

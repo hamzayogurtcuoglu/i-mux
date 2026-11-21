@@ -75,9 +75,9 @@ func TestBinaryRuns(t *testing.T) {
 	}
 }
 
-func TestTmuxAvailable(t *testing.T) {
+func TestEngineAvailable(t *testing.T) {
 	out, err := exec.Command(tmuxBin(t), "-V").CombinedOutput()
-	if err != nil {
-		t.Fatalf("tmux not available: %v %s", err, out)
+	if err != nil || !strings.Contains(string(out), "imux-core") {
+		t.Fatalf("the engine is not available: %v %s", err, out)
 	}
 }

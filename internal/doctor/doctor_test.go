@@ -128,11 +128,11 @@ func TestDoctor(t *testing.T) {
 		t.Errorf("file perm: %+v", x)
 	}
 
-	// Missing tmux and no agents are hard failures; --ci skips agents.
+	// A missing engine and no agents are hard failures; --ci skips agents.
 	o.Tmux.Runner = fakeTmux{""}
 	o.Resolved = map[session.AgentID]agent.Resolved{}
 	r = Run(context.Background(), o)
-	if !r.Failed() || find(r, "tmux is not installed") == nil || find(r, "no agent CLI") == nil {
+	if !r.Failed() || find(r, "the engine (imux-core) is not found") == nil || find(r, "no agent CLI") == nil {
 		t.Fatalf("failures: %+v", r.Results)
 	}
 	o.Tmux.Runner = fakeTmux{"3.8"}

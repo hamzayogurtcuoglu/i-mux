@@ -23,8 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
 
@@ -126,11 +124,11 @@ func Socket() string {
 }
 
 // New returns a client for imux's socket with config file conf. The engine
-// binary is IMUX_TMUX_BIN when set, else the configured backend's (D83).
+// is i-mux-core (D87): IMUX_TMUX_BIN when set, else EngineBin().
 func New(conf string) *Client {
 	bin := os.Getenv("IMUX_TMUX_BIN")
 	if bin == "" {
-		bin = BackendBin(backendFromConfig())
+		bin = EngineBin()
 	}
 	return &Client{
 		Bin:    bin,
@@ -141,26 +139,11 @@ func New(conf string) *Client {
 	}
 }
 
-// backendFromConfig reads the engine backend from the configuration; "" (so
-// tmux) when the file is missing or unreadable — the same default as before
-// the switch existed.
-func backendFromConfig() string {
-	cfg, _, err := config.Load(paths.Config())
-	if err != nil || cfg == nil {
-		return ""
-	}
-	return cfg.Engine.Backend
-}
-
-// BackendBin resolves the engine binary for a backend (D83): "core" uses the
-// imux-core next to the running imux binary, else the one on the PATH —
-// neither found, the name is returned and the exec error names it too, while
-// doctor explains. Any other backend is tmux, where tmux runs (on Windows
-// every backend is core, D85).
-func BackendBin(backend string) string {
-	if backend != "core" && sysx.HasTmux {
-		return "tmux"
-	}
+// EngineBin is the engine i-mux runs on, i-mux-core (D87), whether tmux is
+// installed or not: the imux-core next to the running imux binary, else the
+// one on the PATH; neither found, the name, so the exec error names it too,
+// while doctor explains.
+func EngineBin() string {
 	if self, err := os.Executable(); err == nil {
 		p := filepath.Join(filepath.Dir(self), "imux-core"+sysx.ExeSuffix)
 		if st, err := os.Stat(p); err == nil && !st.IsDir() && sysx.Executable(st) {

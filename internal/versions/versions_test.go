@@ -53,98 +53,6 @@ func row(t *testing.T, rows []Row, name string) Row {
 	return Row{}
 }
 
-const aptTmux = "env LC_ALL=C apt-cache policy tmux"
-
-func TestTmuxRow(t *testing.T) {
-	testutil.SkipOnWindows(t, "tmux's rows (apt, Homebrew); Windows has no tmux")
-	i18n.SetLocale("en")
-	ctx := context.Background()
-	for _, c := range []struct {
-		name    string
-		bins    map[string]string
-		outputs map[string]string
-		root    bool
-		status  Status
-		fix     string
-		note    string
-	}{
-		{
-			name: "Ubuntu 22.04: apt's newer tmux is the same 3.2a",
-			bins: map[string]string{"tmux": "/usr/bin/tmux", "apt-get": "/usr/bin/apt-get"},
-			outputs: map[string]string{
-				"/usr/bin/tmux -V": "tmux 3.2a\n",
-				aptTmux:            "tmux:\n  Installed: 3.2a-4ubuntu0.2\n  Candidate: 3.2a-4ubuntu0.3\n",
-			},
-			status: Old, note: "apt has no newer tmux here",
-		},
-		{
-			name: "apt has a newer tmux",
-			bins: map[string]string{"tmux": "/usr/bin/tmux", "apt-get": "/usr/bin/apt-get"},
-			outputs: map[string]string{
-				"/usr/bin/tmux -V": "tmux 3.3a\n",
-				aptTmux:            "tmux:\n  Installed: 3.3a-3\n  Candidate: 1:3.5a-1\n",
-			},
-			status: Old, fix: "sudo apt-get install -y --only-upgrade tmux", note: "3.4+: the agent bar takes clicks",
-		},
-		{
-			name: "as root, no sudo",
-			bins: map[string]string{"tmux": "/usr/bin/tmux", "apt-get": "/usr/bin/apt-get"},
-			outputs: map[string]string{
-				"/usr/bin/tmux -V": "tmux 3.3a\n",
-				aptTmux:            "tmux:\n  Installed: 3.3a-3\n  Candidate: 3.4-1\n",
-			},
-			root: true, status: Old, fix: "apt-get install -y --only-upgrade tmux", note: "3.4+: the agent bar takes clicks",
-		},
-		{
-			name:    "apt has none newer, Homebrew is there",
-			bins:    map[string]string{"tmux": "/usr/bin/tmux", "apt-get": "/usr/bin/apt-get", "brew": "/home/linuxbrew/.linuxbrew/bin/brew"},
-			outputs: map[string]string{"/usr/bin/tmux -V": "tmux 3.2a\n", aptTmux: "tmux:\n  Installed: 3.2a-4\n  Candidate: 3.2a-4\n"},
-			status:  Old, fix: "brew install tmux",
-		},
-		{
-			name:    "Homebrew's tmux",
-			bins:    map[string]string{"tmux": "/opt/homebrew/bin/tmux", "brew": "/opt/homebrew/bin/brew"},
-			outputs: map[string]string{"/opt/homebrew/bin/tmux -V": "tmux 3.3a\n"},
-			status:  Old, fix: "brew upgrade tmux",
-		},
-		{
-			name:    "new enough",
-			bins:    map[string]string{"tmux": "/opt/homebrew/bin/tmux", "brew": "/opt/homebrew/bin/brew"},
-			outputs: map[string]string{"/opt/homebrew/bin/tmux -V": "tmux 3.6\n"},
-			status:  OK,
-		},
-		{
-			name:    "3.4: menus take the mouse there too (D54)",
-			bins:    map[string]string{"tmux": "/usr/bin/tmux", "apt-get": "/usr/bin/apt-get"},
-			outputs: map[string]string{"/usr/bin/tmux -V": "tmux 3.4\n", aptTmux: "tmux:\n  Installed: 3.4-1\n  Candidate: 3.5a-1\n"},
-			status:  OK,
-		},
-		{
-			name:   "missing, Fedora",
-			bins:   map[string]string{"dnf": "/usr/bin/dnf"},
-			status: Missing, fix: "sudo dnf install -y tmux", note: "not installed",
-		},
-		{
-			name:   "missing, no package manager known",
-			bins:   map[string]string{},
-			status: Missing, note: "update tmux with your package manager",
-		},
-	} {
-		e := fakeEnv(c.bins, c.outputs, nil)
-		e.Root = c.root
-		r := tmuxRow(ctx, e)
-		if r.Status != c.status || r.Show != c.fix || !strings.Contains(r.Note, c.note) || strings.Join(r.Fix, " ") != c.fix {
-			t.Errorf("%s: status %d fix %q show %q note %q", c.name, r.Status, r.Fix, r.Show, r.Note)
-		}
-		if !r.Tmux || r.Key != "t" {
-			t.Errorf("%s: %+v", c.name, r)
-		}
-	}
-	if r := tmuxRow(ctx, fakeEnv(map[string]string{"tmux": "/usr/bin/tmux"}, map[string]string{"/usr/bin/tmux -V": "tmux next-3.6\n"}, nil)); r.Status != OK || r.Version != "next-3.6" {
-		t.Errorf("a development tmux: %+v", r)
-	}
-}
-
 func TestAgentAndImuxRows(t *testing.T) {
 	testutil.SkipOnWindows(t, "POSIX install paths (/home/test/.local/bin)")
 	i18n.SetLocale("en")
@@ -152,7 +60,7 @@ func TestAgentAndImuxRows(t *testing.T) {
 		"claude": "2.1.319", "copilot": "1.0.107", "codex": "brew:0.50.0", "opencode": "1.4.2",
 	})
 	rows := Collect(context.Background(), e)
-	if len(rows) != 2+len(agent.Ordered(e.Cfg)) || rows[0].Name != "i-mux" || rows[1].Name != "tmux" {
+	if len(rows) != 2+len(agent.Ordered(e.Cfg)) || rows[0].Name != "i-mux" || rows[1].Name != "i-mux-core" {
 		t.Fatalf("rows %+v", rows)
 	}
 	for name, want := range map[string]string{
@@ -229,11 +137,5 @@ func TestFormat(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("lacks %q", want)
 		}
-	}
-	if aptPolicy("tmux:\n  Installed: (none)\n  Candidate: 3.2a-4\n"); upstream("1:3.5a-2ubuntu1") != "3.5a" || upstream("3.2a") != "3.2a" {
-		t.Error("upstream")
-	}
-	if i, c := aptPolicy("tmux:\n  Installed: (none)\n  Candidate: 3.2a-4\n"); i != "" || c != "3.2a-4" {
-		t.Errorf("aptPolicy %q %q", i, c)
 	}
 }

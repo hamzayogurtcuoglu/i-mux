@@ -119,10 +119,6 @@ func SetUmask() { syscall.Umask(0o077) }
 // something, so imux sets them (0600 files, 0700 folders) and checks them.
 const PermBits = true
 
-// HasTmux reports whether tmux runs on this system, so the engine can be
-// either tmux or i-mux-core (D83).
-const HasTmux = true
-
 // ExeSuffix ends an executable's file name.
 const ExeSuffix = ""
 

@@ -22,9 +22,9 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/watch"
 )
 
-// tmuxBin is the engine the suite runs on: IMUX_TMUX_BIN when set (i-mux-core,
-// or a particular tmux build), else tmux on PATH — the same order imux itself
-// uses, so the harness's engine and the binary under test agree.
+// tmuxBin is the engine the suite runs on, i-mux-core (D87): IMUX_TMUX_BIN
+// when set (make e2e sets it), else the imux-core next to the imux under
+// test, the same order imux itself uses.
 func tmuxBin(t *testing.T) string {
 	t.Helper()
 	if b := os.Getenv("IMUX_TMUX_BIN"); b != "" {
@@ -33,11 +33,14 @@ func tmuxBin(t *testing.T) string {
 		}
 		return b
 	}
-	b, err := exec.LookPath("tmux")
-	if err != nil {
-		t.Skip("tmux not installed")
+	if bin := os.Getenv("IMUX_E2E_BIN"); bin != "" {
+		p := filepath.Join(filepath.Dir(bin), "imux-core"+exeSuffix)
+		if st, err := os.Stat(p); err == nil && executable(st) {
+			return p
+		}
 	}
-	return b
+	t.Skip("no engine: set IMUX_TMUX_BIN, or run via make e2e")
+	return ""
 }
 
 // H is one isolated e2e environment: its own tmux socket, IMUX_HOME, fake

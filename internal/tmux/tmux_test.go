@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -175,13 +174,19 @@ func TestParseVersion(t *testing.T) {
 	}
 }
 
-func TestBackendBin(t *testing.T) {
-	testutil.SkipOnWindows(t, "the engine is always i-mux-core on Windows (D85)")
-	if b := BackendBin(""); b != "tmux" {
-		t.Fatalf("empty backend: %q", b)
+// TestEngineBin (D87): the engine is i-mux-core, whether tmux is installed or
+// not: the imux-core next to the running binary, else the one on the PATH.
+func TestEngineBin(t *testing.T) {
+	testutil.SkipOnWindows(t, "sh scripts as the fake engines")
+	dir := t.TempDir()
+	for _, name := range []string{"tmux", "imux-core"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if b := BackendBin("tmux"); b != "tmux" {
-		t.Fatalf("tmux backend: %q", b)
+	t.Setenv("PATH", dir) // tmux there too: it is never taken
+	if b := EngineBin(); b != filepath.Join(dir, "imux-core") {
+		t.Fatalf("on the PATH, tmux beside it: %q", b)
 	}
 	// The imux-core next to the running binary wins over the PATH.
 	self, err := os.Executable()
@@ -193,48 +198,33 @@ func TestBackendBin(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(sibling)
-	if b := BackendBin("core"); b != sibling {
+	if b := EngineBin(); b != sibling {
 		t.Fatalf("sibling: %q", b)
-	}
-	// Without it, the one on the PATH is used.
-	os.Remove(sibling)
-	dir := t.TempDir()
-	onPath := filepath.Join(dir, "imux-core")
-	if err := os.WriteFile(onPath, []byte("#!/bin/sh\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", dir)
-	if b := BackendBin("core"); b != onPath {
-		t.Fatalf("path: %q", b)
 	}
 }
 
+// TestNewResolvesEngine (D87): IMUX_TMUX_BIN wins; else the engine is
+// i-mux-core, a config's backend = "tmux" from earlier versions included.
 func TestNewResolvesEngine(t *testing.T) {
-	testutil.SkipOnWindows(t, "the engine is always i-mux-core on Windows (D85)")
+	testutil.SkipOnWindows(t, "sh scripts as the fake engines")
 	t.Setenv("IMUX_HOME", t.TempDir()) // never the real ~/.imux
-	t.Setenv("IMUX_TMUX_BIN", "/somewhere/tmux")
-	if c := New(""); c.Bin != "/somewhere/tmux" {
+	t.Setenv("IMUX_TMUX_BIN", "/somewhere/engine")
+	if c := New(""); c.Bin != "/somewhere/engine" {
 		t.Fatalf("IMUX_TMUX_BIN: %q", c.Bin)
 	}
 	t.Setenv("IMUX_TMUX_BIN", "")
 	dir := t.TempDir()
-	core := filepath.Join(dir, "imux-core")
-	if err := os.WriteFile(core, []byte("#!/bin/sh\n"), 0o755); err != nil {
-		t.Fatal(err)
+	for _, name := range []string{"tmux", "imux-core"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := os.WriteFile(filepath.Join(os.Getenv("IMUX_HOME"), "config.toml"), []byte("[engine]\nbackend = \"core\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(os.Getenv("IMUX_HOME"), "config.toml"), []byte("[engine]\nbackend = \"tmux\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir)
-	if c := New(""); c.Bin != core {
-		t.Fatalf("config core: %q", c.Bin)
-	}
-	if err := os.WriteFile(filepath.Join(os.Getenv("IMUX_HOME"), "config.toml"), []byte(""), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", "/usr/bin:/bin")
-	if c := New(""); c.Bin != "tmux" {
-		t.Fatalf("config default: %q", c.Bin)
+	if c := New(""); c.Bin != filepath.Join(dir, "imux-core") {
+		t.Fatalf("backend = \"tmux\", tmux installed: %q", c.Bin)
 	}
 }
 
@@ -307,10 +297,7 @@ func FuzzSectionsRows(f *testing.F) {
 
 func realClient(t *testing.T) *Client {
 	t.Helper()
-	if _, err := exec.LookPath("tmux"); err != nil {
-		t.Skip("tmux not installed")
-	}
-	c := &Client{Bin: "tmux", Socket: "imux-test-" + randHex(t), Config: "/dev/null", Runner: ExecRunner{}}
+	c := &Client{Bin: testutil.Engine(t), Socket: "imux-test-" + randHex(t), Config: "/dev/null", Runner: ExecRunner{}}
 	t.Cleanup(func() { _, _ = c.Do(Cmd{"kill-server"}) })
 	return c
 }

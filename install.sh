@@ -7,15 +7,14 @@
 # when piping, e.g. `curl ... | sh -s -- --yes`):
 #   --prefix DIR       install directory (default ~/.local/bin; env IMUX_INSTALL_DIR)
 #   --version vX.Y.Z   install this release instead of the latest (env IMUX_VERSION)
-#   --yes              install tmux (if missing) and the Nerd Font without asking
+#   --yes              install the Nerd Font without asking
 #   --no-modify-path   do not add the install directory to your shell profile
 #   --no-font          do not offer the Nerd Font (env IMUX_NO_FONT=1)
 #
 # Downloads the release for this OS and architecture, verifies its sha256
 # against checksums.txt, installs imux and the i-mux-core engine (both or
-# neither), and puts the install directory on PATH in your shell profile. If
-# tmux is missing it offers to install it with the system package manager; it
-# asks first and says so before it uses sudo. Then it offers the Nerd Font the
+# neither), and puts the install directory on PATH in your shell profile; tmux
+# is not needed, i-mux runs on imux-core (D87). Then it offers the Nerd Font the
 # sidebar's icons need (imux font install: for your user only; on WSL in
 # Windows, where the terminal runs, with Windows Terminal and VS Code set).
 set -eu
@@ -264,53 +263,14 @@ if [ "$on_path" -eq 0 ]; then
 	fi
 fi
 
-# tmux is imux's only runtime dependency.
-if have tmux; then
-	say "tmux found: $(tmux -V)"
-else
+# i-mux runs on its own engine, imux-core, installed beside it (D87): tmux is
+# not needed. Sessions an earlier i-mux still runs on tmux are not seen any
+# more; say how to close them (their projects come back from i-mux's
+# snapshots).
+if have tmux && tmux -L imux has-session >/dev/null 2>&1; then
 	say ""
-	say "imux needs tmux, which is not installed."
-	pm=""
-	if have brew; then
-		pm="brew install tmux"
-	elif have apt-get; then
-		pm="apt-get install -y tmux"
-	elif have dnf; then
-		pm="dnf install -y tmux"
-	elif have pacman; then
-		# A fresh Arch has no package database yet, and -Sy alone risks a
-		# partial upgrade; -Syu is how Arch installs a package safely.
-		pm="pacman -Syu --needed --noconfirm tmux"
-	elif have zypper; then
-		pm="zypper --non-interactive install tmux"
-	elif have apk; then
-		pm="apk add tmux"
-	fi
-	if [ -z "$pm" ]; then
-		say "Install tmux with your package manager, then run: imux doctor"
-	else
-		sudo=""
-		if [ "${pm%% *}" != "brew" ] && [ "$(id -u)" -ne 0 ]; then
-			sudo="sudo "
-		fi
-		if [ -n "$sudo" ]; then
-			say "Installing it runs, with sudo (administrator rights): ${sudo}${pm}"
-		else
-			say "Installing it runs: ${pm}"
-		fi
-		if [ "${pm%% *}" = "brew" ] && [ "$os" = darwin ] && [ "$(uname -m)" = x86_64 ]; then
-			# Homebrew has no Intel macOS builds of tmux: it compiles it.
-			say "On an Intel Mac Homebrew builds tmux and its libraries from source: this can take 10-30 minutes."
-		fi
-		if confirm "Install tmux now?"; then
-			# shellcheck disable=SC2086 # word splitting of the command is intended
-			if [ "${pm%% *}" = "apt-get" ]; then ${sudo}apt-get update -q; fi
-			# shellcheck disable=SC2086 # word splitting of the command is intended
-			${sudo}${pm} || die "tmux installation failed; install it yourself, then run: imux doctor"
-		else
-			say "Skipped. Install tmux yourself, then run: imux doctor"
-		fi
-	fi
+	say "Sessions from an earlier i-mux still run on tmux; i-mux now runs on its own engine."
+	say "Close them when you are done with them: tmux -L imux kill-server"
 fi
 
 # The sidebar's icons need a Nerd Font where the terminal draws text (D34).

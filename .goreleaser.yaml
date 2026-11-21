@@ -90,10 +90,8 @@ brews:
       token: "{{ envOrDefault \"HOMEBREW_TAP_GITHUB_TOKEN\" \"\" }}"
     directory: Formula
     homepage: https://github.com/hamzayogurtcuoglu/i-mux
-    description: Continue an AI coding conversation in another agent CLI, inside tmux
+    description: Continue an AI coding conversation in another agent CLI, on its own engine
     license: MIT
-    dependencies:
-      - name: tmux
     install: |
       bin.install "imux", "imux-core"
     test: |

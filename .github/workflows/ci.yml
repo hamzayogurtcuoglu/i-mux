@@ -72,6 +72,8 @@ jobs:
           CGO_ENABLED: "1"
         run: go test -race -count=1 ./...
 
+  # The e2e suite on the engine, i-mux-core (D87), built from go.mod's pin
+  # by make build; no tmux is installed.
   e2e:
     strategy:
       fail-fast: false
@@ -83,24 +85,6 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      # tmux is pinned, not the runner's (T91.2): Ubuntu 26.04's tmux 3.6
-      # closes menus by itself (docs/TROUBLESHOOTING.md).
-      - name: tmux cache
-        if: runner.os == 'Linux'
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/tmux-3.8
-          key: tmux-3.8-${{ runner.os }}-${{ runner.arch }}
-      - name: Build the pinned tmux (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -q && sudo apt-get install -y -q libevent-dev libncurses-dev bison pkg-config
-          scripts/ci-tmux.sh
-      - name: Install tmux (macOS)
-        if: runner.os == 'macOS'
-        run: brew install tmux
-      - name: tmux version
-        run: tmux -V
       - name: End-to-end tests
         run: make e2e
 
@@ -127,29 +111,6 @@ jobs:
           $env:IMUX_E2E_BIN = "$PWD\bin\imux.exe"
           $env:IMUX_TMUX_BIN = "$PWD\bin\imux-core.exe"
           go test -tags e2e -count=1 -timeout 45m ./e2e/...
-
-  # The same suite on the i-mux-core engine (D83), built from go.mod's pin by
-  # make build. tmux is installed as in e2e: the installer's tests expect it;
-  # every engine call of imux and of the harness goes to imux-core.
-  e2e-core:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-      - name: Install tmux (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update -q && sudo apt-get install -y -q tmux
-      - name: Install tmux (macOS)
-        if: runner.os == 'macOS'
-        run: brew install tmux
-      - name: End-to-end tests on i-mux-core
-        run: make e2e-core
 
   size:
     runs-on: ubuntu-latest

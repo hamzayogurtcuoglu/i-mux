@@ -64,7 +64,7 @@ var TmuxWants = tmux.ClickMinVersion
 
 // Collect reads every row: i-mux, tmux, then the agents in config order.
 func Collect(ctx context.Context, e Env) []Row {
-	rows := []Row{imuxRow(e), tmuxRow(ctx, e)}
+	rows := []Row{imuxRow(e), engineRow(ctx, e)}
 	agents := agent.Ordered(e.Cfg)
 	out := make([]Row, len(agents))
 	var wg sync.WaitGroup
@@ -90,63 +90,11 @@ func imuxRow(e Env) Row {
 	return r
 }
 
-func tmuxRow(ctx context.Context, e Env) Row {
-	if !sysx.HasTmux {
-		return engineRow(ctx, e)
-	}
-	r := Row{Key: "t", Name: "tmux", Tmux: true}
-	path, err := e.LookPath("tmux")
-	if err != nil {
-		r.Status, r.Note = Missing, i18n.T("versions.tmux_missing")
-		r.Fix = pmCmd(e, false)
-		if r.Fix == nil {
-			r.Note += "\n" + i18n.T("versions.tmux_pm")
-		}
-		r.Show = shellText(r.Fix)
-		return r
-	}
-	v, ok := tmux.ParseVersion(e.Output(ctx, path, "-V"))
-	if !ok {
-		r.Status, r.Note = Unknown, i18n.T("versions.unknown")
-		return r
-	}
-	r.Version = v.String()
-	switch {
-	case !v.AtLeast(tmux.MinVersion[0], tmux.MinVersion[1]):
-		r.Status, r.Note = Old, i18n.T("versions.tmux_too_old")
-	case !v.AtLeast(TmuxWants[0], TmuxWants[1]):
-		r.Status, r.Note = Old, i18n.T("versions.tmux_34")
-	default:
-		return r
-	}
-	if brewTmux(e, path) {
-		r.Fix = []string{"brew", "upgrade", "tmux"}
-	} else if _, err := e.LookPath("apt-get"); err == nil {
-		// apt gives the release's tmux (Ubuntu 22.04: 3.2a): say so rather
-		// than offer an upgrade that changes nothing.
-		inst, cand := aptPolicy(e.Output(ctx, "env", "LC_ALL=C", "apt-cache", "policy", "tmux"))
-		if cand != "" && upstream(cand) != upstream(inst) {
-			r.Fix = sudo(e, "apt-get", "install", "-y", "--only-upgrade", "tmux")
-		} else if _, err := e.LookPath("brew"); err == nil {
-			r.Fix = []string{"brew", "install", "tmux"}
-		} else {
-			r.Note += "\n" + i18n.T("versions.tmux_no_newer", "apt")
-		}
-	} else {
-		r.Fix = pmCmd(e, true)
-		if r.Fix == nil {
-			r.Note += "\n" + i18n.T("versions.tmux_pm")
-		}
-	}
-	r.Show = shellText(r.Fix)
-	return r
-}
-
 // engineRow is tmux's row where there is no tmux (Windows, D85): the engine, i-mux-core, which
 // comes and updates with i-mux, so no package manager is offered (§7.9).
 func engineRow(ctx context.Context, e Env) Row {
 	r := Row{Key: "t", Name: "i-mux-core", Tmux: true}
-	path := tmux.BackendBin("core")
+	path := tmux.EngineBin()
 	if !filepath.IsAbs(path) {
 		r.Status, r.Note = Missing, i18n.T("versions.engine_missing")
 		return r
@@ -158,18 +106,6 @@ func engineRow(ctx context.Context, e Env) Row {
 	}
 	r.Version = v.EngineVersion()
 	return r
-}
-
-// brewTmux reports whether tmux at path is Homebrew's.
-func brewTmux(e Env, path string) bool {
-	if _, err := e.LookPath("brew"); err != nil {
-		return false
-	}
-	real, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		real = path
-	}
-	return fromBrew(real)
 }
 
 // fromWinGet reports whether a binary's path is WinGet's (its Links folder or a package it
@@ -186,78 +122,6 @@ func fromBrew(real string) bool {
 		}
 	}
 	return false
-}
-
-// pmCmd is the package manager's command that installs (or, with upgrade,
-// updates) tmux, the way install.sh picks it; nil when none is known.
-func pmCmd(e Env, upgrade bool) []string {
-	pms := []struct {
-		bin              string
-		install, upgrade []string
-	}{
-		{"brew", []string{"brew", "install", "tmux"}, []string{"brew", "upgrade", "tmux"}},
-		{"apt-get", []string{"apt-get", "install", "-y", "tmux"}, []string{"apt-get", "install", "-y", "--only-upgrade", "tmux"}},
-		{"dnf", []string{"dnf", "install", "-y", "tmux"}, []string{"dnf", "upgrade", "-y", "tmux"}},
-		{"pacman", []string{"pacman", "-Syu", "--needed", "--noconfirm", "tmux"}, []string{"pacman", "-Syu", "--needed", "--noconfirm", "tmux"}},
-		{"zypper", []string{"zypper", "--non-interactive", "install", "tmux"}, []string{"zypper", "--non-interactive", "update", "tmux"}},
-		{"apk", []string{"apk", "add", "tmux"}, []string{"apk", "upgrade", "tmux"}},
-	}
-	for _, pm := range pms {
-		if _, err := e.LookPath(pm.bin); err != nil {
-			continue
-		}
-		cmd := pm.install
-		if upgrade {
-			cmd = pm.upgrade
-		}
-		if pm.bin == "brew" {
-			return cmd
-		}
-		return sudo(e, cmd...)
-	}
-	return nil
-}
-
-// sudo prefixes argv with sudo unless running as root.
-func sudo(e Env, argv ...string) []string {
-	if e.Root {
-		return argv
-	}
-	return append([]string{"sudo"}, argv...)
-}
-
-// aptPolicy reads the installed and candidate versions from `apt-cache
-// policy` ("" when unknown; "(none)" counts as unknown).
-func aptPolicy(out string) (installed, candidate string) {
-	for _, l := range strings.Split(out, "\n") {
-		k, v, ok := strings.Cut(strings.TrimSpace(l), ":")
-		if !ok {
-			continue
-		}
-		v = strings.TrimSpace(v)
-		if v == "(none)" {
-			v = ""
-		}
-		switch k {
-		case "Installed":
-			installed = v
-		case "Candidate":
-			candidate = v
-		}
-	}
-	return installed, candidate
-}
-
-// upstream is a Debian package version's upstream part: "1:3.2a-4ubuntu0.3"
-// is "3.2a" (Ubuntu's patches of one tmux add no feature).
-func upstream(v string) string {
-	if _, after, ok := strings.Cut(v, ":"); ok {
-		v = after
-	}
-	if i := strings.LastIndex(v, "-"); i > 0 {
-		v = v[:i]
-	}
-	return v
 }
 
 func agentRow(e Env, a agent.Info) Row {

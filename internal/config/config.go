@@ -169,7 +169,7 @@ type Hooks struct {
 
 // Engine is the [engine] section (D83): what runs everything on screen.
 type Engine struct {
-	Backend string `toml:"backend"` // "" and "tmux" = tmux; "core" = i-mux-core
+	Backend string `toml:"backend"` // always i-mux-core (D87); "tmux" is ignored with a warning
 }
 
 // Tmux is the [tmux] section.
@@ -305,7 +305,7 @@ func Default() *Config {
 		Notify: Notify{Enabled: true, Sound: true},
 		Paste:  Paste{Images: true},
 		Web:    Web{Enabled: true, Open: "window"},
-		Engine: Engine{Backend: "tmux"},
+		Engine: Engine{Backend: "core"},
 		Bus: Bus{
 			Enabled:         true,
 			IdleAfter:       D(5 * time.Second),
@@ -424,11 +424,16 @@ func Parse(data []byte) (*Config, []string, error) {
 		}
 		warnings = append(warnings, fmt.Sprintf("unknown key %q ignored", k.String()))
 	}
+	// i-mux runs on i-mux-core only (D87): a backend left from the opt-in
+	// days is read and ignored; "tmux" is told so.
 	switch cfg.Engine.Backend {
-	case "", "tmux", "core":
+	case "", "core":
+	case "tmux":
+		warnings = append(warnings, `engine.backend "tmux" is no longer supported: i-mux runs on i-mux-core`)
+		cfg.Engine.Backend = "core"
 	default:
-		warnings = append(warnings, fmt.Sprintf("engine.backend %q is not tmux or core; tmux is used", cfg.Engine.Backend))
-		cfg.Engine.Backend = ""
+		warnings = append(warnings, fmt.Sprintf("engine.backend %q ignored: i-mux runs on i-mux-core", cfg.Engine.Backend))
+		cfg.Engine.Backend = "core"
 	}
 	for _, a := range cfg.Agents {
 		a.normalize()

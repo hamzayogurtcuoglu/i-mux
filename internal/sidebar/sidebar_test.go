@@ -805,13 +805,10 @@ func TestMoveWraps(t *testing.T) {
 // or project or opens a popup; one that opens a tmux menu waits where menus
 // take no mouse (before tmux 3.5), one that opens the command prompt always.
 func TestClickAtOnce(t *testing.T) {
-	if _, err := exec.LookPath("tmux"); err != nil {
-		t.Skip("tmux not installed")
-	}
 	defer func(d time.Duration) { OpenAfter = d }(OpenAfter)
 	OpenAfter = time.Hour
 	ctx := context.Background()
-	tc := &tmux.Client{Bin: "tmux", Runner: tmux.ExecRunner{}}
+	tc := &tmux.Client{Bin: testutil.Engine(t), Runner: tmux.ExecRunner{}}
 	menus := !tc.MenuTakesMouse(ctx)
 	s := &sidebar{t: tc, sel: NoItem, clicks: make(chan Action, 4), model: Model{Panes: []PaneRow{{ID: "%1"}}}}
 	for i, c := range []struct {
@@ -889,15 +886,12 @@ func TestSwitchMarksTheClient(t *testing.T) {
 	}
 }
 
-// realTmux starts a private tmux server for the test.
+// realTmux starts a private server of the engine (i-mux-core, D87) for the test.
 func realTmux(t *testing.T) *tmux.Client {
 	t.Helper()
-	if _, err := exec.LookPath("tmux"); err != nil {
-		t.Skip("tmux not installed")
-	}
 	b := make([]byte, 6)
 	_, _ = rand.Read(b)
-	c := &tmux.Client{Bin: "tmux", Socket: "imux-sidebar-test-" + hex.EncodeToString(b), Config: "/dev/null", Runner: tmux.ExecRunner{}}
+	c := &tmux.Client{Bin: testutil.Engine(t), Socket: "imux-sidebar-test-" + hex.EncodeToString(b), Config: "/dev/null", Runner: tmux.ExecRunner{}}
 	t.Cleanup(func() { _, _ = c.Do(tmux.Cmd{"kill-server"}) })
 	return c
 }

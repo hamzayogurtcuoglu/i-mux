@@ -27,23 +27,19 @@ func TestDoctor(t *testing.T) {
 			t.Fatalf("doctor started %s", a)
 		}
 	}
-	// The engine line (D83, T88.2): named on i-mux-core, absent on tmux.
-	if strings.HasSuffix(h.Tmux, "imux-core") {
-		if !strings.Contains(out, "engine imux-core ") {
-			t.Errorf("doctor output lacks the engine line:\n%s", out)
-		}
-	} else if strings.Contains(out, "engine ") {
-		t.Errorf("doctor output has an engine line on tmux:\n%s", out)
+	// The engine line (D87): i-mux-core, the only engine.
+	if !strings.Contains(out, "engine imux-core ") {
+		t.Errorf("doctor output lacks the engine line:\n%s", out)
 	}
 	if out, _, err := h.imux("doctor", "--ci"); err != nil || strings.Contains(out, "Claude Code") {
 		t.Fatalf("doctor --ci: %v\n%s", err, out)
 	}
-	// Without tmux: a hard failure and a non-zero exit.
+	// Without the engine: a hard failure and a non-zero exit.
 	cmd := exec.Command(h.Bin, "doctor", "--ci")
 	cmd.Dir = h.Homes.Project
-	cmd.Env = append(os.Environ(), "PATH=/nonexistent", "IMUX_TMUX_BIN=tmux")
+	cmd.Env = append(os.Environ(), "PATH=/nonexistent", "IMUX_TMUX_BIN=imux-core")
 	b, err := cmd.CombinedOutput()
-	if err == nil || !strings.Contains(string(b), "✗ tmux is not installed") {
-		t.Fatalf("doctor without tmux: %v\n%s", err, b)
+	if err == nil || !strings.Contains(string(b), "✗ the engine (imux-core) is not found") {
+		t.Fatalf("doctor without the engine: %v\n%s", err, b)
 	}
 }

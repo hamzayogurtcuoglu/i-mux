@@ -89,15 +89,14 @@ func TestInstallScript(t *testing.T) {
 	}
 	h := testutil.Isolate(t)
 	prefix := filepath.Join(t.TempDir(), "bin")
-	tm, _ := exec.LookPath("tmux")
-	path := filepath.Dir(tm) + ":/usr/bin:/bin"
+	path := "/usr/bin:/bin"
 	base := fakeRelease(t, bin, false)
 	out, err := runInstall(t, base, path, "--prefix", prefix, "--version", "v9.9.9")
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, out)
 	}
 	profile := filepath.Join(h.Home, ".zshrc")
-	for _, want := range []string{"Checksum verified.", "Installed " + prefix + "/imux", "Added " + prefix + " to PATH in " + profile, "tmux found", "Open a new terminal"} {
+	for _, want := range []string{"Checksum verified.", "Installed " + prefix + "/imux", "Added " + prefix + " to PATH in " + profile, "Open a new terminal"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
@@ -131,8 +130,9 @@ func TestInstallScript(t *testing.T) {
 	}
 }
 
-// TestInstallScriptWithoutTmux: without tmux and without a known package
-// manager the script only explains what to do; it never runs sudo.
+// TestInstallScriptWithoutTmux (D87): i-mux runs on imux-core, so without
+// tmux the installer completes and says nothing about tmux; it never runs
+// sudo.
 func TestInstallScriptWithoutTmux(t *testing.T) {
 	skipOnSystem(t)
 	bin := imuxBin(t)
@@ -140,61 +140,62 @@ func TestInstallScriptWithoutTmux(t *testing.T) {
 		t.Skip("curl not installed")
 	}
 	testutil.Isolate(t)
-	tools := t.TempDir()
-	for _, name := range []string{"sh", "curl", "tar", "gzip", "sha256sum", "shasum", "mkdir", "cp", "chmod", "mv", "sed", "awk", "cut", "head", "uname", "mktemp", "rm", "id", "cat", "basename", "dirname", "grep", "tr"} {
-		if p, err := exec.LookPath(name); err == nil {
-			_ = os.Symlink(p, filepath.Join(tools, name))
-		}
-	}
+	tools := installTools(t)
 	prefix := filepath.Join(t.TempDir(), "bin")
-	out, err := runInstall(t, fakeRelease(t, bin, false), tools+":"+prefix, "--prefix", prefix, "--version", "v9.9.9")
+	out, err := runInstall(t, fakeReleaseCore(t, bin, []byte("#!/bin/sh\necho 'tmux 3.8 (imux-core 9.9.9)'\n"), false), tools+":"+prefix, "--prefix", prefix, "--version", "v9.9.9")
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "imux needs tmux") || !strings.Contains(out, "Install tmux with your package manager") ||
-		strings.Contains(out, "sudo") || strings.Contains(out, "is not on your PATH") {
+	if strings.Contains(out, "tmux") || strings.Contains(out, "sudo") || strings.Contains(out, "is not on your PATH") {
 		t.Fatalf("output:\n%s", out)
+	}
+	if _, err := os.Stat(filepath.Join(prefix, "imux-core")); err != nil {
+		t.Fatal("the engine was not installed")
 	}
 }
 
-// TestInstallScriptAsksForTmux: with Homebrew but without --yes and without
-// a terminal to ask on (the release smoke job on Intel macOS, a script), the
-// installer skips tmux and never runs brew.
-func TestInstallScriptAsksForTmux(t *testing.T) {
+// TestInstallScriptOldTmuxSessions (D87): sessions an earlier i-mux still runs
+// on tmux get a note on how to close them; the installer installs nothing
+// else (Homebrew is never run).
+func TestInstallScriptOldTmuxSessions(t *testing.T) {
 	skipOnSystem(t)
 	bin := imuxBin(t)
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl not installed")
 	}
 	testutil.Isolate(t)
+	tools := installTools(t)
+	ran := filepath.Join(t.TempDir(), "brew-ran")
+	testutil.WriteFile(t, filepath.Join(tools, "brew"), []byte("#!/bin/sh\ntouch '"+ran+"'\n"))
+	testutil.WriteFile(t, filepath.Join(tools, "tmux"), []byte("#!/bin/sh\n[ \"$*\" = \"-L imux has-session\" ]\n"))
+	for _, f := range []string{"brew", "tmux"} {
+		if err := os.Chmod(filepath.Join(tools, f), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	prefix := filepath.Join(t.TempDir(), "bin")
+	out, err := runInstall(t, fakeRelease(t, bin, false), tools+":"+prefix, "--prefix", prefix, "--version", "v9.9.9", "--no-modify-path")
+	if err != nil {
+		t.Fatalf("install: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "tmux -L imux kill-server") {
+		t.Fatalf("output:\n%s", out)
+	}
+	if _, err := os.Stat(ran); err == nil {
+		t.Fatal("brew ran")
+	}
+}
+
+// installTools is a folder of the tools install.sh uses, and no others.
+func installTools(t *testing.T) string {
+	t.Helper()
 	tools := t.TempDir()
 	for _, name := range []string{"sh", "curl", "tar", "gzip", "sha256sum", "shasum", "mkdir", "cp", "chmod", "mv", "sed", "awk", "cut", "head", "uname", "mktemp", "rm", "id", "cat", "basename", "dirname", "grep", "tr"} {
 		if p, err := exec.LookPath(name); err == nil {
 			_ = os.Symlink(p, filepath.Join(tools, name))
 		}
 	}
-	ran := filepath.Join(t.TempDir(), "brew-ran")
-	testutil.WriteFile(t, filepath.Join(tools, "brew"), []byte("#!/bin/sh\ntouch '"+ran+"'\n"))
-	if err := os.Chmod(filepath.Join(tools, "brew"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	prefix := filepath.Join(t.TempDir(), "bin")
-	cmd := exec.Command("sh", filepath.Join(testutil.ModuleRoot(t), "install.sh"), "--prefix", prefix, "--version", "v9.9.9", "--no-modify-path")
-	cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+fakeRelease(t, bin, false), "PATH="+tools+":"+prefix, "IMUX_NO_FONT=1")
-	cmd.SysProcAttr = noTerminal() // no terminal to ask on
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("install: %v\n%s", err, out)
-	}
-	if !strings.Contains(string(out), "Installing it runs: brew install tmux") || !strings.Contains(string(out), "Skipped.") {
-		t.Fatalf("output:\n%s", out)
-	}
-	if _, err := os.Stat(ran); err == nil {
-		t.Fatal("brew ran without --yes and without a terminal")
-	}
-	if _, err := os.Stat(filepath.Join(prefix, "imux")); err != nil {
-		t.Fatal("imux not installed")
-	}
+	return tools
 }
 
 // TestInstallScriptOffersFont (M43): after the binary the installer offers

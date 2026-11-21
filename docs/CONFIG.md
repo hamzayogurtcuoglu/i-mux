@@ -49,7 +49,7 @@ line number.
 | `web.enabled` | `true` | A click on an HTML file in the explorer asks how to open it: in your browser, served by i-mux on localhost, the page reloading itself when its files change (Live Preview; nothing to install), or to edit or view it. false: the click edits it at once. |
 | `web.open` | `"window"` | How Open Preview and `imux web open` show a page: "window": a window of its own, without tabs or an address bar (Chrome or Edge; under WSL, Windows' own); "tab": a tab of your default browser. |
 | `web.browser` | `""` | A command that opens pages instead, the URL after its words (e.g. "firefox"); "" = the system's browser. |
-| `engine.backend` | `"tmux"` | What runs everything on screen (D83): "tmux" (the default) or "core", the i-mux-core engine that ships with i-mux. With "core", the imux-core binary next to the imux binary is used, else the one on the PATH; IMUX_TMUX_BIN overrides both. The two engines keep their sessions apart; switching asks that the running sessions be closed first. Settings (⚙ on the rail) → Engine (beta) chooses. On Windows, where tmux does not run, it is always core (D85). |
+| `engine.backend` | `"core"` | What runs everything on screen: i-mux-core, the engine that ships with i-mux (D87), whether tmux is installed or not. The imux-core binary next to the imux binary is used, else the one on the PATH; IMUX_TMUX_BIN overrides both. "tmux", from earlier versions, is ignored with a warning. |
 | `completion.enabled` | `false` | Copilot-like suggestions while you edit a file (Tab accepts): files open in Neovim with GitHub's copilot.vim, in a profile i-mux keeps (imux-nvim). Settings (⚙ on the rail) → Editor → Neovim + Copilot turns it on, sets it up and signs you in. |
 | `tmux.menu_key_root` | `'C-\'` | Key that opens the pane menu without the prefix. "" disables it. |
 | `tmux.quick_open_key_root` | `"C-p"` | Root key that opens Go to File, the editor's Ctrl+P: type letters of a file's name, Enter opens it. It takes the key from the program in the pane (a shell's or OpenCode's previous command; the up arrow does the same). "" for none. |
@@ -238,14 +238,11 @@ open              = "window"
 browser           = ""
 
 [engine]
-# What runs everything on screen (D83): "tmux" (the default) or "core", the
-# i-mux-core engine that ships with i-mux. With "core", the imux-core binary
-# next to the imux binary is used, else the one on the PATH; IMUX_TMUX_BIN
-# overrides both. The two engines keep their sessions apart; switching asks
-# that the running sessions be closed first. Settings (⚙ on the rail) →
-# Engine (beta) chooses. On Windows, where tmux does not run, it is always
-# core (D85).
-backend           = "tmux"
+# What runs everything on screen: i-mux-core, the engine that ships with
+# i-mux (D87), whether tmux is installed or not. The imux-core binary next to
+# the imux binary is used, else the one on the PATH; IMUX_TMUX_BIN overrides
+# both. "tmux", from earlier versions, is ignored with a warning.
+backend           = "core"
 
 [completion]
 # Copilot-like suggestions while you edit a file (Tab accepts): files open in

@@ -1017,7 +1017,7 @@ slow (about a second).
 The owner's decision (D87): i-mux runs on i-mux-core on every system, whether tmux is installed or
 not; tmux is no longer an engine.
 
-- [ ] **T92.1 One engine** · M
+- [x] **T92.1 One engine** · M
   - AC: the engine is always `imux-core` (beside imux, else on `PATH`; `IMUX_TMUX_BIN` still
     wins); `[engine] backend = "tmux"` is ignored with a warning; no engine row in Settings and
     no `imux engine`; doctor and Versions check the engine, not tmux; install.sh and the
