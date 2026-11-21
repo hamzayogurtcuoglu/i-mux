@@ -1,6 +1,6 @@
 //go:build e2e
 
-// Package e2e holds end-to-end tests that drive a real tmux server on a
+// Package e2e holds end-to-end tests that drive a real i-mux-core server on a
 // private socket with fake agents. Run with `make e2e`.
 package e2e
 

@@ -176,9 +176,9 @@ func TestWriteConfOnlyOnChange(t *testing.T) {
 	}
 }
 
-// TestConfLoadsInRealTmux sources the generated config on a real server
-// (the installed tmux version) and checks that tmux accepts every line.
-func TestConfLoadsInRealTmux(t *testing.T) {
+// TestConfLoadsInEngine sources the generated config on the engine (i-mux-core)
+// and checks that it accepts every line.
+func TestConfLoadsInEngine(t *testing.T) {
 	c := realClient(t)
 	ctx := context.Background()
 	v, err := c.BinVersion(ctx)

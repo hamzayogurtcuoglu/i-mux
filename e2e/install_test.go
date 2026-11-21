@@ -219,7 +219,6 @@ func TestInstallScriptOffersFont(t *testing.T) {
 		t.Fatal(err)
 	}
 	base := fakeRelease(t, fake, false)
-	tm, _ := exec.LookPath("tmux")
 	prefix := filepath.Join(dir, "bin")
 	install := func(args ...string) (string, string) {
 		t.Helper()
@@ -228,7 +227,7 @@ func TestInstallScriptOffersFont(t *testing.T) {
 			filepath.Join(testutil.ModuleRoot(t), "install.sh"),
 			"--prefix", prefix, "--version", "v9.9.9", "--no-modify-path",
 		}, args...)...)
-		cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH="+filepath.Dir(tm)+":/usr/bin:/bin", "IMUX_NO_FONT=")
+		cmd.Env = append(os.Environ(), "IMUX_INSTALL_BASE_URL=file://"+base, "PATH=/usr/bin:/bin", "IMUX_NO_FONT=")
 		cmd.SysProcAttr = noTerminal() // no terminal to ask on
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -265,8 +264,7 @@ func TestInstallScriptReplacesBoth(t *testing.T) {
 		t.Skip("curl not installed")
 	}
 	testutil.Isolate(t)
-	tm, _ := exec.LookPath("tmux")
-	path := filepath.Dir(tm) + ":/usr/bin:/bin"
+	path := "/usr/bin:/bin"
 	prefix := filepath.Join(t.TempDir(), "bin")
 	newCore := []byte("#!/bin/sh\necho 'tmux 3.8 (imux-core 9.9.9)'\n")
 	base := fakeReleaseCore(t, bin, newCore, false)

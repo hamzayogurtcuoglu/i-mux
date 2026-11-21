@@ -461,14 +461,14 @@ func writeSpec(s *launch.Spec) (string, error) { return launch.Write(s) }
 // agentBar renders status-format[1] (T2.8a); "" disables the bar.
 var agentBar = func(w *WS, v tmux.Version) string { return "" }
 
-// ErrTmuxMissing means tmux is not installed.
-var ErrTmuxMissing = errors.New("tmux missing")
+// ErrTmuxMissing means the engine (imux-core) is not found.
+var ErrTmuxMissing = errors.New("engine missing")
 
 // TmuxVersion checks that tmux is installed and recent enough.
 func (w *WS) TmuxVersion(ctx context.Context) (tmux.Version, error) {
 	v, err := w.T.BinVersion(ctx)
 	if errors.Is(err, tmux.ErrNotFound) {
-		return v, fmt.Errorf("%w: %s", ErrTmuxMissing, i18n.T("tmux.missing"))
+		return v, fmt.Errorf("%w: %s", ErrTmuxMissing, i18n.T("engine.missing"))
 	}
 	if err != nil {
 		return v, err

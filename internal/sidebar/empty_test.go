@@ -116,7 +116,7 @@ func TestNoAgentsSidebar(t *testing.T) {
 func TestGatherNoAgents(t *testing.T) {
 	h := testutil.Isolate(t)
 	i18n.SetLocale("en")
-	c := realTmux(t)
+	c := realEngine(t)
 	ctx := context.Background()
 	out, err := c.Run(ctx, tmux.Cmd{"new-session", "-d", "-x", "120", "-y", "40", "-c", h.Project, "-P", "-F", "#{pane_id}", "sh"})
 	if err != nil {

@@ -270,7 +270,7 @@ func (w *WS) ExecAttach(name string) error {
 	argv := w.AttachArgv(name)
 	bin, err := exec.LookPath(argv[0])
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrTmuxMissing, i18n.T("tmux.missing"))
+		return fmt.Errorf("%w: %s", ErrTmuxMissing, i18n.T("engine.missing"))
 	}
 	var env []string
 	for _, kv := range os.Environ() {

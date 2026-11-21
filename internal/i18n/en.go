@@ -777,7 +777,7 @@ var en = map[string]string{
 	"died.doctor":              "run 'imux doctor'",
 	"died.fallback":            "Resume failed; started a new %s session with the full handoff",
 	"pick.no_client":           "no client is attached to this i-mux session",
-	"tmux.missing":             "tmux is not installed (brew install tmux / apt install tmux)",
+	"engine.missing":           "the engine (imux-core) is not found: install i-mux again, which brings it",
 	"tmux.too_old":             "tmux %s is too old; i-mux needs %s or newer",
 
 	// doctor

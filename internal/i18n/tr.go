@@ -778,7 +778,7 @@ var tr = map[string]string{
 	"died.doctor":              "'imux doctor' çalıştırın",
 	"died.fallback":            "Sürdürme başarısız oldu; tam devir belgesiyle yeni bir %s oturumu başlatıldı",
 	"pick.no_client":           "bu i-mux oturumuna bağlı istemci yok",
-	"tmux.missing":             "tmux kurulu değil (brew install tmux / apt install tmux)",
+	"engine.missing":           "motor (imux-core) bulunamadı: i-mux'u yeniden kurun, onu da getirir",
 	"tmux.too_old":             "tmux %s çok eski; i-mux %s ya da daha yenisini gerektirir",
 
 	// doctor

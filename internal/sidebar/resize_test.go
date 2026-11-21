@@ -109,12 +109,12 @@ func TestDragged(t *testing.T) {
 	}
 }
 
-// TestSettleRealTmux: in a real tmux window, a sidebar takes a width the
+// TestSettleOnEngine: in a real engine window, a sidebar takes a width the
 // user dragged its edge to and saves it once; a resized window, a pane closed
 // next to it and the rail of a closed panel keep the sidebar's width.
-func TestSettleRealTmux(t *testing.T) {
+func TestSettleOnEngine(t *testing.T) {
 	h := testutil.Isolate(t)
-	c := realTmux(t)
+	c := realEngine(t)
 	ctx := context.Background()
 	saved := make(chan int, 8)
 	oldSave, oldAfter := SaveWidth, SaveAfter

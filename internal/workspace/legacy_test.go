@@ -3,6 +3,7 @@ package workspace
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -66,5 +67,19 @@ func TestMoveFromTmux(t *testing.T) {
 	// On the engine's server (another id) it is a project to restore.
 	if got := snaps.Interrupted("1-2", nil); len(got) != 1 || got[0].Dir != "/home/u/api" {
 		t.Fatalf("interrupted %+v", got)
+	}
+}
+
+// TestEngineMissing (D87): without imux-core, i-mux says to install i-mux
+// again, which brings the engine, and never asks for tmux.
+func TestEngineMissing(t *testing.T) {
+	w, _, _ := testWS(t)
+	w.T = &tmux.Client{Bin: filepath.Join(t.TempDir(), "imux-core"), Socket: "test", Runner: tmux.ExecRunner{}}
+	_, err := w.TmuxVersion(context.Background())
+	if !errors.Is(err, ErrTmuxMissing) {
+		t.Fatalf("err %v", err)
+	}
+	if msg := err.Error(); !strings.Contains(msg, "imux-core") || strings.Contains(msg, "install tmux") {
+		t.Fatalf("message %q", msg)
 	}
 }

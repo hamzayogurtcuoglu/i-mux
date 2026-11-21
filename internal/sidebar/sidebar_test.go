@@ -886,8 +886,8 @@ func TestSwitchMarksTheClient(t *testing.T) {
 	}
 }
 
-// realTmux starts a private server of the engine (i-mux-core, D87) for the test.
-func realTmux(t *testing.T) *tmux.Client {
+// realEngine starts a private server of the engine (i-mux-core, D87) for the test.
+func realEngine(t *testing.T) *tmux.Client {
 	t.Helper()
 	testutil.SkipOnWindows(t, "its panes run sh; the engine's Windows tests are i-mux-core's and the e2e suite's")
 	b := make([]byte, 6)
@@ -897,17 +897,17 @@ func realTmux(t *testing.T) *tmux.Client {
 	return c
 }
 
-// TestGatherRealTmux: in a window with a sidebar, an agent pane and a shell,
+// TestGatherOnEngine: in a window with a sidebar, an agent pane and a shell,
 // the sidebar is not listed, the active pane is the target (and becomes
 // @imux_last), agents come in config order with install and limit state, and
 // a window left with only the sidebar is reported alone.
-func TestGatherRealTmux(t *testing.T) {
+func TestGatherOnEngine(t *testing.T) {
 	h := testutil.Isolate(t)
 	i18n.SetLocale("en")
 	loc := time.Local
 	time.Local = time.UTC // reset clocks are shown in local time
 	t.Cleanup(func() { time.Local = loc })
-	c := realTmux(t)
+	c := realEngine(t)
 	ctx := context.Background()
 	out, err := c.Run(ctx, tmux.Cmd{"new-session", "-d", "-x", "120", "-y", "40", "-c", h.Project, "-P", "-F", "#{pane_id}", "sh"})
 	if err != nil {

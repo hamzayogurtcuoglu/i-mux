@@ -35,7 +35,7 @@ var (
 	ErrNoSession = errors.New("tmux: session not found")
 	ErrNoPane    = errors.New("tmux: pane not found")
 	ErrNoClient  = errors.New("tmux: client not found")
-	ErrNotFound  = errors.New("tmux: binary not found")
+	ErrNotFound  = errors.New("imux-core: binary not found")
 )
 
 // Error is a failed tmux invocation.

@@ -294,7 +294,7 @@ func FuzzSectionsRows(f *testing.F) {
 	})
 }
 
-// --- integration with a real tmux ------------------------------------------
+// --- integration with the engine (i-mux-core) -----------------------------
 
 func realClient(t *testing.T) *Client {
 	t.Helper()
@@ -312,7 +312,7 @@ func randHex(t *testing.T) string {
 	return hex.EncodeToString(b)
 }
 
-func TestIntegrationRealTmux(t *testing.T) {
+func TestIntegrationEngine(t *testing.T) {
 	c := realClient(t)
 	ctx := context.Background()
 	v, err := c.BinVersion(ctx)
