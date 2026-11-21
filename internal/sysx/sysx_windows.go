@@ -365,8 +365,11 @@ const POSIXShell = false
 
 // ShellArgv is how the user's interactive shell starts in a pane, as
 // i-mux-core starts one: sh (default-shell) when it names a program that
-// exists, else pwsh, else Windows PowerShell, else %COMSPEC%. PowerShell
-// gets -NoLogo; Windows shells have no login form.
+// exists, else pwsh, else Windows PowerShell, else %COMSPEC%. It always has
+// an argument (T90.11): one word is a shell command line to the engine, so
+// a shell's path alone ("C:\Program Files\Git\usr\bin\sh.exe") would run
+// as a command and close the pane. PowerShell gets -NoLogo, cmd.exe /a (its
+// default output), others -l (sh, bash: a login shell, as on Unix).
 func ShellArgv(sh string) []string {
 	if !filepath.IsAbs(sh) || !isFile(sh) {
 		sh = defaultShell()
@@ -374,8 +377,10 @@ func ShellArgv(sh string) []string {
 	switch strings.TrimSuffix(strings.ToLower(filepath.Base(sh)), ".exe") {
 	case "pwsh", "powershell":
 		return []string{sh, "-NoLogo"}
+	case "cmd":
+		return []string{sh, "/a"}
 	}
-	return []string{sh}
+	return []string{sh, "-l"}
 }
 
 // defaultShell is i-mux-core's shell when default-shell names none.

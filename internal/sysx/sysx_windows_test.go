@@ -43,14 +43,23 @@ func TestShellArgv(t *testing.T) {
 			t.Fatalf("%q", argv)
 		}
 	case "cmd":
-		if len(argv) != 1 {
+		if len(argv) != 2 || argv[1] != "/a" {
 			t.Fatalf("%q", argv)
 		}
 	default:
 		t.Fatalf("not a Windows shell: %q", argv)
 	}
+	// Always a word more than the program (T90.11): one word alone is a shell
+	// command line to the engine.
 	cmd := filepath.Join(systemRoot(), "System32", "cmd.exe")
-	if got := ShellArgv(cmd); len(got) != 1 || got[0] != cmd {
+	if got := ShellArgv(cmd); len(got) != 2 || got[0] != cmd || got[1] != "/a" {
 		t.Fatalf("ShellArgv(cmd.exe) = %q", got)
+	}
+	sh := filepath.Join(t.TempDir(), "sh.exe")
+	if err := os.WriteFile(sh, []byte("MZ"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := ShellArgv(sh); len(got) != 2 || got[0] != sh || got[1] != "-l" {
+		t.Fatalf("ShellArgv(sh.exe) = %q", got)
 	}
 }
