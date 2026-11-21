@@ -52,8 +52,8 @@ func TestDiffMarks(t *testing.T) {
 	h.run("claude", 1)
 	c, _ := h.attach(140, 40)
 	c.waitScreen(h, "AGENTS", 10*time.Second)
-	h.rowOf(bar, "AGENTS") // the sidebar has its width: the pane will not move
-	h.mustTmux("respawn-pane", "-k", "-t", agentPane, "-c", p, h.Bin+" __diff M long.txt")
+	h.rowOf(bar, "AGENTS")                                                                       // the sidebar has its width: the pane will not move
+	h.mustTmux("respawn-pane", "-k", "-t", agentPane, "-c", p, h.Bin, "__diff", "M", "long.txt") // argv: no shell, no quoting
 	shows := func(what string, want ...string) {
 		t.Helper()
 		h.waitFor(what, 5*time.Second, func() bool {
@@ -76,7 +76,7 @@ func TestDiffMarks(t *testing.T) {
 
 	// Back to the top, then a click on the last mark beside the bar.
 	h.mustTmux("send-keys", "-t", agentPane, "g")
-	shows("the top", "line 1 ")
+	shows("the top", "  1   1   line 1") // its numbers: "line 1 " has no space after it on Windows
 	x, y := 0, 0
 	h.waitFor("the marks beside the bar", 5*time.Second, func() bool {
 		rows := strings.Split(h.screen(agentPane), "\n")

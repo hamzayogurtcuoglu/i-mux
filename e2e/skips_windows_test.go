@@ -48,8 +48,8 @@ var windowsSkips = map[string]string{
 	"TestPaneMenu":      "the menu latency budget of macOS and Linux",
 	"TestSessionPicker": "the picker latency budget of macOS and Linux",
 
-	// Known Windows issues, not yet understood (TASKS.md T90.11): they can apply, and fail.
-	"TestPaneDiedFallsBackToShell": "known Windows issue T90.11: the server is gone after the agent exits",
-	"TestDiffMarks":                "known Windows issue T90.11: the diff view does not show",
-	"TestThemeTerminalBackground":  "known Windows issue T90.11: a theme change's OSC 11 does not reach the client",
+	// What Windows' clients cannot have: a theme change paints an attached terminal's
+	// background by writing OSC 11 to the client's tty device (D77), and a Windows client has
+	// none; it gets the background when it attaches, as on every system.
+	"TestThemeTerminalBackground": "a theme change's OSC 11 is written to a client's tty device (D77); Windows clients have none",
 }

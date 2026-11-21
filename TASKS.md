@@ -1197,12 +1197,20 @@ tmux on macOS and Linux, exactly as before.
     (a schedule's runs could not move, a `file:///C:/…` URL, removing a worktree its agents work
     in); the tests' homes now include `LOCALAPPDATA` and `APPDATA`, so no test touches the
     owner's Windows Terminal settings or engine sockets.
-- [ ] **T90.11 The Windows e2e known issues** · M · deps: T90.9
+- [x] **T90.11 The Windows e2e known issues** · M · deps: T90.9
   - AC: the three tests T90.9 lists as known Windows issues pass on the `windows` job and leave
     the list: `TestPaneDiedFallsBackToShell` (the server is gone after the agent exits; on
     macOS and Linux the pane falls back to the shell), `TestDiffMarks` (the diff view does not
     show), `TestThemeTerminalBackground` (a theme change's OSC 11 does not reach the client
     through ConPTY). Each: the cause found, a fix or, if it cannot apply, a reason.
+  - Status (2026-11-21): done. The shell after an agent was given to the engine as one word, its
+    path, which is a shell command line to it: `C:\Program Files\Git\usr\bin\sh.exe` ran as a
+    command, failed and closed the pane, and with it the session (fixed: a Windows shell always
+    gets an argument, `-l`, `/a` or `-NoLogo`). The diff test respawned its pane with an sh line
+    holding a Windows path and looked for "line 1 " with a space Windows' screen does not have
+    (fixed in the test: argv, and the row's numbers). A theme change paints attached terminals by
+    writing OSC 11 to their tty devices, which Windows clients do not have: they get the
+    background when they attach (D77), so that test stays listed, with that reason.
 - [ ] **T90.10 Windows check** · XS · deps: T90.9 · USER
   - AC: the owner installs from the installer, opens from the Start menu, installs an agent,
     checks the sidebar, tabs, popups, menus and mouse, image paste, notifications, updates from
