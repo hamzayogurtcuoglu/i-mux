@@ -1023,6 +1023,9 @@ User request: a short, professional README with Nerd Font icons, ready for a pro
     privacy, uninstall and the docs. Icons are Nerd Font glyphs (Codicons, Font Awesome,
     Material Design) drawn as SVG in `docs/images/icons/`, since GitHub cannot show the font.
     The detailed usage moves, unchanged, to `docs/GUIDE.md`.
+  - AC: the screenshots show today's UI with the Nerd Font icons: `scripts/screenshots/shoot.sh`
+    runs on i-mux-core at 150x34 with `icons = "nerd"`, and `ansi2svg.py` embeds the Nerd Font in
+    each SVG, subset to the characters on screen (`SHOT_FONT`, fontTools), so GitHub shows it.
 
 ## M92: i-mux-core only; tmux is gone (added 2026-11-21)
 

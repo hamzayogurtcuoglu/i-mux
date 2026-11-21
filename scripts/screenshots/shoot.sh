@@ -1,16 +1,31 @@
 #!/bin/sh
 # Regenerates the README screenshots in docs/images from a real imux session
-# with demo agents (demo-agent.sh). Needs Linux or macOS, tmux >= 3.4 and
+# with demo agents (demo-agent.sh), with the sidebar's Nerd Font icons. Needs
+# Linux or macOS, tmux (only as the outer terminal that is captured) and
 # python3. Nothing outside a temp dir is touched; no real agent is started.
 #
 #   scripts/screenshots/shoot.sh [out-dir]
+#
+# SHOT_FONT (default: JetBrainsMono Nerd Font, when installed) is embedded in
+# the SVGs, only the characters they use, so the icons show on GitHub without
+# the font. It needs python's fontTools (pip install fonttools); set PYTHON to
+# a python that has it.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
 out="${1:-$root/docs/images}"
 bin="${IMUX_BIN:-$root/bin/imux}"
-[ -x "$bin" ] || (cd "$root" && make build >/dev/null)
-COLS=104 ROWS=30
+core="$(dirname "$bin")/imux-core"
+[ -x "$bin" ] && [ -x "$core" ] || (cd "$root" && make build >/dev/null)
+py="${PYTHON:-python3}"
+if [ -z "${SHOT_FONT:-}" ]; then
+	for f in "$HOME/Library/Fonts/JetBrainsMonoNerdFont-Regular.ttf" \
+		"$HOME/.local/share/fonts/JetBrainsMonoNerdFont-Regular.ttf"; do
+		[ -f "$f" ] && SHOT_FONT="$f" && break
+	done
+fi
+export SHOT_FONT="${SHOT_FONT:-}"
+COLS=150 ROWS=34
 # shellcheck disable=SC2088 # a literal ~: it is the window title
 title="~/code/acme-api — imux"
 
@@ -20,7 +35,7 @@ export HOME="$tmp/home" IMUX_HOME="$tmp/home/.imux" IMUX_TMUX_SOCKET="imux-shot-
 export TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8 TERM=xterm-256color IMUX_LANG=en
 cleanup() {
 	tmux -L "$outer" kill-server 2>/dev/null || true
-	tmux -L "$IMUX_TMUX_SOCKET" kill-server 2>/dev/null || true
+	"$core" -L "$IMUX_TMUX_SOCKET" kill-server 2>/dev/null || true
 	"$bin" __watch stop >/dev/null 2>&1 || true
 	rm -rf "$tmp"
 }
@@ -33,6 +48,8 @@ for a in claude agy codex; do
 	chmod +x "$tmp/bin/$a"
 done
 cat >"$IMUX_HOME/config.toml" <<EOF
+[tmux]
+icons = "nerd"
 [limits]
 poll_interval = "0.5s"
 grace = "1s"
@@ -72,7 +89,7 @@ waitfor() { # waitfor TEXT
 shot() { # shot NAME TITLE
 	cap >"$tmp/$1.ans"
 	[ -z "${SHOT_RAW:-}" ] || cp "$tmp/$1.ans" "$out/$1.ans"
-	python3 "$here/ansi2svg.py" "$COLS" "$ROWS" "$2" <"$tmp/$1.ans" >"$out/$1.svg"
+	"$py" "$here/ansi2svg.py" "$COLS" "$ROWS" "$2" <"$tmp/$1.ans" >"$out/$1.svg"
 	echo "wrote $out/$1.svg"
 }
 

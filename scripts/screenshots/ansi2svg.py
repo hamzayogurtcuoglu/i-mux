@@ -6,7 +6,15 @@ Usage: ansi2svg.py COLS ROWS TITLE < capture > out.svg
 Handles the SGR attributes tmux emits (bold, dim, italic, underline, reverse,
 16/256/RGB colors) and double-width characters. Each run of same-styled text
 is placed on its exact cell, so columns line up in any monospace font.
+
+With SHOT_FONT set to a .ttf (a Nerd Font, for the sidebar's icons), that font
+is embedded, subset to the characters on screen, with its Bold sibling when
+there is one: the SVG then looks the same everywhere, GitHub included. This
+needs fontTools (pip install fonttools).
 """
+import base64
+import io
+import os
 import re
 import sys
 import unicodedata
@@ -143,12 +151,44 @@ def colors(k):
     return fg, bg
 
 
+def embedded_fonts(text):
+    """@font-face rules for SHOT_FONT (and its Bold), subset to text; "" without it."""
+    path = os.environ.get("SHOT_FONT", "")
+    if not path:
+        return ""
+    from fontTools import subset
+    from fontTools.ttLib import TTFont
+
+    rules = []
+    for weight, p in (("normal", path), ("bold", path.replace("-Regular.", "-Bold."))):
+        if not os.path.isfile(p):
+            continue
+        font = TTFont(p)
+        opts = subset.Options()
+        opts.flavor = "woff"
+        opts.layout_features = []
+        opts.name_IDs = []
+        opts.notdef_outline = True
+        opts.drop_tables += ["PfEd"]
+        sub = subset.Subsetter(opts)
+        sub.populate(text="".join(sorted(set(text))))
+        sub.subset(font)
+        buf = io.BytesIO()
+        font.flavor = "woff"
+        font.save(buf)
+        data = base64.b64encode(buf.getvalue()).decode()
+        rules.append(f'@font-face{{font-family:"Shot";font-weight:{weight};'
+                     f'src:url(data:font/woff;base64,{data}) format("woff")}}')
+    return "".join(rules)
+
+
 def render(rows, cols, nrows, title):
     w = PAD * 2 + cols * CELL_W
     h = BAR + PAD + nrows * CELL_H + PAD
     o = [
         f'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="{w:.0f}" height="{h:.0f}" viewBox="0 0 {w:.0f} {h:.0f}">',
-        '<style>text{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",'
+        f'<style>{embedded_fonts(title + "".join(r[2] for row in rows for r in row))}'
+        'text{font-family:"Shot",ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",'
         f'"Liberation Mono",monospace;font-size:{FONT}px;white-space:pre}}</style>',
         f'<rect width="{w:.0f}" height="{h:.0f}" rx="10" fill="{BG}"/>',
         f'<rect width="{w:.0f}" height="{BAR}" rx="10" fill="#161b22"/>',
