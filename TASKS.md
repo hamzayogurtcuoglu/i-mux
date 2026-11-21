@@ -1029,6 +1029,13 @@ not; tmux is no longer an engine.
     before 3.5, the agent bar before 3.4, the light/dark hooks before 3.6, …) and their golden
     configs are gone; the engine's version is still checked against i-mux's minimum; unit and
     e2e tests pass.
+- [ ] **T92.3 Updating moves the projects from tmux** · S · deps: T92.1
+  - AC: `imux`, started outside tmux, finds the server an earlier i-mux left running on tmux
+    (tmux on `PATH`, socket `imux`), records its open projects as interrupted snapshots, closes
+    that server and says how many projects moved; Restore last session then reopens them on
+    i-mux-core. Nothing happens without tmux or without that server, and nothing from inside
+    one of its panes; tmux itself and other servers are never touched; a unit test with a fake
+    tmux covers it.
 
 ## M91: CI-green: the watcher's pid and menus after a gesture (added 2026-11-20)
 
