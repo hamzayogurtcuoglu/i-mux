@@ -1,193 +1,228 @@
+<p align="center">
+  <img src="docs/images/icons/handoff.svg" alt="" width="64">
+</p>
+
 <h1 align="center">i-mux</h1>
 
 <p align="center">
-  <b>Bir yapay zekâ kodlama agent'ında kullanım limitine mi takıldınız? Sohbetin tamamıyla başka bir agent'ta devam edin.</b><br>
-  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode
+  <b>Tüm yapay zekâ kodlama agent'ları için tek bir terminal çalışma alanı.</b><br>
+  Bir agent limite takıldığında, tüm bağlamıyla başka bir agent'ta devam edin.
+</p>
+
+<p align="center">
+  <a href="https://github.com/hamzayogurtcuoglu/i-mux/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/hamzayogurtcuoglu/i-mux/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/hamzayogurtcuoglu/i-mux/releases/latest"><img alt="Son sürüm" src="https://img.shields.io/github/v/release/hamzayogurtcuoglu/i-mux?color=1f9fb0"></a>
+  <a href="LICENSE"><img alt="Lisans: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <img alt="Platformlar" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg">
+  <img alt="Go" src="https://img.shields.io/badge/Go-1.27-00ADD8.svg?logo=go&logoColor=white">
+</p>
+
+<p align="center">
+  <a href="#kurulum">Kurulum</a> ·
+  <a href="#hızlı-başlangıç">Hızlı başlangıç</a> ·
+  <a href="#özellikler">Özellikler</a> ·
+  <a href="docs/GUIDE.md">Kullanım rehberi (İngilizce)</a> ·
+  <a href="README.md">English</a>
 </p>
 
 <p align="center">
   <img src="docs/images/limit.svg" alt="Claude limite takılıyor, i-mux Antigravity ya da Codex'te sürdürmeyi öneriyor" width="880">
 </p>
 
-i-mux, agent CLI'larınızı bir terminal çalışma alanında çalıştırır. Biri limite takıldığında ya da
-siz istediğinizde tek tuşa basarsınız; aynı bölme başka bir agent ile yeniden başlar. Yeni agent
-özetlenmiş bir devir belgesi alır: ilk istek, görev listesi, dokunulan dosyalar, depo durumu ve
-işin kaldığı yer. Yeniden anlatmak ya da kopyalayıp yapıştırmak yok.
+## Neden i-mux
 
-Tek bir programdır, komutu `imux`; yanında kendi terminal motoru `imux-core` ile kurulur: tmux
-gerekmez, kurulu bir tmux'a da dokunmaz. Her şey makinenizde kalır.
+Yapay zekâ kodlama agent'larının kullanım limitleri var. Biri işin ortasında durduğunda sıradaki
+agent hiçbir şey bilmez ve her şeye baştan başlarsınız.
+
+i-mux bu boşluğu kapatır. Tek tuşa basın, aynı bölme başka bir agent ile yeniden başlasın. Yeni
+agent kısa bir devir belgesi alır: ilk istek, görev listesi, dokunulan dosyalar, depo durumu ve
+işin kaldığı yer. Yeniden anlatmak yok, kopyala-yapıştır yok.
+
+### Desteklenen agent'lar
+
+| Agent | Komut |
+|---|---|
+| Claude Code | `claude` |
+| Antigravity CLI | `agy` |
+| GitHub Copilot CLI | `copilot` |
+| OpenAI Codex CLI | `codex` |
+| OpenCode | `opencode` |
+
+## Özellikler
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/icons/handoff.svg" width="16" alt=""> <b>Tek tuşla devir</b><br>
+      Sohbeti başka bir agent'a taşıyın. Dökümü değil, özeti gider.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/icons/zap.svg" width="16" alt=""> <b>Limit algılama</b><br>
+      i-mux limit mesajlarını yakalar; sorar, sizin yerinize geçer ya da yalnızca gösterir.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/robot.svg" width="16" alt=""> <b>Tüm agent'lar tek bakışta</b><br>
+      Bütün projeler ve agent'lar tek kenar panelde: çalışıyor, boşta ya da sizi bekliyor.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/history.svg" width="16" alt=""> <b>Sohbet geçmişi</b><br>
+      Eski sohbetleri arayın, sabitleyin ve herhangi bir agent'ta sürdürün.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/files.svg" width="16" alt=""> <b>Gezgin ve arama</b><br>
+      Simgeli dosya ağacı, Hızlı Aç (<code>Ctrl+P</code>) ve tam metin arama.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/git.svg" width="16" alt=""> <b>Kaynak denetimi</b><br>
+      VS Code tarzı Git: stage, commit, dallar, stash, worktree ve grafik.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/clock.svg" width="16" alt=""> <b>Zamanlanmış işler</b><br>
+      Projenizin agent'larını ve skill'lerini hemen ya da bir takvimle çalıştırın.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/remote.svg" width="16" alt=""> <b>Uzak makineler</b><br>
+      Başka bilgisayarlardaki projeleri ve agent'ları SSH ile açın.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/key.svg" width="16" alt=""> <b>Ortamlar</b><br>
+      Kayıtlı API anahtarlarını, proxy'leri ya da uç noktaları tek bir bölmeye uygulayın.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/graph.svg" width="16" alt=""> <b>Kullanım paneli</b><br>
+      Her agent için 5 saatlik, haftalık ve aylık kullanım.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/globe.svg" width="16" alt=""> <b>Canlı web önizleme</b><br>
+      HTML dosyaları tarayıcıda açılır, agent düzenledikçe yenilenir.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/bell.svg" width="16" alt=""> <b>Bildirimler</b><br>
+      Bir agent bitirdiğinde ya da size ihtiyaç duyduğunda haberiniz olur, terminal kapalıyken bile.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/image.svg" width="16" alt=""> <b>Görsel yapıştırma</b><br>
+      Ekran görüntüsünü <code>Ctrl+V</code> ile herhangi bir agent'a yapıştırın.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/palette.svg" width="16" alt=""> <b>Temalar</b><br>
+      Catppuccin, Tokyo Night, Dracula, Nord ve 15 tema daha. Açık ve koyu moda uyar.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/terminal.svg" width="16" alt=""> <b>Yerleşik motor</b><br>
+      Kendi terminal motoruyla gelir: <code>imux-core</code>. tmux gerekmez.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/lock.svg" width="16" alt=""> <b>Önce yerel</b><br>
+      Hesap yok, telemetri yok, API anahtarı yok. Verileriniz makinenizde kalır.
+    </td>
+  </tr>
+</table>
 
 ## Kurulum
 
-macOS, Linux ya da WSL'de tek satır:
+### <img src="docs/images/icons/apple.svg" width="20" alt=""> <img src="docs/images/icons/linux.svg" width="20" alt=""> macOS, Linux ve WSL
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
 ```
 
-Betik işletim sisteminize ve işlemcinize uygun sürümü indirir, sağlama toplamını doğrular, `imux`'u
-motoru `imux-core` ile birlikte `~/.local/bin` dizinine kurar, bu dizini kabuğunuzun PATH'ine ekler
-(zsh, bash ya da fish) ve kenar panelin simgelerinin istediği Nerd Font'u önerir (aşağıda).
-Ardından yeni bir terminal açın. Seçenekler `sh -s --` sonrasına yazılır, örneğin fontu sormadan
-kurmak için `... | sh -s -- --yes`, ya da
-`--version v0.1.0`, `--prefix DİZİN`, `--no-modify-path`, `--no-font`.
+Kurulum betiği doğru sürümü indirir, sağlama toplamını doğrular ve `imux` ile `imux-core`'u
+`~/.local/bin` dizinine kurar. Bu dizini `PATH`'e ekler ve Nerd Font'u önerir. Ardından yeni bir
+terminal açın.
 
-Windows'ta (10 1809 ve sonrası) i-mux doğrudan çalışır:
-[son sürümden](https://github.com/hamzayogurtcuoglu/i-mux/releases/latest)
-`imux_<sürüm>_windows_<işlemci>_setup.exe` dosyasını indirin (yönetici hakkı gerekmez) ya da
-PowerShell'de:
+<details>
+<summary>Kurulum seçenekleri</summary>
+
+Seçenekleri `sh -s --` sonrasına yazın, örneğin `curl -fsSL … | sh -s -- --yes`.
+
+| Seçenek | Etkisi |
+|---|---|
+| `--yes` | Nerd Font'u sormadan kurar |
+| `--version vX.Y.Z` | Belirli bir sürümü kurar |
+| `--prefix DIR` | Başka bir dizine kurar |
+| `--no-modify-path` | Kabuk profilinize dokunmaz |
+| `--no-font` | Nerd Font'u atlar |
+
+</details>
+
+### <img src="docs/images/icons/windows.svg" width="20" alt=""> Windows
+
+i-mux, Windows 10 (1809) ve sonrasında doğrudan çalışır. WSL ya da yönetici yetkisi gerekmez.
+
+**Kurulum programı.** [Son sürümden](https://github.com/hamzayogurtcuoglu/i-mux/releases/latest)
+`imux_<sürüm>_windows_amd64_setup.exe` dosyasını (ARM cihazlarda `arm64`) indirip çalıştırın.
+i-mux'u Başlat menüsüne ekler; Windows Terminal'de açılır.
+
+**PowerShell.**
 
 ```powershell
 irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 | iex
 ```
 
-Go 1.27+ ile kendiniz de derleyebilirsiniz:
+> [!NOTE]
+> Kurulum programı henüz kod imzalı değil. SmartScreen "Windows bilgisayarınızı korudu" derse
+> **Ek bilgi → Yine de çalıştır**'ı seçin.
+
+### <img src="docs/images/icons/package.svg" width="20" alt=""> Kaynaktan
+
+Go 1.27 ya da sonrası gerekir.
 
 ```sh
 go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest github.com/hamzayogurtcuoglu/i-mux/cmd/imux-core@latest
 ```
 
-Sonra en az bir agent CLI'ı kurun ve kurulumu denetleyin. Google modelleri için
-[Antigravity CLI](https://antigravity.google/docs/cli/) (`agy`) kurun:
-`curl -fsSL https://antigravity.google/cli/install.sh | bash`. Google kişisel hesaplara Gemini
-CLI'da 2026-06-18'de hizmeti kesti; bu yüzden i-mux Gemini CLI yerine Antigravity CLI'ı destekliyor.
+### <img src="docs/images/icons/font.svg" width="20" alt=""> Nerd Font
+
+Kenar panel [Nerd Font](https://www.nerdfonts.com) simgeleri kullanır; font yoksa emoji gösterir.
+Kurulum betiği fontu önerir, ya da şunu çalıştırın:
+
+```sh
+imux font install
+```
+
+JetBrainsMono Nerd Font'u yalnızca sizin kullanıcınıza kurar ve Windows Terminal ile VS Code'da
+ayarlar. Diğer terminallerde ayarlardan **JetBrainsMono Nerd Font**'u seçin.
+
+### <img src="docs/images/icons/robot.svg" width="20" alt=""> Agent'lar
+
+Desteklenen agent CLI'larından en az birini kurun, ardından kurulumu kontrol edin:
 
 ```sh
 imux doctor
 ```
 
-Kaldırmak için `~/.local/bin/imux` ve `~/.imux` silin, kabuk profilinize eklenen satırı da
-(`# Added by the imux installer` ile işaretli) kaldırın.
+Eksik agent'ları i-mux içinden **Settings → Versions and updates** ile kurabilirsiniz.
 
-## Kullanım
+## Hızlı başlangıç
 
 ```sh
 cd ~/code/projem
-imux            # kurulu ilk agent'ı başlatır (ya da: imux claude)
+imux            # kurulu ilk agent'ı başlatır
+imux claude     # ya da birini seçin
 ```
 
-Terminalin bir [Nerd Font](https://www.nerdfonts.com) kullanıyorsa şerit editördeki simgeleri
-gösterir, yoksa emojileri. **`imux font install`** (Ayarlar'da da var, kurulum betiği de önerir)
-JetBrainsMono Nerd Font'u indirir, sürümün sağlama toplamıyla denetler, yalnızca senin için kurar
-(yönetici izni gerekmez) ve Windows Terminal'in ve VS Code'un terminal fontunu ona ayarlar; eski
-ayarları `settings.json.imux-backup` içinde saklar. WSL'de bunların hepsini metni çizen terminalin
-çalıştığı Windows tarafında yapar. Sonra terminali yeniden başlat; diğer terminallerde (Terminal.app,
-iTerm2, GNOME Terminal ...) ayarlarından "JetBrainsMono Nerd Font"u seç. `imux font` neyin yerinde
-olduğunu gösterir. Açık görünümün simgesine tıklamak, editördeki gibi şeridin yanındaki paneli
-kapatır ve yeri ajana bırakır; herhangi bir görünümün simgesine tıklamak onu yeniden açar.
-Panelin kenarını sürükleyerek onu genişletir ya da daraltırsın: her sekme bu genişliğe geçer ve
-i-mux onu hatırlar (`tmux.sidebar_width`).
-
-Şeritteki **🔧 Ayar** (ya da `imux settings`, ya da kenar çubuğunda `,`) Ayarlar'ı açar:
-düzenleyicin, bildirimler, simgeler, renk teması, geçişten sonra yeni ajanın ne
-yapacağı, limitte ne olacağı ve ayar dosyası. Bir satıra Enter ya da tıklama, değerlerinin menüsünü
-açar (● şu ankini gösterir); birini seç ya da numarasına bas. Oradaki **Sürümler ve güncellemeler** (ya da `imux
-versions`) i-mux'u, motorunu ve her agent CLI'ını sürümü ve onu güncelleyen (kurulu değilse kuran)
-komutla listeler; harfine basınca komut orada çalışır. **Editörde yapay zekâ tamamlama** VS Code'daki Copilot
-gibi çalışır: oradan **Düzenleyici → Neovim + Copilot**'u seçince düzenlediğin dosyalar GitHub'ın
-Copilot eklentili Neovim'inde açılır (Tab
-öneriyi kabul eder, Ctrl+S kaydeder, Ctrl+Q çıkar). Eksikleri kurar (Homebrew ile Neovim, eklenti) ve
-GitHub Copilot'a bir kez giriş yaptırır.
-
-**Temalar:** kenar panel, açılır pencereler, menüler ve sekme çubuğu renklerini bir temadan alır:
-i-mux (kendi renkleri, varsayılan), Catppuccin, Catppuccin Latte, Tokyo Night (ve Day), Dracula, Nord, Gruvbox (ve Light),
-One Dark ve One Light, Solarized (ve Light), Kanagawa (ve Lotus), Rosé Pine (ve Dawn), Vesper ya da
-Terminal (terminalinin kendi renkleri). Ayarlar → **Tema** birini seçer; **Terminalin açık/koyu
-moduna uy**, terminalin açık ya da koyuya geçince temanın açık ve koyu sürümleri arasında geçer.
-Tema, bir terminal teması gibi bütün pencereyi, ajanların panellerini ve
-terminalin kenarlarını da boyar (i-mux'tan çıkınca terminal kendi arka planına döner); i-mux ve
-Terminal temaları terminalinin kendi renklerini korur. Tek
-tek renkler `[theme.custom]` içinde değiştirilebilir (bkz. [docs/CONFIG.md](docs/CONFIG.md)).
-
-**Canlı web sayfaları:** gezginde bir HTML dosyasına tıklayınca nasıl açılacağını sorar: **Tarayıcıda
-aç** (kendi penceresinde, sekme ya da adres çubuğu olmadan; Chrome'un ya da Edge'in, WSL'de
-Windows'unki), **Yeni sekmede aç**, **Düzenle** ya da **Görüntüle**. Sayfayı i-mux `localhost` üzerinden sunar;
-bir ajan onu ya da kullandığı bir dosyayı yeniden yazınca sayfa kendini yeniler. Başka bir sayfaya
-tıklayınca o pencerede açılır. Agent'lar yanındaki **+** → **🌐 Web sayfası…** herhangi bir adresi
-açar (`localhost:5173`, ya da sadece `5173`). Kurulacak bir şey yok.
-VS Code'un terminalinden (tünel üzerinden de) sayfalar VS Code'un çalıştığı yerde açılır; düz SSH'de
-adres panoya gelir. `imux web` sunulanları listeler, `imux web open <dosya|url>` bir sayfa açar,
-`imux web stop` durdurur.
-
-**Bildirimler:** bir ajan işini bitirince (en az 10 saniye çalıştıktan sonra) ya da sana bir şey
-sorunca, o sırada ona bakmıyorsan bildirim gelir: macOS'un bildirim merkezi, Linux masaüstününki
-(`notify-send`), SSH'ta ya da sunucuda ise terminalinin kendi bildirimi (iTerm2, Ghostty, WezTerm,
-kitty, GNOME Terminal …). Terminal kapalıyken de çalışır. Bildirimi ve sesini Ayarlar'dan kapatabilir,
-`[notify] command` ile istediğin yere (örneğin telefonuna) gönderebilirsin.
-
-**Resim yapıştırma:** bir ekran görüntüsü (ya da Finder'da / dosya yöneticinde resim dosyaları)
-kopyala ve herhangi bir ajanın panelinde **Ctrl+V**'ye bas; istediğin kadar tekrarlayabilirsin.
-i-mux resmi `~/.imux/images/` altına kaydeder ve yolunu ajana, sürüklenip bırakılmış bir dosya
-gibi verir (Antigravity `@yol` alır). **Alt+V** de aynısını yapar; Ctrl+V'yi terminalin
-kendisi yakalıyorsa (Windows Terminal) onu kullan. Panoda resim yoksa Ctrl+V her
-zamanki gibi ajana gider. macOS panosunu, Wayland'inkini (`wl-clipboard`), X11'inkini (`xclip`), WSL'de
-ise Windows panosunu okur: Windows'ta kopyala, WSL'de yapıştır. SSH'ta pano öbür makinede kaldığı
-için orada çalışmaz. `imux doctor` neyi kullandığını söyler; Ayarlar'dan kapatılabilir.
-
-**OpenCode**, OpenCode'da tanımladığın herhangi bir model uç noktasıyla çalışır (NVIDIA'nın ya da
-Groq'un ücretsiz katmanları gibi OpenAI uyumlu API'ler, Anthropic, kendi makinende Ollama ...):
-diğerleri limite takılınca devam etmek için kullanışlı bir yer. i-mux OpenCode 2 ister:
-Ayarlar → **Sürümler ve güncellemeler** onu kurar (harfi `e`); `curl -fsSL
-https://opencode.ai/v2/install | bash`, `npm i -g @opencode/cli` ve `brew install opencode` da
-kurar. OpenCode'un ilk kurulum betiği ve npm'deki `opencode-ai` OpenCode 1 kurar; onlarla kurduysan
-ardından `opencode upgrade --major` çalıştır. `imux doctor` çalışabildiğini kontrol eder. Anahtarı OpenCode'un içinde `/connect` ile ekle (NVIDIA
-ya da Groq'u seç, build.nvidia.com ya da console.groq.com'dan aldığın anahtarı yapıştır; hesap
-gerekmez), sonra `/models` ile modeli seç. OpenCode Go planın varsa limit paneli 5 saatlik, haftalık ve aylık
-kullanımını gösterir.
-
-Dosyalar editöründe açılır: Ayarlar → **Düzenleyici** micro, nano ya da Neovim'i seçer (`imux
-editor use <editör>`); **Otomatik**'te micro, `$VISUAL`, `$EDITOR`, nano, vim. Kendi editörün yoksa,
-açtığın ilk dosya micro'yu senin için getirmeyi önerir (bir kez, 5 MB; ayrıca Ayarlar →
-**Düzenleyici** → micro ya da `imux editor install`): fare, Ctrl+S / Ctrl+Q,
-Ctrl+C / Ctrl+V, renkli kod ve kaydırma çubuğu. nano da sağ kenarında nerede olduğunu gösterir.
-Fare tekerleği her yerde kaydırır.
-
-`imux`'u çalıştırınca hangi projeyi açacağını sorar: adının birkaç harfini yaz. (Açık bir projenin
-klasöründeysen doğrudan ona gider; başka bir klasörde, açık ya da geri yüklenecek bir şey yoksa o
-klasörü açar.) Bilgisayar yeniden başladıysa ya da i-mux'u kapattıysan en üstte **Son oturumu geri
-yükle** gelir ve açık olan bütün projeleri, agent'ı olsun olmasın, geri getirir; sonra **bu
-klasör**, sonra **Son kullanılanlar**: bıraktığın gibi açılırlar, aynı sekmeler, adlar ve
-agent'lar, her agent kendi sohbetine döner.
-
-**Çıkmak:** sekme çubuğunun sağındaki **⏻ Çık** → **Terminale dön** seni kabuğuna döndürür, agent'lar
-çalışmaya devam eder (`imux` seni onlara geri götürür); **i-mux'u kapat, tüm agent'ları durdur…** bir
-kez sorup hepsini kapatır (kabuktan `imux quit`).
-
-Soldaki **kenar panel** bir kod editörününki gibi çalışır: en soldaki simgeler (altlarında adları)
-görünümü değiştirir.
-
-| Simge | Görünüm |
-|---|---|
-| 🤖 | **Agent'lar:** projelerin (branch'iyle) ve içlerinde çalışan bütün agent'lar, her birinin ne yaptığıyla: çalışırken dönen bir işaret (agent'ın kendisi çalıştığını söylerken, Claude Code'un ilerleme satırı gibi), sana bir şey sorduğunda **Sıra sende**, boştayken halka ve bunun ne kadar önce olduğu (Claude Code ve Codex bunu kancalarıyla i-mux'a kendileri söyler, o yüzden onlarınki kesin ve anında; diğerleri ekranlarından okunur); **Agent'lar** başlığı çalışan agent'ları sayar, 🤖 simgesindeki mavi rozet de; her görünümde gözünün önündedir |
-| 📁 | **Dosyalar:** projenin dosyaları, editördeki gibi her biri türünün simgesiyle (Nerd Font varsa Seti'ninkiler, yoksa emoji), açık ya da kapalı klasörler ve düzeyleri gösteren girinti çizgileriyle; klasöre tıklayınca açılır, dosyaya tıklayınca düzenlenir (HTML dosyası tarayıcında canlı açılır, aşağıda); değişen dosyalar renklidir. Başlığında VS Code'un düğmeleri var: **Yeni dosya…** ve **Yeni klasör…** (seçili klasörde, yoksa projede), **Gezgini yenile**, **Klasörleri kapat** ve **⋯** içinde **Gizli dosyaları göster** (açıkken ✓: `.github`, `.env`, `.gitlab-ci.yml` gibi adı noktayla başlayan dosya ve klasörler burada görünür; `.git` ve `node_modules` hiç görünmez; bir dahaki sefere de kalır); imlecin üzerindeki düğmenin ne yaptığını başlık söyler. **Ctrl+P** (ya da ⋯ → Dosyaya git…) editördeki gibi projede dosya bulur: adından harfler yaz (`sbrnd`, `sidebar/render.go`'yu bulur; `ad:42` 42. satırda açar), Enter açar. **Sağ tık** editördeki menüyü açar: Yeni dosya / Yeni klasör, Yeniden adlandır, Sil (Çöp Sepeti'ne), Kes / Kopyala / Yapıştır, Yolu / Göreli yolu kopyala, Finder'da göster, Terminalde aç, Yanda aç, Klasörde ara, Karşılaştır, Ajana ekle; HTML ve SVG dosyalarında Önizlemeyi Aç. İmlecin üzerindeki şey parlar; seçili dosya işaretli kalır |
-| 🔍 | **Arama:** projenin bütün dosyalarında, yazdıkça sonuçlar, dosya dosya, ikonu ve eşleşme sayısıyla (dosyaya tıkla: daralt; hepsi için **⊟ Hepsini kapat** ya da Tab; çok dosya varsa kapalı gelir); Enter dosyayı o satırda açar. Uzun listelerde, diff'lerde ve dosyalarda tıklanıp sürüklenebilen ince bir kaydırma çubuğu var; diff'te çubuğun yanında, VS Code'daki gibi, bütün dosyada satırların silindiği yerler kırmızı, eklendiği yerler yeşil işaretli: birine tıkla oraya git, ya da sonraki ve önceki değişiklik için **]** ve **[** |
-| 🔀 | **Git:** VS Code'un kaynak kontrolü, bütün işlemleriyle. **⋯** menüsünü açar: Pull, Push, Clone, Checkout to, Fetch, Git çıktısı ve Commit (amend, signed off, geri al), Changes, Pull/Push, Branch (merge, rebase, oluştur, yeniden adlandır, sil, yayınla), Remote, Stash, Tags ve Worktrees alt menüleri, bir de View & Sort (liste ya da ağaç; ada, yola ya da duruma göre). Dal, etiket, stash ve remote'lar yazdıkça süzülen bir Quick Pick'ten seçilir. Merge, hazırlanan ve hazırlanmayan değişiklikler (her dosyanın önce adı, sonra gri klasörü), her dosyada, klasörde ve hepsi için hazırla, geri al ve at (önce sorar); **Commit**'in üstünde VS Code'daki gibi mesaj kutusu: tıkla, mesajı yaz, Enter commit eder (yeni satır için Ctrl+J; mesaj commit edilene kadar proje başına saklanır), yanında ▾ (Commit & Push, Commit & Sync, Amend) ve rebase sürerken Continue; ↑↓ sayılarıyla pull / push / senkron, yeni dal için Publish; dala tıklayınca Checkout to…; dosyaya ya da commit'e sağ tıklayınca menüsü (.gitignore'a ekle, Cherry Pick, Revert, Etiket oluştur…); dal ve etiket etiketli grafik olarak geçmiş. Dosyaya tıklayınca dosyanın tamamı değişiklikler vurgulu açılır, pencere genişse yan yana |
-| ⏰ | **İşler:** projenin kendi agent'ları (Claude Code'un `.claude/agents/`, Copilot'un `.github/agents/`, OpenCode'unki, her CLI için `.agents/agents/` ve kişisel agent'ların) ve skill'leri, i-mux açıkken hemen ya da zamanında çalışır; doldurulacak form yok: ne yapacağı zaten yazılmış agent'ta ya da skill'de. **🚀** her şeyin önceden seçili olduğu tek bir Çalıştır paneli açar: kurulu CLI (Claude, Antigravity, Copilot, Codex, OpenCode; önce agent'ın kendi CLI'ı), model (CLI'ın listesi ya da yazdığın bir ad), ne zaman (şimdi, 5 ya da 15 dakikada bir, saat başı, her gün 09:00, ya da `10dk`, `2saat`, `09:00 18:30` gibi biri) ve erişim; **Enter** çalıştırır. Çıktısı açılır ve çalışmayı izler: çağırdığı her araç sonucuyla, sonra cevabı; **s** durdurur, **Esc** çalışmaya bırakır. Projede arka planda çalışır; kenar panel her birinin zamanını, CLI'ını ve modelini, son raporunun ilk satırını (✓, başarısızsa ✗) ve sıradaki çalışmasını gösterir; biri çalışırken dönen bir işaret ve ⏰ üzerinde bir rozet; tıklayınca çıktısını gösterir. Rapor gelince bildirir; "yeni bir şey yok" bildirmez. Her satırdaki **⋯** (ya da sağ tık): Çalıştır / Durdur, Çıktı, Geçmiş, Bir bölmede sürdür, Zamanla (ya da Zamanlamayı değiştir), Duraklat, Tanımı aç, Kaldır; skill'lerde ayrıca Ajana ekle, Agent ile iyileştir, Tüm agent'larla paylaş ve Skill'i sil. Başlıktaki **✨** yeni bir skill yazdırır (seçtiğin bir agent ya da boş bir `SKILL.md`); ön bilgisinde sorun olan skill ⚠ ve neyin yanlış olduğunu gösterir |
-| 🔑 | **Env:** ortamlar: bir pane'deki her programın çalışabileceği değişkenler; bir API anahtarı ya da token, bir proxy ya da bir ajan için başka bir uç nokta gibi. Her biri `~/.imux/env/` içinde bir `KEY=VALUE` dosyası (değerler hiç gösterilmez). **+** yenisinin adını soran bir popup açar, sonra aynı popup'ta örneklerle (bir token, bir proxy; Claude Code, diğer pane'lerde kendi Claude aboneliğin dururken Z.ai GLM Coding Plan'da ya da OpenRouter'da) düzenleyicide açar. Birine tıkla, bulunduğun pane'e uygulansın: ajan önce sorar, sonra onunla yeniden başlar ve aynı konuşmaya devam eder; komut bekleyen bir shell'e hemen uygulanır. i-mux'un o pane'de sonra başlattığı her şey (bir geçiş, ajandan çıkınca açılan shell, geri yüklenen oturum) onu korur ve pane'in kenarında `🔑 ad` görünür. Pane'in kendi ortamına (● bu pane) tıkla ya da herhangi birine sağ tıkla, menüsü açılsın: Bu pane'den kaldır, Düzenle, Sil. Ayrıca `imux env ls`, `imux env apply <ad>`, `imux env clear` |
-| 📊 · ❓ | kullanım limitleri · bütün tuşlar |
-
-| Kenar panel / tuş | Ne yapar |
-|---|---|
-| bir projeye tıkla · **Projeler** yanındaki **+** (ya da `o`) | o projeye geç (projeyi **kapatmak** için mevcut projeye tıkla ya da herhangi birine sağ tıkla) · başka proje aç: adının birkaç harfini yaz, Enter |
-| bir agent'a sağ tıkla (ya da seçili olana tıkla) | menüsü: **Yeniden adlandır…** (sohbet başka CLI'ya geçse de ad kalır, Geçmiş de konuşmayı bu adla listeler) ya da **Agent'ı kapat…** |
-| bir agent'a tıkla · **Agent'lar** yanındaki **+** | ona git (hangi projede olursa) · yeni agent ya da düz **Terminal** aç, sonra yerini seç: sağda, solda, altta, üstte ya da yeni sekmede (sağa / aşağı için `prefix v` / `prefix -`), ya da **🌿 Yeni bir worktree'de…**: kendine ait bir git worktree'si (`<proje>.worktrees/<dal>`), böylece iki agent aynı dosyaları hiç düzenlemez; projesinin altında listelenir, menüsü farkını gösterir, dalına birleştirir ya da kaldırır (`imux worktree`); ya da **🌐 Web sayfası…** |
-| şeritteki **💻 Remote** (Git'ten sonra) · **+** düğmesi (ya da `imux machine add kullanici@sunucu`) | diğer bilgisayarların, VS Code'daki Remote Explorer gibi: her makine durumuyla (● bağlı, ✕ bağlı değil), altında projeleri, onların altında agent'ları; bir projeye ya da agent'a tıklayınca burada bir sekmede açılır (bağlantı koparsa yeniden bağlanır), makineye tıklayınca katlanır, sağ tıklayınca menüsü açılır (orada klasör aç, orada terminal, yeniden bağlan, kaldır) · `ssh` ile ulaştığın bir bilgisayarı ekler (anahtarların, `~/.ssh/config` ve known hosts; ona hiçbir şey yönlendirilmez). Agent'larının soruları ve biten işleri burada bildirilir. Makinede i-mux 0.61 ya da sonrası gerekir (eklerken oraya kurmayı önerir) |
-| **Bu sohbete şurada devam et** altındaki bir agent'a tıkla | etkin pane o agent'ta, konuşmayla birlikte devam eder (kurulu olmayan biri, onu kuran komutu ve **Şimdi kur** düğmesini gösteren küçük bir pencere açar) |
-| bir bölüm başlığı (PROJELER, AGENT'LAR) | bölümü kapatır / açar |
-| **⧉ Geçmiş** (ya da `prefix S`) · şeritteki **◔** | eski konuşmalar, ad verilenler adıyla (konuşmanın **Yeniden adlandır…** öğesi ad verir; devam edince agent adını geri alır) (📌 Sabitle ya da kaldır…, `p`, birini en üstte tutar; **🔍 Metinlerinde ara…**, `/`, bir konuşmayı içinde geçen herhangi bir şeyle bulur) · plan kullanımı (Claude ve Codex: 5 saatlik ve haftalık %; Copilot: aylık) |
-| en üstteki, terminalin üstündeki **sekme çubuğu** · **+** (ya da `prefix c`) · **×** · **⏻ Çık** | her iş için bir sekme, agent'ları ve durumuyla; tıklayınca geçersin · seçtiğin agent ile yeni sekme (`prefix ,` sekmeye ad verir) · sekmeyi kapat · terminale dön ya da i-mux'u kapat |
-| projenin son agent'ını kapat | proje açık kalır ve **Agent yok** der: başlatmak için orada bir agent'ın tuşuna bas (ya da tıkla) veya AGENT'LAR yanındaki **+** |
-| `prefix b` | kenar paneli gizle ya da göster |
-| `prefix H` `J` `K` `L` | aktif pane'i o taraftakiyle (sol, alt, üst, sağ) yer değiştir |
-| `prefix r`, sonra `h` `j` `k` `l` ya da oklar (Shift: hızlı), `Esc` | aktif pane'i boyutlandır |
-| `prefix ?` (ya da kenar panelde `?`) | bütün tuşlar: birini bulmak için yaz, Enter çalıştırır |
-| `Ctrl+\` (ya da `prefix a`), sonra `c` `a` `p` `x` `e` | pane menüsü; Claude / Antigravity / Copilot / Codex / OpenCode'da sürdür |
-
-`prefix`, `Ctrl+b` demektir: bas, bırak, sonra tuşa bas.
+1. Agent'ınızla her zamanki gibi çalışın.
+2. Limite takıldığında ya da istediğiniz an `Ctrl+\` ve bir agent'ın harfine basın.
+3. Yeni agent devir belgesini okur ve bir sonraki talimatınızı bekler.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/switched.svg" alt="Antigravity oturumu i-mux'un devir belgesiyle sürdürüyor"></td>
+    <td width="50%"><img src="docs/images/switched.svg" alt="Antigravity, i-mux'un devir belgesiyle oturumu sürdürüyor"></td>
     <td width="50%"><img src="docs/images/menu.svg" alt="i-mux bölme menüsü"></td>
   </tr>
   <tr>
@@ -196,57 +231,78 @@ görünümü değiştirir.
   </tr>
 </table>
 
-Geçişte bütün konuşmayı değil, tek bir kısa mesaj görürsün: i-mux konuşmayı `~/.imux/handoffs`
-içine kaydeder ve yeni agent'a o dosyayı okumasını söyler. Agent dosyayı okur, bağlamı aldığını
-tek cümleyle söyler ve seni bekler: kendiliğinden işe girişmez, boşuna token harcamaz. Belgenin
-tamamının mesaj olarak gitmesini istersen `[handoff] deliver = "inline"`, yarım kalan işe hemen
-devam etmesini istersen `[handoff] on_arrival = "continue"` yaz.
+## <img src="docs/images/icons/keyboard.svg" width="22" alt=""> Kısayollar
 
-Bölmede daha önce çalışmış bir agent'a geri dönmek, o agent'ın kendi oturumunu sürdürür ve ona
-yalnızca aradaki gelişmeleri anlatır. Komut satırı için `imux help` (`switch`, `split`, `ls`, `versions`,
-`limits`, `sessions`, `handoff --print`, `editor`, `quit`).
+`prefix`, `Ctrl+b`'dir: basın, bırakın, sonra tuşa basın.
 
-Arayüz dili `LANG` / `IMUX_LANG` ya da yapılandırmadaki `locale = "tr"` ile seçilir; agent'lara
-giden devir belgesi her zaman İngilizcedir.
+| Tuş | İşlev |
+|---|---|
+| `Ctrl+\` sonra `c` `a` `p` `x` `e` | Claude, Antigravity, Copilot, Codex ya da OpenCode'da sürdür |
+| `prefix c` | Yeni sekme |
+| `prefix v` / `prefix -` | Sağa / aşağı böl |
+| `prefix S` | Sohbet geçmişi |
+| `prefix b` | Kenar paneli göster ya da gizle |
+| `Ctrl+P` | Dosyaya git |
+| `Ctrl+V` | Agent'a görsel yapıştır |
+| `prefix ?` | Tüm tuşlar, aranabilir |
 
-## Bir agent limite takıldığında
+Tam liste [kullanım rehberinde](docs/GUIDE.md#keys).
 
-Küçük bir izleyici agent ekranlarındaki limit mesajlarını fark eder ve durum çubuğunda gösterir.
-Sonrasında ne olacağını `~/.imux/config.toml` içinde seçin (`imux config init` açıklamalı bir dosya
-yazar):
+## <img src="docs/images/icons/gear.svg" width="22" alt=""> Yapılandırma
 
-```toml
-on_limit = "ask"   # ask (varsayılan) | auto: `order` içindeki sıradaki agent'a geç | off: yalnızca göster
+Kenar panelden **Settings**'i açın ya da `imux settings` çalıştırın. Yapılandırma dosyası için:
+
+```sh
+imux config init    # açıklamalı bir ~/.imux/config.toml yazar
 ```
 
-## Motor
+```toml
+on_limit = "ask"        # ask | auto (sıradaki agent'a geç) | off
 
-i-mux, i-mux için yapılmış ve tmux'un komutlarını konuşan bir terminal motoru olan **i-mux-core**
-üzerinde çalışır; aynı sürümle gelir (`imux-core`, `imux`'un yanında) ve tmux kurulu olsa da
-olmasa da tek motordur. `imux doctor` sürümünü gösterir. Önceki bir sürümden
-`~/.imux/config.toml` içinde kalan `[engine] backend = "tmux"` bir uyarıyla yok sayılır.
+[handoff]
+on_arrival = "wait"     # sizi bekler | "continue": yarım kalan isteğe devam eder
+```
 
-tmux üzerinde çalışan bir sürümden güncelliyorsanız: bir sonraki `imux`, o tmux sunucusunun hâlâ
-çalıştırdığı projeleri motora taşır. O sunucuyu kapatır ve **Son oturumu geri yükle**'yi önerir;
-projeler ajanları konuşmalarına devam ederek yeniden açılır. tmux'un kendisi ve kullandığınız başka
-tmux'lar olduğu gibi kalır.
+Tüm seçenekler için [Configuration](docs/CONFIG.md) belgesine bakın.
 
-## Gizlilik
+## Devir nasıl çalışır
 
-- Ağ bağlantısı, telemetri ya da API anahtarı yok. i-mux, agent'ların yerel oturum dosyalarını ve
-  `git status` çıktısını okur.
-- Geçiş, devir belgesini sonraki agent'ın sağlayıcısına gönderir. Gizli bilgiler elden geldiğince
-  çıkarılır; `imux handoff --print` ile kontrol edin.
-- Devir belgesi komut satırı argümanı olarak verilir; makinedeki diğer kullanıcılar onu `ps` ile
-  görebilir. Paylaşılan makinelerde `[handoff] inject = "paste"` ayarlayın.
-- Ayrıntılar: [docs/HANDOFF.md](docs/HANDOFF.md) ve [docs/AGENT-BUS.md](docs/AGENT-BUS.md).
+i-mux her agent'ın yerel oturum dosyalarını ve `git status` çıktısını okur. Kısa bir devir
+belgesini `~/.imux/handoffs` altına yazar ve yeni agent'a onu okumasını söyler. Agent bağlamı
+aldığını söyler ve sizi bekler; kendi başına işe girişmez.
 
-## Belgeler (İngilizce)
+Bölmede daha önce çalışmış bir agent'a geri dönmek onun kendi oturumunu sürdürür. Agent yalnızca
+aradan geçen kısmı öğrenir.
 
-[Yapılandırma](docs/CONFIG.md) · [Devir belgesi](docs/HANDOFF.md) · [Limitler](docs/LIMITS.md) ·
-[Agent veri yolu](docs/AGENT-BUS.md) · [Sorun giderme](docs/TROUBLESHOOTING.md) ·
-[Mimari](ARCHITECTURE.md) · [Katkı](CONTRIBUTING.md) · [English](README.md)
+## <img src="docs/images/icons/lock.svg" width="22" alt=""> Gizlilik
 
-## Lisans
+- Telemetri, hesap ya da API anahtarı yok. i-mux yalnızca yerel dosyaları okur.
+- Devir belgesi yalnızca geçtiğiniz agent'ın sağlayıcısına gider.
+- Gizli bilgiler elden geldiğince maskelenir. Her devri `imux handoff --print` ile önizleyin.
+- Paylaşılan makinelerde devrin `ps`'te görünmemesi için `[handoff] inject = "paste"` ayarlayın.
 
-[MIT](LICENSE)
+Ayrıntılar: [Handoff format](docs/HANDOFF.md).
+
+## Kaldırma
+
+- **macOS, Linux, WSL:** `~/.local/bin/imux`, `~/.local/bin/imux-core` ve `~/.imux`'u silin.
+  Kabuk profilinizden `# Added by the imux installer` ile işaretli satırı kaldırın.
+- **Windows:** i-mux'u **Ayarlar → Uygulamalar**'dan kaldırın. PowerShell ile kurduysanız
+  `%LOCALAPPDATA%\Programs\i-mux` klasörünü silin ve kullanıcı `PATH`'inizden çıkarın.
+
+## <img src="docs/images/icons/book.svg" width="22" alt=""> Belgeler (İngilizce)
+
+| | |
+|---|---|
+| [User guide](docs/GUIDE.md) | Tüm görünümler, tuşlar ve ayarlar |
+| [Configuration](docs/CONFIG.md) | `config.toml` başvurusu |
+| [Handoff format](docs/HANDOFF.md) | Yeni agent'a ne gider |
+| [Limits](docs/LIMITS.md) | Kullanım ve limitler nasıl okunur |
+| [Agent bus](docs/AGENT-BUS.md) | Agent'lar arası mesajlar |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Sık sorunlar ve çözümleri |
+| [Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) | Geliştiriciler için |
+
+## <img src="docs/images/icons/law.svg" width="22" alt=""> Lisans
+
+[MIT](LICENSE). Simgeler [Nerd Fonts](https://www.nerdfonts.com)'tan alınmıştır: Codicons
+(CC BY 4.0, Microsoft), Font Awesome (CC BY 4.0) ve Material Design Icons (Apache 2.0).

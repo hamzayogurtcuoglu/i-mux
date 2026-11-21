@@ -1,191 +1,224 @@
+<p align="center">
+  <img src="docs/images/icons/handoff.svg" alt="" width="64">
+</p>
+
 <h1 align="center">i-mux</h1>
 
 <p align="center">
-  <b>Hit your usage limit in one AI coding agent? Keep going in another, with the whole conversation.</b><br>
-  Claude Code · Antigravity CLI · GitHub Copilot CLI · OpenAI Codex CLI · OpenCode
+  <b>One terminal workspace for every AI coding agent.</b><br>
+  When one agent hits its limit, continue in another with the full context.
 </p>
 
 <p align="center">
   <a href="https://github.com/hamzayogurtcuoglu/i-mux/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/hamzayogurtcuoglu/i-mux/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/hamzayogurtcuoglu/i-mux/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/hamzayogurtcuoglu/i-mux?color=1f9fb0"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
-  <img alt="macOS and Linux" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-lightgrey.svg">
+  <img alt="Platforms" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg">
+  <img alt="Go" src="https://img.shields.io/badge/Go-1.27-00ADD8.svg?logo=go&logoColor=white">
+</p>
+
+<p align="center">
+  <a href="#installation">Installation</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#features">Features</a> ·
+  <a href="docs/GUIDE.md">User guide</a> ·
+  <a href="README.tr.md">Türkçe</a>
 </p>
 
 <p align="center">
   <img src="docs/images/limit.svg" alt="Claude hits its usage limit and i-mux offers to continue in Antigravity or Codex" width="880">
 </p>
 
-i-mux runs your agent CLIs in a terminal workspace. When one hits its limit, or whenever you like,
-press one key and the same pane restarts with another agent. The new agent receives a condensed
-handoff: the original request, the task list, files touched, repository state and where the work
-stopped. No re-explaining, no copy-paste.
+## Why i-mux
 
-It is a single binary, `imux`, with its own terminal engine, `imux-core`, installed beside it: no
-tmux needed, and a tmux you have is left untouched. Everything stays on your machine.
+AI coding agents have usage limits. When one stops mid-task, the next agent knows nothing, and
+you start over.
 
-## Install
+i-mux removes that gap. Press one key and the same pane restarts with another agent. It receives
+a compact handoff: the original request, the task list, the files touched, the repository state
+and where the work stopped. No re-explaining, no copy-paste.
 
-One line on macOS, Linux, or WSL:
+### Supported agents
+
+| Agent | Command |
+|---|---|
+| Claude Code | `claude` |
+| Antigravity CLI | `agy` |
+| GitHub Copilot CLI | `copilot` |
+| OpenAI Codex CLI | `codex` |
+| OpenCode | `opencode` |
+
+## Features
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/icons/handoff.svg" width="16" alt=""> <b>One-key handoff</b><br>
+      Move a conversation to another agent. It arrives with a summary, not a transcript.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/icons/zap.svg" width="16" alt=""> <b>Limit detection</b><br>
+      i-mux spots limit messages and asks, switches for you, or just shows them.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/robot.svg" width="16" alt=""> <b>Every agent at a glance</b><br>
+      All projects and agents in one sidebar: working, idle, or waiting for you.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/history.svg" width="16" alt=""> <b>Session history</b><br>
+      Search, pin and resume past conversations in any agent.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/files.svg" width="16" alt=""> <b>Explorer and search</b><br>
+      A file tree with icons, Quick Open (<code>Ctrl+P</code>) and full-text search.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/git.svg" width="16" alt=""> <b>Source control</b><br>
+      VS Code-style Git: stage, commit, branches, stashes, worktrees and the graph.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/clock.svg" width="16" alt=""> <b>Scheduled jobs</b><br>
+      Run your project's agents and skills now or on a schedule.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/remote.svg" width="16" alt=""> <b>Remote machines</b><br>
+      Open projects and agents on other computers over SSH.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/key.svg" width="16" alt=""> <b>Environments</b><br>
+      Apply saved API keys, proxies or endpoints to a single pane.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/graph.svg" width="16" alt=""> <b>Usage panel</b><br>
+      5-hour, weekly and monthly usage for each agent.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/globe.svg" width="16" alt=""> <b>Live web preview</b><br>
+      HTML files open in a browser and reload as agents edit them.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/bell.svg" width="16" alt=""> <b>Notifications</b><br>
+      Know when an agent finishes or needs you, even with the terminal closed.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/image.svg" width="16" alt=""> <b>Image paste</b><br>
+      Paste a screenshot into any agent with <code>Ctrl+V</code>.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/palette.svg" width="16" alt=""> <b>Themes</b><br>
+      Catppuccin, Tokyo Night, Dracula, Nord and 15 more. Follows light and dark mode.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/icons/terminal.svg" width="16" alt=""> <b>Built-in engine</b><br>
+      Ships with its own terminal engine, <code>imux-core</code>. No tmux needed.
+    </td>
+    <td valign="top">
+      <img src="docs/images/icons/lock.svg" width="16" alt=""> <b>Local first</b><br>
+      No account, no telemetry, no API keys. Your data stays on your machine.
+    </td>
+  </tr>
+</table>
+
+## Installation
+
+### <img src="docs/images/icons/apple.svg" width="20" alt=""> <img src="docs/images/icons/linux.svg" width="20" alt=""> macOS, Linux and WSL
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
 ```
 
-It downloads the release for your OS and CPU, verifies its checksum, installs `imux` to
-`~/.local/bin` with its engine `imux-core`, adds that directory to your shell's PATH (zsh, bash or
-fish), and offers the Nerd Font the sidebar's icons need (below). Open a new terminal afterwards.
-Options go after `sh -s --`, for example `... | sh -s -- --yes` to install the font without
-asking, `--version v0.1.0`,
-`--prefix DIR`, `--no-modify-path` or `--no-font`.
+The installer downloads the right build, verifies its checksum and installs `imux` and
+`imux-core` to `~/.local/bin`. It adds that folder to your `PATH` and offers the Nerd Font.
+Open a new terminal afterwards.
 
-On Windows (10 1809 or newer) i-mux runs natively: download `imux_<version>_windows_<cpu>_setup.exe`
-from the [latest release](https://github.com/hamzayogurtcuoglu/i-mux/releases/latest) (no admin
-rights needed), or in PowerShell:
+<details>
+<summary>Installer options</summary>
+
+Pass options after `sh -s --`, for example `curl -fsSL … | sh -s -- --yes`.
+
+| Option | Effect |
+|---|---|
+| `--yes` | Install the Nerd Font without asking |
+| `--version vX.Y.Z` | Install a specific release |
+| `--prefix DIR` | Install to another folder |
+| `--no-modify-path` | Leave your shell profile alone |
+| `--no-font` | Skip the Nerd Font |
+
+</details>
+
+### <img src="docs/images/icons/windows.svg" width="20" alt=""> Windows
+
+i-mux runs natively on Windows 10 (1809) and later. No WSL and no administrator rights needed.
+
+**Installer.** Download `imux_<version>_windows_amd64_setup.exe` (`arm64` for ARM devices) from
+the [latest release](https://github.com/hamzayogurtcuoglu/i-mux/releases/latest) and run it.
+It adds i-mux to the Start menu, opening in Windows Terminal.
+
+**PowerShell.**
 
 ```powershell
 irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 | iex
 ```
 
-With Go 1.27+ you can also build it yourself:
+> [!NOTE]
+> The installer is not code-signed yet. If SmartScreen shows "Windows protected your PC",
+> choose **More info → Run anyway**.
+
+### <img src="docs/images/icons/package.svg" width="20" alt=""> From source
+
+Requires Go 1.27 or later.
 
 ```sh
 go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest github.com/hamzayogurtcuoglu/i-mux/cmd/imux-core@latest
 ```
 
-Then install at least one agent CLI and check the setup. For Google's models, install
-[Antigravity CLI](https://antigravity.google/docs/cli/) (`agy`):
-`curl -fsSL https://antigravity.google/cli/install.sh | bash`. Google stopped serving personal
-accounts in Gemini CLI on 2026-06-18, so i-mux supports Antigravity CLI instead of Gemini CLI.
+### <img src="docs/images/icons/font.svg" width="20" alt=""> Nerd Font
+
+The sidebar uses [Nerd Font](https://www.nerdfonts.com) icons and falls back to emoji without
+one. The installer offers it, or run:
+
+```sh
+imux font install
+```
+
+It installs JetBrainsMono Nerd Font for your user and sets it in Windows Terminal and VS Code.
+In other terminals, choose **JetBrainsMono Nerd Font** in their settings.
+
+### <img src="docs/images/icons/robot.svg" width="20" alt=""> Agents
+
+Install at least one supported agent CLI, then check your setup:
 
 ```sh
 imux doctor
 ```
 
-To uninstall, delete `~/.local/bin/imux` and `~/.imux`, and remove the line the installer added to
-your shell profile (marked `# Added by the imux installer`).
+Missing agents can be installed from **Settings → Versions and updates** inside i-mux.
 
-## Usage
+## Quick start
 
 ```sh
 cd ~/code/my-project
-imux            # start the first installed agent (or: imux claude)
+imux            # start the first installed agent
+imux claude     # or pick one
 ```
 
-The rail shows the editor's icons when your terminal uses a [Nerd Font](https://www.nerdfonts.com),
-emoji otherwise. **`imux font install`** (also in Settings, and offered by the installer) downloads
-JetBrainsMono Nerd Font, checks it against the release's checksum, installs it for you alone (no
-administrator rights) and sets Windows Terminal's and VS Code's terminal font to it, keeping their
-old settings in `settings.json.imux-backup`. On WSL it does all this on the Windows side, where
-the terminal draws the text. Restart the terminal afterwards; in other terminals (Terminal.app,
-iTerm2, GNOME Terminal ...) pick "JetBrainsMono Nerd Font" in their settings. `imux font` shows
-what is in place. A click on the open view's icon closes the panel beside the rail, as in the
-editor, and gives the agent the room; a click on any view's icon opens it again. Drag the panel's
-edge to make it wider or narrower: every tab takes the width, and i-mux remembers it
-(`tmux.sidebar_width`).
-
-**🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: your editor,
-notifications, icons, the color theme, what a new agent does after a handoff, what happens
-at a limit, and the config file. Enter or a click on a row opens a menu of its values (● marks the
-current one); pick one or press its number. **Versions and updates** there (or `imux versions`) lists i-mux, its engine
-and every agent CLI with its version and the command that updates it, or installs it when it is
-missing; press its letter to run it right there. **AI completion in the editor** works like Copilot in VS Code: choose
-**Editor → Neovim + Copilot** there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
-Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
-in to GitHub Copilot once.
-
-**Themes:** the sidebar, popups, menus and tab bar take their colors from a theme: i-mux (its own
-colors, the default), Catppuccin, Catppuccin Latte, Tokyo Night (and Day), Dracula, Nord, Gruvbox (and Light), One Dark and
-One Light, Solarized (and Light), Kanagawa (and Lotus), Rosé Pine (and Dawn), Vesper, or Terminal
-(your terminal's own colors). Settings → **Theme** picks one; **Follow the terminal's light/dark**
-switches between a theme's light and dark versions when your terminal does. A
-theme colors the whole window, the agents' panes and the terminal's edges too, as a terminal theme
-would (your terminal gets its own background back when you leave i-mux); i-mux and Terminal keep
-your terminal's own colors. Single colors can be
-changed in `[theme.custom]` (see [docs/CONFIG.md](docs/CONFIG.md)).
-
-**Web pages, live:** a click on an HTML file in the explorer asks how to open it: **Open in
-browser** (its own window, no tabs or address bar; Chrome's or Edge's, under WSL Windows' own),
-**Open in a new tab**, **Edit** or **View**. The page is served by i-mux on `localhost`; when an agent rewrites it, or a
-file it uses, it reloads by itself. A click on another page shows it in that window. **+** next to
-Agents → **🌐 Web page…** opens any address (`localhost:5173`, or just `5173`). Nothing to
-install. From VS Code's terminal (also over a
-tunnel) pages open where VS Code runs; over plain SSH the address goes to your clipboard.
-`imux web` lists what is served, `imux web open <file|url>` opens a page, `imux web stop` stops.
-
-**Notifications:** when an agent finishes (after working 10 s or more) or asks you something and you
-are not looking at it, a notification comes: macOS's notification center, the Linux desktop's
-(`notify-send`), or, over SSH or on a server, your terminal's own (iTerm2, Ghostty, WezTerm, kitty,
-GNOME Terminal …). It works with the terminal closed too. Turn it and its sound off in Settings, or set
-`[notify] command` to send it anywhere (a push to your phone).
-
-**Pasting images:** copy a screenshot (or image files in Finder / your file manager) and press
-**Ctrl+V** in any agent's pane, as many times as you like: i-mux saves the image under
-`~/.imux/images/` and gives the agent its path, the way a dropped file arrives (Antigravity gets
-`@path`). **Alt+V** does the same; use it where the terminal keeps Ctrl+V for itself (Windows
-Terminal). With no image on the clipboard Ctrl+V reaches the agent as usual.
-It reads the macOS clipboard, Wayland's (`wl-clipboard`), X11's (`xclip`), and from WSL the
-Windows clipboard: copy on Windows, paste in WSL. Over SSH the clipboard is on the other machine,
-so it cannot work there. `imux doctor` says what it uses; Settings turns it off.
-
-**OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
-NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
-when the others hit their limits. i-mux needs OpenCode 2: Settings → **Versions and updates**
-installs it (its letter, `e`), as do `curl -fsSL https://opencode.ai/v2/install | bash`, `npm i -g
-@opencode/cli` and `brew install opencode`. OpenCode's first install script and npm's `opencode-ai`
-give OpenCode 1; after them, run `opencode upgrade --major`. `imux doctor` checks that it can run.
-With an OpenCode Go plan, the limits panel shows its 5-hour, weekly and monthly use. Add a key inside OpenCode with `/connect` (pick NVIDIA or Groq,
-paste the key from build.nvidia.com or console.groq.com; no account needed), then choose a model
-with `/models`.
-
-Files open in your editor: Settings → **Editor** picks micro, nano or Neovim (`imux editor use
-<editor>`); on **Auto**, micro, `$VISUAL`, `$EDITOR`, nano, vim. Without an editor of your own, the
-first file you open offers to get micro for you (5 MB, once; also Settings → **Editor** → micro, or
-`imux editor install`): the mouse, Ctrl+S / Ctrl+Q,
-Ctrl+C / Ctrl+V, colors for code and a scroll bar. nano shows where you are at its right edge too.
-The mouse wheel scrolls everywhere.
-
-Run `imux` and it asks which project to open: type a few letters of its name. (In an open
-project's folder it goes straight there; in another folder, with nothing open or to restore, it
-opens that folder.) **Restore last session** comes first after a restart or a quit and brings back
-every project that was open, with or without agents; then **this folder**, then **Recent**
-projects, which reopen as you left them: the same tabs, names and agents, each agent back in its
-own conversation.
-
-**Leaving:** **⏻ Exit** at the right of the tab bar → **Back to the terminal** returns you to your
-shell while the agents keep working (`imux` takes you back to them); **Quit i-mux and stop every
-agent…** closes it all after asking (`imux quit` from a shell).
-
-The **sidebar** on the left works like an editor's: a column of icons (with their names under
-them) switches its view.
-
-| Icon | View |
-|---|---|
-| 🤖 | **Agents:** your projects (with their branch) and every agent working in them, with what each one is doing: a spinner while it works (while the agent itself says so, like Claude Code's progress line), **Needs you** when it asks you something, a ring when idle, and how long ago that changed (Claude Code and Codex tell i-mux themselves through their hooks, so theirs is exact and at once; others are read from their screen); the **Agents** title counts the agents at work, and so does a blue badge on the 🤖 icon, in sight on any view |
-| 📁 | **Files:** the project's files, each with the icon of its type as in the editor (Seti's, with a Nerd Font; emoji otherwise), folders open or closed, indent guides for the levels; click a folder to open it, a file to edit it (an HTML file opens in your browser, live: below); changed files are colored. Its title has VS Code's buttons: **New File…** and **New Folder…** (in the selected folder, else the project's), **Refresh Explorer**, **Collapse Folders**, and **⋯** with **Show Hidden Files** (✓ while on: files and folders starting with a dot, such as `.github`, `.env` or `.gitlab-ci.yml`, show here; `.git` and `node_modules` never; saved for next time); the title says what the button under the pointer does. **Ctrl+P** (or ⋯ → Go to File…) finds a file of the project like the editor's Quick Open: type letters of its name (`sbrnd` finds `sidebar/render.go`; `name:42` opens at line 42), Enter opens it. **Right-click** gives the editor's menu: New File / New Folder, Rename, Delete (to the Trash), Cut / Copy / Paste, Copy Path / Copy Relative Path, Reveal in Finder, Open in Terminal, Open to the Side, Find in Folder, Compare, Add to Agent, and Open Preview for HTML and SVG files. What the pointer is over lights up; the selected file stays marked |
-| 🔍 | **Search:** every file of the project, results as you type, grouped by file with its icon and number of matches (click a file to fold it, **⊟ Collapse all** or Tab for all; many files start folded); Enter opens the file at the line. Long lists, diffs and files have a thin scroll bar you can click or drag; beside a diff's bar, red and green marks show where lines were removed and added in the whole file, as in VS Code: click one to go there, or press **]** and **[** for the next and previous change |
-| 🔀 | **Git:** VS Code's Source Control, every action of it. **⋯** opens its menu: Pull, Push, Clone, Checkout to, Fetch, Show Git Output and the Commit (amend, signed off, undo), Changes, Pull/Push, Branch (merge, rebase, create, rename, delete, publish), Remote, Stash, Tags and Worktrees submenus, and View & Sort (list or tree; by name, path or status). Branches, tags, stashes and remotes are chosen in a Quick Pick you type to filter. Merge, staged and unstaged changes (each file's name, then its folder in gray) with stage, unstage and discard (asks first) on each file, folder and all; VS Code's message box above **Commit**: click it, type the message, Enter commits (Ctrl+J for a new line; the message is kept per project until it is committed), with ▾ (Commit & Push, Commit & Sync, Amend) and Continue during a rebase; pull / push / sync with ↑↓ counts, Publish for a new branch; a click on the branch: Checkout to…; a right-click on a file or a commit: its menu (Add to .gitignore, Cherry Pick, Revert, Create Tag…); the history as a graph with branch and tag labels. A click on a file shows the whole file with the changes highlighted, side by side when the window is wide |
-| ⏰ | **Jobs:** the project's own agents (Claude Code's `.claude/agents/`, Copilot's `.github/agents/`, OpenCode's, `.agents/agents/` for any CLI, and your personal ones) and its skills, run now or on a schedule while i-mux is open, with nothing to fill in: what to do is in the agent or skill already written. **🚀** opens one Run panel where everything is chosen already: the installed CLI (Claude, Antigravity, Copilot, Codex, OpenCode; the agent's own first), the model (the CLI's list, or a name you type), when (now, every 5 or 15 minutes, every hour, every day at 09:00, or one such as `10m`, `2h`, `09:00 18:30`) and the access; **Enter** runs it. Its output opens and follows the run: each tool it calls with its result, then its answer; **s** stops it, **Esc** leaves it running. It runs headless in the project; the sidebar shows each one's time, CLI and model, its last report's first line (✓, or ✗ when it failed) and its next run, with a spinner and a badge on ⏰ while one runs; a click shows its output. A report notifies you; "nothing new" does not. **⋯** on every row (or a right-click): Run / Stop, Output, History, Continue in a pane, Schedule (or Change schedule), Pause, Open definition, Remove; for a skill also Add to Agent, Improve with Agent, Share with all agents and Delete skill. **✨** in the title writes a new skill (an agent you pick, or a blank `SKILL.md`); a skill whose front matter has a problem shows ⚠ and what is wrong |
-| 🔑 | **Env:** environments: sets of variables for any program in a pane, such as an API key or a token, a proxy, or another endpoint for an agent, each a `KEY=VALUE` file in `~/.imux/env/` (values are never shown). **+** opens a popup that asks the new one's name, then the editor in that popup, with examples (a token, a proxy; Claude Code on Z.ai's GLM Coding Plan or on OpenRouter, beside your own Claude subscription in other panes). Click one to apply it to the pane you are in: an agent asks first, then restarts with it and continues the same conversation; a shell at its prompt gets it at once. Everything i-mux starts in that pane later (a switch, the shell an agent exits to, a restored session) keeps it, and its border shows `🔑 name`. Click the pane's own (● this pane), or right-click any, for its menu: Remove from this pane, Edit, Delete. Also `imux env ls`, `imux env apply <name>`, `imux env clear` |
-| 📊 · ❓ | usage limits · every key |
-
-| Sidebar / key | What it does |
-|---|---|
-| click a project · **+** next to **Projects** (or `o`) | switch to it (click the current one, or right-click any, to **close** it) · open another project: type a few letters of its name, Enter |
-| right-click an agent (or click the selected one) | its menu: **Rename…** (the name stays when the chat moves to another CLI, and History lists the conversation by it) or **Close agent…** |
-| click an agent · **+** next to **Agents** | go to it (in any project) · open a new agent, or a plain **Terminal**, then pick where: right, left, down, up or a new tab (`prefix v` / `prefix -` for right / down), or **🌿 In a new worktree…**: a git worktree of its own (`<project>.worktrees/<branch>`), so two agents never edit the same files; it is listed under its project, whose menu then shows its diff, merges it into your branch or removes it (`imux worktree`); or **🌐 Web page…** |
-| **💻 Remote** on the rail (after Git) · its **+** (or `imux machine add user@host`) | your other computers, as VS Code's Remote Explorer: each machine with its state (● connected, ✕ offline), its projects under it and their agents under them; click a project or an agent to open it in a tab here (it connects again when the connection drops), click a machine to fold it, right-click it for its menu (open a folder there, a terminal there, reconnect, remove) · add a computer you reach with `ssh` (your keys, `~/.ssh/config` and known hosts; nothing is forwarded to it). Its agents' questions and finished work are notified here. The machine needs i-mux 0.61 or later (adding it offers to install it there) |
-| click an agent under **Continue this chat in** | the active pane continues in that agent, with the conversation (one that is not installed opens a small window with the command that installs it, and **Install now**) |
-| a section title (PROJECTS, AGENTS) | fold or unfold it |
-| **⧉ History** (or `prefix S`) · **◔** on the rail | earlier conversations, named ones by their name (a conversation's **Rename…** names it; continuing it gives the agent its name back) (📌 Pin or unpin…, `p`, keeps one at the top; **🔍 Search their text…**, `/`, finds a conversation by anything said in it) · plan usage per window (Claude and Codex: 5-hour and weekly %; Copilot: monthly) |
-| the **tab bar** at the top, over the terminal · its **+** (or `prefix c`) · **×** · **⏻ Exit** | one tab per task, with its agents and state; click to switch · a new tab with the agent you pick (`prefix ,` names a tab) · close the tab · back to the terminal, or quit i-mux |
-| close a project's last agent | the project stays open and says **No agents**: press an agent's key (or click it) there, or **+** next to AGENTS, to start one |
-| `prefix b` | hide or show the sidebar |
-| `prefix H` `J` `K` `L` | swap the active pane with the one on that side (left, down, up, right) |
-| `prefix r`, then `h` `j` `k` `l` or the arrows (Shift: faster), `Esc` | resize the active pane |
-| `prefix ?` (or `?` in the sidebar) | every key: type to find one, Enter runs it |
-| `Ctrl+\` (or `prefix a`), then `c` `a` `p` `x` `e` | the pane menu; continue in Claude / Antigravity / Copilot / Codex / OpenCode |
-
-`prefix` is `Ctrl+b`: press it, release, then press the key.
+1. Work with your agent as usual.
+2. When it hits a limit, or whenever you like, press `Ctrl+\` and an agent's letter.
+3. The new agent reads the handoff and waits for your next instruction.
 
 <table>
   <tr>
@@ -198,53 +231,78 @@ them) switches its view.
   </tr>
 </table>
 
-After a switch you see one short message, not the whole conversation: i-mux saves it in
-`~/.imux/handoffs` and tells the new agent to read that file. The agent reads it, says in one
-sentence that it has the context, and waits for you: it does not start working (or spend tokens) on
-its own. Set `[handoff] deliver = "inline"` to send the whole document as the message instead,
-and `[handoff] on_arrival = "continue"` to let it carry on with an unfinished request right away.
+## <img src="docs/images/icons/keyboard.svg" width="22" alt=""> Key bindings
 
-Switching back to an agent that already ran in the pane resumes its own session and tells it only
-what happened in the meantime. Run `imux help` for the command line (`switch`, `split`, `ls`, `versions`,
-`limits`, `sessions`, `handoff --print`, `editor`, `quit`).
+`prefix` is `Ctrl+b`: press it, release, then press the key.
 
-## When an agent hits its limit
+| Key | Action |
+|---|---|
+| `Ctrl+\` then `c` `a` `p` `x` `e` | Continue in Claude, Antigravity, Copilot, Codex or OpenCode |
+| `prefix c` | New tab |
+| `prefix v` / `prefix -` | Split right / down |
+| `prefix S` | Conversation history |
+| `prefix b` | Show or hide the sidebar |
+| `Ctrl+P` | Go to file |
+| `Ctrl+V` | Paste an image into the agent |
+| `prefix ?` | Every key, searchable |
 
-A small watcher notices limit messages on agent screens and shows them in the status bar. Choose
-what happens next in `~/.imux/config.toml` (`imux config init` writes a commented one):
+The [user guide](docs/GUIDE.md#keys) lists them all.
 
-```toml
-on_limit = "ask"   # ask (default) | auto: switch to the next agent in `order` | off: only show it
+## <img src="docs/images/icons/gear.svg" width="22" alt=""> Configuration
+
+Open **Settings** from the sidebar, or run `imux settings`. For the config file:
+
+```sh
+imux config init    # writes a commented ~/.imux/config.toml
 ```
 
-## The engine
+```toml
+on_limit = "ask"        # ask | auto (switch to the next agent) | off
 
-i-mux runs on **i-mux-core**, a terminal engine made for i-mux that speaks tmux's commands; it
-ships in the same release (`imux-core`, next to `imux`) and is the only engine, whether tmux is
-installed or not. `imux doctor` shows its version. An `[engine] backend = "tmux"` left in
-`~/.imux/config.toml` from an earlier version is ignored, with a warning.
+[handoff]
+on_arrival = "wait"     # wait for you | "continue" the unfinished request
+```
 
-Updating from a version that ran on tmux: the next `imux` moves the projects that tmux server still
-runs to the engine. It closes that server and offers **Restore last session**, which reopens them
-with their agents resuming their conversations. tmux itself, and any other tmux you use, stay as
-they are.
+See [Configuration](docs/CONFIG.md) for every option.
 
-## Privacy
+## How the handoff works
 
-- No network calls, no telemetry, no API keys. i-mux reads the agents' local session files and
-  `git status`.
-- Switching sends the handoff to the next agent's provider. Secrets are redacted on a best-effort
-  basis; check with `imux handoff --print`.
-- The handoff is passed as a command-line argument, which other users on the machine can see with
-  `ps`. On shared machines set `[handoff] inject = "paste"`.
-- Details in [docs/HANDOFF.md](docs/HANDOFF.md) and [docs/AGENT-BUS.md](docs/AGENT-BUS.md).
+i-mux reads each agent's local session files and `git status`. It writes a condensed handoff to
+`~/.imux/handoffs` and tells the next agent to read it. The agent confirms it has the context
+and waits for you. It does not start working on its own.
 
-## Documentation
+Switching back to an agent that already ran in the pane resumes its own session. It only hears
+what happened in the meantime.
 
-[Configuration](docs/CONFIG.md) · [Handoff format](docs/HANDOFF.md) · [Limits](docs/LIMITS.md) ·
-[Agent bus](docs/AGENT-BUS.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) ·
-[Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) · [Türkçe](README.tr.md)
+## <img src="docs/images/icons/lock.svg" width="22" alt=""> Privacy
 
-## License
+- No telemetry, no account and no API keys. i-mux reads local files only.
+- A handoff goes only to the provider of the agent you switch to.
+- Secrets are redacted on a best-effort basis. Preview any handoff with `imux handoff --print`.
+- On shared machines, set `[handoff] inject = "paste"` to keep the handoff out of `ps`.
 
-[MIT](LICENSE)
+Details: [Handoff format](docs/HANDOFF.md).
+
+## Uninstall
+
+- **macOS, Linux, WSL:** delete `~/.local/bin/imux`, `~/.local/bin/imux-core` and `~/.imux`.
+  Remove the line marked `# Added by the imux installer` from your shell profile.
+- **Windows:** uninstall i-mux from **Settings → Apps**. After a PowerShell install, delete
+  `%LOCALAPPDATA%\Programs\i-mux` and remove it from your user `PATH`.
+
+## <img src="docs/images/icons/book.svg" width="22" alt=""> Documentation
+
+| | |
+|---|---|
+| [User guide](docs/GUIDE.md) | Every view, key and setting |
+| [Configuration](docs/CONFIG.md) | The `config.toml` reference |
+| [Handoff format](docs/HANDOFF.md) | What the next agent receives |
+| [Limits](docs/LIMITS.md) | How usage and limits are read |
+| [Agent bus](docs/AGENT-BUS.md) | Messages between agents |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Common problems and fixes |
+| [Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) | For developers |
+
+## <img src="docs/images/icons/law.svg" width="22" alt=""> License
+
+[MIT](LICENSE). Icons come from [Nerd Fonts](https://www.nerdfonts.com): Codicons
+(CC BY 4.0, Microsoft), Font Awesome (CC BY 4.0) and Material Design Icons (Apache 2.0).

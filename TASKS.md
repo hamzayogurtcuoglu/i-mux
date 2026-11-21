@@ -1012,6 +1012,18 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M93: A product README (added 2026-11-21)
+
+User request: a short, professional README with Nerd Font icons, ready for a product launch.
+
+- [x] **T93.1 Product README and user guide** · S
+  - AC: README.md and README.tr.md are short and scannable: tagline, badges, why i-mux, the
+    supported agents, a feature grid, installation per OS (macOS/Linux/WSL, Windows installer
+    and PowerShell, from source), the Nerd Font, quick start, key bindings, configuration,
+    privacy, uninstall and the docs. Icons are Nerd Font glyphs (Codicons, Font Awesome,
+    Material Design) drawn as SVG in `docs/images/icons/`, since GitHub cannot show the font.
+    The detailed usage moves, unchanged, to `docs/GUIDE.md`.
+
 ## M92: i-mux-core only; tmux is gone (added 2026-11-21)
 
 The owner's decision (D87): i-mux runs on i-mux-core on every system, whether tmux is installed or
