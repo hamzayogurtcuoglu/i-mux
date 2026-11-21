@@ -266,6 +266,11 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 		return err
 	}
 	logger := log.New(io.Writer(rl), fmt.Sprintf("watch[%d] ", os.Getpid()), log.LstdFlags)
+	// The config's time before newTicker reads the config: a change saved
+	// meanwhile is then seen, where noted after it was taken for the one
+	// read, and an older theme stayed in tmux.conf (D66).
+	cfgPath := paths.Config()
+	cfgMod := config.ModTime(cfgPath)
 	tk, tc, poll, idle, err := newTicker(logger)
 	if err != nil {
 		logger.Printf("start: %v", err)
@@ -277,8 +282,6 @@ func Run(newTicker func(logger *log.Logger) (Ticker, *tmux.Client, time.Duration
 	sysx.Notify(stop, sysx.Std()...)
 	logger.Printf("started (poll %v, idle %v)", poll, idle)
 	stamp := selfexec.Take()
-	cfgPath := paths.Config()
-	cfgMod := config.ModTime(cfgPath)
 	changed := func() bool { return stamp.Changed() || configChanged(cfgPath, &cfgMod, logger) }
 	d := &Daemon{T: tc, Tick: tk, PollInterval: poll, IdleInterval: idle, Log: logger, Wake: wake, Stop: stop, Upgraded: changed}
 	err = d.Loop(context.Background())
