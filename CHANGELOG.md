@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.67.0] - 2026-11-21
+
 ### Changed
 
 - **Updating from tmux moves your projects.** The first `imux` after updating from a version that
