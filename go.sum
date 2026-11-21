@@ -1,6 +1,6 @@
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/hamzayogurtcuoglu/i-mux-core v0.0.0-20261121064949-1bcfc1711f30 h1:bn8FEdlq2SFRPrfxVnh8fzHZBYa/8RbOt4gx9oUX6f4=
-github.com/hamzayogurtcuoglu/i-mux-core v0.0.0-20261121064949-1bcfc1711f30/go.mod h1:LriVCgJj3JxfMXPZ8j1pz4f0UAU/PXEaeSjAigQZxuM=
+github.com/hamzayogurtcuoglu/i-mux-core v0.0.0-20261121110104-43f7a3ba982a h1:tVVn6U8W71q0OYGobytCwWHWi3q8RdcORIp/qmvMHqg=
+github.com/hamzayogurtcuoglu/i-mux-core v0.0.0-20261121110104-43f7a3ba982a/go.mod h1:LriVCgJj3JxfMXPZ8j1pz4f0UAU/PXEaeSjAigQZxuM=
 golang.org/x/sys v0.49.0 h1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=
 golang.org/x/sys v0.49.0/go.mod h1:hNLxWAXmnKAxqDtdwIYC4bM9oQPEecfsnNMuSxOs3og=
