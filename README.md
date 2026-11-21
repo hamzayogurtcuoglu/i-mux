@@ -216,9 +216,10 @@ ships in the same release (`imux-core`, next to `imux`) and is the only engine, 
 installed or not. `imux doctor` shows its version. An `[engine] backend = "tmux"` left in
 `~/.imux/config.toml` from an earlier version is ignored, with a warning.
 
-Updating from a version that ran on tmux: i-mux no longer sees the sessions that tmux server still
-runs. Your projects come back from i-mux's snapshots (Restore last session); close the old server
-when you are done with it: `tmux -L imux kill-server`.
+Updating from a version that ran on tmux: the next `imux` moves the projects that tmux server still
+runs to the engine. It closes that server and offers **Restore last session**, which reopens them
+with their agents resuming their conversations. tmux itself, and any other tmux you use, stay as
+they are.
 
 ## Privacy
 

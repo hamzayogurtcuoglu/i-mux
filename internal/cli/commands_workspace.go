@@ -156,6 +156,14 @@ func defaultAction(e *Env, args []string) error {
 	if err := w.EnsureConf(ctx); err != nil {
 		return err
 	}
+	// Projects an earlier i-mux left open on tmux move to the engine (D87):
+	// Restore last session, offered below, brings them back. Not from inside
+	// a pane of that server, which closing it would close.
+	if os.Getenv("TMUX") == "" {
+		if n := w.MoveFromTmux(ctx); n > 0 {
+			fmt.Fprintln(e.Stderr, i18n.T("start.moved_from_tmux", n))
+		}
+	}
 	// Unless imux starts in an open project, ask which one to open when
 	// there is a workspace to go back to, and in the home folder (a
 	// terminal's default, D22): Restore last session, this folder, the

@@ -42,6 +42,7 @@ var tr = map[string]string{
 
 	// workspace: start / attach / ls
 	"start.no_agent":                   "hiçbir agent CLI'ı kurulu değil. Şunlardan birini kurun:\n%s",
+	"start.moved_from_tmux":            "i-mux artık kendi motorunda çalışıyor: tmux'tan %d proje taşındı; Son oturumu geri yükle onları geri getirir",
 	"start.window":                     "yeni bir pencere açıldı (%s)",
 	"start.created":                    "%s oturumu oluşturuldu (bölme %s)",
 	"start.exists":                     "%s oturumu zaten var",

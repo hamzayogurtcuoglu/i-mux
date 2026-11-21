@@ -41,6 +41,7 @@ var en = map[string]string{
 
 	// workspace: start / attach / ls
 	"start.no_agent":                   "no agent CLI is installed. Install one of:\n%s",
+	"start.moved_from_tmux":            "i-mux now runs on its own engine: %d project(s) from tmux moved; Restore last session brings them back",
 	"start.window":                     "opened a new window (%s)",
 	"start.created":                    "created session %s (pane %s)",
 	"start.exists":                     "session %s already exists",

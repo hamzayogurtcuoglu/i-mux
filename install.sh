@@ -264,13 +264,11 @@ if [ "$on_path" -eq 0 ]; then
 fi
 
 # i-mux runs on its own engine, imux-core, installed beside it (D87): tmux is
-# not needed. Sessions an earlier i-mux still runs on tmux are not seen any
-# more; say how to close them (their projects come back from i-mux's
-# snapshots).
+# not needed and stays as it is. Projects an earlier i-mux still runs on tmux
+# move to the engine the next time imux starts (T92.3).
 if have tmux && tmux -L imux has-session >/dev/null 2>&1; then
 	say ""
-	say "Sessions from an earlier i-mux still run on tmux; i-mux now runs on its own engine."
-	say "Close them when you are done with them: tmux -L imux kill-server"
+	say "i-mux now runs on its own engine: the next imux moves your open projects from tmux to it."
 fi
 
 # The sidebar's icons need a Nerd Font where the terminal draws text (D34).

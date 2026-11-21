@@ -6,6 +6,13 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Updating from tmux moves your projects.** The first `imux` after updating from a version that
+  ran on tmux moves the projects still open there to i-mux's own engine: it closes that one tmux
+  server and offers Restore last session, which reopens them with their agents resuming their
+  conversations. tmux itself is left installed and untouched.
+
 ## [0.66.0] - 2026-11-21
 
 ### Changed

@@ -217,9 +217,10 @@ i-mux, i-mux için yapılmış ve tmux'un komutlarını konuşan bir terminal mo
 olmasa da tek motordur. `imux doctor` sürümünü gösterir. Önceki bir sürümden
 `~/.imux/config.toml` içinde kalan `[engine] backend = "tmux"` bir uyarıyla yok sayılır.
 
-tmux üzerinde çalışan bir sürümden güncelliyorsanız: i-mux o tmux sunucusunun hâlâ çalıştırdığı
-oturumları artık görmez. Projeleriniz i-mux'un anlık görüntülerinden geri gelir (Son oturumu geri
-yükle); eski sunucuyla işiniz bitince kapatın: `tmux -L imux kill-server`.
+tmux üzerinde çalışan bir sürümden güncelliyorsanız: bir sonraki `imux`, o tmux sunucusunun hâlâ
+çalıştırdığı projeleri motora taşır. O sunucuyu kapatır ve **Son oturumu geri yükle**'yi önerir;
+projeler ajanları konuşmalarına devam ederek yeniden açılır. tmux'un kendisi ve kullandığınız başka
+tmux'lar olduğu gibi kalır.
 
 ## Gizlilik
 

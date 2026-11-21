@@ -154,9 +154,9 @@ func TestInstallScriptWithoutTmux(t *testing.T) {
 	}
 }
 
-// TestInstallScriptOldTmuxSessions (D87): sessions an earlier i-mux still runs
-// on tmux get a note on how to close them; the installer installs nothing
-// else (Homebrew is never run).
+// TestInstallScriptOldTmuxSessions (D87, T92.3): sessions an earlier i-mux
+// still runs on tmux get a note that the next imux moves them; the installer
+// installs nothing else (Homebrew is never run).
 func TestInstallScriptOldTmuxSessions(t *testing.T) {
 	skipOnSystem(t)
 	bin := imuxBin(t)
@@ -178,7 +178,7 @@ func TestInstallScriptOldTmuxSessions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("install: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "tmux -L imux kill-server") {
+	if !strings.Contains(out, "the next imux moves your open projects from tmux to it") {
 		t.Fatalf("output:\n%s", out)
 	}
 	if _, err := os.Stat(ran); err == nil {
