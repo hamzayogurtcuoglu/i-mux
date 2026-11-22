@@ -1343,11 +1343,15 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   ⧉ History  ◔ Limits  ? Help
 ```
 
-- **Projects:** a coloured letter avatar (colour from the name), the name, the branch and the most
+- **Projects:** a coloured letter avatar (colour from the name; when a project above it in the
+  list has that colour, the next free one, so open projects differ; a worktree has its
+  repository's, T95.1), the name, the branch and the most
   urgent state of its agents (Needs you > limited > working; nothing when they are idle; no dot for
   uncommitted changes or a finished agent since v0.47, D56). Click: switch to it. **+** (header):
   open a project.
-- **Agents:** every project's agent panes, grouped under the project's name. The title counts the
+- **Agents:** every project's agent panes, grouped under the project's name, which carries the
+  project's letter avatar; each agent row starts with a thin bar (`▎`) in that colour, so an
+  agent's project shows at a glance, and nothing else is coloured (T95.1). The title counts the
   agents at work (a spinner and "2 working", the number alone in a narrow panel; folded, also the
   number of panes). A row: the agent's
   icon in its colour (Claude ✻, Antigravity ▲, Codex ◎, Copilot ◉, shell ›), the name, the time

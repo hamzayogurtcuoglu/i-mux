@@ -1012,6 +1012,22 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M95: Agents in their project's colour (added 2026-11-22)
+
+User request: in the left panel it is hard to tell which project an agent belongs to; the
+projects' avatar colours should show in AGENTS too.
+
+- [x] **T95.1 Project colour in AGENTS** · XS
+  - AC: §"Agents": a project's group row shows its letter avatar (the same colour as in PROJECTS),
+    its name stays muted; every agent row under it starts with `▎` in that colour, with no change
+    to the row's width; agents elsewhere (machines) keep their plain row.
+  - AC: §"Projects": a project's colour is the one its name hashes to, or, when a project above it
+    has that one, the next free one, so open projects never share a colour while there are
+    colours enough, and a project keeps its colour; a worktree has its repository's; a theme whose
+    accent is one of its colours lists it once.
+  - AC: unit tests: the avatar and the bar match, in classic and in a theme; names whose hashes
+    collide get different colours; the first project's colour does not move; worktrees.
+
 ## M94: Windows: the font, menus under the mouse, themes and switching speed (added 2026-11-22)
 
 User report (Windows 11, i-mux in a classic console window): the Nerd Font does not work, a
