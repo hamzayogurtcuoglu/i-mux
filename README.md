@@ -190,12 +190,14 @@ imux carries its engine, so this one binary is enough on macOS, Linux and Window
 
 ### <img src="docs/images/icons/font.svg" width="20" alt=""> Nerd Font
 
-The sidebar uses [Nerd Font](https://www.nerdfonts.com) icons, and the font comes with i-mux:
-every installer puts JetBrainsMono Nerd Font in place for your user and sets it in Windows
-Terminal, VS Code and the Windows console window, keeping their old settings. Installed another
-way (`go install`, Homebrew), the first `imux` does it once. In other terminals (Terminal.app,
-iTerm2, GNOME Terminal …) choose **JetBrainsMono Nerd Font** in their settings. To skip it,
-set `icons = "emoji"` or `IMUX_NO_FONT=1`; `imux font install` runs it again.
+The sidebar uses [Nerd Font](https://www.nerdfonts.com) icons, and the font ships with i-mux,
+so nothing is downloaded: every installer and update puts JetBrainsMono Nerd Font in place for
+your user and sets it in Windows Terminal (every profile), VS Code and the Windows console
+window, keeping their old settings. Installed with `go install`, the first `imux` of each version
+does it. In other terminals (Terminal.app, iTerm2, GNOME Terminal …) choose **JetBrainsMono Nerd
+Font** in their settings. Until the terminal draws with it, the sidebar shows emoji instead of
+broken icons. To skip it, set `icons = "emoji"` or `IMUX_NO_FONT=1`; `imux font install` runs
+it again.
 
 ### <img src="docs/images/icons/robot.svg" width="20" alt=""> Agents
 

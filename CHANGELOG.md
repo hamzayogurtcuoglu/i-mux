@@ -6,6 +6,22 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **A simpler Settings.** Nine short rows under Appearance, Agents and Editing, with their values
+  in one column, instead of sixteen sentences. Following the terminal's light/dark is in the Theme
+  menu, the Nerd Font install in Icons, the sound in Notifications (On, Silent, Off), and Update
+  and Versions are one Updates row.
+- **The Nerd Font ships with i-mux.** Every release carries JetBrainsMono Nerd Font, so installing
+  and updating set it up without a download, behind company proxies too.
+
+### Fixed
+
+- **Windows: icons showed as `?`.** The Nerd Font is now set in every Windows Terminal profile,
+  not only the defaults (a Command Prompt profile with its own font kept it), and the sidebar
+  shows the editor's icons only when the profile you run in really draws with an installed
+  Nerd Font; otherwise emoji. Each new version checks the font again.
+
 ## [0.70.0] - 2026-11-22
 
 ### Changed

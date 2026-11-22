@@ -190,12 +190,14 @@ imux motorunu kendi içinde taşır; macOS, Linux ve Windows'ta bu tek dosya yet
 
 ### <img src="docs/images/icons/font.svg" width="20" alt=""> Nerd Font
 
-Kenar panel [Nerd Font](https://www.nerdfonts.com) simgeleri kullanır ve font i-mux ile gelir:
-her kurulum yolu JetBrainsMono Nerd Font'u yalnızca sizin kullanıcınıza kurar; Windows Terminal,
-VS Code ve Windows konsol penceresinde ayarlar, eski ayarları saklar. Başka yoldan kurduysanız
-(`go install`, Homebrew) ilk `imux` bunu bir kez yapar. Diğer terminallerde (Terminal.app, iTerm2,
-GNOME Terminal …) ayarlardan **JetBrainsMono Nerd Font**'u seçin. İstemezseniz `icons = "emoji"`
-ya da `IMUX_NO_FONT=1`; `imux font install` yeniden çalıştırır.
+Kenar panel [Nerd Font](https://www.nerdfonts.com) simgeleri kullanır ve font i-mux'un içinde
+gelir, hiçbir şey indirilmez: her kurulum ve güncelleme JetBrainsMono Nerd Font'u yalnızca sizin
+kullanıcınıza kurar; Windows Terminal'de (her profilde), VS Code'da ve Windows konsol
+penceresinde ayarlar, eski ayarları saklar. `go install` ile kurduysanız her sürümün ilk `imux`'u
+bunu yapar. Diğer terminallerde (Terminal.app, iTerm2, GNOME Terminal …) ayarlardan
+**JetBrainsMono Nerd Font**'u seçin. Terminal bu fontla çizene kadar kenar panel bozuk simge
+yerine emoji gösterir. İstemezseniz `icons = "emoji"` ya da `IMUX_NO_FONT=1`; `imux font install`
+yeniden çalıştırır.
 
 ### <img src="docs/images/icons/robot.svg" width="20" alt=""> Agent'lar
 
