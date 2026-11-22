@@ -287,8 +287,8 @@ func (h *H) run(agent string, n int) []string {
 }
 
 // sessionPath waits for fake agent run n to record the session file it
-// wrote and returns that file's path. The fake writes it after its .env, so
-// run returning does not mean it exists yet.
+// wrote and returns that file's path (the fake writes its .env, which run
+// waits for, after the session).
 func (h *H) sessionPath(agent string, n int) string {
 	h.t.Helper()
 	p := filepath.Join(h.Log, fmt.Sprintf("%s-%d.session", agent, n))

@@ -215,7 +215,6 @@ func run(args []string) int {
 	pwd, _ := os.Getwd()
 	env := fmt.Sprintf("IMUX_PANE=%s\nIMUX_AGENT=%s\nTMUX_PANE=%s\nPATH=%s\nPWD=%s\nE2E_ENV_PROBE=%s\n",
 		os.Getenv("IMUX_PANE"), os.Getenv("IMUX_AGENT"), os.Getenv("TMUX_PANE"), os.Getenv("PATH"), pwd, os.Getenv("E2E_ENV_PROBE"))
-	_ = os.WriteFile(filepath.Join(log, agent+"-"+ns+".env"), []byte(env), 0o644)
 
 	pane := os.Getenv("TMUX_PANE")
 	if pane == "" {
@@ -234,6 +233,11 @@ func run(args []string) int {
 	}
 	ts := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 	writeSession(agent, log, ns, args, pwd, req, reply, ts, ocdir)
+	// The .env comes last: the harness takes it as the run having started
+	// (h.run), and a switch right after must find this run's session. With
+	// the engine's queries inside imux (D92) a switch is fast enough to
+	// get there before a session written after it.
+	_ = os.WriteFile(filepath.Join(log, agent+"-"+ns+".env"), []byte(env), 0o644)
 
 	fmt.Fprintf(out, "fake %s ready (run %d, pane %s)\n", agent, n, pane)
 	fmt.Fprintf(out, "argc %d · last argument %d bytes\n", len(args), len(last))
