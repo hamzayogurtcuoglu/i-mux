@@ -27,6 +27,9 @@ func TestAutoFontWanted(t *testing.T) {
 	failed := func(ago time.Duration) []byte {
 		return []byte("failed " + strconv.FormatInt(now.Add(-ago).Unix(), 10) + "\n")
 	}
+	done := func(ago time.Duration, ver string) []byte {
+		return []byte("done " + strconv.FormatInt(now.Add(-ago).Unix(), 10) + " " + ver + "\n")
+	}
 	cases := []struct {
 		name  string
 		cfg   *config.Config
@@ -36,7 +39,10 @@ func TestAutoFontWanted(t *testing.T) {
 	}{
 		{"first start", auto, env(), nil, true},
 		{"no config", nil, env(), nil, true},
-		{"done", auto, env(), []byte("done\n"), false},
+		// Done for this version: not again; a new version looks again (D94).
+		{"done for this version", auto, env(), done(time.Hour, "0.71.0"), false},
+		{"done for an older version", auto, env(), done(time.Hour, "0.70.0"), true},
+		{"done before versions were recorded", auto, env(), []byte("done\n"), true},
 		{"IMUX_NO_FONT", auto, env("IMUX_NO_FONT", "1"), nil, false},
 		{"over SSH", auto, env("SSH_CONNECTION", "10.0.0.1 22 10.0.0.2 22"), nil, false},
 		{"SSH tty", auto, env("SSH_TTY", "/dev/pts/1"), nil, false},
@@ -46,7 +52,7 @@ func TestAutoFontWanted(t *testing.T) {
 		{"unreadable stamp", auto, env(), []byte("failed soon\n"), true},
 	}
 	for _, c := range cases {
-		if got := autoFontWanted(c.cfg, c.env, c.stamp, now); got != c.want {
+		if got := autoFontWanted(c.cfg, c.env, c.stamp, now, "0.71.0"); got != c.want {
 			t.Errorf("%s: %v, want %v", c.name, got, c.want)
 		}
 	}

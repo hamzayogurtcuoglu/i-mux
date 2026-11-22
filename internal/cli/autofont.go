@@ -14,6 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/nerdfont"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 )
 
 // The first start's Nerd Font step (D90): the installers put the font in
@@ -29,10 +30,13 @@ const autoFontTimeout = 2 * time.Minute
 // fontStamp records the step: "done", or "failed <unix time>".
 func fontStamp() string { return filepath.Join(paths.Home(), "font.auto") }
 
-// autoFontWanted reports whether this start sets up the Nerd Font: not over
+// autoFontWanted reports whether this start looks at the Nerd Font: not over
 // SSH (the terminal is on another machine), not with icons = "emoji" or
-// IMUX_NO_FONT=1, and not once done or within a day of a failure.
-func autoFontWanted(cfg *config.Config, getenv func(string) string, stamp []byte, now time.Time) bool {
+// IMUX_NO_FONT=1, and not within a day of a failure. Set up once, it is
+// looked at again with every new version (D94), so an install and an
+// update both leave it in place; a terminal the user set back is left alone
+// until then.
+func autoFontWanted(cfg *config.Config, getenv func(string) string, stamp []byte, now time.Time, ver string) bool {
 	if getenv("IMUX_NO_FONT") == "1" || getenv("SSH_CONNECTION") != "" || getenv("SSH_TTY") != "" {
 		return false
 	}
@@ -43,25 +47,28 @@ func autoFontWanted(cfg *config.Config, getenv func(string) string, stamp []byte
 	switch {
 	case len(f) == 0:
 		return true
-	case len(f) == 2 && f[0] == "failed":
+	case f[0] == "failed" && len(f) >= 2:
 		at, err := strconv.ParseInt(f[1], 10, 64)
 		return err != nil || now.Sub(time.Unix(at, 0)) >= autoFontRetry
+	case f[0] == "done":
+		return len(f) < 3 || f[2] != ver
 	}
-	return false
+	return true
 }
 
 // autoFont runs the step when autoFontWanted: `imux font install --yes`,
 // saying so first. It never fails the start.
 func autoFont(e *Env, cfg *config.Config) {
 	stamp, _ := os.ReadFile(fontStamp())
-	if !autoFontWanted(cfg, os.Getenv, stamp, now()) {
+	if !autoFontWanted(cfg, os.Getenv, stamp, now(), version.Version) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), autoFontTimeout)
 	defer cancel()
 	record := func(s string) { _ = paths.WriteFile(fontStamp(), []byte(s+"\n")) }
+	done := "done " + strconv.FormatInt(now().Unix(), 10) + " " + version.Version
 	if sys, err := nerdfont.Detect(ctx); err == nil && sys.Ready() {
-		record("done") // a Nerd Font is there already
+		record(done) // in place: nothing to say
 		return
 	}
 	fmt.Fprintln(e.Stdout, i18n.T("font.auto"))
@@ -70,6 +77,6 @@ func autoFont(e *Env, cfg *config.Config) {
 		fmt.Fprintln(e.Stderr, i18n.T("font.auto_failed", err.Error()))
 		return
 	}
-	record("done")
+	record(done)
 	fmt.Fprintln(e.Stdout)
 }

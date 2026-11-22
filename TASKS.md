@@ -1043,9 +1043,12 @@ User report: a fresh install on a company Windows machine showed `?` for every i
   - Status: done. `termfont.WTFontSettings` and `WTFace` read the settings, `Terminal.Nerd`
     and `Use` (with `Profiles`) check and set them; tested with fakes here, not yet on a real
     Windows Terminal.
-- [ ] **T99.3 Every start checks the font** · S
-  - AC: D94: an interactive start sets the font up whenever it is not ready (the stamp's
-    "done" no longer stops it; a failure waits a day as before); unit tests of the rule.
+- [x] **T99.3 Every new version checks the font** · S
+  - AC: D94: the first interactive start of each version sets the font up when it is not
+    ready (`font.auto` holds `done <time> <version>`; a stamp without the version counts as
+    older; a failure waits a day as before); unit tests of the rule.
+  - Status: done. Every start was considered first and dropped: it would set back, at each
+    start, a terminal font the user chose after i-mux set it.
 
 ## M98: A simpler Settings, and every system in mind (added 2026-11-22)
 
