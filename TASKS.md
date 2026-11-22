@@ -1127,6 +1127,13 @@ not; tmux is no longer an engine.
     the README installs natively on Windows (setup.exe, `install.ps1`) and `go install` builds
     imux-core too; TROUBLESHOOTING drops the tmux-only fixes and explains the move from tmux;
     tests that ran on real tmux are named for the engine and no test leans on tmux's `PATH`.
+- [ ] **T92.5 imux carries the engine** · S · deps: T92.1
+  - AC (D88): `go install …/cmd/imux@latest` alone gives a working i-mux on macOS, Linux and
+    Windows; an imux binary named `imux-core` runs as the engine; with no imux-core beside imux
+    nor on `PATH`, i-mux makes `~/.imux/engine/imux-core` from itself (a hard link, else a copy)
+    and remakes it when imux was replaced; test binaries never do; the README's from-source
+    install is the one `go install`; unit tests cover the lookup, the link, the copy and the
+    remake with synthetic files; the stripped imux stays under the 15 MB gate.
 
 ## M91: CI-green: the watcher's pid and menus after a gesture (added 2026-11-20)
 

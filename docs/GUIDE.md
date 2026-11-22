@@ -201,7 +201,8 @@ with `/models`.
 
 i-mux runs on **i-mux-core**, a terminal engine made for i-mux that speaks tmux's commands; it
 ships in the same release (`imux-core`, next to `imux`) and is the only engine, whether tmux is
-installed or not. `imux doctor` shows its version. An `[engine] backend = "tmux"` left in
+installed or not. imux carries it too: installed with `go install` alone, i-mux runs it from
+`~/.imux/engine/imux-core`, made from imux itself. `imux doctor` shows its version. An `[engine] backend = "tmux"` left in
 `~/.imux/config.toml` from an earlier version is ignored, with a warning.
 
 Updating from a version that ran on tmux: the next `imux` moves the projects that tmux server still
