@@ -1012,6 +1012,27 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M98: A simpler Settings, and every system in mind (added 2026-11-22)
+
+User request: Settings is confusing and its texts too long; and a skill so that a change is
+thought through for macOS, Linux and Windows alike, not for one of them.
+
+- [ ] **T98.1 Settings in three groups, with short rows** · S
+  - AC: D93: the menu's rows, headings, aligned values and keys as D93 lists them, in English
+    and Turkish; the Theme menu starts with the light/dark switch, the Icons menu ends with the
+    Nerd Font install, the Notifications menu has On, Silent and Off (`notifications` sets
+    `notify.enabled` and `notify.sound`), the Editor menu's rows are short and hold the Copilot
+    sign-in while Neovim + Copilot is chosen; Updates opens the Versions popup. README,
+    README.tr and the user guide name the rows as they now read. Unit tests: the menu's rows,
+    each submenu, the `notifications` setting.
+- [ ] **T98.2 A skill for every system** · XS
+  - AC: `.agents/skills/every-system/SKILL.md` (linked from `.claude/skills/`) says what to
+    check on macOS, Linux (WSL included) and native Windows before and while making any change:
+    the questions to ask, the usual differences (paths, shells and argv, process starts,
+    signals, consoles and ConPTY, terminals and fonts, clipboard, notifications, file systems),
+    where platform code goes (build tags behind small interfaces, D85), and which tests and CI
+    jobs show each system; AGENTS.md points to it.
+
 ## M97: Engine queries without a process (added 2026-11-22)
 
 User report: on a Windows machine with endpoint security every process start costs about
