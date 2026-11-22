@@ -15,6 +15,9 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) first; [ARCHITECTURE.md](ARCHITECTURE.md
   and with macOS's symlinked temp folder, and e2e. Unit tests passing on Linux are not enough
   (v0.49.0 failed CI on macOS). Do not commit, tag or hand over a push while it fails, and say
   which checks could not run here.
+- **Think of every system** (`.agents/skills/every-system/SKILL.md`): every change is planned,
+  written and checked for macOS, Linux (WSL included) and native Windows alike, not for the
+  system it is written on; the decision says what it does on each.
 - **Windows code sits behind small interfaces** (D85): i-mux runs natively on Windows on
   i-mux-core. Windows-only code lives in build-tagged files (`_windows.go`) behind small
   interfaces — never `runtime.GOOS` switches in core files — and CI's Windows jobs are required

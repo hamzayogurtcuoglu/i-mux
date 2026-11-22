@@ -1027,7 +1027,7 @@ thought through for macOS, Linux and Windows alike, not for one of them.
     each submenu, the `notifications` setting.
   - Status: done. Sixteen rows of sentences became nine short rows under three headings; the
     strings for the removed rows are gone from both catalogs.
-- [ ] **T98.2 A skill for every system** · XS
+- [x] **T98.2 A skill for every system** · XS
   - AC: `.agents/skills/every-system/SKILL.md` (linked from `.claude/skills/`) says what to
     check on macOS, Linux (WSL included) and native Windows before and while making any change:
     the questions to ask, the usual differences (paths, shells and argv, process starts,
