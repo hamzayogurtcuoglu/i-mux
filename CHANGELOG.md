@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-11-22
+
 ### Changed
 
 - **A simpler Settings.** Nine short rows under Appearance, Agents and Editing, with their values
