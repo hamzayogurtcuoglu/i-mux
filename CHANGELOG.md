@@ -21,7 +21,13 @@ All notable changes to i-mux are listed here. The format follows
   to put it back), `imux` switches the window to the font when a shortcut opened it with
   another, and the sidebars show the editor's icons there.
 - **Windows: switching panes is faster.** A switch starts one background `imux` instead of two,
-  and every `imux` starts faster.
+  every `imux` starts faster, and the engine no longer reads the system's process list on every
+  frame.
+- **Windows: menus stay open under the mouse.** In the console window, moving the mouse over a
+  menu or popup closed it, or chose an item; it now stays open until you click.
+- **A theme colours the agents' panes too.** The engine now applies the theme's pane colours
+  (`window-style`, `window-active-style`, `pane-colours`) as tmux does. On Windows only the
+  sidebars took the theme before.
 
 ## [0.67.0] - 2026-11-21
 

@@ -1029,15 +1029,15 @@ and switching panes takes at least a second (D89).
     `tar.exe`. Tests: the console among the terminals with a fake setting; the registry in a
     private key of the test's own (never the user's `HKCU\Console`); `termfont` with
     `conhost:` names.
-- [ ] **T94.2 Menus stay open under a moving mouse** · S
+- [x] **T94.2 Menus stay open under a moving mouse** · S
   - AC: i-mux-core C8.10: an SGR motion ending in `m` (the console's report of the mouse moving
     with no button) is a motion, not a release, so a `-M -O` menu neither closes nor chooses;
     parser test and e2e scenario, failing before the fix; i-mux's pin moves to it.
-- [ ] **T94.3 A theme recolours the agents' panes** · S
+- [x] **T94.3 A theme recolours the agents' panes** · S
   - AC: i-mux-core C8.10: `window-style`, `window-active-style` and `pane-colours` colour a
     pane's cells in the default colours and its palette, in panes already running, as in tmux;
     render test and e2e scenario, failing before the fix; i-mux's pin moves to it.
-- [ ] **T94.4 One process per pane switch on Windows** · S
+- [x] **T94.4 One process per pane switch on Windows** · S
   - AC: on Windows the sidebars' hooks are `pane-focus-in`, `after-split-window`,
     `after-kill-pane` and `pane-exited` (`internal/tmux`'s `hooks_windows.go`; macOS and Linux
     keep `window-pane-changed`, and the goldens stay the same everywhere); the web view adds its
