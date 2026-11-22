@@ -174,3 +174,33 @@ func TestWatch(t *testing.T) {
 		t.Errorf("styles %q", s.Accent)
 	}
 }
+
+// TestTabColors (D91): every theme's tab bar is a strip a shade darker than
+// its panes, with the open tab on the panes' own color; the i-mux theme on
+// the terminal's background, terminal's open tab on surface0.
+func TestTabColors(t *testing.T) {
+	for _, name := range Names {
+		p := Builtin(name)
+		strip, open := TabColors(p)
+		switch {
+		case p.Classic:
+			if strip != Idx(234) || !open.IsReset() {
+				t.Errorf("%s: strip %v open %v", name, strip.Tmux(), open.Tmux())
+			}
+		case !p.PanelBg.IsRGB():
+			if !strip.IsReset() || open != p.Surface0 {
+				t.Errorf("%s: strip %v open %v", name, strip.Tmux(), open.Tmux())
+			}
+		default:
+			if open != p.PanelBg {
+				t.Errorf("%s: the open tab %v is not on the panes' %v", name, open.Tmux(), p.PanelBg.Tmux())
+			}
+			if c := Contrast(strip, p.PanelBg); c < 1.12 || strip.Luma() >= p.PanelBg.Luma() {
+				t.Errorf("%s: strip %v against the panes' %v: contrast %.2f, not darker", name, strip.Tmux(), p.PanelBg.Tmux(), c)
+			}
+			if Contrast(p.Subtext0, strip) < 3 {
+				t.Errorf("%s: the other tabs' names do not read on the strip %v", name, strip.Tmux())
+			}
+		}
+	}
+}

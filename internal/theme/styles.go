@@ -131,3 +131,25 @@ func HoverBg(p Palette) Color {
 	}
 	return p.Surface1
 }
+
+// TabColors are the tab bar's strip and its open tab's background (D91),
+// as an editor's tabs: the strip a shade darker than the panes, the open
+// tab on the panes' own color, so it opens onto the pane below. Reset is the
+// terminal's background. The i-mux theme draws on the terminal's background
+// (a dark one): its strip is 256-color 234; terminal keeps the bar on the
+// terminal's background and the open tab on surface0.
+func TabColors(p Palette) (strip, open Color) {
+	switch {
+	case p.Classic:
+		return Idx(234), Reset
+	case !p.PanelBg.IsRGB():
+		return Reset, p.Surface0
+	}
+	// The least darkening that tells the two apart; a panel already near
+	// black gets as dark as it goes.
+	strip = p.PanelBg
+	for t := 0.02; t <= 1 && Contrast(strip, p.PanelBg) < 1.12; t += 0.02 {
+		strip = Blend(p.PanelBg, black, t)
+	}
+	return strip, p.PanelBg
+}

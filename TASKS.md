@@ -1017,13 +1017,13 @@ slow (about a second).
 User request: the tab bar does not look like VS Code's; the open tab should be on the panel's
 colour.
 
-- [ ] **T96.1 The open tab on the panes' colour** · S
+- [x] **T96.1 The open tab on the panes' colour** · S
   - AC (D91): the tab bar's strip is `tabs_bg`, a shade darker than the panes (`panel_bg`
     darkened until the two can be told apart; 256-color 234 with the i-mux theme); the open tab
     is on `tab_bg`, the panes' own colour (`panel_bg`, the terminal's with the i-mux theme), its
     name bold `text`; the other tabs `subtext0` on the strip; the blank over the sidebar on the
     panes' colour; `terminal` keeps the bar on the terminal's colour and the open tab on
-    `surface0`; widths and click ranges unchanged; unit tests for the colours of every built-in
+    `surface0`; the first tab at the pane's edge, the tabs' widths unchanged; unit tests for the colours of every built-in
     theme (the strip apart from the panel, the open tab on the panel) and the golden configs.
 
 ## M95: Agents in their project's colour (added 2026-11-22)

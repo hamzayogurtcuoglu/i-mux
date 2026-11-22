@@ -26,12 +26,12 @@ func TestTabsOverTheTerminal(t *testing.T) {
 		n, _ := strconv.Atoi(strings.TrimSpace(h.mustTmux("display-message", "-p", "-t", p, f)))
 		return n
 	}
-	// " 0 Claude": the tab's first column is a blank, then its number.
+	// " 0 Claude": the tab starts at the pane's edge (D91) with a blank, then its number.
 	over := func(what string, want func() int) {
 		t.Helper()
 		h.waitFor(what, 5*time.Second, func() bool { return h.tabCol(agentPane, "0 Claude") == want() })
 	}
-	over("the tab over the agent", func() int { return num(agentPane, "#{pane_left}") + 3 })
+	over("the tab over the agent", func() int { return num(agentPane, "#{pane_left}") + 2 })
 	if num(agentPane, "#{pane_left}") < 20 {
 		t.Fatalf("the agent pane starts at %d", num(agentPane, "#{pane_left}"))
 	}
@@ -39,10 +39,10 @@ func TestTabsOverTheTerminal(t *testing.T) {
 	x, y := h.rowOf(bar, "🤖")
 	c.Click(0, x, y)
 	h.waitFor("panel closed", 5*time.Second, func() bool { return num(bar, "#{pane_width}") == sidebar.ClosedWidth })
-	over("the tab over the agent, the panel closed", func() int { return num(agentPane, "#{pane_left}") + 3 })
+	over("the tab over the agent, the panel closed", func() int { return num(agentPane, "#{pane_left}") + 2 })
 
 	h.mustTmux("resize-pane", "-Z", "-t", agentPane)
-	over("the tab at the left edge, zoomed", func() int { return 3 })
+	over("the tab at the left edge, zoomed", func() int { return 2 })
 }
 
 // TestExitButton (T56.1, T56.2): ⏻ Exit at the right of the tab bar opens

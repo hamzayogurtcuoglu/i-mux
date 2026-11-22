@@ -22,7 +22,7 @@ func TestThemeOptions(t *testing.T) {
 	got := join(ThemeOptions(theme.Builtin("nord"), v("3.4")))
 	for _, want := range []string{
 		"@imux_c_accent #88c0d0", "@imux_c_peach #d08770", "@imux_c_sidebar_bg default",
-		"status-style bg=#272c36,fg=#d8dee9", "pane-active-border-style bg=#272c36,fg=#88c0d0", "pane-border-style bg=#272c36,fg=#434c5e",
+		"status-style bg=#1f232b,fg=#d8dee9", "@imux_c_tab_bg #272c36", "pane-active-border-style bg=#272c36,fg=#88c0d0", "pane-border-style bg=#272c36,fg=#434c5e",
 		// Every pane in the theme (D70), with its 16 colors.
 		"window-style bg=#272c36,fg=#eceff4", "window-active-style bg=#272c36,fg=#eceff4",
 		OptPaneColors + "[1] #bf616a", OptPaneColors + "[4] #81a1c1", OptPaneColors + "[7] #d8dee9", OptPaneColors + "[15] #eceff4",
@@ -42,7 +42,7 @@ func TestThemeOptions(t *testing.T) {
 	// messages, popups and menus (unset, so a theme before it goes).
 	classic := ThemeOptions(theme.Builtin("i-mux"), v("3.4"))
 	got = join(classic)
-	if !strings.Contains(got, "status-style bg=default,fg=colour245") || !strings.Contains(got, "@imux_c_subtext0 colour245") || strings.Contains(got, "pane-border-style fg") {
+	if !strings.Contains(got, "status-style bg=colour234,fg=colour245") || !strings.Contains(got, "@imux_c_subtext0 colour245") || strings.Contains(got, "pane-border-style fg") {
 		t.Errorf("classic:\n%s", got)
 	}
 	unset := 0
@@ -99,5 +99,39 @@ func TestThemeHooks(t *testing.T) {
 	in.Appearance = theme.AppearanceLight
 	if got := GenerateConf(in); !strings.Contains(got, "@imux_c_accent '#1e66f5'") {
 		t.Error("light terminal: not Catppuccin Latte")
+	}
+}
+
+// TestTabBarColors (D91): the open tab and the blank over the sidebar are on
+// the panes' color (the terminal's with the i-mux theme, never the status
+// line's "default"); the strip is the status line's background.
+func TestTabBarColors(t *testing.T) {
+	f := TabFormat()
+	open := "#{" + ColorOpt(TabBgToken) + "}"
+	if strings.Count(f, "bg="+open) != 3 || strings.Contains(f, "surface0") {
+		t.Errorf("tab format:\n%s", f)
+	}
+	opt := func(p theme.Palette, name string) string {
+		for _, c := range ThemeOptions(p, Version{Major: 3, Minor: 8}) {
+			if len(c) == 4 && c[2] == name {
+				return c[3]
+			}
+		}
+		return ""
+	}
+	classic := theme.Builtin(theme.Default)
+	if got := opt(classic, ColorOpt(TabBgToken)); got != "terminal" {
+		t.Errorf("i-mux theme's open tab %q", got)
+	}
+	if got := opt(classic, "status-style"); !strings.HasPrefix(got, "bg=colour234,") {
+		t.Errorf("i-mux theme's strip %q", got)
+	}
+	cat := theme.Builtin("catppuccin")
+	strip, _ := theme.TabColors(cat)
+	if got := opt(cat, ColorOpt(TabBgToken)); got != cat.PanelBg.Tmux() {
+		t.Errorf("catppuccin's open tab %q", got)
+	}
+	if got := opt(cat, "status-style"); !strings.HasPrefix(got, "bg="+strip.Tmux()+",") {
+		t.Errorf("catppuccin's strip %q", got)
 	}
 }

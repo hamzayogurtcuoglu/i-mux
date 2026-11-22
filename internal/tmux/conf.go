@@ -79,11 +79,16 @@ func TabFormat() string {
 	// range one cell longer than drawn, so a range right after another loses
 	// its first cell (the current tab took the click on its ×). The × takes
 	// 3 columns, like the +.
-	return "#[align=left]" + pad + " " +
+	// An editor's tabs (D91): the strip is the status line's background, a
+	// shade darker than the panes; the open tab and the blank over the
+	// sidebar are on the panes' color, so the open tab opens onto its pane.
+	open := colorRef(TabBgToken)
+	// The first tab starts at the pane's edge, as an editor's does.
+	return "#[align=left]#[bg=" + open + "]" + pad + "#[default]" +
 		"#{W:" +
 		"#[range=window|#{window_index}]#[fg=" + colorRef("subtext0") + "]" + tab + " #[norange default] ," +
-		"#[range=window|#{window_index}]#[bg=" + colorRef("surface0") + " fg=" + colorRef("text") + " bold]" + tab + "#[norange] " +
-		closeRange + "#[bg=" + colorRef("surface0") + " fg=" + colorRef("overlay1") + " nobold] × #[norange default] " +
+		"#[range=window|#{window_index}]#[bg=" + open + " fg=" + colorRef("text") + " bold]" + tab + "#[norange] " +
+		closeRange + "#[bg=" + open + " fg=" + colorRef("overlay1") + " nobold] × #[norange default] " +
 		"}" +
 		tabRange + "#[fg=" + colorRef("subtext0") + "] + #[norange default]" +
 		"#[align=right]" + quitRange + "#[fg=" + colorRef("subtext0") + "] " + i18n.T("tabs.exit") + " #[norange default] "

@@ -6,6 +6,12 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The tab bar looks like an editor's tabs.** The open tab sits on the pane's colour and opens
+  onto it, the bar behind the tabs is a shade darker, and the first tab starts at the pane's
+  edge, as in VS Code.
+
 ## [0.69.0] - 2026-11-22
 
 ### Changed

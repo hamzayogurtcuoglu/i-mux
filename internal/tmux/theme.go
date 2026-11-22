@@ -23,6 +23,10 @@ const OptAppearance = "@imux_appearance"
 // tab bar): "@imux_c_accent" … (D68).
 func ColorOpt(token string) string { return "@imux_c_" + token }
 
+// TabBgToken is the option (@imux_c_tab_bg) with the open tab's background
+// (D91): the panes' color.
+const TabBgToken = "tab_bg"
+
 // colorRef is a palette color in a format: #{@imux_c_<token>}.
 func colorRef(token string) string { return "#{" + ColorOpt(token) + "}" }
 
@@ -46,10 +50,19 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 		out = append(out, Cmd{"set-option", "-g", ColorOpt(t), v})
 	}
 	style := func(opt, s string) { out = append(out, Cmd{"set-option", "-g", opt, s}) }
+	// The tab bar (D91): its strip is the status line's background, the
+	// open tab on the panes' color ("terminal" in a format is the
+	// terminal's background; "default" would be the status line's).
+	strip, open := theme.TabColors(p)
+	openBg := open.Tmux()
+	if open.IsReset() {
+		openBg = "terminal"
+	}
+	out = append(out, Cmd{"set-option", "-g", ColorOpt(TabBgToken), openBg})
 	if p.Classic {
-		// i-mux's look before themes: the tab bar's gray, tmux's own
+		// i-mux's look before themes: the tab bar's grays, tmux's own
 		// borders, messages, popups and menus.
-		style("status-style", "bg=default,fg=colour245")
+		style("status-style", "bg="+strip.Tmux()+",fg=colour245")
 		for _, o := range classicUnset(v) {
 			out = append(out, Cmd{"set-option", "-gu", o})
 		}
@@ -66,14 +79,14 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 		for i, c := range ANSIColors(p) {
 			out = append(out, Cmd{"set-option", "-g", OptPaneColors + "[" + strconv.Itoa(i) + "]", c.Tmux()})
 		}
-		style("status-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Subtext0.Tmux())
+		style("status-style", "bg="+strip.Tmux()+",fg="+p.Subtext0.Tmux())
 		style("pane-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
 		style("pane-active-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Accent.Tmux())
 	} else {
 		for _, o := range paneUnset(v) {
 			out = append(out, Cmd{"set-option", "-gu", o})
 		}
-		style("status-style", "bg=default,fg="+p.Subtext0.Tmux())
+		style("status-style", "bg="+strip.Tmux()+",fg="+p.Subtext0.Tmux())
 		style("pane-border-style", "fg="+p.Surface1.Tmux())
 		style("pane-active-border-style", "fg="+p.Accent.Tmux())
 	}
