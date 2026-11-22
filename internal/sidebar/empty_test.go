@@ -92,7 +92,7 @@ func TestNoAgentsSidebar(t *testing.T) {
 	lines := strings.Split(text, "\n")
 	under := false
 	for i := 1; i < len(lines); i++ {
-		if strings.HasSuffix(lines[i-1], "│ acme-api") && strings.HasSuffix(lines[i], "│   No agents · + to start one") {
+		if strings.HasSuffix(lines[i-1], "│  A  acme-api") && strings.HasSuffix(lines[i], "│   No agents · + to start one") {
 			under = true
 		}
 	}

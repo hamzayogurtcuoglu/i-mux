@@ -31,7 +31,7 @@ func TestNestWorktrees(t *testing.T) {
 		t.Errorf("marks %+v", rows)
 	}
 	// Indented with 🌿, as wide as the sidebar.
-	l := projectRow(ProjectRow{Name: "feature-login", Branch: "feature-login", Worktree: true}, 40, 0)
+	l := projectRow(ProjectRow{Name: "feature-login", Branch: "feature-login", Worktree: true}, 40, 0, 0)
 	if p := Plain(l.Text); !strings.HasPrefix(p, "   🌿 feature") || DisplayWidth(p) != 40 {
 		t.Errorf("row %q (%d)", p, DisplayWidth(p))
 	}

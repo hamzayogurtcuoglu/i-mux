@@ -1046,10 +1046,9 @@ func TestFold(t *testing.T) {
 	if lineWith("▾ AGENTS") == "" {
 		t.Error("agents stay open")
 	}
-	for _, gone := range []string{" A  acme-api"} {
-		if strings.Contains(text, gone) {
-			t.Errorf("folded section shows %q", gone)
-		}
+	// The avatar stays once: AGENTS' group row (T95.1), not the project row.
+	if n := strings.Count(text, " A  acme-api"); n != 1 {
+		t.Errorf("folded section shows the project: %d avatars", n)
 	}
 }
 

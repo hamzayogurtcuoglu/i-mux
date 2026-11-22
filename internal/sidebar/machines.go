@@ -74,7 +74,7 @@ func machineTree(mv MachineView, folded bool, w int, now time.Time, tick int, ic
 	for _, p := range mv.State.Projects {
 		out = append(out, dimmed(remoteProjectRow(mv.Name, p, w), ok))
 		for _, r := range remotePanes(p) {
-			l := agentRow(r, w-4, now, tick)
+			l := agentRow(r, w-4, now, tick, "")
 			l.Text = "    " + l.Text
 			l.Cells = nil
 			l.Action = Action{Kind: ActMachineOpen, Path: mv.Name, Session: p.Session, Pane: r.ID}

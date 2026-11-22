@@ -1,6 +1,7 @@
 package sidebar
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -32,6 +33,7 @@ var (
 	// on the terminal's colors (theme.PaneBase).
 	paneBase, paneFg, paneBg string
 	avatars                  []string // projects' avatars (background and text)
+	avatarFg                 []string // the same colors as text (AGENTS, T95.1)
 )
 
 func init() { theme.Watch(applyPalette) }
@@ -65,11 +67,17 @@ func applyPalette(p theme.Palette) {
 	barThumb = p.Overlay0.Fg() + "┃" + reset
 	buttonStyle = p.Accent.Bg() + onColor(p.Accent)
 	agentFg = [5]string{p.Peach.Fg(), p.Blue.Fg(), p.Text.Fg(), p.Mauve.Fg(), p.Yellow.Fg()} // Claude, Antigravity, Codex, Copilot, OpenCode
-	var av []string
+	// A theme's accent may be one of its colors: each color once, so two
+	// projects' colors differ when their avatars do (T95.1).
+	var av, fg []string
 	for _, c := range []theme.Color{p.Teal, p.Peach, p.Blue, p.Green, p.Mauve, p.Red, p.Yellow, p.Accent} {
+		if slices.Contains(fg, c.Fg()) {
+			continue
+		}
 		av = append(av, c.Bg()+onColor(c))
+		fg = append(fg, c.Fg())
 	}
-	avatars = av
+	avatars, avatarFg = av, fg
 }
 
 // classic are the sidebar's colors before themes, exactly (the i-mux theme).
@@ -86,11 +94,12 @@ func classic() {
 	barTrack, barThumb = "\x1b[38;5;236m│"+reset, "\x1b[38;5;245m┃"+reset
 	buttonStyle = "\x1b[48;5;24m\x1b[38;5;255m"
 	agentFg = [5]string{"\x1b[38;5;173m", "\x1b[38;5;75m", "\x1b[38;5;252m", "\x1b[38;5;141m", "\x1b[38;5;215m"}
-	var av []string
+	var av, fg []string
 	for _, n := range []int{30, 166, 68, 71, 98, 168, 136, 37} {
 		av = append(av, "\x1b[48;5;"+strconv.Itoa(n)+"m"+white)
+		fg = append(fg, "\x1b[38;5;"+strconv.Itoa(n)+"m")
 	}
-	avatars = av
+	avatars, avatarFg = av, fg
 }
 
 // paint puts a row on the theme's background (paneBase): the row starts

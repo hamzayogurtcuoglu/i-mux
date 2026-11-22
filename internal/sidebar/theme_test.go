@@ -63,3 +63,78 @@ func TestPaletteColors(t *testing.T) {
 		t.Errorf("24-bit colors with the terminal theme:\n%q", term)
 	}
 }
+
+// TestAgentsInProjectColor (T95.1): AGENTS shows each project's avatar on
+// its group row (the name stays muted) and its color as a bar on every agent
+// row, in classic and in a theme; a row's width does not change, and agents
+// on other machines keep their plain row.
+func TestAgentsInProjectColor(t *testing.T) {
+	defer theme.Set(theme.Builtin(theme.Default))
+	for _, name := range []string{theme.Default, "catppuccin"} {
+		theme.Set(theme.Builtin(name))
+		m := model()
+		colors := projectColors(m.Projects)
+		lines := Render(m, 41, 0, NoItem).Lines
+		for i, pr := range m.Projects {
+			bar := projectFg(colors[i]) + "▎" + reset
+			group, rows := -1, 0
+			for j, l := range lines {
+				if strings.Contains(l.Text, " "+avatar(pr.Name, colors[i])+" "+muted+pr.Name) {
+					group = j
+				}
+				if group >= 0 && j > group && j <= group+len(pr.Panes) && strings.Contains(l.Text, bar) {
+					rows++
+				}
+			}
+			if group < 0 {
+				t.Errorf("%s: no group row with %s's avatar", name, pr.Name)
+			}
+			if rows < len(pr.Panes) {
+				t.Errorf("%s: %d of %s's %d agents carry its color", name, rows, pr.Name, len(pr.Panes))
+			}
+		}
+		for _, l := range lines {
+			if n := DisplayWidth(Plain(l.Text)); n != 41 {
+				t.Errorf("%s: %d columns: %q", name, n, Plain(l.Text))
+			}
+		}
+		if l := agentRow(m.Panes[0], 30, m.Now, 0, ""); strings.Contains(l.Text, "▎") {
+			t.Errorf("%s: a row without a project has a bar: %q", name, l.Text)
+		}
+	}
+}
+
+// TestProjectColors (T95.1): open projects never share a color while there
+// are colors enough, a project keeps the color its name gives it unless one
+// above it has it, and a worktree takes its repository's.
+func TestProjectColors(t *testing.T) {
+	defer theme.Set(theme.Builtin(theme.Default))
+	for _, name := range []string{theme.Default, "catppuccin"} {
+		theme.Set(theme.Builtin(name))
+		// Names whose hashes collide (blog and api, web and i-mux, ...).
+		var ps []ProjectRow
+		for _, n := range []string{"acme-api", "blog", "web", "api", "docs", "i-mux", "site", "app"}[:len(avatars)] {
+			ps = append(ps, ProjectRow{Name: n})
+		}
+		seen := map[string]bool{}
+		for _, c := range projectColors(ps) {
+			if seen[projectFg(c)] {
+				t.Errorf("%s: two of %d projects share %q", name, len(ps), projectFg(c))
+			}
+			seen[projectFg(c)] = true
+		}
+		alone := projectColors(ps[3:4])[0]
+		if got := projectColors([]ProjectRow{ps[3], ps[0]})[0]; got != alone {
+			t.Errorf("%s: the first project's color moved: %d, alone %d", name, got, alone)
+		}
+		wt := projectColors([]ProjectRow{ps[1], {Name: "feature-x", Worktree: true}, ps[2]})
+		if wt[1] != wt[0] || wt[2] == wt[0] {
+			t.Errorf("%s: worktree colors %v", name, wt)
+		}
+		// More projects than colors: every one still has one.
+		many := projectColors(append(ps, ps...))
+		if len(many) != 2*len(ps) {
+			t.Fatalf("%s: %d colors for %d projects", name, len(many), 2*len(ps))
+		}
+	}
+}

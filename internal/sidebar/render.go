@@ -236,19 +236,47 @@ func icon(a session.AgentID) (string, string) {
 // AgentIcon is an agent's glyph and its color (other packages' screens).
 func AgentIcon(a session.AgentID) (string, string) { return icon(a) }
 
-// avatar is a project's letter on its color (3 columns).
-func avatar(name string) string {
+// avatar is a project's letter on its color c (3 columns).
+func avatar(name string, c int) string {
 	r := []rune(strings.TrimLeft(name, ".-_ "))
 	letter := "?"
 	if len(r) > 0 {
 		letter = strings.ToUpper(string(r[0]))
 	}
-	var h uint32
-	for _, c := range name {
-		h = h*31 + uint32(c)
+	return avatars[c%len(avatars)] + bold + " " + letter + " " + reset
+}
+
+// projectFg is color c as text: the bar of a project's agents (T95.1).
+func projectFg(c int) string { return avatarFg[c%len(avatarFg)] }
+
+// projectColors gives every project its color (T95.1): the one its name
+// hashes to, or, when a project above it in the list has that one, the next
+// free one, so open projects differ while there are colors enough and a
+// project keeps its color. A worktree takes its repository's (D72).
+func projectColors(ps []ProjectRow) []int {
+	n := len(avatars)
+	out := make([]int, len(ps))
+	used := make([]bool, n)
+	free := n
+	for i, pr := range ps {
+		if pr.Worktree && i > 0 {
+			out[i] = out[i-1]
+			continue
+		}
+		var h uint32
+		for _, c := range pr.Name {
+			h = h*31 + uint32(c)
+		}
+		c := int(h % uint32(n))
+		for free > 0 && used[c] {
+			c = (c + 1) % n
+		}
+		if !used[c] {
+			used[c], free = true, free-1
+		}
+		out[i] = c
 	}
-	av := avatars[h%uint32(len(avatars))]
-	return av + bold + " " + letter + " " + reset
+	return out
 }
 
 // age is the time since since: "<1m", "9m", "2h", "3d" ("" if unknown).
@@ -414,7 +442,7 @@ func workingCount(m Model) int {
 
 // projectRow: avatar, name, branch and the roll-up state (no dot for
 // uncommitted changes, D56).
-func projectRow(pr ProjectRow, w, tick int) Line {
+func projectRow(pr ProjectRow, w, tick, color int) Line {
 	var right []string
 	rw := 0
 	add := func(t string, n int) {
@@ -459,7 +487,7 @@ func projectRow(pr ProjectRow, w, tick int) Line {
 		style = bold
 	}
 	nw := min(runes(name), max(room(), 1))
-	left := " " + avatar(pr.Name) + " " + style + fit(name, nw) + reset
+	left := " " + avatar(pr.Name, color) + " " + style + fit(name, nw) + reset
 	if pr.Worktree {
 		left = "   🌿 " + style + fit(name, nw) + reset
 	}
@@ -471,8 +499,9 @@ func projectRow(pr ProjectRow, w, tick int) Line {
 	return Line{Text: text, Action: a}
 }
 
-// agentRow: icon, name, time since the state changed and the state.
-func agentRow(p PaneRow, w int, now time.Time, tick int) Line {
+// agentRow: icon, name, time since the state changed and the state; bar,
+// when set, is the project's color for the row's first column (T95.1).
+func agentRow(p PaneRow, w int, now time.Time, tick int, bar string) Line {
 	sym, color := icon(p.Agent)
 	name := p.Display(i18n.T("sidebar.shell"))
 	nameStyle := ""
@@ -511,7 +540,11 @@ func agentRow(p PaneRow, w int, now time.Time, tick int) Line {
 		layout()
 	}
 	nw := min(runes(name), max(room(), 1))
-	left := " " + color + sym + reset + "  " + nameStyle + fit(name, nw) + reset
+	lead := " "
+	if bar != "" {
+		lead = bar + "▎" + reset
+	}
+	left := lead + color + sym + reset + "  " + nameStyle + fit(name, nw) + reset
 	text := spread(left, 4+nw, right+" ", rw+1, w)
 	if p.Target {
 		// The selected agent: a click opens its menu (go, rename, close).
@@ -520,23 +553,28 @@ func agentRow(p PaneRow, w int, now time.Time, tick int) Line {
 	return Line{Text: text, Action: Action{Kind: ActFocus, Pane: p.ID}}
 }
 
-// groupRow is a project's name above its agents; collapsed, it also shows
-// how many agents it has and their roll-up state.
-func groupRow(pr ProjectRow, w, tick int, collapsed bool) Line {
+// groupRow is a project's avatar and name above its agents; collapsed, it
+// also shows how many agents it has and their roll-up state.
+func groupRow(pr ProjectRow, w, tick, color int, collapsed bool) Line {
 	a := Action{}
 	if !pr.Current {
 		a = Action{Kind: ActProject, Session: pr.Session}
 	}
-	if !collapsed {
+	const lead = 5 // " ", the avatar, " "
+	if w < lead+2 {
 		return Line{Text: muted + fit(" "+pr.Name, w) + reset, Action: a}
 	}
-	right, rw := muted+strconv.Itoa(len(pr.Panes))+reset, runes(strconv.Itoa(len(pr.Panes)))
-	if st, ok := rollup(pr.Panes); ok {
-		b, bw := badge(st, tick, true)
-		right, rw = right+" "+b, rw+1+bw
+	right, rw := "", 0
+	if collapsed {
+		right, rw = muted+strconv.Itoa(len(pr.Panes))+reset, runes(strconv.Itoa(len(pr.Panes)))
+		if st, ok := rollup(pr.Panes); ok {
+			b, bw := badge(st, tick, true)
+			right, rw = right+" "+b, rw+1+bw
+		}
 	}
-	nw := max(w-rw-3, 1)
-	return Line{Text: spread(muted+" "+fit(pr.Name, nw)+reset, nw+1, right+" ", rw+1, w), Action: a}
+	nw := min(runes(pr.Name), max(w-lead-rw-2, 1))
+	left := " " + avatar(pr.Name, color) + " " + muted + fit(pr.Name, nw) + reset
+	return Line{Text: spread(left, lead+nw, right+" ", rw+1, w), Action: a}
 }
 
 // continueRows: the agents the chat can move to, two buttons per row.
@@ -701,9 +739,10 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 		count = strconv.Itoa(len(m.Projects))
 	}
 	out = append(out, header(SecProjects, i18n.T("sidebar.projects"), folded(SecProjects), count, w, Action{Kind: ActOpen}, m.icons()))
+	colors := projectColors(m.Projects)
 	if !folded(SecProjects) {
-		for _, pr := range m.Projects {
-			out = append(out, projectRow(pr, w, m.Tick))
+		for i, pr := range m.Projects {
+			out = append(out, projectRow(pr, w, m.Tick, colors[i]))
 		}
 	}
 
@@ -711,11 +750,11 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 	right, rw := agentsCount(m, w)
 	out = append(out, headerWith(SecAgents, i18n.T("sidebar.agents"), folded(SecAgents), right, rw, w, Action{Kind: ActNewAgent}, m.icons()))
 	if !folded(SecAgents) {
-		for _, pr := range m.Projects {
+		for i, pr := range m.Projects {
 			if len(pr.Panes) == 0 {
 				if pr.Current {
 					// Its last agent was closed: the project stays.
-					out = append(out, groupRow(pr, w, m.Tick, false), Line{
+					out = append(out, groupRow(pr, w, m.Tick, colors[i], false), Line{
 						Text:   muted + fit("   "+i18n.T("sidebar.no_agents_hint"), w) + reset,
 						Action: Action{Kind: ActNewAgent},
 					})
@@ -723,12 +762,12 @@ func top(m Model, w int, blanks, collapse bool, maxChanges int, withChanges bool
 				continue
 			}
 			fold := collapse && !pr.Current
-			out = append(out, groupRow(pr, w, m.Tick, fold))
+			out = append(out, groupRow(pr, w, m.Tick, colors[i], fold))
 			if fold {
 				continue
 			}
 			for _, p := range pr.Panes {
-				out = append(out, agentRow(p, w, m.Now, m.Tick))
+				out = append(out, agentRow(p, w, m.Now, m.Tick, projectFg(colors[i])))
 			}
 		}
 	}
