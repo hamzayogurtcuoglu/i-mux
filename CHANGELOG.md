@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.69.1] - 2026-11-22
+
 ### Changed
 
 - **The tab bar looks like an editor's tabs.** The open tab sits on the pane's colour and opens
