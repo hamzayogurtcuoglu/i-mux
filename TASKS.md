@@ -1012,6 +1012,21 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M97: Engine queries without a process (added 2026-11-22)
+
+User report: on a Windows machine with endpoint security every process start costs about
+270 ms, so a click or `imux ls` took about a second (D92).
+
+- [ ] **T97.1 Engine queries inside imux** · S
+  - AC: D92: `tmux.Client.Run` runs its commands through `tmux.EngineCommand`
+    (i-mux-core's `engine.Command`, pinned at its C11.1) when the engine is an existing
+    `imux-core` file, the line starts no server and asks no `-V`, and `IMUX_ENGINE_INPROC` is
+    not `0`; anything else, and a line the engine leaves to the binary, runs the binary as
+    before. `cmd/imux` sets `tmux.EngineCommand`; test binaries do not. Unit tests: which
+    lines run in the process and which run the binary, the exit code and stderr reaching
+    `Error` as from the binary; the e2e suite runs on it, the imux under test carrying the
+    engine.
+
 ## M96: Tabs like an editor's (added 2026-11-22)
 
 User request: the tab bar does not look like VS Code's; the open tab should be on the panel's
