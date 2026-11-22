@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.68.0] - 2026-11-22
+
 ### Changed
 
 - **The Nerd Font comes with i-mux.** The installers (`install.sh`, `install.ps1` and the
