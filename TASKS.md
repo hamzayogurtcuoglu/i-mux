@@ -1065,6 +1065,11 @@ thought through for macOS, Linux and Windows alike, not for one of them.
     each submenu, the `notifications` setting.
   - Status: done. Sixteen rows of sentences became nine short rows under three headings; the
     strings for the removed rows are gone from both catalogs.
+- [ ] **T98.3 Updates: no letter for a row with nothing to run** · XS
+  - AC: in the Versions popup (Settings → Updates) a row with no command (i-mux when it is the
+    newest, i-mux-core, which comes with i-mux) shows no letter; typing one says why there is
+    nothing to do (up to date; updated with i-mux), and a letter no row has says so. Unit tests
+    of the rows and the messages.
 - [x] **T98.2 A skill for every system** · XS
   - AC: `.agents/skills/every-system/SKILL.md` (linked from `.claude/skills/`) says what to
     check on macOS, Linux (WSL included) and native Windows before and while making any change:
