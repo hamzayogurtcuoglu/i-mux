@@ -68,3 +68,31 @@ func TestSetTheme(t *testing.T) {
 		t.Error("an unknown theme saved")
 	}
 }
+
+// TestSetNotifications (D93): one row sets both keys: On with sound, On
+// silent, Off (the sound kept for later).
+func TestSetNotifications(t *testing.T) {
+	testutil.Isolate(t)
+	load := func() *config.Config {
+		t.Helper()
+		cfg, _, err := config.Load(paths.Config())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg
+	}
+	for _, c := range []struct {
+		value     string
+		on, sound bool
+	}{{"silent", true, false}, {"off", false, false}, {"sound", true, true}, {"off", false, true}} {
+		if err := setSetting("notifications", c.value); err != nil {
+			t.Fatalf("%s: %v", c.value, err)
+		}
+		if cfg := load(); cfg.Notify.Enabled != c.on || cfg.Notify.Sound != c.sound {
+			t.Errorf("%s: enabled %v sound %v", c.value, cfg.Notify.Enabled, cfg.Notify.Sound)
+		}
+	}
+	if err := setSetting("notifications", "loud"); err == nil {
+		t.Error("an unknown value saved")
+	}
+}

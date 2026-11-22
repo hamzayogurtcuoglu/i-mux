@@ -148,6 +148,8 @@ func setSetting(name, value string) error {
 		return setEditor(value)
 	case "theme":
 		return setTheme(value)
+	case "notifications":
+		return setNotifications(value)
 	}
 	k, ok := settingKeys[name]
 	if !ok {
@@ -168,6 +170,31 @@ func setSetting(name, value string) error {
 		return err
 	}
 	return config.Set(paths.Config(), k.section, k.key, v)
+}
+
+// setNotifications saves the Notifications row's choice (D93): sound (on,
+// with sound), silent (on, no sound) or off.
+func setNotifications(value string) error {
+	on, sound := true, true
+	switch value {
+	case "sound":
+	case "silent":
+		sound = false
+	case "off":
+		on = false
+	default:
+		return fmt.Errorf("notifications: invalid value %q", value)
+	}
+	if err := paths.Ensure(); err != nil {
+		return err
+	}
+	if err := config.Set(paths.Config(), "notify", "enabled", config.Bool(on)); err != nil {
+		return err
+	}
+	if !on {
+		return nil // the sound is kept for when they are turned on again
+	}
+	return config.Set(paths.Config(), "notify", "sound", config.Bool(sound))
 }
 
 // setEditor saves the Editor row's choice (D50): copilot turns AI

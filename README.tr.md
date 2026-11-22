@@ -205,7 +205,7 @@ Desteklenen agent CLI'larından en az birini kurun, ardından kurulumu kontrol e
 imux doctor
 ```
 
-Eksik agent'ları i-mux içinden **Settings → Versions and updates** ile kurabilirsiniz.
+Eksik agent'ları i-mux içinden **Settings → Updates** ile kurabilirsiniz.
 
 ## Hızlı başlangıç
 

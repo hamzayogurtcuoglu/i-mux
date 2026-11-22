@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 
@@ -54,47 +55,92 @@ func (w *WS) popupCmd(width, height string, args ...string) string {
 	return "display-popup -E -w " + width + " -h " + height + " " + tmux.QuoteProgram(append([]string{w.Self}, args...)...)
 }
 
-// SettingsMenu lists the common settings with their values; a row opens a
-// menu of its values (D50), whose choice changes the config file and opens
-// Settings again.
+// SettingsMenu lists the settings in three groups under dimmed headings
+// (D93), each row a short name and its value in an aligned column; a row
+// opens a menu of its values (D50), whose choice changes the config file
+// and opens Settings again.
 func (w *WS) SettingsMenu(pane, client string) *Menu {
 	cfg := w.Cfg
 	tgt := settingsTarget(pane, client)
 	menu := func(which string) string {
 		return w.ui(append([]string{"__settings", "menu", which}, tgt...)...)
 	}
+	theme := ThemeTitle(cfg.Theme.Name)
+	if cfg.Theme.AutoSwitch {
+		theme += " · " + i18n.T("settings.auto")
+	}
+	updates := version.Version
+	if latest := w.State().Latest; upd.Newer(latest, updates) {
+		updates = "⬆ " + latest
+	}
+	type row struct{ key, name, value, cmd string }
+	groups := []struct {
+		heading string
+		rows    []row
+	}{
+		{i18n.T("settings.group_appearance"), []row{
+			{"t", i18n.T("settings.theme"), theme, menu("theme")},
+			{"i", i18n.T("settings.icons"), labels(iconsValue(cfg.Tmux.Icons)), menu("icons")},
+		}},
+		{i18n.T("settings.group_agents"), []row{
+			{"l", i18n.T("settings.on_limit"), limitLabel(cfg.OnLimit), menu("on_limit")},
+			{"w", i18n.T("settings.on_arrival"), labels(arrivalValue(cfg.Handoff.OnArrival)), menu("on_arrival")},
+			{"n", i18n.T("settings.notify"), notifyLabel(cfg.Notify.Enabled, cfg.Notify.Sound), menu("notifications")},
+		}},
+		{i18n.T("settings.group_editing"), []row{
+			{"e", i18n.T("settings.editor"), w.editorLabel(), menu("editor")},
+			{"v", i18n.T("settings.paste_images"), onOffLabel(cfg.Paste.Images), menu("paste_images")},
+		}},
+		{"", []row{
+			{"u", i18n.T("settings.updates"), updates, w.popupCmd("90%", "80%", "versions", "--popup")},
+			{"o", i18n.T("settings.open"), "", w.popupCmd("90%", "90%", "__settings", "edit")},
+		}},
+	}
+	width := 0
+	for _, g := range groups {
+		for _, r := range g.rows {
+			width = max(width, utf8.RuneCountInString(r.name))
+		}
+	}
 	m := &Menu{Title: i18n.T("settings.title")}
-	cur := version.Version
-	row := MenuItem{Name: i18n.T("settings.update", cur), Key: "u", Cmd: w.popupCmd("80%", "60%", "update", "--popup")}
-	if latest := w.State().Latest; upd.Newer(latest, cur) {
-		row.Name = i18n.T("settings.update_available", cur, latest)
+	for i, g := range groups {
+		if g.heading != "" {
+			m.Items = append(m.Items, MenuItem{Name: g.heading, Disabled: true})
+		} else if i > 0 {
+			m.Items = append(m.Items, Separator())
+		}
+		for _, r := range g.rows {
+			name := "  " + r.name
+			if r.value != "" {
+				name += strings.Repeat(" ", width-utf8.RuneCountInString(r.name)+2) + r.value
+			}
+			m.Items = append(m.Items, MenuItem{Name: name, Key: r.key, Cmd: r.cmd})
+		}
 	}
-	// Versions and updates: i-mux, its engine, the agents.
-	vers := MenuItem{Name: i18n.T("settings.versions"), Key: "c", Cmd: w.popupCmd("90%", "80%", "versions", "--popup")}
-	m.Items = append(m.Items, row, vers, Separator(),
-		MenuItem{Name: i18n.T("settings.editor", w.editorLabel()), Key: "e", Cmd: menu("editor")})
-	if cfg.Completion.Enabled {
-		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.signin"), Key: "s", Cmd: w.popupCmd("90%", "90%", "__completion", "signin")})
-	}
-	m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify", onOffLabel(cfg.Notify.Enabled)), Key: "n", Cmd: menu("notify")})
-	if cfg.Notify.Enabled {
-		m.Items = append(m.Items, MenuItem{Name: i18n.T("settings.notify_sound", onOffLabel(cfg.Notify.Sound)), Key: "d", Cmd: menu("notify_sound")})
-	}
-	m.Items = append(m.Items,
-		MenuItem{Name: i18n.T("settings.paste_images", onOffLabel(cfg.Paste.Images)), Key: "v", Cmd: menu("paste_images")},
-		MenuItem{Name: i18n.T("settings.icons", labels(iconsValue(cfg.Tmux.Icons))), Key: "i", Cmd: menu("icons")},
-		MenuItem{Name: i18n.T("settings.font"), Key: "f", Cmd: w.popupCmd("90%", "70%", "font", "install", "--popup")},
-		MenuItem{Name: i18n.T("settings.theme", ThemeTitle(cfg.Theme.Name)), Key: "t", Cmd: menu("theme")},
-		MenuItem{Name: i18n.T("settings.theme_auto", onOffLabel(cfg.Theme.AutoSwitch)), Key: "a", Cmd: menu("theme_auto")},
-		MenuItem{Name: i18n.T("settings.on_arrival", labels(arrivalValue(cfg.Handoff.OnArrival))), Key: "w", Cmd: menu("on_arrival")},
-		MenuItem{Name: i18n.T("settings.on_limit", limitLabel(cfg.OnLimit)), Key: "l", Cmd: menu("on_limit")},
-		MenuItem{Name: i18n.T("settings.hooks", onOffLabel(cfg.Hooks.Enabled)), Key: "h", Cmd: menu("hooks")},
-	)
-	m.Items = append(m.Items,
-		Separator(),
-		MenuItem{Name: i18n.T("settings.open"), Key: "o", Cmd: w.popupCmd("90%", "90%", "__settings", "edit")},
-	)
 	return m
+}
+
+// notifyLabel is the Notifications row's value: On, Silent (no sound) or
+// Off (D93).
+func notifyLabel(on, sound bool) string {
+	switch {
+	case !on:
+		return i18n.T("settings.off")
+	case !sound:
+		return i18n.T("settings.notify_silent")
+	}
+	return i18n.T("settings.on_plain")
+}
+
+// notifyValue is notifyLabel's value for `__settings set notifications`.
+func notifyValue(on, sound bool) string {
+	switch {
+	case !on:
+		return "off"
+	case !sound:
+		return "silent"
+	}
+	return "sound"
 }
 
 func onOffLabel(on bool) string {
@@ -153,10 +199,13 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 	switch which {
 	case "editor":
 		return w.EditorMenu(pane, client)
-	case "notify":
-		return w.ChoiceMenu(i18n.T("settings.notify_title"), "notify", onOffValue(cfg.Notify.Enabled), onOff, pane, client)
-	case "notify_sound":
-		return w.ChoiceMenu(i18n.T("settings.sound_title"), "notify_sound", onOffValue(cfg.Notify.Sound), onOff, pane, client)
+	case "notifications", "notify", "notify_sound":
+		cs := []Choice{
+			{"sound", i18n.T("settings.notify_sound_on")},
+			{"silent", i18n.T("settings.notify_silent_row")},
+			{"off", i18n.T("settings.off")},
+		}
+		return w.ChoiceMenu(i18n.T("settings.notify_title"), "notifications", notifyValue(cfg.Notify.Enabled, cfg.Notify.Sound), cs, pane, client)
 	case "paste_images":
 		return w.ChoiceMenu(i18n.T("settings.paste_title"), "paste_images", onOffValue(cfg.Paste.Images), onOff, pane, client)
 	case "icons":
@@ -164,9 +213,14 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 		for _, v := range []string{"auto", "nerd", "emoji"} {
 			cs = append(cs, Choice{v, labels(v)})
 		}
-		return w.ChoiceMenu(i18n.T("settings.icons_title"), "icons", iconsValue(cfg.Tmux.Icons), cs, pane, client)
+		m := w.ChoiceMenu(i18n.T("settings.icons_title"), "icons", iconsValue(cfg.Tmux.Icons), cs, pane, client)
+		// The Nerd Font comes with every install (D90); here it can be put
+		// in place again, or for a terminal set up later (D93).
+		m.Items = append(m.Items, Separator(),
+			MenuItem{Name: "  " + i18n.T("settings.font"), Key: "f", Cmd: w.popupCmd("90%", "70%", "font", "install", "--popup")})
+		return m
 	case "on_arrival":
-		cs := []Choice{{"wait", labels("wait")}, {"continue", labels("continue")}}
+		cs := []Choice{{"wait", i18n.T("settings.arrival_wait_row")}, {"continue", i18n.T("settings.arrival_continue_row")}}
 		return w.ChoiceMenu(i18n.T("settings.arrival_title"), "on_arrival", arrivalValue(cfg.Handoff.OnArrival), cs, pane, client)
 	case "theme":
 		return w.ThemeMenu(pane, client)
@@ -176,8 +230,8 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 		return w.ChoiceMenu(i18n.T("settings.theme_auto_title"), "theme_auto", onOffValue(cfg.Theme.AutoSwitch), onOff, pane, client)
 	case "on_limit":
 		var cs []Choice
-		for _, v := range []string{"ask", "auto", "off"} {
-			cs = append(cs, Choice{v, limitLabel(v)})
+		for _, c := range [][2]string{{"ask", "settings.limit_ask_row"}, {"auto", "settings.limit_auto_row"}, {"off", "settings.limit_off_row"}} {
+			cs = append(cs, Choice{c[0], i18n.T(c[1])})
 		}
 		return w.ChoiceMenu(i18n.T("settings.limit_title"), "on_limit", cfg.OnLimit, cs, pane, client)
 	}
@@ -262,6 +316,10 @@ func (w *WS) EditorMenu(pane, client string) *Menu {
 		copilot.Cmd = w.popupCmd("90%", "80%", append([]string{"__completion", "setup"}, tgt...)...)
 	}
 	m.Items = append(m.Items, micro, nano, nvim, Separator(), copilot)
+	if cur == "copilot" {
+		// Signing in again, while Copilot is the editor (D93).
+		m.Items = append(m.Items, MenuItem{Name: "  " + i18n.T("settings.signin"), Key: "s", Cmd: w.popupCmd("90%", "90%", "__completion", "signin")})
+	}
 	return m
 }
 
@@ -327,6 +385,15 @@ func (w *WS) ThemeMenu(pane, client string) *Menu {
 		cur = theme.Default
 	}
 	m := &Menu{Title: i18n.T("settings.theme_title")}
+	// Following the terminal's light/dark is a switch at the top (D93).
+	follow, next := "  ", "on"
+	if w.Cfg.Theme.AutoSwitch {
+		follow, next = "✓ ", "off"
+	}
+	m.Items = append(m.Items, MenuItem{
+		Name: follow + i18n.T("settings.theme_auto"), Key: "0",
+		Cmd: w.ui(append([]string{"__settings", "set", "theme_auto", next}, tgt...)...),
+	}, Separator())
 	for i, n := range theme.Names {
 		mark := "  "
 		if n == cur {

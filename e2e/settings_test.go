@@ -13,10 +13,11 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
-// TestSettings (T29.4, T57.1): 🔧 on the rail opens Settings; a row opens
-// the menu of its values (D50), a choice changes the config file and
-// Settings opens again with the new value; the sidebar redraws with the new
-// icons; no row for the removed ✨ commit messages (D65).
+// TestSettings (T29.4, T57.1, D93): 🔧 on the rail opens Settings, in
+// groups with short rows; a row opens the menu of its values (D50), a
+// choice changes the config file and Settings opens again with the new
+// value; the sidebar redraws with the new icons; no row for the removed ✨
+// commit messages (D65); the Nerd Font install is in the Icons menu.
 func TestSettings(t *testing.T) {
 	h := newH(t, sidebarConfig)
 	agent, bar := h.startWithSidebar()
@@ -34,20 +35,20 @@ func TestSettings(t *testing.T) {
 	x, y := h.rowOf(bar, "🔧")
 	mark := c.Mark()
 	c.Click(0, x, y)
-	c.waitScreenAfter(h, mark, "i-mux · Settings", 5*time.Second)
-	c.waitScreenAfter(h, mark, "Icons: Auto", 5*time.Second)
+	c.waitScreenAfter(h, mark, "APPEARANCE", 5*time.Second)
+	c.waitScreenAfter(h, mark, "Icons", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 
 	mark = c.Mark()
 	c.Write("w")
-	c.waitScreenAfter(h, mark, "continues at once", 5*time.Second)
+	c.waitScreenAfter(h, mark, "Continue the task", 5*time.Second)
 	if load().Handoff.OnArrival == "continue" {
 		t.Fatal("the row changed the value without asking")
 	}
 	time.Sleep(300 * time.Millisecond)
 	mark = c.Mark()
 	c.Write("2")
-	c.waitScreenAfter(h, mark, "After a handoff the new agent: continues at once", 5*time.Second)
+	c.waitScreenAfter(h, mark, "APPEARANCE", 5*time.Second)
 	if load().Handoff.OnArrival != "continue" {
 		t.Fatal("on_arrival not written")
 	}
@@ -61,7 +62,7 @@ func TestSettings(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 	mark = c.Mark()
 	c.Write("2")
-	c.waitScreenAfter(h, mark, "Icons: Nerd Font", 5*time.Second)
+	c.waitScreenAfter(h, mark, "Nerd Font", 5*time.Second)
 	if load().Tmux.Icons != "nerd" {
 		t.Fatal("icons not written")
 	}
@@ -79,13 +80,17 @@ func TestSettings(t *testing.T) {
 		t.Fatalf("other settings lost:\n%s", b)
 	}
 
-	// Install the Nerd Font for the icons… (M43) runs `imux font install` in
+	// Icons → Install the Nerd Font… (M43, D93) runs `imux font install` in
 	// a popup: it shows what is there and asks first (no is the answer
 	// here), or says all is set.
 	time.Sleep(300 * time.Millisecond)
 	mark = c.Mark()
 	h.mustImux("settings", "--pane", agent)
-	c.waitScreenAfter(h, mark, "Install the Nerd Font for the icons", 5*time.Second)
+	c.waitScreenAfter(h, mark, "APPEARANCE", 5*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("i")
+	c.waitScreenAfter(h, mark, "Install the Nerd Font", 5*time.Second)
 	time.Sleep(300 * time.Millisecond)
 	mark = c.Mark()
 	c.Write("f")

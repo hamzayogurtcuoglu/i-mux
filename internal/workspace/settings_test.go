@@ -31,8 +31,9 @@ func noMicro(t *testing.T) {
 	t.Setenv("EDITOR", "")
 }
 
-// TestSettingsMenu (D50): each row shows its value and opens a menu of
-// its values; actions open popups.
+// TestSettingsMenu (D50, D93): three groups under dimmed headings, each row
+// a short name and its value in one column; a row opens a menu of its
+// values; Updates and the config file open popups.
 func TestSettingsMenu(t *testing.T) {
 	i18n.SetLocale("en")
 	w, _, _ := testWS(t)
@@ -40,52 +41,66 @@ func TestSettingsMenu(t *testing.T) {
 	m := w.SettingsMenu("%1", "c1")
 	var names []string
 	for _, it := range m.Items {
-		names = append(names, it.Key+" "+it.Name)
+		n := it.Key + " " + it.Name
+		if it.Disabled {
+			n = "-" + it.Name
+		}
+		names = append(names, n)
 	}
 	got := strings.Join(names, "|")
-	want := "u Update i-mux… (dev)|c Versions and updates…| |e Editor: Auto (the viewer)|n Notifications: On|d Notification sound: On|v Paste images with Ctrl+V: On|i Icons: Auto|f Install the Nerd Font for the icons…|t Theme: i-mux|a Follow the terminal's light/dark: Off|" +
-		"w After a handoff the new agent: waits for you|l When an agent hits its limit: ask me|h Agent states from their hooks: Off| |o Open the config file…"
-	if m.Title != "i-mux · Settings" || got != want {
+	want := "-APPEARANCE|t   Theme            i-mux|i   Icons            Auto|" +
+		"-AGENTS|l   At a limit       Ask|w   After a handoff  Wait|n   Notifications    On|" +
+		"-EDITING|e   Editor           Auto (the viewer)|v   Image paste      On| |" +
+		"u   Updates          dev|o   Config file…"
+	if m.Title != "Settings" || got != want {
 		t.Fatalf("menu\n got %s\nwant %s", got, want)
 	}
 	for key, which := range map[string]string{
-		"e": "editor", "n": "notify", "d": "notify_sound", "v": "paste_images", "i": "icons", "t": "theme", "a": "theme_auto", "h": "hooks",
+		"e": "editor", "n": "notifications", "v": "paste_images", "i": "icons", "t": "theme",
 		"w": "on_arrival", "l": "on_limit",
 	} {
 		if c := cmdOf(m, key); !strings.Contains(c, "__settings menu "+which+" --pane %1 --client c1") {
 			t.Errorf("%s: %q does not open the %s menu", key, c, which)
 		}
 	}
-	for key, want := range map[string]string{"f": "font install --popup", "o": "__settings edit", "u": "update --popup", "c": "versions --popup"} {
+	for key, want := range map[string]string{"o": "__settings edit", "u": "versions --popup"} {
 		if c := cmdOf(m, key); !strings.HasPrefix(c, "display-popup -E") || !strings.Contains(c, want) {
 			t.Errorf("%s: %q", key, c)
 		}
 	}
-	// Values change the rows; with AI completion on, Copilot's sign-in.
-	w.Cfg.Completion.Enabled = true
+	for _, gone := range []string{"h", "f", "d", "a", "c", "s"} {
+		if c := cmdOf(m, gone); c != "" {
+			t.Errorf("a row %s left: %q", gone, c)
+		}
+	}
+	// Values change the rows.
+	w.Cfg.Completion.Enabled, w.Cfg.Theme.AutoSwitch, w.Cfg.Notify.Sound = true, true, false
 	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival = "emoji", "off", "continue"
-	m = w.SettingsMenu("%1", "")
 	got = ""
-	for _, it := range m.Items {
-		got += it.Key + " " + it.Name + "|"
+	for _, it := range w.SettingsMenu("%1", "").Items {
+		got += it.Name + "|"
 	}
 	for _, want := range []string{
-		"e Editor: Neovim + Copilot|s Sign in to GitHub Copilot…|",
-		"i Icons: Emoji|", "w After a handoff the new agent: continues at once|",
-		"l When an agent hits its limit: do nothing|",
+		"Theme            i-mux · auto|", "Icons            Emoji|", "At a limit       Do nothing|",
+		"After a handoff  Continue|", "Notifications    Silent|", "Editor           Neovim + Copilot|",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("menu lacks %q:\n%s", want, got)
 		}
 	}
-
-	if strings.Contains(got, "Commit messages") {
-		t.Errorf("a row for the removed ✨ commit messages (D65):\n%s", got)
+	w.Cfg.Notify.Enabled = false
+	if got := w.SettingsMenu("", "").Items[6].Name; got != "  Notifications    Off" {
+		t.Errorf("notifications off: %q", got)
+	}
+	i18n.SetLocale("tr")
+	defer i18n.SetLocale("en")
+	if m := w.SettingsMenu("", ""); m.Title != "Ayarlar" || m.Items[0].Name != "GÖRÜNÜM" {
+		t.Errorf("Turkish: %q %q", m.Title, m.Items[0].Name)
 	}
 }
 
-// TestSettingMenus (D50): a row's menu lists its values, ● on the current
-// one; each saves its value.
+// TestSettingMenus (D50, D93): a row's menu lists its values, ● on the
+// current one; each saves its value.
 func TestSettingMenus(t *testing.T) {
 	i18n.SetLocale("en")
 	w, _, _ := testWS(t)
@@ -99,22 +114,29 @@ func TestSettingMenus(t *testing.T) {
 	for _, c := range []struct {
 		which, title, rows, cmd string
 	}{
-		{"notify", "Notifications", "1 ● On|2   Off", "__settings set notify off --pane %1 --client c1"},
-		{"notify_sound", "Notification sound", "1 ● On|2   Off", "__settings set notify_sound off"},
-		{"paste_images", "Paste images with Ctrl+V", "1 ● On|2   Off", "__settings set paste_images off"},
-		{"icons", "Icons", "1 ● Auto|2   Nerd Font|3   Emoji", "__settings set icons emoji"},
-		{"on_arrival", "After a handoff the new agent", "1 ● waits for you|2   continues at once", "__settings set on_arrival continue"},
-		{"on_limit", "When an agent hits its limit", "1 ● ask me|2   switch on its own|3   do nothing", "__settings set on_limit off"},
-		{"theme_auto", "Follow the terminal's light/dark", "1   On|2 ● Off", "__settings set theme_auto off"},
+		{"notifications", "Notifications", "1 ● On, with sound|2   On, silent|3   Off", "__settings set notifications off --pane %1 --client c1"},
+		{"paste_images", "Image paste (Ctrl+V)", "1 ● On|2   Off", "__settings set paste_images off"},
+		{"on_arrival", "After a handoff", "1 ● Wait for me|2   Continue the task", "__settings set on_arrival continue"},
+		{"on_limit", "At a limit", "1 ● Ask me|2   Switch to the next agent|3   Do nothing", "__settings set on_limit off"},
 	} {
 		m := w.SettingMenu(c.which, "%1", "c1")
 		if m == nil || m.Title != c.title || rows(m) != c.rows {
-			t.Errorf("%s: %+v", c.which, m)
+			t.Errorf("%s: %q %q", c.which, m.Title, rows(m))
 			continue
 		}
 		if last := m.Items[len(m.Items)-1]; !strings.Contains(last.Cmd, c.cmd) {
 			t.Errorf("%s: last row %q lacks %q", c.which, last.Cmd, c.cmd)
 		}
+	}
+	// Icons: its values, then the Nerd Font install (D93).
+	m := w.SettingMenu("icons", "%1", "c1")
+	if rows(m) != "1 ● Auto|2   Nerd Font|3   Emoji| |f   Install the Nerd Font…" || !strings.Contains(cmdOf(m, "f"), "font install --popup") {
+		t.Errorf("icons: %q", rows(m))
+	}
+	// Silent notifications: the middle value.
+	w.Cfg.Notify.Sound = false
+	if r := rows(w.SettingMenu("notifications", "", "")); r != "1   On, with sound|2 ● On, silent|3   Off" {
+		t.Errorf("silent: %q", r)
 	}
 	if w.SettingMenu("nope", "", "") != nil {
 		t.Error("a menu for an unknown row")
@@ -142,7 +164,7 @@ func TestEditorMenu(t *testing.T) {
 		return strings.Join(r, "|")
 	}
 	m := w.EditorMenu("%1", "c1")
-	if m.Title != "Files open in" || names(m) != "a ● Auto · micro, $VISUAL, $EDITOR, nano|m   micro · get it (5 MB)|n   nano|v   Neovim| |c   Neovim + Copilot suggestions (AI completion)" {
+	if m.Title != "Editor" || names(m) != "a ● Auto|m   micro · download (5 MB)|n   nano|v   Neovim| |c   Neovim + Copilot (AI)" {
 		t.Fatalf("menu %q", names(m))
 	}
 	for key, want := range map[string]string{
@@ -169,6 +191,10 @@ func TestEditorMenu(t *testing.T) {
 	w.Cfg.Completion.Enabled = true
 	if c := EditorChoice(w.Cfg); c != "copilot" || !strings.Contains(cmdOf(w.EditorMenu("", ""), "c"), "__settings set editor copilot") {
 		t.Errorf("copilot: %s", c)
+	}
+	// While Copilot is the editor, its sign-in is here (D93).
+	if c := cmdOf(w.EditorMenu("", ""), "s"); !strings.Contains(c, "__completion signin") {
+		t.Errorf("copilot sign-in: %q", c)
 	}
 	w.Cfg.Completion.Enabled, w.Cfg.Editor = false, "hx --flag"
 	if m := w.EditorMenu("", ""); EditorChoice(w.Cfg) != "custom" || !m.Items[0].Disabled || m.Items[0].Name != "● hx --flag" || w.editorLabel() != "hx --flag" {
@@ -241,13 +267,23 @@ func TestThemeMenu(t *testing.T) {
 	i18n.SetLocale("en")
 	w, _, _ := testWS(t)
 	m := w.ThemeMenu("%1", "c1")
-	if m.Title != "Theme" || len(m.Items) != 19 || m.Items[0].Name != "● i-mux" || m.Items[0].Key != "1" ||
-		m.Items[9].Key != "a" || m.Items[18].Name != "  Vesper" || m.Items[18].Key != "j" {
-		t.Fatalf("menu %+v", m.Items)
+	// The light/dark switch first (D93), then the themes.
+	if !strings.Contains(m.Items[0].Cmd, "__settings set theme_auto on --pane %1 --client c1") || m.Items[0].Name != "  Follow the terminal's light/dark" || m.Items[1].Name != "" {
+		t.Fatalf("follow: %+v", m.Items[0])
 	}
-	if !strings.Contains(m.Items[4].Cmd, "__settings set theme tokyo-night --pane %1 --client c1") {
-		t.Errorf("tokyo-night: %q", m.Items[4].Cmd)
+	themes := m.Items[2:]
+	if m.Title != "Theme" || len(themes) != 19 || themes[0].Name != "● i-mux" || themes[0].Key != "1" ||
+		themes[9].Key != "a" || themes[18].Name != "  Vesper" || themes[18].Key != "j" {
+		t.Fatalf("menu %+v", themes)
 	}
+	if !strings.Contains(themes[4].Cmd, "__settings set theme tokyo-night --pane %1 --client c1") {
+		t.Errorf("tokyo-night: %q", themes[4].Cmd)
+	}
+	w.Cfg.Theme.AutoSwitch = true
+	if f := w.ThemeMenu("", "").Items[0]; f.Name != "✓ Follow the terminal's light/dark" || !strings.Contains(f.Cmd, "theme_auto off") {
+		t.Errorf("following: %+v", f)
+	}
+	w.Cfg.Theme.AutoSwitch = false
 	w.Cfg.Theme.Name = "Rose Pine"
 	for _, it := range w.ThemeMenu("", "").Items {
 		if strings.HasPrefix(it.Name, "●") && it.Name != "● Rosé Pine" {

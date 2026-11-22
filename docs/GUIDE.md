@@ -106,15 +106,25 @@ on_limit = "ask"   # ask (default) | auto: switch to the next agent in `order` |
 
 ## Settings
 
-**🔧 Config** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings: your editor,
-notifications, icons, the color theme, what a new agent does after a handoff, what happens
-at a limit, and the config file. Enter or a click on a row opens a menu of its values (● marks the
-current one); pick one or press its number. **Versions and updates** there (or `imux versions`) lists i-mux, its engine
-and every agent CLI with its version and the command that updates it, or installs it when it is
-missing; press its letter to run it right there. **AI completion in the editor** works like Copilot in VS Code: choose
-**Editor → Neovim + Copilot** there and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a suggestion,
-Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the plugin) and signs you
-in to GitHub Copilot once.
+**⚙ Settings** on the rail (or `imux settings`, or `,` in the sidebar) opens Settings, in three
+groups:
+
+| Group | Rows |
+|---|---|
+| Appearance | **Theme** (its first item follows the terminal's light/dark), **Icons** (its last item installs the Nerd Font) |
+| Agents | **At a limit** (ask, switch, do nothing), **After a handoff** (wait, continue), **Notifications** (on, silent, off) |
+| Editing | **Editor**, **Image paste** |
+
+Enter or a click on a row opens a menu of its values (● marks the current one); pick one or press
+its number. **Updates** (or `imux versions`) lists i-mux, its engine and every agent CLI with its
+version and the command that updates it, or installs it when it is missing; press its letter to
+run it right there. **Config file…** opens `config.toml`, where the rest is (agent states from
+their hooks, `[hooks] enabled`, among them).
+
+**AI completion in the editor** works like Copilot in VS Code: choose **Editor → Neovim +
+Copilot** and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a
+suggestion, Ctrl+S saves, Ctrl+Q quits). It installs what is missing (Neovim with Homebrew, the
+plugin) and signs you in to GitHub Copilot once; the Editor menu signs you in again.
 
 ## Themes
 
@@ -189,7 +199,7 @@ so it cannot work there. `imux doctor` says what it uses; Settings turns it off.
 
 **OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as
 NVIDIA's or Groq's free tiers, Anthropic, Ollama on your machine ...): a handy place to continue
-when the others hit their limits. i-mux needs OpenCode 2: Settings → **Versions and updates**
+when the others hit their limits. i-mux needs OpenCode 2: Settings → **Updates**
 installs it (its letter, `e`), as do `curl -fsSL https://opencode.ai/v2/install | bash`, `npm i -g
 @opencode/cli` and `brew install opencode`. OpenCode's first install script and npm's `opencode-ai`
 give OpenCode 1; after them, run `opencode upgrade --major`. `imux doctor` checks that it can run.

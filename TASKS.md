@@ -1017,7 +1017,7 @@ slow (about a second).
 User request: Settings is confusing and its texts too long; and a skill so that a change is
 thought through for macOS, Linux and Windows alike, not for one of them.
 
-- [ ] **T98.1 Settings in three groups, with short rows** · S
+- [x] **T98.1 Settings in three groups, with short rows** · S
   - AC: D93: the menu's rows, headings, aligned values and keys as D93 lists them, in English
     and Turkish; the Theme menu starts with the light/dark switch, the Icons menu ends with the
     Nerd Font install, the Notifications menu has On, Silent and Off (`notifications` sets
@@ -1025,6 +1025,8 @@ thought through for macOS, Linux and Windows alike, not for one of them.
     sign-in while Neovim + Copilot is chosen; Updates opens the Versions popup. README,
     README.tr and the user guide name the rows as they now read. Unit tests: the menu's rows,
     each submenu, the `notifications` setting.
+  - Status: done. Sixteen rows of sentences became nine short rows under three headings; the
+    strings for the removed rows are gone from both catalogs.
 - [ ] **T98.2 A skill for every system** · XS
   - AC: `.agents/skills/every-system/SKILL.md` (linked from `.claude/skills/`) says what to
     check on macOS, Linux (WSL included) and native Windows before and while making any change:

@@ -205,7 +205,7 @@ Install at least one supported agent CLI, then check your setup:
 imux doctor
 ```
 
-Missing agents can be installed from **Settings → Versions and updates** inside i-mux.
+Missing agents can be installed from **Settings → Updates** inside i-mux.
 
 ## Quick start
 
