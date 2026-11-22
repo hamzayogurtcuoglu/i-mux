@@ -1012,6 +1012,33 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M99: The Nerd Font in every install, icons as the terminal draws them (added 2026-11-22)
+
+User report: a fresh install on a company Windows machine showed `?` for every icon (D94).
+
+- [ ] **T99.1 The font ships with i-mux** · M
+  - AC: D94: `scripts/fetch-font.sh DIR` puts the four styles and `OFL.txt` in `DIR/fonts`,
+    from the Nerd Fonts archive checked against its SHA-256; the release workflow runs it; the
+    archives carry `fonts/`, `setup.exe` installs it beside imux, `install.ps1` and `install.sh`
+    copy it (`<install dir>\fonts`, `<prefix>/../share/imux/fonts`), Homebrew's formula
+    installs it under `share/imux/fonts`, and the Windows `imux update` copies it. `imux font
+    install` uses those files (each checked against its own SHA-256) before any download.
+    Tests: the bundled files found and checked (a wrong one refused, then the download), the
+    archive layout, the scripts' copies.
+- [ ] **T99.2 Every Windows Terminal profile, and icons as drawn** · M
+  - AC: D94: `jsonc` reads and writes array elements (`#N` in a path); `imux font install`
+    sets Windows Terminal's defaults and each profile with a non-Nerd `font.face` or
+    `fontFace` (a `profiles` object or list), keeping the backup as before; `Ready` needs
+    them all. `imux` attaching in Windows Terminal passes `WindowsTerminal:<WT_PROFILE_ID>`;
+    with `icons = "auto"` the sidebars take the editor's icons only when that profile's font
+    (its own, the defaults', else Cascadia Mono) is a Nerd Font and one is installed in the
+    user's or the system's fonts; `imux font install` sets `icons = "nerd"` only on Linux.
+    Tests: profiles object and list, legacy `fontFace`, the profile in use, no font
+    installed.
+- [ ] **T99.3 Every start checks the font** · S
+  - AC: D94: an interactive start sets the font up whenever it is not ready (the stamp's
+    "done" no longer stops it; a failure waits a day as before); unit tests of the rule.
+
 ## M98: A simpler Settings, and every system in mind (added 2026-11-22)
 
 User request: Settings is confusing and its texts too long; and a skill so that a change is
