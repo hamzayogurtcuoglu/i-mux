@@ -1012,6 +1012,47 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M94: Windows: the font, menus under the mouse, themes and switching speed (added 2026-11-22)
+
+User report (Windows 11, i-mux in a classic console window): the Nerd Font does not work, a
+popup closes when the mouse moves over it, changing the theme recolours only the side panels,
+and switching panes takes at least a second (D88).
+
+- [ ] **T94.1 The Nerd Font in the console window** · M
+  - AC: on native Windows `imux font` lists "Windows Console" with the font of `HKCU\Console`
+    (the defaults and every key with a font of its own); `imux font install` sets them all,
+    keeping the old values once in `~/.imux/console-font.imux-backup.reg` (UTF-16, as regedit
+    writes it; it puts them back); `imux` started in a console window sets `@imux_terminal` to
+    `conhost:<font>` (`GetCurrentConsoleFontEx`) and, when the registry's font is a Nerd Font
+    and the window's is not, switches the window to it; a pseudo console (Windows Terminal,
+    VS Code, a pane) is not taken for a console window; the font unpacks with Windows' own
+    `tar.exe`. Tests: the console among the terminals with a fake setting; the registry in a
+    private key of the test's own (never the user's `HKCU\Console`); `termfont` with
+    `conhost:` names.
+- [ ] **T94.2 Menus stay open under a moving mouse** · S
+  - AC: i-mux-core C8.10: an SGR motion ending in `m` (the console's report of the mouse moving
+    with no button) is a motion, not a release, so a `-M -O` menu neither closes nor chooses;
+    parser test and e2e scenario, failing before the fix; i-mux's pin moves to it.
+- [ ] **T94.3 A theme recolours the agents' panes** · S
+  - AC: i-mux-core C8.10: `window-style`, `window-active-style` and `pane-colours` colour a
+    pane's cells in the default colours and its palette, in panes already running, as in tmux;
+    render test and e2e scenario, failing before the fix; i-mux's pin moves to it.
+- [ ] **T94.4 One process per pane switch on Windows** · S
+  - AC: on Windows the sidebars' hooks are `pane-focus-in`, `after-split-window`,
+    `after-kill-pane` and `pane-exited` (`internal/tmux`'s `hooks_windows.go`; macOS and Linux
+    keep `window-pane-changed`, and the goldens stay the same everywhere); the web view adds its
+    MIME types when it first serves a file, not at every imux start; i-mux-core reuses a pane's
+    program name for 250 ms on Windows (a process snapshot per frame stalled its loop); a
+    Windows test checks the hooks, one the engine's reuse.
+- [ ] **T94.5 The Nerd Font comes with the install** · S · deps: T94.1
+  - AC: D89: `install.sh` and `install.ps1` install the font with no question (`--no-font` /
+    `-NoFont` / `IMUX_NO_FONT=1` skip it; a font in place is left alone); `setup.exe` runs
+    `imux font install --yes` unless `/NOFONT`; the first interactive `imux` does it once when
+    none of them did (not over SSH, with `icons = "emoji"` or `IMUX_NO_FONT=1`), recorded in
+    `~/.imux/font.auto`, a failure tried again a day later and never stopping the start;
+    `testutil.Isolate` sets `IMUX_NO_FONT=1`. Tests: the install script runs the font step
+    without `--yes`; the first start's rules (unit); the installers' texts.
+
 ## M93: A product README (added 2026-11-21)
 
 User request: a short, professional README with Nerd Font icons, ready for a product launch.
