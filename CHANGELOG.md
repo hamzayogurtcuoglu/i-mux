@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.70.0] - 2026-11-22
+
 ### Changed
 
 - **`go install` alone is enough.** `imux` now carries its engine: installed with
