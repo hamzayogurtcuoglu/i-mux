@@ -73,6 +73,10 @@ func Isolate(t testing.TB) *Homes {
 	t.Setenv("COPILOT_HOME", h.Copilot)
 	t.Setenv("GEMINI_CLI_HOME", "")
 	t.Setenv("IMUX_LANG", "en")
+	// Never the first start's Nerd Font download (D89), nor the Windows
+	// console's real font settings (a key no test creates).
+	t.Setenv("IMUX_NO_FONT", "1")
+	t.Setenv("IMUX_CONSOLE_KEY", `Software\imux-test-isolated\Console`)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(h.Home, ".config"))
 	return h
 }

@@ -198,10 +198,10 @@ func installTools(t *testing.T) string {
 	return tools
 }
 
-// TestInstallScriptOffersFont (M43): after the binary the installer offers
-// the Nerd Font the sidebar's icons need. Without a terminal to ask on and
-// without --yes it only says how; --yes runs `imux font install --yes`;
-// --no-font, or a font already in place (`imux font --check`), skips it.
+// TestInstallScriptOffersFont (M43, D89): after the binary the installer
+// installs the Nerd Font the sidebar's icons need, with no question and no
+// terminal: `imux font install --yes`, with or without --yes; --no-font, or
+// a font already in place (`imux font --check`), skips it.
 func TestInstallScriptOffersFont(t *testing.T) {
 	skipOnSystem(t)
 	imuxBin(t)
@@ -237,11 +237,11 @@ func TestInstallScriptOffersFont(t *testing.T) {
 		return string(out), string(b)
 	}
 	out, ran := install()
-	if !strings.Contains(out, "Skipped. Later: imux font install") || ran != "font --check\n" {
+	if ran != "font --check\nfont install --yes\n" || !strings.Contains(out, "Installing JetBrainsMono Nerd Font") {
 		t.Fatalf("without --yes:\n%s\nran %q", out, ran)
 	}
 	out, ran = install("--yes")
-	if ran != "font --check\nfont install --yes\n" || strings.Contains(out, "Skipped") {
+	if ran != "font --check\nfont install --yes\n" {
 		t.Fatalf("--yes:\n%s\nran %q", out, ran)
 	}
 	if out, ran = install("--yes", "--no-font"); ran != "" || strings.Contains(out, "Nerd Font") {

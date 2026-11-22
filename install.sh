@@ -4,25 +4,24 @@
 #   curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.sh | sh
 #
 # Works on macOS, Linux and Windows through WSL. Options (after `sh -s --`
-# when piping, e.g. `curl ... | sh -s -- --yes`):
+# when piping, e.g. `curl ... | sh -s -- --no-font`):
 #   --prefix DIR       install directory (default ~/.local/bin; env IMUX_INSTALL_DIR)
 #   --version vX.Y.Z   install this release instead of the latest (env IMUX_VERSION)
-#   --yes              install the Nerd Font without asking
+#   --yes              accepted for older scripts (nothing asks any more)
 #   --no-modify-path   do not add the install directory to your shell profile
-#   --no-font          do not offer the Nerd Font (env IMUX_NO_FONT=1)
+#   --no-font          do not install the Nerd Font (env IMUX_NO_FONT=1)
 #
 # Downloads the release for this OS and architecture, verifies its sha256
 # against checksums.txt, installs imux and the i-mux-core engine (both or
 # neither), and puts the install directory on PATH in your shell profile; tmux
-# is not needed, i-mux runs on imux-core (D87). Then it offers the Nerd Font the
-# sidebar's icons need (imux font install: for your user only; on WSL in
+# is not needed, i-mux runs on imux-core (D87). Then it installs the Nerd Font the
+# sidebar's icons need (D89) (imux font install: for your user only; on WSL in
 # Windows, where the terminal runs, with Windows Terminal and VS Code set).
 set -eu
 
 REPO="hamzayogurtcuoglu/i-mux"
 PREFIX="${IMUX_INSTALL_DIR:-${HOME}/.local/bin}"
 VERSION="${IMUX_VERSION:-}"
-YES=0
 MODIFY_PATH=1
 FONT=1
 [ "${IMUX_NO_FONT:-}" = 1 ] && FONT=0
@@ -55,8 +54,7 @@ while [ $# -gt 0 ]; do
 		shift
 		;;
 	-y | --yes)
-		YES=1
-		shift
+		shift # accepted for older scripts: nothing asks any more
 		;;
 	--no-modify-path)
 		MODIFY_PATH=0
@@ -117,18 +115,6 @@ latest_tag() {
 		sed -n 's/.*"tag_name"[^"]*"\([^"]*\)".*/\1/p' "$tmpv" | head -n 1
 	fi
 	rm -f "$tmpv"
-}
-
-# confirm QUESTION: yes with --yes; no when there is no terminal to ask on.
-confirm() {
-	[ "$YES" -eq 1 ] && return 0
-	{ [ -r /dev/tty ] && [ -w /dev/tty ]; } || return 1
-	printf '%s [y/N] ' "$1" >/dev/tty
-	read -r answer </dev/tty || return 1
-	case "$answer" in
-	y | Y | yes | YES) return 0 ;;
-	esac
-	return 1
 }
 
 os=$(uname -s)
@@ -271,15 +257,12 @@ if have tmux && tmux -L imux has-session >/dev/null 2>&1; then
 	say "i-mux now runs on its own engine: the next imux moves your open projects from tmux to it."
 fi
 
-# The sidebar's icons need a Nerd Font where the terminal draws text (D34).
+# The sidebar's icons need a Nerd Font where the terminal draws text (D34);
+# it comes with i-mux, with no question (D89).
 if [ "$FONT" -eq 1 ] && ! "$PREFIX/imux" font --check >/dev/null 2>&1; then
 	say ""
-	say "The sidebar shows the editor's icons when your terminal has a Nerd Font."
-	if confirm "Install JetBrainsMono Nerd Font (7 MB, for you only) and set your terminal to it?"; then
-		"$PREFIX/imux" font install --yes || say "The font was not installed. Try again later with: imux font install"
-	else
-		say "Skipped. Later: imux font install"
-	fi
+	say "Installing JetBrainsMono Nerd Font (7 MB, for you only) for the sidebar's icons..."
+	"$PREFIX/imux" font install --yes || say "The font was not installed. Try again later with: imux font install"
 fi
 
 say ""

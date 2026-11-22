@@ -6,6 +6,13 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The Nerd Font comes with i-mux.** The installers (`install.sh`, `install.ps1` and the
+  Windows `setup.exe`) install it and set your terminals to it without asking; installed another
+  way (`go install`, Homebrew), the first `imux` does it once. `--no-font`, `-NoFont`, `/NOFONT`,
+  `IMUX_NO_FONT=1` or `icons = "emoji"` skip it; nothing is installed over SSH.
+
 ### Fixed
 
 - **Windows: the Nerd Font works in the console window.** When PowerShell or cmd opens i-mux in

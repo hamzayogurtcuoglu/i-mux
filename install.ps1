@@ -7,9 +7,9 @@
 # engine (D85). This script downloads the release zip for this CPU, checks its
 # SHA-256 against checksums.txt, installs imux-core.exe and imux.exe into
 # %LOCALAPPDATA%\Programs\i-mux as one step (rolling back if either fails),
-# puts that folder on your user PATH, and offers the Nerd Font the sidebar's
-# icons need (imux font install: for your user only, with Windows Terminal and
-# VS Code set to it). With -FromSource (or when no release exists yet and a
+# puts that folder on your user PATH, and installs the Nerd Font the sidebar's
+# icons need (imux font install: for your user only, with Windows Terminal, VS
+# Code and the console window set to it; D89). With -FromSource (or when no release exists yet and a
 # checkout sits next to this script), both binaries are built from source with
 # Go instead.
 #
@@ -18,9 +18,9 @@
 #   -Version vX.Y.Z    install this release instead of the latest (IMUX_VERSION)
 #   -InstallDir DIR    install directory (IMUX_INSTALL_DIR; default %LOCALAPPDATA%\Programs\i-mux)
 #   -FromSource DIR    build this i-mux checkout with Go instead of downloading (IMUX_FROM_SOURCE)
-#   -Yes               install the Nerd Font without asking (IMUX_YES=1)
+#   -Yes               accepted for older scripts (nothing asks any more)
 #   -NoModifyPath      do not add the install directory to your user PATH
-#   -NoFont            do not offer the Nerd Font (IMUX_NO_FONT=1)
+#   -NoFont            do not install the Nerd Font (IMUX_NO_FONT=1)
 # IMUX_INSTALL_BASE_URL replaces https://github.com/<repo>/releases/download
 # (a mirror or a test fixture; checksums.txt still decides).
 #
@@ -47,7 +47,6 @@ function Install-Imux {
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
     if ($env:OS -ne 'Windows_NT') { Fail 'this script is for Windows; on macOS and Linux use install.sh' }
-    $assumeYes = $Yes.IsPresent -or $env:IMUX_YES -eq '1'
     $offerFont = -not ($NoFont.IsPresent -or $env:IMUX_NO_FONT -eq '1')
     $dir = $InstallDir
     if (-not $dir) { $dir = Join-Path $env:LOCALAPPDATA 'Programs\i-mux' }
@@ -76,17 +75,14 @@ function Install-Imux {
 
     $onPath = Add-ToPath $dir (-not $NoModifyPath.IsPresent)
 
+    # The Nerd Font comes with i-mux (D89): no question.
     if ($offerFont) {
         & $exe font --check *> $null
         if ($LASTEXITCODE -ne 0) {
             Say ''
-            Say "The sidebar shows the editor's icons when your terminal has a Nerd Font."
-            if (Confirm-Step 'Install JetBrainsMono Nerd Font (7 MB, for you only) and set Windows Terminal and VS Code to it?' $assumeYes) {
-                & $exe font install --yes
-                if ($LASTEXITCODE -ne 0) { Say 'The font was not installed. Try again later with: imux font install' }
-            } else {
-                Say 'Skipped. Later: imux font install'
-            }
+            Say "Installing JetBrainsMono Nerd Font (7 MB, for you only) for the sidebar's icons..."
+            & $exe font install --yes
+            if ($LASTEXITCODE -ne 0) { Say 'The font was not installed. Try again later with: imux font install' }
         }
     }
 
@@ -104,13 +100,6 @@ function Say([string]$msg) { Write-Host $msg }
 function Fail([string]$msg) {
     Write-Host "imux install: $msg" -ForegroundColor Red
     throw "imux install failed: $msg"
-}
-
-function Confirm-Step([string]$question, [bool]$assumeYes) {
-    if ($assumeYes) { return $true }
-    if ([Console]::IsInputRedirected -or -not [Environment]::UserInteractive) { return $false }
-    $answer = Read-Host "$question [y/N]"
-    return $answer -match '^(y|yes)$'
 }
 
 function Get-Arch {

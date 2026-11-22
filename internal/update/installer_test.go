@@ -52,6 +52,9 @@ func TestWindowsInstallArtifacts(t *testing.T) {
 		`$SMPROGRAMS\i-mux.lnk`,
 		`Software\Microsoft\Windows\CurrentVersion\Uninstall\i-mux`,
 		`WriteUninstaller "$INSTDIR\uninstall.exe"`,
+		// D89: the Nerd Font comes with the install; /NOFONT skips it.
+		`nsExec::ExecToLog '"$INSTDIR\imux.exe" font install --yes'`,
+		`${GetOptions} $R0 "/NOFONT" $R1`,
 	} {
 		if !strings.Contains(nsi, want) {
 			t.Errorf("scripts/installer.nsi missing %q", want)

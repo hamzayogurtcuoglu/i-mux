@@ -142,17 +142,16 @@ curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/instal
 ```
 
 The installer downloads the right build, verifies its checksum and installs `imux` and
-`imux-core` to `~/.local/bin`. It adds that folder to your `PATH` and offers the Nerd Font.
+`imux-core` to `~/.local/bin`. It adds that folder to your `PATH` and installs the Nerd Font.
 Open a new terminal afterwards.
 
 <details>
 <summary>Installer options</summary>
 
-Pass options after `sh -s --`, for example `curl -fsSL … | sh -s -- --yes`.
+Pass options after `sh -s --`, for example `curl -fsSL … | sh -s -- --no-font`.
 
 | Option | Effect |
 |---|---|
-| `--yes` | Install the Nerd Font without asking |
 | `--version vX.Y.Z` | Install a specific release |
 | `--prefix DIR` | Install to another folder |
 | `--no-modify-path` | Leave your shell profile alone |
@@ -166,7 +165,8 @@ i-mux runs natively on Windows 10 (1809) and later. No WSL and no administrator 
 
 **Installer.** Download `imux_<version>_windows_amd64_setup.exe` (`arm64` for ARM devices) from
 the [latest release](https://github.com/hamzayogurtcuoglu/i-mux/releases/latest) and run it.
-It adds i-mux to the Start menu, opening in Windows Terminal.
+It adds i-mux to the Start menu, opening in Windows Terminal, and installs the Nerd Font
+(`/NOFONT` skips it).
 
 **PowerShell.**
 
@@ -188,15 +188,12 @@ go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest github.com/hamzayo
 
 ### <img src="docs/images/icons/font.svg" width="20" alt=""> Nerd Font
 
-The sidebar uses [Nerd Font](https://www.nerdfonts.com) icons and falls back to emoji without
-one. The installer offers it, or run:
-
-```sh
-imux font install
-```
-
-It installs JetBrainsMono Nerd Font for your user and sets it in Windows Terminal and VS Code.
-In other terminals, choose **JetBrainsMono Nerd Font** in their settings.
+The sidebar uses [Nerd Font](https://www.nerdfonts.com) icons, and the font comes with i-mux:
+every installer puts JetBrainsMono Nerd Font in place for your user and sets it in Windows
+Terminal, VS Code and the Windows console window, keeping their old settings. Installed another
+way (`go install`, Homebrew), the first `imux` does it once. In other terminals (Terminal.app,
+iTerm2, GNOME Terminal …) choose **JetBrainsMono Nerd Font** in their settings. To skip it,
+set `icons = "emoji"` or `IMUX_NO_FONT=1`; `imux font install` runs it again.
 
 ### <img src="docs/images/icons/robot.svg" width="20" alt=""> Agents
 

@@ -29,7 +29,11 @@ func init() {
 // runFont shows whether the sidebar's icons have their Nerd Font (D34);
 // `install` puts it in place: the font where the terminal draws text (on
 // WSL, Windows), the terminals i-mux can set, and icons = "nerd".
-func runFont(e *Env, args []string) error {
+func runFont(e *Env, args []string) error { return runFontCtx(context.Background(), e, args) }
+
+// runFontCtx is runFont within ctx (the first start's step gives it a
+// deadline, D89).
+func runFontCtx(ctx context.Context, e *Env, args []string) error {
 	fs := newFlags(e, "font")
 	yes := fs.Bool("yes", false, "install and set the terminals without asking")
 	checkOnly := fs.Bool("check", false, "print nothing; exit 1 when the font is not in place")
@@ -49,7 +53,6 @@ func runFont(e *Env, args []string) error {
 			_, _ = bufio.NewReader(in).ReadString('\n')
 		}()
 	}
-	ctx := context.Background()
 	sys, err := nerdfont.Detect(ctx)
 	if err != nil {
 		if *checkOnly {

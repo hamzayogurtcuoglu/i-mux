@@ -1044,7 +1044,7 @@ and switching panes takes at least a second (D88).
     MIME types when it first serves a file, not at every imux start; i-mux-core reuses a pane's
     program name for 250 ms on Windows (a process snapshot per frame stalled its loop); a
     Windows test checks the hooks, one the engine's reuse.
-- [ ] **T94.5 The Nerd Font comes with the install** · S · deps: T94.1
+- [x] **T94.5 The Nerd Font comes with the install** · S · deps: T94.1
   - AC: D89: `install.sh` and `install.ps1` install the font with no question (`--no-font` /
     `-NoFont` / `IMUX_NO_FONT=1` skip it; a font in place is left alone); `setup.exe` runs
     `imux font install --yes` unless `/NOFONT`; the first interactive `imux` does it once when

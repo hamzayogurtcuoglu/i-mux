@@ -142,17 +142,16 @@ curl -fsSL https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/instal
 ```
 
 Kurulum betiği doğru sürümü indirir, sağlama toplamını doğrular ve `imux` ile `imux-core`'u
-`~/.local/bin` dizinine kurar. Bu dizini `PATH`'e ekler ve Nerd Font'u önerir. Ardından yeni bir
+`~/.local/bin` dizinine kurar. Bu dizini `PATH`'e ekler ve Nerd Font'u kurar. Ardından yeni bir
 terminal açın.
 
 <details>
 <summary>Kurulum seçenekleri</summary>
 
-Seçenekleri `sh -s --` sonrasına yazın, örneğin `curl -fsSL … | sh -s -- --yes`.
+Seçenekleri `sh -s --` sonrasına yazın, örneğin `curl -fsSL … | sh -s -- --no-font`.
 
 | Seçenek | Etkisi |
 |---|---|
-| `--yes` | Nerd Font'u sormadan kurar |
 | `--version vX.Y.Z` | Belirli bir sürümü kurar |
 | `--prefix DIR` | Başka bir dizine kurar |
 | `--no-modify-path` | Kabuk profilinize dokunmaz |
@@ -166,7 +165,8 @@ i-mux, Windows 10 (1809) ve sonrasında doğrudan çalışır. WSL ya da yöneti
 
 **Kurulum programı.** [Son sürümden](https://github.com/hamzayogurtcuoglu/i-mux/releases/latest)
 `imux_<sürüm>_windows_amd64_setup.exe` dosyasını (ARM cihazlarda `arm64`) indirip çalıştırın.
-i-mux'u Başlat menüsüne ekler; Windows Terminal'de açılır.
+i-mux'u Başlat menüsüne ekler; Windows Terminal'de açılır. Nerd Font'u da kurar (`/NOFONT`
+atlatır).
 
 **PowerShell.**
 
@@ -188,15 +188,12 @@ go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest github.com/hamzayo
 
 ### <img src="docs/images/icons/font.svg" width="20" alt=""> Nerd Font
 
-Kenar panel [Nerd Font](https://www.nerdfonts.com) simgeleri kullanır; font yoksa emoji gösterir.
-Kurulum betiği fontu önerir, ya da şunu çalıştırın:
-
-```sh
-imux font install
-```
-
-JetBrainsMono Nerd Font'u yalnızca sizin kullanıcınıza kurar ve Windows Terminal ile VS Code'da
-ayarlar. Diğer terminallerde ayarlardan **JetBrainsMono Nerd Font**'u seçin.
+Kenar panel [Nerd Font](https://www.nerdfonts.com) simgeleri kullanır ve font i-mux ile gelir:
+her kurulum yolu JetBrainsMono Nerd Font'u yalnızca sizin kullanıcınıza kurar; Windows Terminal,
+VS Code ve Windows konsol penceresinde ayarlar, eski ayarları saklar. Başka yoldan kurduysanız
+(`go install`, Homebrew) ilk `imux` bunu bir kez yapar. Diğer terminallerde (Terminal.app, iTerm2,
+GNOME Terminal …) ayarlardan **JetBrainsMono Nerd Font**'u seçin. İstemezseniz `icons = "emoji"`
+ya da `IMUX_NO_FONT=1`; `imux font install` yeniden çalıştırır.
 
 ### <img src="docs/images/icons/robot.svg" width="20" alt=""> Agent'lar
 

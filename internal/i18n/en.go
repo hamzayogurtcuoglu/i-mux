@@ -191,6 +191,8 @@ var en = map[string]string{
 	"font.and":                         " and ",
 	"font.close":                       "Press Enter to close.",
 	"font.no_system":                   "cannot tell where your terminal's fonts go",
+	"font.auto":                        "i-mux sets up the Nerd Font for the sidebar's icons (once; IMUX_NO_FONT=1 skips it).",
+	"font.auto_failed":                 "The Nerd Font is not in place (%s); i-mux tries again tomorrow, or now with: imux font install",
 	"versions.newest":                  "the newest",
 	"versions.imux_new":                "%s is out",
 	"versions.engine_missing":          "not found beside imux: install i-mux again, which brings it",

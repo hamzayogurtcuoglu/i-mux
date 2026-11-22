@@ -192,6 +192,8 @@ var tr = map[string]string{
 	"font.and":                         " ve ",
 	"font.close":                       "Kapatmak için Enter'a bas.",
 	"font.no_system":                   "terminalinin fontlarının nereye gittiği bulunamadı",
+	"font.auto":                        "i-mux kenar panel simgeleri için Nerd Font'u kuruyor (bir kez; IMUX_NO_FONT=1 atlatır).",
+	"font.auto_failed":                 "Nerd Font kurulamadı (%s); i-mux yarın yeniden dener, ya da şimdi: imux font install",
 	"versions.newest":                  "en yenisi",
 	"versions.imux_new":                "%s çıktı",
 	"versions.engine_missing":          "imux'un yanında bulunamadı: i-mux'u yeniden kur, onu da getirir",

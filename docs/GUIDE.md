@@ -131,11 +131,15 @@ changed in `[theme.custom]` (see [CONFIG.md](CONFIG.md)).
 ## Icons and the Nerd Font
 
 The rail shows the editor's icons when your terminal uses a [Nerd Font](https://www.nerdfonts.com),
-emoji otherwise. **`imux font install`** (also in Settings, and offered by the installer) downloads
+emoji otherwise. The font comes with i-mux: every installer runs **`imux font install`** (also in
+Settings), and when i-mux was installed another way (`go install`, Homebrew) the first `imux` in a
+terminal runs it once (not over SSH, not with `icons = "emoji"` or `IMUX_NO_FONT=1`). It downloads
 JetBrainsMono Nerd Font, checks it against the release's checksum, installs it for you alone (no
 administrator rights) and sets Windows Terminal's and VS Code's terminal font to it, keeping their
-old settings in `settings.json.imux-backup`. On WSL it does all this on the Windows side, where
-the terminal draws the text. Restart the terminal afterwards; in other terminals (Terminal.app,
+old settings in `settings.json.imux-backup`; on Windows it sets the console window's font too
+(PowerShell's and cmd's, kept in `~/.imux/console-font.imux-backup.reg`, which puts it back when
+opened), and `imux` switches a console window to it as it starts. On WSL it does all this on the
+Windows side, where the terminal draws the text. Restart the terminal afterwards; in other terminals (Terminal.app,
 iTerm2, GNOME Terminal ...) pick "JetBrainsMono Nerd Font" in their settings. `imux font` shows
 what is in place. A click on the open view's icon closes the panel beside the rail, as in the
 editor, and gives the agent the room; a click on any view's icon opens it again. Drag the panel's

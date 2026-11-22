@@ -141,7 +141,7 @@ func defaultAction(e *Env, args []string) error {
 			return err
 		}
 	}
-	w, _, err := newWorkspace(e, true)
+	w, cfg, err := newWorkspace(e, true)
 	if err != nil {
 		return err
 	}
@@ -163,6 +163,11 @@ func defaultAction(e *Env, args []string) error {
 		if n := w.MoveFromTmux(ctx); n > 0 {
 			fmt.Fprintln(e.Stderr, i18n.T("start.moved_from_tmux", n))
 		}
+	}
+	// The Nerd Font comes with i-mux (D89): the first start in a terminal
+	// puts it in place when no installer did.
+	if !*detach && os.Getenv("TMUX") == "" && isTerminal(os.Stdin) {
+		autoFont(e, cfg)
 	}
 	// Unless imux starts in an open project, ask which one to open when
 	// there is a workspace to go back to, and in the home folder (a
