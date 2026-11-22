@@ -424,7 +424,7 @@ func GenerateConf(in *ConfInput) string {
 	w("set-hook -g client-dark-theme %s", QuoteDouble(runShell(in.Self, "__theme", "appearance", "dark")))
 	if cfg.Tmux.Sidebar {
 		w("# Sidebars redraw when panes change (they sleep otherwise).")
-		for _, h := range []string{"pane-focus-in", "after-split-window", "after-kill-pane", "pane-exited", "window-pane-changed"} {
+		for _, h := range SidebarHooks {
 			w("set-hook -g %s %s", h, QuoteDouble(runShell(in.Self, "__sidebar-refresh")))
 		}
 	}
@@ -432,6 +432,10 @@ func GenerateConf(in *ConfInput) string {
 	w("source-file -q %s", Quote(in.LocalConf))
 	return b.String()
 }
+
+// AllSidebarHooks are the hooks that wake the sidebars on macOS and Linux
+// (SidebarHooks).
+var AllSidebarHooks = []string{"pane-focus-in", "after-split-window", "after-kill-pane", "pane-exited", "window-pane-changed"}
 
 // WriteConf writes content to path if it differs from what is there (by
 // content hash) and reports whether it changed.

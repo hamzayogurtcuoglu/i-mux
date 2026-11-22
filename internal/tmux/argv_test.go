@@ -10,6 +10,7 @@ import (
 // goldens are the same everywhere; the argv form's tests ask for it.
 func TestMain(m *testing.M) {
 	ArgvForm = false
+	SidebarHooks = AllSidebarHooks
 	os.Exit(m.Run())
 }
 

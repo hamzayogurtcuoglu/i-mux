@@ -13,6 +13,8 @@ All notable changes to i-mux are listed here. The format follows
   window's font too (the old setting is kept in `~/.imux/console-font.imux-backup.reg`; open it
   to put it back), `imux` switches the window to the font when a shortcut opened it with
   another, and the sidebars show the editor's icons there.
+- **Windows: switching panes is faster.** A switch starts one background `imux` instead of two,
+  and every `imux` starts faster.
 
 ## [0.67.0] - 2026-11-21
 

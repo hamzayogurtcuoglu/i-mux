@@ -279,6 +279,7 @@ func (s *Server) file(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close()
+	addMimeTypes()
 	http.ServeContent(w, r, fi.Name(), fi.ModTime(), f)
 }
 
@@ -459,9 +460,17 @@ func listen(port int) (net.Listener, error) {
 	return net.Listen("tcp", "127.0.0.1:0")
 }
 
-func init() {
-	// Types the system may not know (a minimal container).
-	_ = mime.AddExtensionType(".mjs", "text/javascript")
-	_ = mime.AddExtensionType(".svg", "image/svg+xml")
-	_ = mime.AddExtensionType(".webp", "image/webp")
+var mimeOnce sync.Once
+
+// addMimeTypes adds the types the system may not know (a minimal
+// container), the first time a file is served: not in an init, since
+// mime's first use reads the system's whole list of types (on Windows the
+// registry's, 30 ms or more) and every imux process, a hook's included,
+// would pay it at start.
+func addMimeTypes() {
+	mimeOnce.Do(func() {
+		_ = mime.AddExtensionType(".mjs", "text/javascript")
+		_ = mime.AddExtensionType(".svg", "image/svg+xml")
+		_ = mime.AddExtensionType(".webp", "image/webp")
+	})
 }
