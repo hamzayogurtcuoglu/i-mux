@@ -31,6 +31,8 @@ jobs:
           done
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH" # go install's folder is not on the PATH
           "$RUNNER_TEMP/bin/goreleaser" --version
+      - name: The Nerd Font that ships with i-mux (D94)
+        run: ./scripts/fetch-font.sh build
       - name: Cross-build Windows NSIS installers
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q nsis

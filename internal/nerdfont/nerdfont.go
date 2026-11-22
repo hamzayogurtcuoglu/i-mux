@@ -43,15 +43,54 @@ const (
 	FamilyWindows = "JetBrainsMono NF"
 )
 
-// Style is one file of the font and its full name (the Windows registry's).
-type Style struct{ File, Name string }
+// Style is one file of the font, its full name (the Windows registry's) and
+// its SHA-256 as the release archive holds it (D94: a copy beside imux is
+// checked against it).
+type Style struct{ File, Name, Sum string }
 
 // Styles are the four a terminal uses, of the archive's 96.
 var Styles = []Style{
-	{"JetBrainsMonoNerdFont-Regular.ttf", "JetBrainsMono NF Regular"},
-	{"JetBrainsMonoNerdFont-Bold.ttf", "JetBrainsMono NF Bold"},
-	{"JetBrainsMonoNerdFont-Italic.ttf", "JetBrainsMono NF Italic"},
-	{"JetBrainsMonoNerdFont-BoldItalic.ttf", "JetBrainsMono NF Bold Italic"},
+	{"JetBrainsMonoNerdFont-Regular.ttf", "JetBrainsMono NF Regular", "1c680e8cde9fcf8b88a5605ce8d1fb94dd3fb15841f7ca7bf4c55664855e5611"},
+	{"JetBrainsMonoNerdFont-Bold.ttf", "JetBrainsMono NF Bold", "e490660ad75e0b152c93b1604c2ea1a4ea675f1b8a3fe0d005b1998568f99f1f"},
+	{"JetBrainsMonoNerdFont-Italic.ttf", "JetBrainsMono NF Italic", "71d5466cc3ab31bee38b4e2c5cc99c2b41a749c4973ed4579b814ec992b0738e"},
+	{"JetBrainsMonoNerdFont-BoldItalic.ttf", "JetBrainsMono NF Bold Italic", "19a2e3af8ccf99954941ea07e0a29df27574500f12016d86d6c4c059b825ffe1"},
+}
+
+// Executable is the running imux, whose release carries the font beside it
+// (D94); tests replace it.
+var Executable = os.Executable
+
+// BundleDirs are where a release puts the font beside imux (D94): fonts/ in
+// imux's folder (the archives, setup.exe, install.ps1), then
+// ../share/imux/fonts (install.sh, Homebrew), from imux's real path.
+func BundleDirs() []string {
+	exe, err := Executable()
+	if err != nil {
+		return nil
+	}
+	if r, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = r
+	}
+	d := filepath.Dir(exe)
+	return []string{filepath.Join(d, "fonts"), filepath.Join(d, "..", "share", "imux", "fonts")}
+}
+
+// Bundled is the first of BundleDirs holding every style with its own
+// checksum, or "" when none does (then Install downloads the archive).
+func Bundled() string {
+	for _, d := range BundleDirs() {
+		ok := true
+		for _, st := range Styles {
+			if check(filepath.Join(d, st.File), st.Sum) != nil {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			return d
+		}
+	}
+	return ""
 }
 
 // URL is where the archive is downloaded from; $IMUX_NERD_FONT_URL replaces
@@ -310,34 +349,28 @@ func (s *System) Ready() bool {
 	return true
 }
 
-// Install puts the font's Styles into FontDir: downloaded, checked against
-// Sum and unpacked with tar; registered for the Windows user under WSL, and
-// made known to fontconfig on Linux.
+// Install puts the font's Styles into FontDir: the copy that came with
+// imux (Bundled, D94), else the archive downloaded, checked against Sum and
+// unpacked with tar; registered for the Windows user on Windows and under
+// WSL, and made known to fontconfig on Linux.
 func (s *System) Install(ctx context.Context) error {
-	tmp, err := os.MkdirTemp("", "imux-font-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmp)
-	archive := filepath.Join(tmp, Archive)
-	if err := Fetch(ctx, URL(), archive); err != nil {
-		return err
-	}
-	if err := check(archive, sum); err != nil {
-		return err
-	}
-	args := []string{"-xJf", archive, "-C", tmp}
-	for _, st := range Styles {
-		args = append(args, st.File)
-	}
-	if out, err := Run(ctx, "tar", args...); err != nil {
-		return fmt.Errorf("tar: %v: %s", err, bytes.TrimSpace(out))
+	src := Bundled()
+	if src == "" {
+		tmp, err := os.MkdirTemp("", "imux-font-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tmp)
+		if err := download(ctx, tmp); err != nil {
+			return err
+		}
+		src = tmp
 	}
 	if err := os.MkdirAll(s.FontDir, 0o755); err != nil {
 		return err
 	}
 	for _, st := range Styles {
-		if err := place(filepath.Join(tmp, st.File), filepath.Join(s.FontDir, st.File)); err != nil {
+		if err := place(filepath.Join(src, st.File), filepath.Join(s.FontDir, st.File)); err != nil {
 			return err
 		}
 	}
@@ -346,6 +379,26 @@ func (s *System) Install(ctx context.Context) error {
 		return s.register(ctx)
 	case Linux:
 		_, _ = Run(ctx, "fc-cache", "-f", s.FontDir) // without fontconfig there is nobody to tell
+	}
+	return nil
+}
+
+// download fetches the archive into dir, checks it against Sum and unpacks
+// the Styles there with tar.
+func download(ctx context.Context, dir string) error {
+	archive := filepath.Join(dir, Archive)
+	if err := Fetch(ctx, URL(), archive); err != nil {
+		return err
+	}
+	if err := check(archive, sum); err != nil {
+		return err
+	}
+	args := []string{"-xJf", archive, "-C", dir}
+	for _, st := range Styles {
+		args = append(args, st.File)
+	}
+	if out, err := Run(ctx, "tar", args...); err != nil {
+		return fmt.Errorf("tar: %v: %s", err, bytes.TrimSpace(out))
 	}
 	return nil
 }

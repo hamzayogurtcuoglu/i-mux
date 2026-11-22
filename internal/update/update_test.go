@@ -162,6 +162,7 @@ func TestInstallArchiveAndRollback(t *testing.T) {
 		imuxName:  newImux,
 		coreName:  newCore,
 		"LICENSE": []byte("MIT"),
+		"fonts/JetBrainsMonoNerdFont-Regular.ttf": []byte("the font"),
 	})
 	sumsText = sum + "  " + archName + "\n"
 	var out bytes.Buffer
@@ -173,6 +174,10 @@ func TestInstallArchiveAndRollback(t *testing.T) {
 	}
 	if !hasContent(imuxName+".old", oldImux) || !hasContent(coreName+".old", oldCore) {
 		t.Fatalf("*.old files not kept after replace")
+	}
+	// The font that ships with i-mux goes beside it (D94).
+	if !hasContent(filepath.Join("fonts", "JetBrainsMonoNerdFont-Regular.ttf"), []byte("the font")) {
+		t.Fatalf("the release's font was not copied beside imux")
 	}
 	CleanOldIn(dir)
 	for _, old := range []string{imuxName + ".old", coreName + ".old"} {

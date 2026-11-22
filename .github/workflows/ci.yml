@@ -148,6 +148,8 @@ jobs:
             sleep 20
           done
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: The Nerd Font that ships with i-mux (D94)
+        run: ./scripts/fetch-font.sh build
       - name: Cross-build Windows NSIS installers
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q nsis
@@ -179,7 +181,7 @@ jobs:
 
           $p = Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "setup /S exited with $($p.ExitCode)" }
-          foreach ($f in @('imux.exe', 'imux-core.exe', 'LICENSE', 'README.md', 'uninstall.exe')) {
+          foreach ($f in @('imux.exe', 'imux-core.exe', 'LICENSE', 'README.md', 'uninstall.exe', 'fonts\JetBrainsMonoNerdFont-Regular.ttf', 'fonts\OFL.txt')) {
             $fp = Join-Path $instDir $f
             if (-not (Test-Path -LiteralPath $fp -PathType Leaf)) { throw "missing $fp" }
           }

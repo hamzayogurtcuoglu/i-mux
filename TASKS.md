@@ -1016,7 +1016,7 @@ slow (about a second).
 
 User report: a fresh install on a company Windows machine showed `?` for every icon (D94).
 
-- [ ] **T99.1 The font ships with i-mux** · M
+- [x] **T99.1 The font ships with i-mux** · M
   - AC: D94: `scripts/fetch-font.sh DIR` puts the four styles and `OFL.txt` in `DIR/fonts`,
     from the Nerd Fonts archive checked against its SHA-256; the release workflow runs it; the
     archives carry `fonts/`, `setup.exe` installs it beside imux, `install.ps1` and `install.sh`
@@ -1025,6 +1025,11 @@ User report: a fresh install on a company Windows machine showed `?` for every i
     install` uses those files (each checked against its own SHA-256) before any download.
     Tests: the bundled files found and checked (a wrong one refused, then the download), the
     archive layout, the scripts' copies.
+  - Status: done. Checked here: a GoReleaser snapshot's Windows zip holds `fonts/` (the four
+    styles, 2.6 MB each, and `OFL.txt`); `install.sh` from a local fake release copied them to
+    `~/.local/share/imux/fonts`, and `imux font install --yes` installed them from there with
+    the download pointed at nothing. The NSIS installer and `install.ps1` are checked by CI's
+    `windows-installer` job and the release smoke tests.
 - [ ] **T99.2 Every Windows Terminal profile, and icons as drawn** · M
   - AC: D94: `jsonc` reads and writes array elements (`#N` in a path); `imux font install`
     sets Windows Terminal's defaults and each profile with a non-Nerd `font.face` or

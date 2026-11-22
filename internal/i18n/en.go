@@ -176,6 +176,8 @@ var en = map[string]string{
 	"font.skipped":                     "Nothing changed.",
 	"font.ready":                       "All set: the sidebar shows the editor's icons.",
 	"font.downloading":                 "Downloading %s (%d MB)… ",
+	"font.plan_bundled":                "install JetBrainsMono Nerd Font, which came with i-mux, %s",
+	"font.copying":                     "Installing JetBrainsMono Nerd Font… ",
 	"font.installed_in":                "installed in %s",
 	"font.failed":                      "the font could not be installed",
 	"font.term_set":                    "%s: font set to %s",

@@ -205,6 +205,17 @@ done
 for b in $bins; do rm -f "$(old "$b")"; done
 for b in $bins; do say "Installed $PREFIX/$b"; done
 
+# The Nerd Font that ships with i-mux (D94), where imux font install takes it
+# from without a download: PREFIX/../share/imux/fonts (~/.local/share/...).
+if [ -d "$tmp/fonts" ]; then
+	fonts="$(dirname "$PREFIX")/share/imux/fonts"
+	if mkdir -p "$fonts" 2>/dev/null && cp "$tmp"/fonts/* "$fonts/" 2>/dev/null; then
+		chmod 644 "$fonts"/* 2>/dev/null || true
+	else
+		say "Could not copy the font to $fonts; imux font install will download it."
+	fi
+fi
+
 # Put PREFIX on PATH for new terminals by adding one line to the profile of
 # the user's login shell. A piped script cannot change the PATH of the shell
 # that started it, so the closing message says how to use imux right away.

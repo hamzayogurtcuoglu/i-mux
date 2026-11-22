@@ -177,6 +177,8 @@ var tr = map[string]string{
 	"font.skipped":                     "Hiçbir şey değişmedi.",
 	"font.ready":                       "Her şey hazır: kenar panel editörün simgelerini gösteriyor.",
 	"font.downloading":                 "%s indiriliyor (%d MB)… ",
+	"font.plan_bundled":                "i-mux ile gelen JetBrainsMono Nerd Font'u %s kuracak",
+	"font.copying":                     "JetBrainsMono Nerd Font kuruluyor… ",
 	"font.installed_in":                "%s içine kuruldu",
 	"font.failed":                      "font kurulamadı",
 	"font.term_set":                    "%s: font %s olarak ayarlandı",

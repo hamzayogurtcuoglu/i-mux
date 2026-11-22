@@ -69,6 +69,7 @@ function Install-Imux {
             }
         }
         $exe = Install-Binaries $srcDir $dir
+        Install-Fonts $srcDir $dir
     } finally {
         Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -265,6 +266,17 @@ function Install-Binaries([string]$srcDir, [string]$dir) {
         Say "Installed $dst"
     }
     return (Join-Path $dir 'imux.exe')
+}
+
+# Install-Fonts copies the Nerd Font that ships with i-mux (D94) from the
+# release's fonts folder to $dir\fonts, where imux font install takes it
+# from without a download. A build from source has none.
+function Install-Fonts([string]$srcDir, [string]$dir) {
+    $src = Join-Path $srcDir 'fonts'
+    if (-not (Test-Path -LiteralPath $src -PathType Container)) { return }
+    $dst = Join-Path $dir 'fonts'
+    New-Item -ItemType Directory -Path $dst -Force | Out-Null
+    Copy-Item -Path (Join-Path $src '*') -Destination $dst -Force
 }
 
 function Add-ToPath([string]$dir, [bool]$modify) {

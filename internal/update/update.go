@@ -187,9 +187,38 @@ func InstallArchive(ctx context.Context, version, dir string, out io.Writer) err
 	if err := Replace(dir, unpackDir); err != nil {
 		return err
 	}
+	// The Nerd Font that ships with i-mux (D94), beside it as setup.exe and
+	// install.ps1 put it; imux font install takes it from there. Best
+	// effort: without it, the font is downloaded when needed.
+	_ = copyFonts(filepath.Join(unpackDir, "fonts"), filepath.Join(dir, "fonts"))
 	if out != nil {
 		for _, b := range Bins() {
 			fmt.Fprintln(out, "Installed "+filepath.Join(dir, b))
+		}
+	}
+	return nil
+}
+
+// copyFonts copies the files of the release's fonts folder src to dst; a
+// release without one copies nothing.
+func copyFonts(src, dst string) error {
+	ents, err := os.ReadDir(src)
+	if err != nil {
+		return nil
+	}
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+	for _, e := range ents {
+		if e.IsDir() {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(src, e.Name()))
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dst, e.Name()), b, 0o644); err != nil {
+			return err
 		}
 	}
 	return nil

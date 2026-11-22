@@ -55,6 +55,14 @@ Section "Install"
   File "${BIN_DIR}\imux-core.exe"
   File "${ROOT_DIR}\LICENSE"
   File "${ROOT_DIR}\README.md"
+!ifdef FONT_DIR
+  ; The Nerd Font that ships with i-mux (D94): imux font install takes it
+  ; from here, without a download.
+  SetOutPath "$INSTDIR\fonts"
+  File "${FONT_DIR}\*.ttf"
+  File "${FONT_DIR}\OFL.txt"
+  SetOutPath "$INSTDIR"
+!endif
 
   Delete "$INSTDIR\imux.exe.old"
   Delete "$INSTDIR\imux-core.exe.old"
@@ -92,7 +100,8 @@ Section "Install"
 
   ; The Nerd Font comes with i-mux (D90): the sidebar's icons, for this user
   ; alone, with Windows Terminal, VS Code and the console window set to it.
-  ; /NOFONT skips it; a failure (no network) leaves it to imux's first start.
+  ; It is the copy in $INSTDIR\fonts (D94); /NOFONT skips it, and a failure
+  ; leaves it to imux's next start.
   ${GetParameters} $R0
   ClearErrors
   ${GetOptions} $R0 "/NOFONT" $R1
@@ -113,6 +122,7 @@ Section "Uninstall"
   Delete "$INSTDIR\LICENSE"
   Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\uninstall.exe"
+  RMDir /r "$INSTDIR\fonts"
   RMDir "$INSTDIR"
 
   Delete "$SMPROGRAMS\i-mux.lnk"

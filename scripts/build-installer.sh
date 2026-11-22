@@ -81,7 +81,14 @@ build_one() {
 		(cd "$ROOT" && CGO_ENABLED=0 GOOS=windows GOARCH="$a" go build -trimpath -ldflags "-s -w" -o "$src/imux-core.exe" ./cmd/imux-core)
 	fi
 	out="$OUT_DIR/imux_${VERSION}_windows_${a}_setup.exe"
-	makensis -V2 \
+	# The Nerd Font beside imux (D94), when scripts/fetch-font.sh put it in
+	# build/fonts.
+	font_def=""
+	if [ -f "$ROOT/build/fonts/OFL.txt" ]; then
+		font_def="-DFONT_DIR=$ROOT/build/fonts"
+	fi
+	# shellcheck disable=SC2086 # font_def is one word or none
+	makensis -V2 $font_def \
 		"-DVERSION=$VERSION" \
 		"-DARCH=$a" \
 		"-DBIN_DIR=$src" \

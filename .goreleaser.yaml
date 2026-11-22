@@ -46,6 +46,11 @@ archives:
     files:
       - LICENSE
       - README.md
+      # The Nerd Font ships with i-mux (D94): scripts/fetch-font.sh puts it
+      # in build/fonts before GoReleaser runs.
+      - src: build/fonts/*
+        dst: fonts
+        strip_parent: true
 
 checksum:
   name_template: checksums.txt
@@ -94,6 +99,7 @@ brews:
     license: MIT
     install: |
       bin.install "imux", "imux-core"
+      (share/"imux/fonts").install Dir["fonts/*"]
     test: |
       assert_match "imux", shell_output("#{bin}/imux version")
       assert_match "imux-core", shell_output("#{bin}/imux-core -V")

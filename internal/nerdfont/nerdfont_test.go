@@ -68,6 +68,10 @@ func fake(t *testing.T, wsl bool) *fakeWindows {
 		Run, Fetch, Home, GOOS, IsWSL, sum, SystemFonts[Linux], WindowsConsole = oldRun, oldFetch, oldHome, oldOS, oldWSL, oldSum, oldSys, oldCon
 	})
 	WindowsConsole = nil // never the real registry
+	oldExe := Executable
+	exe := filepath.Join(f.root, "bin", "imux")
+	Executable = func() (string, error) { return exe, nil } // no font beside it
+	t.Cleanup(func() { Executable = oldExe })
 	t.Setenv("IMUX_HOME", filepath.Join(f.root, "imux"))
 	SystemFonts[Linux] = filepath.Join(f.root, "usr-share-fonts")
 	archive := []byte("the archive")
@@ -279,5 +283,66 @@ func TestConsoleWindows(t *testing.T) {
 	GOOS = "linux"
 	if s, _ := Detect(context.Background()); len(s.Terminals) != 0 {
 		t.Fatalf("console off Windows: %+v", s.Terminals)
+	}
+}
+
+// bundle puts the styles beside a fake imux in dir (D94), with sums that
+// match them; bad names a style written wrong.
+func bundle(t *testing.T, dir, bad string) {
+	t.Helper()
+	old := slices.Clone(Styles)
+	t.Cleanup(func() { Styles = old })
+	for i, st := range Styles {
+		body := "bundled " + st.File
+		h := sha256.Sum256([]byte(body))
+		Styles[i].Sum = hex.EncodeToString(h[:])
+		if st.File == bad {
+			body = "tampered"
+		}
+		writeFile(t, filepath.Join(dir, st.File), body)
+	}
+}
+
+// TestInstallBundled (D94): the font that came with imux is used, checked
+// file by file, before any download; beside imux, then in
+// ../share/imux/fonts; a wrong file makes it download instead.
+func TestInstallBundled(t *testing.T) {
+	f := fake(t, false)
+	bin := filepath.Join(f.root, "prefix", "bin")
+	Executable = func() (string, error) { return filepath.Join(bin, "imux"), nil }
+	share := filepath.Join(f.root, "prefix", "share", "imux", "fonts")
+	bundle(t, share, "")
+	fetched := false
+	Fetch = func(_ context.Context, _, file string) error {
+		fetched = true
+		return os.WriteFile(file, []byte("the archive"), 0o644)
+	}
+	if got := Bundled(); got != filepath.Join(bin, "..", "share", "imux", "fonts") {
+		t.Fatalf("Bundled = %q", got)
+	}
+	s, err := Detect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Install(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(s.FontDir, Styles[0].File))
+	if fetched || err != nil || string(b) != "bundled "+Styles[0].File {
+		t.Fatalf("fetched %v, installed %q %v", fetched, b, err)
+	}
+	// fonts/ beside imux comes first.
+	bundle(t, filepath.Join(bin, "fonts"), "")
+	if got := Bundled(); got != filepath.Join(bin, "fonts") {
+		t.Fatalf("Bundled = %q, want fonts/ beside imux", got)
+	}
+	// A file that does not match its sum is not used: the archive is.
+	bundle(t, filepath.Join(bin, "fonts"), Styles[1].File)
+	bundle(t, share, Styles[2].File)
+	if got := Bundled(); got != "" {
+		t.Fatalf("Bundled = %q with wrong files", got)
+	}
+	if err := s.Install(context.Background()); err != nil || !fetched {
+		t.Fatalf("download: %v, fetched %v", err, fetched)
 	}
 }

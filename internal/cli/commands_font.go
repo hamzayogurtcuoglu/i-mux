@@ -96,7 +96,11 @@ func runFontCtx(ctx context.Context, e *Env, args []string) error {
 		if sys.Kind == nerdfont.WSL {
 			where = i18n.T("font.for_windows")
 		}
-		fmt.Fprintln(e.Stdout, "  • "+i18n.T("font.plan_font", nerdfont.Release, nerdfont.SizeMB, where))
+		if nerdfont.Bundled() != "" {
+			fmt.Fprintln(e.Stdout, "  • "+i18n.T("font.plan_bundled", where))
+		} else {
+			fmt.Fprintln(e.Stdout, "  • "+i18n.T("font.plan_font", nerdfont.Release, nerdfont.SizeMB, where))
+		}
 	}
 	for _, t := range change {
 		fmt.Fprintln(e.Stdout, "  • "+i18n.T("font.plan_term", t.Name, filepath.Base(t.Backup())))
@@ -125,7 +129,11 @@ func runFontCtx(ctx context.Context, e *Env, args []string) error {
 
 	fmt.Fprintln(e.Stdout)
 	if needFont {
-		fmt.Fprint(e.Stdout, i18n.T("font.downloading", nerdfont.Archive, nerdfont.SizeMB))
+		if nerdfont.Bundled() != "" {
+			fmt.Fprint(e.Stdout, i18n.T("font.copying"))
+		} else {
+			fmt.Fprint(e.Stdout, i18n.T("font.downloading", nerdfont.Archive, nerdfont.SizeMB))
+		}
 		if err := sys.Install(ctx); err != nil {
 			fmt.Fprintln(e.Stdout)
 			return fmt.Errorf("%s: %w", i18n.T("font.failed"), err)
