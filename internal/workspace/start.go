@@ -270,7 +270,11 @@ func (w *WS) ExecAttach(name string) error {
 	// Windows Terminal sets no TERM_PROGRAM, only WT_SESSION (passed to WSL).
 	prog := os.Getenv("TERM_PROGRAM")
 	if prog == "" && os.Getenv("WT_SESSION") != "" {
+		// With the profile it runs in: its font decides the icons (D94).
 		prog = "WindowsTerminal"
+		if id := os.Getenv("WT_PROFILE_ID"); id != "" {
+			prog += ":" + id
+		}
 	}
 	if prog == "" && os.Getenv("TMUX") == "" {
 		prog = consoleTerminal()

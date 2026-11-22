@@ -107,3 +107,42 @@ func TestSetErrors(t *testing.T) {
 		t.Errorf("the last duplicate wins: %q", v)
 	}
 }
+
+// TestArrays (D94): "#N" names an array's element in a path, for Windows
+// Terminal's profiles; the rest of the file stays as it was.
+func TestArrays(t *testing.T) {
+	src := []byte("{\n  // profiles\n  \"profiles\": {\n    \"list\": [\n      {\"name\": \"a\"},\n      {\"name\": \"b\", \"font\": {\"face\": \"Consolas\"}}, // b\n    ],\n  },\n}\n")
+	if n, ok := Len(src, "profiles", "list"); !ok || n != 2 {
+		t.Fatalf("Len = %d %v", n, ok)
+	}
+	if !IsArray(src, "profiles", "list") || IsArray(src, "profiles") {
+		t.Fatal("IsArray")
+	}
+	if f, ok := Get(src, "profiles", "list", "#1", "font", "face"); !ok || f != "Consolas" {
+		t.Fatalf("Get = %q %v", f, ok)
+	}
+	if _, ok := Get(src, "profiles", "list", "#2", "name"); ok {
+		t.Fatal("an element past the end")
+	}
+	out, err := Set(src, "JetBrainsMono NF", "profiles", "list", "#1", "font", "face")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Replace(string(src), `"Consolas"`, `"JetBrainsMono NF"`, 1)
+	if string(out) != want {
+		t.Fatalf("Set:\n%s\nwant\n%s", out, want)
+	}
+	out, err = Set(src, "JetBrainsMono NF", "profiles", "list", "#0", "font", "face")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f, _ := Get(out, "profiles", "list", "#0", "font", "face"); f != "JetBrainsMono NF" || !strings.Contains(string(out), "// b") {
+		t.Fatalf("Set adds a key in an element:\n%s", out)
+	}
+	if _, err := Set(src, "x", "profiles", "list", "#5", "font"); err == nil {
+		t.Fatal("Set past the end")
+	}
+	if n, ok := Len([]byte(`{"a": []}`), "a"); !ok || n != 0 {
+		t.Fatalf("empty array: %d %v", n, ok)
+	}
+}

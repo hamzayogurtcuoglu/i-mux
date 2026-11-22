@@ -81,7 +81,7 @@ func runFontCtx(ctx context.Context, e *Env, args []string) error {
 
 	var change []nerdfont.Terminal
 	for _, t := range sys.Terminals {
-		if !termfont.IsNerdName(t.Font()) {
+		if !t.Nerd() {
 			change = append(change, t)
 		}
 	}
@@ -158,14 +158,15 @@ func runFontCtx(ctx context.Context, e *Env, args []string) error {
 	// the terminal once the user picks the font there.
 	nerdTerm := false
 	for _, t := range sys.Terminals {
-		nerdTerm = nerdTerm || termfont.IsNerdName(t.Font())
+		nerdTerm = nerdTerm || t.Nerd()
 	}
-	want := icons
-	switch {
-	case nerdTerm || sys.Kind == nerdfont.Linux:
+	// The editor's icons on Linux, where fontconfig gives every terminal
+	// the font; elsewhere auto, which looks at the font the terminal really
+	// draws with (D94): a terminal i-mux cannot set, or a Windows Terminal
+	// profile left on another font, then shows emoji, not "?".
+	want := "auto"
+	if sys.Kind == nerdfont.Linux {
 		want = "nerd"
-	case icons == "emoji":
-		want = "auto"
 	}
 	if want != icons {
 		if err := setSetting("icons", want); err != nil {

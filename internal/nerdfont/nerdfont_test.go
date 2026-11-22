@@ -346,3 +346,45 @@ func TestInstallBundled(t *testing.T) {
 		t.Fatalf("download: %v, fetched %v", err, fetched)
 	}
 }
+
+// TestUseWindowsTerminalProfiles (D94): Windows Terminal's defaults and
+// every profile with a font of its own are set; it is ready only when all
+// of them are Nerd Fonts.
+func TestUseWindowsTerminalProfiles(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "settings.json")
+	writeFile(t, file, `{
+  "profiles": {
+    "defaults": {},
+    "list": [
+      {"name": "PowerShell"},
+      {"name": "Command Prompt", "font": {"face": "Consolas"}},
+      {"name": "Old", "fontFace": "Lucida Console"},
+      {"name": "Mine", "font": {"face": "FiraCode Nerd Font"}}
+    ]
+  }
+}`)
+	wt := Terminal{Name: "Windows Terminal", File: file, Key: []string{"profiles", "defaults", "font", "face"}, Profiles: true}
+	if wt.Nerd() {
+		t.Fatal("ready before")
+	}
+	changed, err := wt.Use("JetBrainsMono NF")
+	if err != nil || !changed {
+		t.Fatalf("Use: %v %v", changed, err)
+	}
+	b, _ := os.ReadFile(file)
+	for _, want := range []string{"\"defaults\": {\n      \"font\": {\"face\": \"JetBrainsMono NF\"}\n    }", `"name": "Command Prompt", "font": {"face": "JetBrainsMono NF"}`, `"fontFace": "JetBrainsMono NF"`, `"FiraCode Nerd Font"`} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("settings lack %s:\n%s", want, b)
+		}
+	}
+	if !wt.Nerd() {
+		t.Fatal("not ready after Use")
+	}
+	if changed, err := wt.Use("JetBrainsMono NF"); err != nil || changed {
+		t.Fatalf("a second Use changed it: %v %v", changed, err)
+	}
+	if bk, err := os.ReadFile(file + ".imux-backup"); err != nil || !strings.Contains(string(bk), "Consolas") {
+		t.Fatalf("backup %q %v", bk, err)
+	}
+}

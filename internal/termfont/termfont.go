@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/jsonc"
@@ -119,13 +121,126 @@ func NerdFont(program string) bool {
 		return IsNerdName(itermFont())
 	case p == "vscode":
 		return anyNerd(vscodeFonts())
-	case p == "windowsterminal":
-		return anyNerd(windowsTerminalFonts())
+	case p == "vscode" && (WSL() || Windows()):
+		return anyNerd(vscodeFonts()) && nerdInstalled()
+	case p == "vscode":
+		return anyNerd(vscodeFonts())
+	case p == "windowsterminal" || strings.HasPrefix(p, "windowsterminal:"):
+		// The profile the client runs in (WT_PROFILE_ID, D94), else the
+		// default one; its font must be a Nerd Font that is installed.
+		_, guid, _ := strings.Cut(program, ":")
+		return anyNerd(windowsTerminalFaces(guid)) && nerdInstalled()
 	case p == "" && (WSL() || Windows()):
 		// Started from the Start menu, Windows hands WSL to its default
 		// terminal and tells it nothing (no TERM_PROGRAM, no WT_SESSION);
 		// on Windows itself the terminal is Windows Terminal or VS Code too.
-		return anyNerd(windowsTerminalFonts()) || anyNerd(vscodeFonts())
+		return (anyNerd(windowsTerminalFaces("")) || anyNerd(vscodeFonts())) && nerdInstalled()
+	}
+	return false
+}
+
+// WTFontSetting is a place in Windows Terminal's settings that sets the font
+// of some profiles: its path (for jsonc) and the face it names ("" for
+// none, which is Cascadia Mono).
+type WTFontSetting struct {
+	Path []string
+	Face string
+}
+
+// WTFontSettings are the font settings Windows Terminal's profiles use
+// (D94): with a profiles object, the defaults' face and every profile's own
+// (font.face, or the older fontFace); with the older profiles list, every
+// profile's, including those that name none.
+func WTFontSettings(b []byte) []WTFontSetting {
+	var out []WTFontSetting
+	add := func(path ...string) bool {
+		face, ok := jsonc.Get(b, path...)
+		if ok {
+			out = append(out, WTFontSetting{Path: path, Face: face})
+		}
+		return ok
+	}
+	if jsonc.IsArray(b, "profiles") {
+		n, _ := jsonc.Len(b, "profiles")
+		for i := range n {
+			e := "#" + strconv.Itoa(i)
+			a := add("profiles", e, "font", "face")
+			o := add("profiles", e, "fontFace")
+			if !a && !o {
+				out = append(out, WTFontSetting{Path: []string{"profiles", e, "font", "face"}})
+			}
+		}
+		return out
+	}
+	if !add(WTFont...) {
+		out = append(out, WTFontSetting{Path: WTFont})
+	}
+	n, _ := jsonc.Len(b, "profiles", "list")
+	for i := range n {
+		e := "#" + strconv.Itoa(i)
+		add("profiles", "list", e, "font", "face")
+		add("profiles", "list", e, "fontFace")
+	}
+	return out
+}
+
+// WTFace is the font Windows Terminal draws profile guid with ("" for the
+// default profile): its own, else the defaults', else Cascadia Mono.
+func WTFace(b []byte, guid string) string {
+	if guid == "" {
+		guid, _ = jsonc.Get(b, "defaultProfile")
+	}
+	list := []string{"profiles", "list"}
+	if jsonc.IsArray(b, "profiles") {
+		list = []string{"profiles"}
+	}
+	n, _ := jsonc.Len(b, list...)
+	for i := range n {
+		p := append(slices.Clone(list), "#"+strconv.Itoa(i))
+		if g, _ := jsonc.Get(b, append(slices.Clone(p), "guid")...); guid == "" || !strings.EqualFold(g, guid) {
+			continue
+		}
+		if f, ok := jsonc.Get(b, append(slices.Clone(p), "font", "face")...); ok && f != "" {
+			return f
+		}
+		if f, ok := jsonc.Get(b, append(slices.Clone(p), "fontFace")...); ok && f != "" {
+			return f
+		}
+		break
+	}
+	if f, ok := jsonc.Get(b, WTFont...); ok && f != "" {
+		return f
+	}
+	return "Cascadia Mono"
+}
+
+// nerdInstalled reports whether a Nerd Font is installed where Windows
+// draws text (Windows and WSL): in the user's or the system's fonts.
+// Tests replace it.
+var nerdInstalled = func() bool {
+	var dirs []string
+	locals, _ := windowsAppData()
+	for _, l := range locals {
+		dirs = append(dirs, filepath.Join(l, "Microsoft", "Windows", "Fonts"))
+	}
+	if Windows() {
+		dirs = append(dirs, filepath.Join(os.Getenv("SystemRoot"), "Fonts"))
+	} else if WSL() {
+		sys, _ := filepath.Glob("/mnt/*/Windows/Fonts")
+		dirs = append(dirs, sys...)
+	}
+	for _, d := range dirs {
+		ents, err := os.ReadDir(d)
+		if err != nil {
+			continue
+		}
+		for _, e := range ents {
+			name := e.Name()
+			ext := strings.ToLower(filepath.Ext(name))
+			if (ext == ".ttf" || ext == ".otf") && IsNerdName(strings.TrimSuffix(name, filepath.Ext(name))) {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -139,9 +254,9 @@ func anyNerd(names []string) bool {
 	return false
 }
 
-// windowsTerminalFonts are the fonts of the Windows Terminals WSL or Windows
-// sees ("" for one that keeps its default, Cascadia Mono).
-func windowsTerminalFonts() []string {
+// windowsTerminalFaces are the fonts the Windows Terminals WSL or Windows
+// sees draw profile guid with ("" for the default profile).
+func windowsTerminalFaces(guid string) []string {
 	locals, _ := windowsAppData()
 	var out []string
 	for _, local := range locals {
@@ -150,8 +265,7 @@ func windowsTerminalFonts() []string {
 			if err != nil {
 				continue
 			}
-			face, _ := jsonc.Get(b, WTFont...)
-			out = append(out, face)
+			out = append(out, WTFace(b, guid))
 		}
 	}
 	return out

@@ -80,8 +80,9 @@ func TestNerdFont(t *testing.T) {
 func TestNerdFontWSL(t *testing.T) {
 	testutil.SkipOnWindows(t, "WSL's Windows Terminal; native Windows has its own tests")
 	win := filepath.Join(t.TempDir(), "Users", "me")
-	oldHome, oldWSL, oldHomes := Home, WSL, WindowsHomes
-	defer func() { Home, WSL, WindowsHomes = oldHome, oldWSL, oldHomes }()
+	oldHome, oldWSL, oldHomes, oldInst := Home, WSL, WindowsHomes, nerdInstalled
+	defer func() { Home, WSL, WindowsHomes, nerdInstalled = oldHome, oldWSL, oldHomes, oldInst }()
+	nerdInstalled = func() bool { return true }
 	Home = func() string { return t.TempDir() }
 	WSL = func() bool { return true }
 	WindowsHomes = func() []string { return []string{win} }
@@ -135,8 +136,9 @@ func TestNerdFontWindows(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("LOCALAPPDATA", filepath.Join(root, "Local"))
 	t.Setenv("APPDATA", filepath.Join(root, "Roaming"))
-	oldHome, oldWSL, oldWin := Home, WSL, Windows
-	defer func() { Home, WSL, Windows = oldHome, oldWSL, oldWin }()
+	oldHome, oldWSL, oldWin, oldInst := Home, WSL, Windows, nerdInstalled
+	defer func() { Home, WSL, Windows, nerdInstalled = oldHome, oldWSL, oldWin, oldInst }()
+	nerdInstalled = func() bool { return true }
 	Home = func() string { return t.TempDir() }
 	WSL = func() bool { return false }
 	Windows = func() bool { return true }
@@ -160,5 +162,79 @@ func TestNerdFontWindows(t *testing.T) {
 	}
 	if !NerdFont(Conhost+"JetBrainsMono NF") || !NerdFont(Conhost+"FiraCode Nerd Font Mono") {
 		t.Fatal("conhost with a Nerd Font")
+	}
+}
+
+// TestWindowsTerminalProfiles (D94): the font of the profile the client runs
+// in decides, its own over the defaults'; no Nerd Font installed, no icons.
+func TestWindowsTerminalProfiles(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("LOCALAPPDATA", filepath.Join(root, "Local"))
+	t.Setenv("APPDATA", filepath.Join(root, "Roaming"))
+	oldHome, oldWSL, oldWin, oldInst := Home, WSL, Windows, nerdInstalled
+	defer func() { Home, WSL, Windows, nerdInstalled = oldHome, oldWSL, oldWin, oldInst }()
+	Home = func() string { return t.TempDir() }
+	WSL = func() bool { return false }
+	Windows = func() bool { return true }
+	installed := true
+	nerdInstalled = func() bool { return installed }
+	settings := `{
+  "defaultProfile": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
+  "profiles": {
+    "defaults": {"font": {"face": "JetBrainsMono NF"}},
+    "list": [
+      {"guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}", "name": "Windows PowerShell"},
+      {"guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}", "name": "Command Prompt", "font": {"face": "Consolas"}},
+      {"guid": "{11111111-2222-3333-4444-555555555555}", "name": "Old", "fontFace": "Lucida Console"},
+    ]
+  }
+}`
+	p := filepath.Join(root, "Local", "Packages", "Microsoft.WindowsTerminal_8wekyb3d8bbwe", "LocalState", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(settings), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	b := []byte(settings)
+	for guid, want := range map[string]string{
+		"":                                       "Consolas", // the default profile
+		"{61C54BBD-C2C6-5271-96E7-009A87FF44BF}": "JetBrainsMono NF",
+		"{0caa0dad-35be-5f56-a8ff-afceeeaa6101}": "Consolas",
+		"{11111111-2222-3333-4444-555555555555}": "Lucida Console",
+		"{99999999-0000-0000-0000-000000000000}": "JetBrainsMono NF",
+	} {
+		if got := WTFace(b, guid); got != want {
+			t.Errorf("WTFace(%q) = %q, want %q", guid, got, want)
+		}
+	}
+	if NerdFont("WindowsTerminal") || NerdFont("WindowsTerminal:{0caa0dad-35be-5f56-a8ff-afceeeaa6101}") {
+		t.Error("Command Prompt keeps Consolas: no icons")
+	}
+	if !NerdFont("WindowsTerminal:{61c54bbd-c2c6-5271-96e7-009a87ff44bf}") {
+		t.Error("PowerShell takes the defaults' Nerd Font")
+	}
+	installed = false
+	if NerdFont("WindowsTerminal:{61c54bbd-c2c6-5271-96e7-009a87ff44bf}") {
+		t.Error("icons with no Nerd Font installed")
+	}
+	var paths []string
+	for _, f := range WTFontSettings(b) {
+		paths = append(paths, strings.Join(f.Path, ".")+"="+f.Face)
+	}
+	if got := strings.Join(paths, "|"); got != "profiles.defaults.font.face=JetBrainsMono NF|profiles.list.#1.font.face=Consolas|profiles.list.#2.fontFace=Lucida Console" {
+		t.Errorf("settings %s", got)
+	}
+	// The older profiles list: every profile, a face or not.
+	old := []byte(`{"defaultProfile": "{a}", "profiles": [{"guid": "{a}"}, {"guid": "{b}", "fontFace": "Consolas"}]}`)
+	paths = nil
+	for _, f := range WTFontSettings(old) {
+		paths = append(paths, strings.Join(f.Path, ".")+"="+f.Face)
+	}
+	if got := strings.Join(paths, "|"); got != "profiles.#0.font.face=|profiles.#1.fontFace=Consolas" {
+		t.Errorf("older list %s", got)
+	}
+	if WTFace(old, "") != "Cascadia Mono" || WTFace(old, "{b}") != "Consolas" {
+		t.Error("older list faces")
 	}
 }

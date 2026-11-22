@@ -116,6 +116,9 @@ type Terminal struct {
 	File string   // its settings.json; for Console, where its backup goes
 	Key  []string // its font setting
 	List bool     // the setting is a font list (CSS): the font goes first
+	// Profiles is set for Windows Terminal (D94): the defaults' font and
+	// every profile's own are set, and all must be Nerd Fonts.
+	Profiles bool
 	// Console is set for the Windows console (conhost), whose font is in
 	// the registry, not in a file.
 	Console Console
@@ -263,7 +266,7 @@ func Detect(ctx context.Context) (*System, error) {
 			if i == 1 {
 				name = "Windows Terminal Preview"
 			}
-			s.add(Terminal{Name: name, File: filepath.Join(local.unix, filepath.FromSlash(rel)), Key: termfont.WTFont})
+			s.add(Terminal{Name: name, File: filepath.Join(local.unix, filepath.FromSlash(rel)), Key: termfont.WTFont, Profiles: true})
 		}
 		s.vscode(roaming.unix)
 		if kind == Windows && WindowsConsole != nil {
@@ -342,7 +345,7 @@ func (s *System) Ready() bool {
 		return false
 	}
 	for _, t := range s.Terminals {
-		if !termfont.IsNerdName(t.Font()) {
+		if !t.Nerd() {
 			return false
 		}
 	}
@@ -510,9 +513,28 @@ func (t Terminal) Font() string {
 	return f
 }
 
+// Nerd reports whether the terminal draws with a Nerd Font: for Windows
+// Terminal, the defaults and every profile with a font of its own (D94).
+func (t Terminal) Nerd() bool {
+	if !t.Profiles {
+		return termfont.IsNerdName(t.Font())
+	}
+	b, err := os.ReadFile(t.File)
+	if err != nil {
+		return false
+	}
+	for _, f := range termfont.WTFontSettings(b) {
+		if !termfont.IsNerdName(f.Face) {
+			return false
+		}
+	}
+	return true
+}
+
 // Use sets the terminal's font to family, unless it is a Nerd Font
-// already. The first change keeps the settings as they were in
-// <file>.imux-backup. It reports whether it changed the file.
+// already; for Windows Terminal, in the defaults and in every profile that
+// names another font (D94). The first change keeps the settings as they
+// were in <file>.imux-backup. It reports whether it changed the file.
 func (t Terminal) Use(family string) (bool, error) {
 	if t.Console != nil {
 		if termfont.IsNerdName(t.Console.Font()) {
@@ -532,17 +554,32 @@ func (t Terminal) Use(family string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	cur, _ := jsonc.Get(b, t.Key...)
-	if termfont.IsNerdName(cur) {
-		return false, nil
-	}
-	v := family
-	if t.List && strings.TrimSpace(cur) != "" {
-		v = family + ", " + cur // the rest stay as fallbacks
-	}
-	out, err := jsonc.Set(b, v, t.Key...)
-	if err != nil {
-		return false, err
+	var out []byte
+	if t.Profiles {
+		out = b
+		for _, f := range termfont.WTFontSettings(b) {
+			if termfont.IsNerdName(f.Face) {
+				continue
+			}
+			if out, err = jsonc.Set(out, family, f.Path...); err != nil {
+				return false, err
+			}
+		}
+		if bytes.Equal(out, b) {
+			return false, nil
+		}
+	} else {
+		cur, _ := jsonc.Get(b, t.Key...)
+		if termfont.IsNerdName(cur) {
+			return false, nil
+		}
+		v := family
+		if t.List && strings.TrimSpace(cur) != "" {
+			v = family + ", " + cur // the rest stay as fallbacks
+		}
+		if out, err = jsonc.Set(b, v, t.Key...); err != nil {
+			return false, err
+		}
 	}
 	backup := t.File + ".imux-backup"
 	if _, err := os.Stat(backup); errors.Is(err, os.ErrNotExist) {

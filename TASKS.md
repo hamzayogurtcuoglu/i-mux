@@ -1030,7 +1030,7 @@ User report: a fresh install on a company Windows machine showed `?` for every i
     `~/.local/share/imux/fonts`, and `imux font install --yes` installed them from there with
     the download pointed at nothing. The NSIS installer and `install.ps1` are checked by CI's
     `windows-installer` job and the release smoke tests.
-- [ ] **T99.2 Every Windows Terminal profile, and icons as drawn** · M
+- [x] **T99.2 Every Windows Terminal profile, and icons as drawn** · M
   - AC: D94: `jsonc` reads and writes array elements (`#N` in a path); `imux font install`
     sets Windows Terminal's defaults and each profile with a non-Nerd `font.face` or
     `fontFace` (a `profiles` object or list), keeping the backup as before; `Ready` needs
@@ -1040,6 +1040,9 @@ User report: a fresh install on a company Windows machine showed `?` for every i
     user's or the system's fonts; `imux font install` sets `icons = "nerd"` only on Linux.
     Tests: profiles object and list, legacy `fontFace`, the profile in use, no font
     installed.
+  - Status: done. `termfont.WTFontSettings` and `WTFace` read the settings, `Terminal.Nerd`
+    and `Use` (with `Profiles`) check and set them; tested with fakes here, not yet on a real
+    Windows Terminal.
 - [ ] **T99.3 Every start checks the font** · S
   - AC: D94: an interactive start sets the font up whenever it is not ready (the stamp's
     "done" no longer stops it; a failure waits a day as before); unit tests of the rule.

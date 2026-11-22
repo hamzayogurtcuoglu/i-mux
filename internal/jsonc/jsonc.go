@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -181,41 +182,158 @@ func find(ms []member, key string) *member {
 	return nil
 }
 
-// Get returns the string at path (object keys). ok is false when a key is
-// missing or the value is not a string.
-func Get(src []byte, path ...string) (s string, ok bool) {
-	b := clean(src)
+// elements are the offsets of the values of the array starting at b[i].
+func elements(b []byte, i int) ([]int, error) {
+	if i >= len(b) || b[i] != '[' {
+		return nil, errSyntax
+	}
+	var out []int
+	i = ws(b, i+1)
+	if i < len(b) && b[i] == ']' {
+		return nil, nil
+	}
+	for {
+		out = append(out, i)
+		end, err := value(b, i)
+		if err != nil {
+			return nil, err
+		}
+		i = ws(b, end)
+		switch {
+		case i < len(b) && b[i] == ',':
+			i = ws(b, i+1)
+			if i < len(b) && b[i] == ']' { // a trailing comma (cleaned to a space)
+				return out, nil
+			}
+		case i < len(b) && b[i] == ']':
+			return out, nil
+		default:
+			return nil, errSyntax
+		}
+	}
+}
+
+// index reads a path element naming an array element: "#3" is the fourth.
+func index(key string) (int, bool) {
+	if !strings.HasPrefix(key, "#") {
+		return 0, false
+	}
+	n, err := strconv.Atoi(key[1:])
+	return n, err == nil && n >= 0
+}
+
+// at is the offset of the value at path in b, or false when it is missing.
+func at(b []byte, path []string) (int, bool) {
 	i := ws(b, 0)
-	for d, key := range path {
+	for _, key := range path {
+		if n, ok := index(key); ok {
+			els, err := elements(b, i)
+			if err != nil || n >= len(els) {
+				return 0, false
+			}
+			i = els[n]
+			continue
+		}
 		ms, _, err := object(b, i)
 		if err != nil {
-			return "", false
+			return 0, false
 		}
 		m := find(ms, key)
 		if m == nil {
-			return "", false
-		}
-		if d == len(path)-1 {
-			if json.Unmarshal(b[m.valStart:m.valEnd], &s) != nil {
-				return "", false
-			}
-			return s, true
+			return 0, false
 		}
 		i = m.valStart
 	}
-	return "", false
+	return i, true
+}
+
+// Len is the number of elements of the array at path (object keys, or
+// "#N" for an array's element); ok is false when there is no array there.
+func Len(src []byte, path ...string) (n int, ok bool) {
+	b := clean(src)
+	i, ok := at(b, path)
+	if !ok {
+		return 0, false
+	}
+	els, err := elements(b, i)
+	if err != nil {
+		return 0, false
+	}
+	return len(els), true
+}
+
+// IsArray reports whether the value at path is an array.
+func IsArray(src []byte, path ...string) bool {
+	b := clean(src)
+	i, ok := at(b, path)
+	return ok && i < len(b) && b[i] == '['
+}
+
+// Get returns the string at path (object keys, or "#N" for an array's
+// element). ok is false when a key is missing or the value is not a string.
+func Get(src []byte, path ...string) (s string, ok bool) {
+	if len(path) == 0 {
+		return "", false
+	}
+	b := clean(src)
+	i, ok := at(b, path[:len(path)-1])
+	if !ok {
+		return "", false
+	}
+	return get(b, i, path[len(path)-1])
+}
+
+// get is the string at key of the value at b[i].
+func get(b []byte, i int, key string) (s string, ok bool) {
+	if n, isIndex := index(key); isIndex {
+		els, err := elements(b, i)
+		if err != nil || n >= len(els) {
+			return "", false
+		}
+		end, err := value(b, els[n])
+		if err != nil || json.Unmarshal(b[els[n]:end], &s) != nil {
+			return "", false
+		}
+		return s, true
+	}
+	ms, _, err := object(b, i)
+	if err != nil {
+		return "", false
+	}
+	m := find(ms, key)
+	if m == nil || json.Unmarshal(b[m.valStart:m.valEnd], &s) != nil {
+		return "", false
+	}
+	return s, true
 }
 
 // Set puts the string value at path: a value there is replaced; missing
 // keys (and the objects they need) are added first in their object,
 // indented like the file. Nothing else in src changes.
-func Set(src []byte, value string, path ...string) ([]byte, error) {
+func Set(src []byte, val string, path ...string) ([]byte, error) {
 	if len(path) == 0 {
 		return nil, errors.New("jsonc: empty path")
 	}
 	b := clean(src)
 	i := ws(b, 0)
 	for d, key := range path {
+		if n, ok := index(key); ok {
+			els, err := elements(b, i)
+			if err != nil || n >= len(els) {
+				return nil, fmt.Errorf("%s has no element %d", strings.Join(append([]string{"(top)"}, path[:d]...), "."), n)
+			}
+			if d == len(path)-1 {
+				end, err := value(b, els[n])
+				if err != nil {
+					return nil, err
+				}
+				out := append([]byte(nil), src[:els[n]]...)
+				out = append(out, quote(val)...)
+				return append(out, src[end:]...), nil
+			}
+			i = els[n]
+			continue
+		}
 		ms, end, err := object(b, i)
 		if err != nil {
 			if d == 0 {
@@ -225,11 +343,11 @@ func Set(src []byte, value string, path ...string) ([]byte, error) {
 		}
 		m := find(ms, key)
 		if m == nil {
-			return insert(src, i, end, ms, quote(key)+": "+nested(path[d+1:], value)), nil
+			return insert(src, i, end, ms, quote(key)+": "+nested(path[d+1:], val)), nil
 		}
 		if d == len(path)-1 {
 			out := append([]byte(nil), src[:m.valStart]...)
-			out = append(out, quote(value)...)
+			out = append(out, quote(val)...)
 			return append(out, src[m.valEnd:]...), nil
 		}
 		i = m.valStart
