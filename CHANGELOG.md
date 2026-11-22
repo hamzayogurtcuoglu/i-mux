@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.69.0] - 2026-11-22
+
 ### Changed
 
 - **Agents show their project's colour.** In the sidebar's AGENTS list, each project carries its
