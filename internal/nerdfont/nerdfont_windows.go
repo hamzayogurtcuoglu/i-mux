@@ -75,7 +75,7 @@ func (c regConsole) keys() []string {
 	if err != nil {
 		return out
 	}
-	defer k.Close()
+	defer func() { _ = k.Close() }()
 	names, _ := k.ReadSubKeyNames(-1)
 	sort.Strings(names)
 	for _, n := range names {
@@ -92,7 +92,7 @@ func (c regConsole) value(path, name string) (any, bool) {
 	if err != nil {
 		return nil, false
 	}
-	defer k.Close()
+	defer func() { _ = k.Close() }()
 	if s, _, err := k.GetStringValue(name); err == nil {
 		return s, true
 	}
@@ -141,7 +141,7 @@ func (c regConsole) SetFont(family string) error {
 		if size, _, e := k.GetIntegerValue("FontSize"); e == nil && err == nil && (size == 0 || size&rasterCell != 0) {
 			err = k.SetDWordValue("FontSize", size16px)
 		}
-		k.Close()
+		_ = k.Close()
 		if err != nil {
 			return fmt.Errorf(`HKCU\%s: %w`, p, err)
 		}
