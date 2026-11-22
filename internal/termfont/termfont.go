@@ -99,11 +99,18 @@ var WTFont = []string{"profiles", "defaults", "font", "face"}
 // VSCodeFont is VS Code's terminal font setting.
 const VSCodeFont = "terminal.integrated.fontFamily"
 
+// Conhost starts the terminal name of a Windows console window (conhost),
+// which tells no TERM_PROGRAM: the font follows ("conhost:Consolas"), as
+// the console itself reports it to the client.
+const Conhost = "conhost:"
+
 // NerdFont reports whether terminal program (TERM_PROGRAM, or the client's
 // terminal name) draws Nerd Font icons.
 func NerdFont(program string) bool {
 	p := strings.ToLower(program)
 	switch {
+	case strings.HasPrefix(program, Conhost):
+		return IsNerdName(strings.TrimPrefix(program, Conhost))
 	case strings.Contains(p, "ghostty"), strings.Contains(p, "wezterm"), strings.Contains(p, "kitty"):
 		return true // they bring the symbols
 	case p == "apple_terminal":

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/jsonc"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
 )
 
@@ -73,9 +74,36 @@ const (
 // Terminal is a terminal whose settings file i-mux edits.
 type Terminal struct {
 	Name string   // "Windows Terminal", "VS Code"
-	File string   // its settings.json
+	File string   // its settings.json; for Console, where its backup goes
 	Key  []string // its font setting
 	List bool     // the setting is a font list (CSS): the font goes first
+	// Console is set for the Windows console (conhost), whose font is in
+	// the registry, not in a file.
+	Console Console
+}
+
+// Console is the Windows console's font setting (§7.10): the font its
+// windows open with, the change to family, and a .reg file that puts the
+// old setting back.
+type Console interface {
+	Font() string
+	SetFont(family string) error
+	Backup() []byte
+}
+
+// ConsoleName is the console's name among the terminals.
+const ConsoleName = "Windows Console"
+
+// WindowsConsole is the console's setting on native Windows (nil
+// elsewhere); tests replace it.
+var WindowsConsole Console
+
+// Backup is the file that keeps the terminal's old font setting.
+func (t Terminal) Backup() string {
+	if t.Console != nil {
+		return t.File
+	}
+	return t.File + ".imux-backup"
 }
 
 // System is where the user's terminal finds its fonts.
@@ -121,7 +149,7 @@ func run(ctx context.Context, name string, args ...string) ([]byte, error) {
 		}
 		dir = "/mnt/c" // Windows programs want a Windows folder to start in
 	}
-	c := exec.CommandContext(ctx, name, args...)
+	c := exec.CommandContext(ctx, program(name), args...)
 	c.Dir = dir
 	return c.CombinedOutput()
 }
@@ -199,6 +227,11 @@ func Detect(ctx context.Context) (*System, error) {
 			s.add(Terminal{Name: name, File: filepath.Join(local.unix, filepath.FromSlash(rel)), Key: termfont.WTFont})
 		}
 		s.vscode(roaming.unix)
+		if kind == Windows && WindowsConsole != nil {
+			// The console window PowerShell and cmd open in, unless
+			// Windows Terminal is the default terminal.
+			s.Terminals = append(s.Terminals, Terminal{Name: ConsoleName, File: filepath.Join(paths.Home(), "console-font.imux-backup.reg"), Console: WindowsConsole})
+		}
 		return s, nil
 	}
 	data := os.Getenv("XDG_DATA_HOME")
@@ -413,6 +446,9 @@ func fetch(ctx context.Context, url, file string) error {
 
 // Font is the font the terminal's settings name ("" for its default).
 func (t Terminal) Font() string {
+	if t.Console != nil {
+		return t.Console.Font()
+	}
 	b, err := os.ReadFile(t.File)
 	if err != nil {
 		return ""
@@ -425,6 +461,20 @@ func (t Terminal) Font() string {
 // already. The first change keeps the settings as they were in
 // <file>.imux-backup. It reports whether it changed the file.
 func (t Terminal) Use(family string) (bool, error) {
+	if t.Console != nil {
+		if termfont.IsNerdName(t.Console.Font()) {
+			return false, nil
+		}
+		if _, err := os.Stat(t.File); errors.Is(err, os.ErrNotExist) {
+			if err := os.MkdirAll(filepath.Dir(t.File), 0o700); err != nil {
+				return false, err
+			}
+			if err := os.WriteFile(t.File, t.Console.Backup(), 0o600); err != nil {
+				return false, err
+			}
+		}
+		return true, t.Console.SetFont(family)
+	}
 	b, err := os.ReadFile(t.File)
 	if err != nil {
 		return false, err

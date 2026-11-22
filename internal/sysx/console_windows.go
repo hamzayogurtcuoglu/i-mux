@@ -4,6 +4,7 @@ package sysx
 
 import (
 	"io"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf16"
@@ -187,10 +188,101 @@ func (r *inputRecord) isTextKey() bool {
 }
 
 var (
-	kernel32             = windows.NewLazySystemDLL("kernel32.dll")
-	procPeekConsoleInput = kernel32.NewProc("PeekConsoleInputW")
-	procReadConsoleInput = kernel32.NewProc("ReadConsoleInputW")
+	kernel32                    = windows.NewLazySystemDLL("kernel32.dll")
+	user32                      = windows.NewLazySystemDLL("user32.dll")
+	procPeekConsoleInput        = kernel32.NewProc("PeekConsoleInputW")
+	procReadConsoleInput        = kernel32.NewProc("ReadConsoleInputW")
+	procGetConsoleWindow        = kernel32.NewProc("GetConsoleWindow")
+	procGetCurrentConsoleFontEx = kernel32.NewProc("GetCurrentConsoleFontEx")
+	procSetCurrentConsoleFontEx = kernel32.NewProc("SetCurrentConsoleFontEx")
+	procIsWindowVisible         = user32.NewProc("IsWindowVisible")
 )
+
+// consoleFontInfo is CONSOLE_FONT_INFOEX.
+type consoleFontInfo struct {
+	Size       uint32
+	Font       uint32
+	FontWidth  int16
+	FontHeight int16
+	Family     uint32
+	Weight     uint32
+	Face       [32]uint16
+}
+
+// tmpfTrueType is TMPF_TRUETYPE in a font's family: not a raster font.
+const tmpfTrueType = 0x04
+
+// visibleConsole reports whether this process draws in a console window of
+// its own (conhost) and not in a pseudo console, whose window is hidden: in
+// Windows Terminal, VS Code and i-mux's own panes the font is the
+// terminal's, and the console's says nothing about it.
+func visibleConsole() bool {
+	if procGetConsoleWindow.Find() != nil || procIsWindowVisible.Find() != nil {
+		return false
+	}
+	hwnd, _, _ := procGetConsoleWindow.Call()
+	if hwnd == 0 {
+		return false
+	}
+	v, _, _ := procIsWindowVisible.Call(hwnd)
+	return v != 0
+}
+
+func currentFont(out windows.Handle) (consoleFontInfo, bool) {
+	info := consoleFontInfo{Size: uint32(unsafe.Sizeof(consoleFontInfo{}))}
+	if out == windows.InvalidHandle || procGetCurrentConsoleFontEx.Find() != nil {
+		return info, false
+	}
+	r, _, _ := procGetCurrentConsoleFontEx.Call(uintptr(out), 0, uintptr(unsafe.Pointer(&info)))
+	return info, r != 0
+}
+
+// ConsoleFont is the font of the console window this process draws in
+// (conhost's, the window's properties → Font); false when it draws in a
+// terminal instead (Windows Terminal, VS Code, a pane), whose font the
+// console does not know.
+func ConsoleFont() (string, bool) {
+	if !visibleConsole() {
+		return "", false
+	}
+	info, ok := currentFont(consoleOut())
+	if !ok {
+		return "", false
+	}
+	return windows.UTF16ToString(info.Face[:]), true
+}
+
+// SetConsoleFont switches the console window's font to face, keeping its
+// height (a raster font's cells become a 16 px TrueType one). The window
+// redraws with it at once; it reports whether the console took it.
+func SetConsoleFont(face string) bool {
+	if !visibleConsole() || procSetCurrentConsoleFontEx.Find() != nil {
+		return false
+	}
+	out := consoleOut()
+	info, ok := currentFont(out)
+	if !ok {
+		return false
+	}
+	name, err := windows.UTF16FromString(face)
+	if err != nil || len(name) > len(info.Face) {
+		return false
+	}
+	if info.Family&tmpfTrueType == 0 || info.FontHeight <= 0 {
+		info.FontHeight = 16
+	}
+	info.Font, info.FontWidth = 0, 0
+	info.Family, info.Weight = 0x36, 400 // FF_MODERN | TMPF_TRUETYPE | TMPF_VECTOR, FW_NORMAL
+	info.Face = [32]uint16{}
+	copy(info.Face[:], name)
+	r, _, _ := procSetCurrentConsoleFontEx.Call(uintptr(out), 0, uintptr(unsafe.Pointer(&info)))
+	if r == 0 {
+		return false
+	}
+	// The console falls back to another font when it lacks face.
+	now, ok := currentFont(out)
+	return ok && strings.EqualFold(windows.UTF16ToString(now.Face[:]), face)
+}
 
 // consoleInput calls PeekConsoleInputW or ReadConsoleInputW for one record.
 func consoleInput(proc *windows.LazyProc, h windows.Handle, rec *inputRecord, n *uint32) error {

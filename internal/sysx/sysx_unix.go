@@ -149,3 +149,11 @@ func Executable(fi os.FileInfo) bool { return fi.Mode().Perm()&0o111 != 0 }
 
 // CrossDevice reports whether err is a rename across file systems.
 func CrossDevice(err error) bool { return errors.Is(err, syscall.EXDEV) }
+
+// ConsoleFont is the font of the Windows console window this process draws
+// in; on Unix there is none ("", false): the terminal's font is its own.
+func ConsoleFont() (string, bool) { return "", false }
+
+// SetConsoleFont switches the console window's font; on Unix it does
+// nothing.
+func SetConsoleFont(string) bool { return false }

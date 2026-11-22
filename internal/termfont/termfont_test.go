@@ -25,10 +25,13 @@ func TestIsNerdName(t *testing.T) {
 
 func TestNerdFont(t *testing.T) {
 	home := t.TempDir()
-	oldHome, oldRun, oldWSL := Home, Run, WSL
-	defer func() { Home, Run, WSL = oldHome, oldRun, oldWSL }()
+	oldHome, oldRun, oldWSL, oldWin := Home, Run, WSL, Windows
+	defer func() { Home, Run, WSL, Windows = oldHome, oldRun, oldWSL, oldWin }()
 	Home = func() string { return home }
+	// macOS's and Linux's rules: on Windows "" would read the real Windows
+	// Terminal's settings.
 	WSL = func() bool { return false }
+	Windows = func() bool { return false }
 	font := "SFMono-Regular"
 	Run = func(name string, args ...string) ([]byte, error) {
 		a := strings.Join(args, " ")
@@ -149,5 +152,13 @@ func TestNerdFontWindows(t *testing.T) {
 	}
 	if !NerdFont("") || !NerdFont("WindowsTerminal") {
 		t.Fatal("Windows Terminal with a Nerd Font")
+	}
+	// A console window (conhost) tells its own font, whatever Windows
+	// Terminal's settings say.
+	if NerdFont(Conhost+"Lucida Console") || NerdFont(Conhost) {
+		t.Fatal("conhost without a Nerd Font")
+	}
+	if !NerdFont(Conhost+"JetBrainsMono NF") || !NerdFont(Conhost+"FiraCode Nerd Font Mono") {
+		t.Fatal("conhost with a Nerd Font")
 	}
 }

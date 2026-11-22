@@ -96,7 +96,7 @@ func runFont(e *Env, args []string) error {
 		fmt.Fprintln(e.Stdout, "  • "+i18n.T("font.plan_font", nerdfont.Release, nerdfont.SizeMB, where))
 	}
 	for _, t := range change {
-		fmt.Fprintln(e.Stdout, "  • "+i18n.T("font.plan_term", t.Name, filepath.Base(t.File)+".imux-backup"))
+		fmt.Fprintln(e.Stdout, "  • "+i18n.T("font.plan_term", t.Name, filepath.Base(t.Backup())))
 	}
 	fmt.Fprintln(e.Stdout, "  • "+i18n.T("font.plan_icons"))
 	if !*yes {

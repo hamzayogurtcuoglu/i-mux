@@ -1018,7 +1018,7 @@ User report (Windows 11, i-mux in a classic console window): the Nerd Font does 
 popup closes when the mouse moves over it, changing the theme recolours only the side panels,
 and switching panes takes at least a second (D88).
 
-- [ ] **T94.1 The Nerd Font in the console window** · M
+- [x] **T94.1 The Nerd Font in the console window** · M
   - AC: on native Windows `imux font` lists "Windows Console" with the font of `HKCU\Console`
     (the defaults and every key with a font of its own); `imux font install` sets them all,
     keeping the old values once in `~/.imux/console-font.imux-backup.reg` (UTF-16, as regedit

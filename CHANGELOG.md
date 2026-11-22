@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Windows: the Nerd Font works in the console window.** When PowerShell or cmd opens i-mux in
+  the classic console window rather than Windows Terminal, `imux font install` now sets that
+  window's font too (the old setting is kept in `~/.imux/console-font.imux-backup.reg`; open it
+  to put it back), `imux` switches the window to the font when a shortcut opened it with
+  another, and the sidebars show the editor's icons there.
+
 ## [0.67.0] - 2026-11-21
 
 ### Changed

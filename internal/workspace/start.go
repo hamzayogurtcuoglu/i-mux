@@ -12,11 +12,13 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/nerdfont"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/termfont"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -237,6 +239,24 @@ func (w *WS) Sessions(ctx context.Context) ([]*SessionInfo, error) {
 	return list, nil
 }
 
+// consoleTerminal names the Windows console window (conhost) this client
+// runs in, with its font ("conhost:<font>"), for the sidebars' icons; ""
+// anywhere else. When `imux font install` made a Nerd Font the console's
+// (the registry) but this window opened with another one (a shortcut's own
+// font wins over the registry), the window switches to it.
+func consoleTerminal() string {
+	face, ok := sysx.ConsoleFont()
+	if !ok {
+		return ""
+	}
+	if !termfont.IsNerdName(face) && nerdfont.WindowsConsole != nil {
+		if want := nerdfont.WindowsConsole.Font(); termfont.IsNerdName(want) && sysx.SetConsoleFont(want) {
+			face = want
+		}
+	}
+	return termfont.Conhost + face
+}
+
 // AttachArgv returns the tmux command line that attaches to name.
 func (w *WS) AttachArgv(name string) []string {
 	return append(append([]string{w.T.Bin}, w.T.BaseArgs()...), "attach-session", "-t", "="+name)
@@ -251,6 +271,9 @@ func (w *WS) ExecAttach(name string) error {
 	prog := os.Getenv("TERM_PROGRAM")
 	if prog == "" && os.Getenv("WT_SESSION") != "" {
 		prog = "WindowsTerminal"
+	}
+	if prog == "" && os.Getenv("TMUX") == "" {
+		prog = consoleTerminal()
 	}
 	if prog != "" && os.Getenv("TMUX") == "" && prog != "tmux" {
 		_, _ = w.T.Run(context.Background(), tmux.Cmd{"set-option", "-g", "@imux_terminal", prog})

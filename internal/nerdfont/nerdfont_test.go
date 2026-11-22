@@ -63,10 +63,12 @@ func writeFile(t *testing.T, p, body string) {
 func fake(t *testing.T, wsl bool) *fakeWindows {
 	t.Helper()
 	f := &fakeWindows{root: t.TempDir()}
-	oldRun, oldFetch, oldHome, oldOS, oldWSL, oldSum, oldSys := Run, Fetch, Home, GOOS, IsWSL, sum, SystemFonts[Linux]
+	oldRun, oldFetch, oldHome, oldOS, oldWSL, oldSum, oldSys, oldCon := Run, Fetch, Home, GOOS, IsWSL, sum, SystemFonts[Linux], WindowsConsole
 	t.Cleanup(func() {
-		Run, Fetch, Home, GOOS, IsWSL, sum, SystemFonts[Linux] = oldRun, oldFetch, oldHome, oldOS, oldWSL, oldSum, oldSys
+		Run, Fetch, Home, GOOS, IsWSL, sum, SystemFonts[Linux], WindowsConsole = oldRun, oldFetch, oldHome, oldOS, oldWSL, oldSum, oldSys, oldCon
 	})
+	WindowsConsole = nil // never the real registry
+	t.Setenv("IMUX_HOME", filepath.Join(f.root, "imux"))
 	SystemFonts[Linux] = filepath.Join(f.root, "usr-share-fonts")
 	archive := []byte("the archive")
 	h := sha256.Sum256(archive)
@@ -222,5 +224,60 @@ func TestInstallWindows(t *testing.T) {
 	}
 	if len(f.ran("cmd.exe")) != 0 || len(f.ran("wslpath")) != 0 {
 		t.Fatal("cmd.exe or wslpath on native Windows")
+	}
+}
+
+// fakeConsole is the Windows console's font setting in memory.
+type fakeConsole struct{ face string }
+
+func (c *fakeConsole) Font() string                { return c.face }
+func (c *fakeConsole) SetFont(family string) error { c.face = family; return nil }
+func (c *fakeConsole) Backup() []byte              { return []byte("old: " + c.face) }
+
+// TestConsoleWindows: on native Windows the console window (conhost) is one
+// of the terminals: its font is set, the old one kept in a .reg file once,
+// and the system is ready only then.
+func TestConsoleWindows(t *testing.T) {
+	f := fake(t, false)
+	GOOS = "windows"
+	con := &fakeConsole{face: "Lucida Console"}
+	WindowsConsole = con
+	local := filepath.Join(f.root, "Local")
+	t.Setenv("LOCALAPPDATA", local)
+	t.Setenv("APPDATA", filepath.Join(f.root, "Roaming"))
+	t.Setenv("SystemRoot", filepath.Join(f.root, "WINDOWS"))
+	s, err := Detect(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Terminals) != 1 || s.Terminals[0].Name != ConsoleName || s.Terminals[0].Font() != "Lucida Console" {
+		t.Fatalf("terminals %+v", s.Terminals)
+	}
+	if err := s.Install(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if s.Ready() {
+		t.Fatal("ready while the console keeps Lucida Console")
+	}
+	term := s.Terminals[0]
+	if changed, err := term.Use(s.Family); err != nil || !changed || con.face != FamilyWindows {
+		t.Fatalf("changed %v err %v face %q", changed, err, con.face)
+	}
+	if b, _ := os.ReadFile(term.Backup()); string(b) != "old: Lucida Console" {
+		t.Fatalf("backup %q", b)
+	}
+	if !strings.HasPrefix(term.Backup(), filepath.Join(f.root, "imux")) {
+		t.Fatalf("backup outside IMUX_HOME: %s", term.Backup())
+	}
+	if !s.Ready() {
+		t.Fatal("not ready with the console set")
+	}
+	if changed, _ := term.Use(s.Family); changed {
+		t.Fatal("a Nerd Font is left alone")
+	}
+	// On macOS and Linux there is no console.
+	GOOS = "linux"
+	if s, _ := Detect(context.Background()); len(s.Terminals) != 0 {
+		t.Fatalf("console off Windows: %+v", s.Terminals)
 	}
 }
