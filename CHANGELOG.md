@@ -6,6 +6,12 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Agents show their project's colour.** In the sidebar's AGENTS list, each project carries its
+  letter avatar and every agent under it a thin bar in the same colour, so you see at a glance
+  which project an agent works in. Open projects no longer share a colour.
+
 ## [0.68.0] - 2026-11-22
 
 ### Changed
