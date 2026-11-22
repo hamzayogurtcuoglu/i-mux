@@ -11,6 +11,10 @@ All notable changes to i-mux are listed here. The format follows
 - **`go install` alone is enough.** `imux` now carries its engine: installed with
   `go install …/cmd/imux@latest` and nothing else, it runs i-mux-core from itself
   (`~/.imux/engine/imux-core`). Releases and the installers still ship `imux-core` beside it.
+- **Faster everywhere, much faster on Windows.** i-mux asks its engine from inside its own
+  process instead of starting an `imux-core` process for every question. Clicks, pane switches
+  and the sidebars no longer wait for process starts, which on Windows machines with endpoint
+  security cost about a quarter of a second each. On macOS `imux ls` takes 14 ms instead of 49.
 
 ## [0.69.1] - 2026-11-22
 

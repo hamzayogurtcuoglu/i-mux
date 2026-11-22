@@ -1017,7 +1017,7 @@ slow (about a second).
 User report: on a Windows machine with endpoint security every process start costs about
 270 ms, so a click or `imux ls` took about a second (D92).
 
-- [ ] **T97.1 Engine queries inside imux** · S
+- [x] **T97.1 Engine queries inside imux** · S
   - AC: D92: `tmux.Client.Run` runs its commands through `tmux.EngineCommand`
     (i-mux-core's `engine.Command`, pinned at its C11.1) when the engine is an existing
     `imux-core` file, the line starts no server and asks no `-V`, and `IMUX_ENGINE_INPROC` is
@@ -1026,6 +1026,11 @@ User report: on a Windows machine with endpoint security every process start cos
     lines run in the process and which run the binary, the exit code and stderr reaching
     `Error` as from the binary; the e2e suite runs on it, the imux under test carrying the
     engine.
+  - Status: done. `tmux.EngineRunner` is `New`'s runner (the legacy tmux client keeps
+    `ExecRunner`); a non-zero code is an `ExitCodeError`. i-mux-core is pinned at e07d98c
+    (its C11.1). On macOS `imux ls` against a running server went from 48.5 ms to 13.8 ms
+    (20 runs each, `IMUX_ENGINE_INPROC=0` against the default); on Windows each query saved is
+    a whole `imux-core.exe` start.
 
 ## M96: Tabs like an editor's (added 2026-11-22)
 

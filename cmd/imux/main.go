@@ -19,5 +19,6 @@ func main() {
 		os.Exit(engine.Main(os.Args[1:], os.Stdout, os.Stderr))
 	}
 	tmux.CarriesEngine = true
+	tmux.EngineCommand = engine.Command // engine queries inside this process (D92)
 	os.Exit(cli.Main(os.Args))
 }

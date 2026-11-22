@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -99,6 +100,60 @@ func (ExecRunner) Run(ctx context.Context, bin string, args []string) ([]byte, [
 	return out.Bytes(), errb.Bytes(), err
 }
 
+// EngineCommand runs an engine command line inside this process: i-mux-core's
+// engine.Command (its E18), which cmd/imux sets (D92). nil, as in test
+// binaries, leaves every command to the engine's binary.
+var EngineCommand func(ctx context.Context, args []string, stdout, stderr io.Writer) (code int, handled bool)
+
+// EngineRunner runs a command line in this process through EngineCommand
+// when it can (D92), else as a child process: the engine must be an
+// existing imux-core file, the line must ask no -V (the binary's own
+// version), and IMUX_ENGINE_INPROC must not be "0"; a line the engine
+// leaves to its binary (one that starts a server) runs the binary.
+type EngineRunner struct{}
+
+// ExitCodeError is a non-zero exit code of a command run in this process,
+// as *exec.ExitError is the binary's.
+type ExitCodeError struct{ Code int }
+
+func (e *ExitCodeError) Error() string { return "exit status " + strconv.Itoa(e.Code) }
+
+// Run implements Runner.
+func (EngineRunner) Run(ctx context.Context, bin string, args []string) ([]byte, []byte, error) {
+	if inProcess(bin, args) {
+		var out, errb bytes.Buffer
+		if code, handled := EngineCommand(ctx, args, &out, &errb); handled {
+			if code != 0 {
+				return out.Bytes(), errb.Bytes(), &ExitCodeError{Code: code}
+			}
+			return out.Bytes(), errb.Bytes(), nil
+		}
+	}
+	return ExecRunner{}.Run(ctx, bin, args)
+}
+
+// inProcess reports whether EngineRunner may run args in this process.
+func inProcess(bin string, args []string) bool {
+	if EngineCommand == nil || os.Getenv("IMUX_ENGINE_INPROC") == "0" || !RunsAsEngine(bin) {
+		return false
+	}
+	for _, a := range args {
+		if a == "-V" {
+			return false
+		}
+	}
+	path := bin
+	if !strings.ContainsAny(bin, `/\`) {
+		p, err := exec.LookPath(bin)
+		if err != nil {
+			return false
+		}
+		path = p
+	}
+	st, err := os.Stat(path)
+	return err == nil && st.Mode().IsRegular()
+}
+
 // Cmd is one tmux command with its arguments, e.g. {"set", "-p", "@x", "1"}.
 type Cmd []string
 
@@ -134,7 +189,7 @@ func New(conf string) *Client {
 		Bin:    bin,
 		Socket: Socket(),
 		Config: conf,
-		Runner: ExecRunner{},
+		Runner: EngineRunner{},
 		Record: os.Getenv("IMUX_TMUX_RECORD"),
 	}
 }
@@ -212,7 +267,7 @@ func (c *Client) Run(ctx context.Context, cmds ...Cmd) (string, error) {
 	defer cancel()
 	r := c.Runner
 	if r == nil {
-		r = ExecRunner{}
+		r = EngineRunner{}
 	}
 	out, errb, err := r.Run(ctx, c.Bin, args)
 	if err != nil {
