@@ -90,15 +90,17 @@ func TestCarriedEngineCopy(t *testing.T) {
 	if b, _ := os.ReadFile(p); string(b) != "imux v1" || !ti.ModTime().Equal(at) || !sysx.Executable(ti) {
 		t.Fatalf("copy %q %v %v", b, ti.ModTime(), ti.Mode())
 	}
-	// Kept: nothing is written again.
-	if err := os.Chmod(p, 0o700); err != nil {
+	// Kept: nothing is written again. A marker of the same size and time
+	// shows it (Windows keeps no permission bits to mark it with).
+	testutil.WriteFile(t, p, []byte("marker!"))
+	if err := os.Chtimes(p, at, at); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := carriedEngine(self, home); err != nil {
 		t.Fatal(err)
 	}
-	if ti, _ := os.Stat(p); ti.Mode().Perm() != 0o700 {
-		t.Fatal("an up-to-date copy was made again")
+	if b, _ := os.ReadFile(p); string(b) != "marker!" {
+		t.Fatalf("an up-to-date copy was made again: %q", b)
 	}
 
 	// imux replaced, and the stale engine held: renamed, then removed later.
