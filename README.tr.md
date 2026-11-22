@@ -183,8 +183,10 @@ irm https://raw.githubusercontent.com/hamzayogurtcuoglu/i-mux/main/install.ps1 |
 Go 1.27 ya da sonrası gerekir.
 
 ```sh
-go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest github.com/hamzayogurtcuoglu/i-mux/cmd/imux-core@latest
+go install github.com/hamzayogurtcuoglu/i-mux/cmd/imux@latest
 ```
+
+imux motorunu kendi içinde taşır; macOS, Linux ve Windows'ta bu tek dosya yeter.
 
 ### <img src="docs/images/icons/font.svg" width="20" alt=""> Nerd Font
 

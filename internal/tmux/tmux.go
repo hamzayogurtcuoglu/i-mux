@@ -141,19 +141,26 @@ func New(conf string) *Client {
 
 // EngineBin is the engine i-mux runs on, i-mux-core (D87), whether tmux is
 // installed or not: the imux-core next to the running imux binary, else the
-// one on the PATH; neither found, the name, so the exec error names it too,
-// while doctor explains.
+// one on the PATH, else, for an imux that carries the engine (D88: go
+// install alone), ~/.imux/engine/imux-core made from imux itself; none of
+// them, the name, so the exec error names it too, while doctor explains.
 func EngineBin() string {
-	if self, err := os.Executable(); err == nil {
-		p := filepath.Join(filepath.Dir(self), "imux-core"+sysx.ExeSuffix)
+	self, selfErr := os.Executable()
+	if selfErr == nil {
+		p := filepath.Join(filepath.Dir(self), EngineName+sysx.ExeSuffix)
 		if st, err := os.Stat(p); err == nil && !st.IsDir() && sysx.Executable(st) {
 			return p
 		}
 	}
-	if p, err := exec.LookPath("imux-core"); err == nil {
+	if p, err := exec.LookPath(EngineName); err == nil {
 		return p
 	}
-	return "imux-core"
+	if CarriesEngine && selfErr == nil {
+		if p, err := carriedEngine(self, carriedDir()); err == nil {
+			return p
+		}
+	}
+	return EngineName
 }
 
 // BaseArgs returns the arguments that select the socket and config.

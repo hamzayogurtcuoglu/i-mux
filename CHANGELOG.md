@@ -6,6 +6,12 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **`go install` alone is enough.** `imux` now carries its engine: installed with
+  `go install …/cmd/imux@latest` and nothing else, it runs i-mux-core from itself
+  (`~/.imux/engine/imux-core`). Releases and the installers still ship `imux-core` beside it.
+
 ## [0.69.1] - 2026-11-22
 
 ### Changed
