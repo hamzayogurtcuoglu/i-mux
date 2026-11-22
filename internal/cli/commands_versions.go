@@ -74,7 +74,11 @@ func runVersions(e *Env, args []string) error {
 			}
 		}
 		if row == nil {
-			fmt.Fprintln(e.Stdout, i18n.T("versions.nothing", key))
+			msg := versions.Nothing(rows, key)
+			if msg == "" {
+				msg = i18n.T("versions.nothing", key)
+			}
+			fmt.Fprintln(e.Stdout, msg)
 			continue
 		}
 		fmt.Fprintln(e.Stdout, "\n$ "+row.Show)

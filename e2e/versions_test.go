@@ -11,8 +11,7 @@ import (
 )
 
 // TestVersions (T38.2): `imux versions` lists i-mux, its engine and the agents with
-// their versions and update commands; in the popup (Settings → Versions and
-// updates) a row's letter runs its update there, and the list is read again.
+// their versions and update commands; in the popup (Settings → Updates) a row's letter runs its update there, and the list is read again.
 func TestVersions(t *testing.T) {
 	h := newH(t, "")
 	out := h.mustImux("versions")
@@ -23,17 +22,17 @@ func TestVersions(t *testing.T) {
 		}
 	}
 
-	// c runs Claude's updater; a letter with nothing to run says so; Enter
-	// alone closes.
+	// c runs Claude's updater; the engine's letter says it comes with i-mux
+	// and no row's letter says so (T98.3); Enter alone closes.
 	cmd := exec.Command(h.Bin, "versions", "--popup")
 	cmd.Dir = h.Homes.Project
-	cmd.Stdin = strings.NewReader("c\nz\n\n")
+	cmd.Stdin = strings.NewReader("c\nt\nz\n\n")
 	b, err := cmd.CombinedOutput()
 	got := string(b)
 	if err != nil {
 		t.Fatalf("versions --popup: %v\n%s", err, got)
 	}
-	for _, want := range []string{"$ claude update", "claude is up to date", "Done.", `Nothing to run for "z".`} {
+	for _, want := range []string{"$ claude update", "claude is up to date", "Done.", "i-mux-core comes with i-mux: updating i-mux updates it.", `No row has the letter "z".`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("popup lacks %q:\n%s", want, got)
 		}

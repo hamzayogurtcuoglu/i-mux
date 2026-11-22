@@ -119,23 +119,39 @@ func TestFormat(t *testing.T) {
 	rows := []Row{
 		{Key: "u", Name: "i-mux", Version: "0.33.0", Note: "the newest"},
 		{Key: "t", Name: "tmux", Version: "3.2a", Status: Old, Note: "works; 3.4+: the agent bar takes clicks\napt has no newer tmux here"},
-		{Key: "c", Name: "Claude Code", Version: "2.1.319", Show: "claude update"},
+		{Key: "c", Name: "Claude Code", Version: "2.1.319", Show: "claude update", Fix: []string{"claude", "update"}},
 		{Key: "x", Name: "Codex CLI", Status: Missing, Note: "not installed", Show: "npm i -g @openai/codex", Fix: []string{"sh", "-c", "npm i -g @openai/codex"}},
 		{Key: "e", Name: "OpenCode", Status: Missing, Note: "not installed\nOpenCode installs with curl, which is not installed here.", Show: "curl -fsSL https://opencode.ai/v2/install | bash"},
-		{Key: "q", Name: "Odd", Status: Unknown, Show: "odd update"},
+		{Key: "q", Name: "Odd", Status: Unknown, Show: "odd update", Fix: []string{"odd", "update"}},
 	}
 	got := Format(rows)
 	t.Logf("\n%s", got)
 	for _, want := range []string{
-		"  u  i-mux        0.33.0   ✓ the newest\n",
-		"  t  tmux         3.2a     ⚠ works; 3.4+: the agent bar takes clicks\n                           apt has no newer tmux here\n",
+		// A row with nothing to run shows no letter (T98.3).
+		"     i-mux        0.33.0   ✓ the newest\n",
+		"     tmux         3.2a     ⚠ works; 3.4+: the agent bar takes clicks\n                           apt has no newer tmux here\n",
 		"  c  Claude Code  2.1.319  update: claude update\n",
 		"  x  Codex CLI    –        ✗ not installed · install: npm i -g @openai/codex\n",
-		"  e  OpenCode     –        ✗ not installed\n                           OpenCode installs with curl, which is not installed here.\n                           install: curl -fsSL https://opencode.ai/v2/install | bash\n",
+		"     OpenCode     –        ✗ not installed\n                           OpenCode installs with curl, which is not installed here.\n                           install: curl -fsSL https://opencode.ai/v2/install | bash\n",
 		"  q  Odd          –        update: odd update\n",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("lacks %q", want)
+		}
+	}
+}
+
+// TestNothing (T98.3): a letter with nothing to run says why.
+func TestNothing(t *testing.T) {
+	i18n.SetLocale("en")
+	rows := []Row{{Key: "u", Name: "i-mux"}, {Key: "t", Name: "i-mux-core", Tmux: true}}
+	for key, want := range map[string]string{
+		"u": "i-mux is up to date: nothing to do.",
+		"t": "i-mux-core comes with i-mux: updating i-mux updates it.",
+		"z": "",
+	} {
+		if got := Nothing(rows, key); got != want {
+			t.Errorf("%s: %q, want %q", key, got, want)
 		}
 	}
 }

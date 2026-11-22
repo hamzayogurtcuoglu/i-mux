@@ -205,6 +205,21 @@ func agentUpdate(a agent.Info, path, version string) ([]string, string) {
 // pad fills s with spaces to w columns (names and versions are ASCII).
 func pad(s string, w int) string { return s + strings.Repeat(" ", max(w-len([]rune(s)), 0)) }
 
+// Nothing says why a row has nothing to run when its letter is typed
+// (T98.3): up to date, or updated with i-mux; "" for a letter no row has.
+func Nothing(rows []Row, key string) string {
+	for _, r := range rows {
+		if r.Key != key {
+			continue
+		}
+		if r.Tmux {
+			return i18n.T("versions.with_imux", r.Name)
+		}
+		return i18n.T("versions.up_to_date", r.Name)
+	}
+	return ""
+}
+
 // shellText is argv as one would type it.
 func shellText(argv []string) string { return strings.Join(argv, " ") }
 
@@ -259,7 +274,12 @@ func Format(rows []Row) string {
 		if len(lines) == 0 {
 			lines = []string{mark}
 		}
-		b.WriteString("  " + r.Key + "  " + pad(r.Name, nameW) + "  " + pad(ver, verW) + "  " + lines[0] + "\n")
+		// Only a row with a command to run shows its letter (T98.3).
+		key := r.Key
+		if r.Fix == nil {
+			key = strings.Repeat(" ", len([]rune(r.Key)))
+		}
+		b.WriteString("  " + key + "  " + pad(r.Name, nameW) + "  " + pad(ver, verW) + "  " + lines[0] + "\n")
 		for _, l := range lines[1:] {
 			b.WriteString(indent + l + "\n")
 		}

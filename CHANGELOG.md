@@ -6,6 +6,12 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Updates no longer offers letters that do nothing.** A row with nothing to run (i-mux when it
+  is the newest, i-mux-core, which comes with i-mux) shows no letter, and typing one says why
+  instead of "Nothing to run".
+
 ## [0.71.0] - 2026-11-22
 
 ### Changed
