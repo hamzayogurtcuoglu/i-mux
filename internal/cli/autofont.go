@@ -16,7 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 )
 
-// The first start's Nerd Font step (D89): the installers put the font in
+// The first start's Nerd Font step (D90): the installers put the font in
 // place; for the ways that run none of them (go install, Homebrew, a copied
 // binary, an update) the first interactive imux does it once.
 

@@ -9,7 +9,7 @@
 # %LOCALAPPDATA%\Programs\i-mux as one step (rolling back if either fails),
 # puts that folder on your user PATH, and installs the Nerd Font the sidebar's
 # icons need (imux font install: for your user only, with Windows Terminal, VS
-# Code and the console window set to it; D89). With -FromSource (or when no release exists yet and a
+# Code and the console window set to it; D90). With -FromSource (or when no release exists yet and a
 # checkout sits next to this script), both binaries are built from source with
 # Go instead.
 #
@@ -75,7 +75,7 @@ function Install-Imux {
 
     $onPath = Add-ToPath $dir (-not $NoModifyPath.IsPresent)
 
-    # The Nerd Font comes with i-mux (D89): no question.
+    # The Nerd Font comes with i-mux (D90): no question.
     if ($offerFont) {
         & $exe font --check *> $null
         if ($LASTEXITCODE -ne 0) {

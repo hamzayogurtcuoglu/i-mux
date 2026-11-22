@@ -1016,7 +1016,7 @@ slow (about a second).
 
 User report (Windows 11, i-mux in a classic console window): the Nerd Font does not work, a
 popup closes when the mouse moves over it, changing the theme recolours only the side panels,
-and switching panes takes at least a second (D88).
+and switching panes takes at least a second (D89).
 
 - [x] **T94.1 The Nerd Font in the console window** · M
   - AC: on native Windows `imux font` lists "Windows Console" with the font of `HKCU\Console`
@@ -1045,7 +1045,7 @@ and switching panes takes at least a second (D88).
     program name for 250 ms on Windows (a process snapshot per frame stalled its loop); a
     Windows test checks the hooks, one the engine's reuse.
 - [x] **T94.5 The Nerd Font comes with the install** · S · deps: T94.1
-  - AC: D89: `install.sh` and `install.ps1` install the font with no question (`--no-font` /
+  - AC: D90: `install.sh` and `install.ps1` install the font with no question (`--no-font` /
     `-NoFont` / `IMUX_NO_FONT=1` skip it; a font in place is left alone); `setup.exe` runs
     `imux font install --yes` unless `/NOFONT`; the first interactive `imux` does it once when
     none of them did (not over SSH, with `icons = "emoji"` or `IMUX_NO_FONT=1`), recorded in

@@ -8,7 +8,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 )
 
-// D89: the first interactive start sets up the Nerd Font once, unless over
+// D90: the first interactive start sets up the Nerd Font once, unless over
 // SSH, with emoji icons or IMUX_NO_FONT=1; a failure is tried again a day
 // later.
 func TestAutoFontWanted(t *testing.T) {

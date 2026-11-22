@@ -32,7 +32,7 @@ func init() {
 func runFont(e *Env, args []string) error { return runFontCtx(context.Background(), e, args) }
 
 // runFontCtx is runFont within ctx (the first start's step gives it a
-// deadline, D89).
+// deadline, D90).
 func runFontCtx(ctx context.Context, e *Env, args []string) error {
 	fs := newFlags(e, "font")
 	yes := fs.Bool("yes", false, "install and set the terminals without asking")

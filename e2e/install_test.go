@@ -198,7 +198,7 @@ func installTools(t *testing.T) string {
 	return tools
 }
 
-// TestInstallScriptOffersFont (M43, D89): after the binary the installer
+// TestInstallScriptOffersFont (M43, D90): after the binary the installer
 // installs the Nerd Font the sidebar's icons need, with no question and no
 // terminal: `imux font install --yes`, with or without --yes; --no-font, or
 // a font already in place (`imux font --check`), skips it.

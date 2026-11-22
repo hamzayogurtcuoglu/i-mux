@@ -164,7 +164,7 @@ func defaultAction(e *Env, args []string) error {
 			fmt.Fprintln(e.Stderr, i18n.T("start.moved_from_tmux", n))
 		}
 	}
-	// The Nerd Font comes with i-mux (D89): the first start in a terminal
+	// The Nerd Font comes with i-mux (D90): the first start in a terminal
 	// puts it in place when no installer did.
 	if !*detach && os.Getenv("TMUX") == "" && isTerminal(os.Stdin) {
 		autoFont(e, cfg)

@@ -90,7 +90,7 @@ Section "Install"
   nsExec::ExecToLog `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -WindowStyle Hidden -Command "$$d = $$env:IMUX_INSTDIR; $$k = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $$true); if ($$null -ne $$k) { $$cur = [string]$$k.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames); $$parts = @($$cur -split ';' | Where-Object { $$_ }); if (-not ($$parts | Where-Object { $$_.TrimEnd('\') -ieq $$d.TrimEnd('\') })) { $$new = ($$parts + $$d) -join ';'; $$k.SetValue('Path', $$new, [Microsoft.Win32.RegistryValueKind]::ExpandString) }; $$k.Close() }"`
   SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=500
 
-  ; The Nerd Font comes with i-mux (D89): the sidebar's icons, for this user
+  ; The Nerd Font comes with i-mux (D90): the sidebar's icons, for this user
   ; alone, with Windows Terminal, VS Code and the console window set to it.
   ; /NOFONT skips it; a failure (no network) leaves it to imux's first start.
   ${GetParameters} $R0

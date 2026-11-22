@@ -15,7 +15,7 @@
 # against checksums.txt, installs imux and the i-mux-core engine (both or
 # neither), and puts the install directory on PATH in your shell profile; tmux
 # is not needed, i-mux runs on imux-core (D87). Then it installs the Nerd Font the
-# sidebar's icons need (D89) (imux font install: for your user only; on WSL in
+# sidebar's icons need (D90) (imux font install: for your user only; on WSL in
 # Windows, where the terminal runs, with Windows Terminal and VS Code set).
 set -eu
 
@@ -258,7 +258,7 @@ if have tmux && tmux -L imux has-session >/dev/null 2>&1; then
 fi
 
 # The sidebar's icons need a Nerd Font where the terminal draws text (D34);
-# it comes with i-mux, with no question (D89).
+# it comes with i-mux, with no question (D90).
 if [ "$FONT" -eq 1 ] && ! "$PREFIX/imux" font --check >/dev/null 2>&1; then
 	say ""
 	say "Installing JetBrainsMono Nerd Font (7 MB, for you only) for the sidebar's icons..."
