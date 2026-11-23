@@ -6,6 +6,13 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **i-mux can be updated from Settings as soon as a release is out.** Settings → Updates read
+  only the once-a-day check, so a release out since then showed i-mux as the newest, with no
+  letter to update it. It now asks GitHub when it opens, and keeps the letter when it cannot
+  ask.
+
 ## [0.71.3] - 2026-11-23
 
 ### Fixed

@@ -106,7 +106,12 @@ func TestAgentAndImuxRows(t *testing.T) {
 	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0", Latest: "0.34.0"}); r.Status != Old || r.Note != "0.34.0 is out" || r.Show != "imux update" || r.Fix[1] != "update" {
 		t.Errorf("newer out %+v", r)
 	}
-	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0", Latest: "0.33.0"}); r.Status != OK || r.Fix != nil || r.Note != "the newest" {
+	// Only a live answer (D98) makes it the newest, without a letter; the
+	// daily check's may be hours old, and imux update asks again itself.
+	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0", Latest: "0.33.0"}); r.Fix == nil || r.Note != "" {
+		t.Errorf("daily check only: %+v", r)
+	}
+	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0", Latest: "0.33.0", Live: true}); r.Status != OK || r.Fix != nil || r.Note != "the newest" {
 		t.Errorf("newest %+v", r)
 	}
 	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0"}); r.Fix == nil || r.Note != "" || r.Version != "0.33.0" {

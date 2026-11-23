@@ -46,11 +46,14 @@ type Row struct {
 
 // Env is what Collect looks at; tests replace every part.
 type Env struct {
-	Cfg      *config.Config
-	Self     string // the imux binary
-	Current  string // this i-mux's version
-	Latest   string // the newest release seen ("" when unknown)
-	Root     bool   // running as root: no sudo
+	Cfg     *config.Config
+	Self    string // the imux binary
+	Current string // this i-mux's version
+	Latest  string // the newest release seen ("" when unknown)
+	// Live says Latest was just asked of GitHub (D98), not only the daily
+	// check's: only then is the i-mux row "the newest", without a letter.
+	Live     bool
+	Root     bool // running as root: no sudo
 	LookPath func(string) (string, error)
 	// Output runs a short command and returns its stdout ("" on failure).
 	Output  func(ctx context.Context, argv ...string) string
@@ -80,7 +83,7 @@ func imuxRow(e Env) Row {
 	switch {
 	case update.Newer(e.Latest, e.Current):
 		r.Status, r.Note = Old, i18n.T("versions.imux_new", strings.TrimPrefix(e.Latest, "v"))
-	case e.Latest != "":
+	case e.Latest != "" && e.Live:
 		r.Note, r.Fix, r.Show = i18n.T("versions.newest"), nil, ""
 	}
 	return r

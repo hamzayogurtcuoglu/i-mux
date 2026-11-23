@@ -16,6 +16,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/state"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/update"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/versions"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/workspace"
@@ -114,13 +115,36 @@ func versionsEnv(ctx context.Context, cfg *config.Config, self string) versions.
 	if f := strings.Fields(commandOutput(ctx, self, "version")); len(f) >= 2 {
 		cur = f[1]
 	}
+	latest, live := st.Latest, false
+	if l, ok := liveLatest(ctx, cfg); ok {
+		latest, live = l, true
+	}
 	return versions.Env{
-		Cfg: cfg, Self: self, Current: cur, Latest: st.Latest, Root: os.Geteuid() == 0,
+		Cfg: cfg, Self: self, Current: cur, Latest: latest, Live: live, Root: os.Geteuid() == 0,
 		LookPath: exec.LookPath,
 		Output:   commandOutput,
 		Resolve:  func(id session.AgentID) agent.Resolved { return agent.Resolve(cfg, id, st) },
 		Probe:    func(r agent.Resolved) string { return agent.ProbeVersion(r.Path, r.PathEnv) },
 	}
+}
+
+// latestRelease asks GitHub for the latest release; tests replace it.
+var latestRelease = update.Latest
+
+// liveLatest asks for the latest release now (D98), with update_check on,
+// and remembers it as the daily check does; ok is false when it could not.
+func liveLatest(ctx context.Context, cfg *config.Config) (string, bool) {
+	if !cfg.UpdateCheck {
+		return "", false
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	l, err := latestRelease(ctx)
+	if err != nil || l == "" {
+		return "", false
+	}
+	remember(l)
+	return l, true
 }
 
 // commandOutput runs a short command (5 s at most) and returns its stdout.
