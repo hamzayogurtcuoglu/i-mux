@@ -79,6 +79,8 @@ build_one() {
 		LDFLAGS="-s -w -X $PKG/internal/version.Version=$VERSION -X $PKG/internal/version.Commit=$COMMIT -X $PKG/internal/version.Date=$DATE"
 		(cd "$ROOT" && CGO_ENABLED=0 GOOS=windows GOARCH="$a" go build -trimpath -ldflags "$LDFLAGS" -o "$src/imux.exe" ./cmd/imux)
 		(cd "$ROOT" && CGO_ENABLED=0 GOOS=windows GOARCH="$a" go build -trimpath -ldflags "-s -w" -o "$src/imux-core.exe" ./cmd/imux-core)
+		# Signed before they go in (D100); nothing happens with signing off.
+		"$ROOT/scripts/sign-windows.sh" "$src/imux.exe" "$src/imux-core.exe"
 	fi
 	out="$OUT_DIR/imux_${VERSION}_windows_${a}_setup.exe"
 	# The Nerd Font beside imux (D94), when scripts/fetch-font.sh put it in
@@ -87,14 +89,20 @@ build_one() {
 	if [ -f "$ROOT/build/fonts/OFL.txt" ]; then
 		font_def="-DFONT_DIR=$ROOT/build/fonts"
 	fi
-	# shellcheck disable=SC2086 # font_def is one word or none
-	makensis -V2 $font_def \
+	# Signing on (D100): NSIS signs the uninstaller it writes.
+	sign_def=""
+	if [ -n "${IMUX_SIGN_STORETYPE:-}" ]; then
+		sign_def="-DSIGN"
+	fi
+	# shellcheck disable=SC2086 # font_def and sign_def are one word or none
+	makensis -V2 $font_def $sign_def \
 		"-DVERSION=$VERSION" \
 		"-DARCH=$a" \
 		"-DBIN_DIR=$src" \
 		"-DROOT_DIR=$ROOT" \
 		"-DOUT_FILE=$out" \
 		"$ROOT/scripts/installer.nsi"
+	"$ROOT/scripts/sign-windows.sh" "$out"
 	rm -rf "$tmp"
 	trap - EXIT INT TERM
 	printf 'Built %s\n' "$out"

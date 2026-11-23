@@ -1016,7 +1016,7 @@ slow (about a second).
 
 User report: a company Windows machine would not install i-mux, an unsigned program (D100).
 
-- [ ] **T105.1 Windows: Authenticode signing in the release** · M
+- [x] **T105.1 Windows: Authenticode signing in the release** · M
   - AC: D100: `scripts/sign-windows.sh FILE...` signs `.exe` files with jsign 7.6 (fetched once,
     checked against its SHA-256) from `IMUX_SIGN_*`, timestamped unless `IMUX_SIGN_TSA=none`, and
     does nothing without `IMUX_SIGN_STORETYPE`; GoReleaser's build hooks, `build-installer.sh`
@@ -1024,11 +1024,19 @@ User report: a company Windows machine would not install i-mux, an unsigned prog
     the repository's variables and secret. CI's snapshot signs with a self-signed certificate
     made on the spot, and its Windows job checks that `setup.exe`, `imux.exe`, `imux-core.exe`
     and `uninstall.exe` carry it. shellcheck clean.
-- [ ] **T105.2 macOS: signing and notarization in the release** · S
+  - Status: done; jsign itself runs only in CI (not on the owner's machine), where the
+    snapshot's self-signed run checks the whole path. The uninstaller is signed with `--any`:
+    NSIS hands `!uninstfinalize` a temporary file.
+- [x] **T105.2 macOS: signing and notarization in the release** · S
   - AC: D100: `.goreleaser.yaml`'s `notarize.macos` signs both darwin binaries with
     `MACOS_SIGN_P12` and notarizes them with the App Store Connect key, only when
     `MACOS_SIGN_P12` is set; `goreleaser check` passes; a local snapshot with a self-signed
     certificate signs them (`codesign -dv` shows it).
+  - Status: done, but a self-signed certificate cannot test it: quill wants Apple's chain
+    ("unable to find remaining chain certificates"). Checked here: `goreleaser check`, and a
+    snapshot with `MACOS_SIGN_P12` empty skips the step (GitHub sets an unset secret as an
+    empty variable, so `enabled` tests for a non-empty value, not `isEnvSet`). The first
+    signed release (T105.3) is its test.
 - [ ] **T105.3 (USER) Certificates and secrets** · S · deps: T105.1, T105.2
   - AC: the owner gets a Windows code-signing certificate or service (SignPath Foundation,
     Certum, Azure Trusted Signing …) and an Apple Developer ID, and sets the variables and

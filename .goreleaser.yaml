@@ -20,6 +20,12 @@ builds:
       - -X github.com/hamzayogurtcuoglu/i-mux/internal/version.Commit={{ .ShortCommit }}
       - -X github.com/hamzayogurtcuoglu/i-mux/internal/version.Date={{ .Date }}
     mod_timestamp: "{{ .CommitTimestamp }}"
+    # Windows binaries are signed before they are archived and checksummed
+    # (D100); the script leaves other files alone and does nothing while
+    # signing is off.
+    hooks:
+      post:
+        - cmd: ./scripts/sign-windows.sh "{{ .Path }}"
   # The i-mux-core engine (D83), from go.mod's pin of its module; it reports
   # that version itself, so it takes no -X.
   - id: imux-core
@@ -34,6 +40,12 @@ builds:
     ldflags:
       - -s -w
     mod_timestamp: "{{ .CommitTimestamp }}"
+    # Windows binaries are signed before they are archived and checksummed
+    # (D100); the script leaves other files alone and does nothing while
+    # signing is off.
+    hooks:
+      post:
+        - cmd: ./scripts/sign-windows.sh "{{ .Path }}"
 
 archives:
   - id: imux
@@ -51,6 +63,22 @@ archives:
       - src: build/fonts/*
         dst: fonts
         strip_parent: true
+
+# macOS: both binaries signed with a Developer ID and notarized (D100), only
+# when the MACOS_SIGN_P12 secret is set; docs/SIGNING.md.
+notarize:
+  macos:
+    - enabled: '{{ ne (envOrDefault "MACOS_SIGN_P12" "") "" }}'
+      ids: [imux, imux-core]
+      sign:
+        certificate: '{{ envOrDefault "MACOS_SIGN_P12" "" }}'
+        password: '{{ envOrDefault "MACOS_SIGN_PASSWORD" "" }}'
+      notarize:
+        issuer_id: '{{ envOrDefault "MACOS_NOTARY_ISSUER_ID" "" }}'
+        key_id: '{{ envOrDefault "MACOS_NOTARY_KEY_ID" "" }}'
+        key: '{{ envOrDefault "MACOS_NOTARY_KEY" "" }}'
+        wait: true
+        timeout: 20m
 
 checksum:
   name_template: checksums.txt

@@ -12,6 +12,19 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Code signing (D100, docs/SIGNING.md): off until these are set in the
+    # repository's settings; then Windows and macOS programs are signed.
+    env:
+      IMUX_SIGN_STORETYPE: ${{ vars.IMUX_SIGN_STORETYPE }}
+      IMUX_SIGN_KEYSTORE: ${{ vars.IMUX_SIGN_KEYSTORE }}
+      IMUX_SIGN_ALIAS: ${{ vars.IMUX_SIGN_ALIAS }}
+      IMUX_SIGN_TSA: ${{ vars.IMUX_SIGN_TSA }}
+      IMUX_SIGN_STOREPASS: ${{ secrets.IMUX_SIGN_STOREPASS }}
+      MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+      MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+      MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+      MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+      MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -33,6 +46,8 @@ jobs:
           "$RUNNER_TEMP/bin/goreleaser" --version
       - name: The Nerd Font that ships with i-mux (D94)
         run: ./scripts/fetch-font.sh build
+      - name: jsign for Windows signing (D100; nothing while signing is off)
+        run: ./scripts/sign-windows.sh --fetch
       - name: Cross-build Windows NSIS installers
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q nsis

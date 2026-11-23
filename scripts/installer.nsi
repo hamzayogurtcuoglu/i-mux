@@ -26,6 +26,11 @@ RequestExecutionLevel user
 
 Name "i-mux ${VERSION}"
 OutFile "${OUT_FILE}"
+!ifdef SIGN
+  ; The uninstaller this installer writes is signed as it is built (D100,
+  ; NSIS 3.08+); build-installer.sh signs the installer itself afterwards.
+  !uninstfinalize 'sh "${ROOT_DIR}/scripts/sign-windows.sh" --any "%1"'
+!endif
 InstallDir "$LOCALAPPDATA\Programs\i-mux"
 InstallDirRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\i-mux" "InstallLocation"
 BrandingText "i-mux ${VERSION}"
