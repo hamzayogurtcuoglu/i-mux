@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A theme stays on GitHub Copilot's pane.** Copilot's GitHub theme sets the terminal's
+  background to GitHub's near-black, which covered i-mux's theme in its pane. While a theme colors
+  the panes, a program can no longer change its pane's background or text color, so every agent
+  sits on the theme. OpenCode paints with its own theme: `/theme system` in OpenCode takes i-mux's
+  colors.
+- **Close agent… asks and stays.** The confirmation a menu item opens (Close agent…, Close
+  project…) vanished as soon as it appeared, closed by the release of the click that opened it.
+  A menu is now chosen by the press only.
+
 ## [0.71.2] - 2026-11-23
 
 ### Fixed

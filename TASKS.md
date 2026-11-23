@@ -1017,14 +1017,19 @@ slow (about a second).
 User report: Copilot's pane stays black under a theme, and closing an agent shows a popup that
 vanishes when clicked (D96).
 
-- [ ] **T101.1 Programs cannot paint over the theme** · S
+- [x] **T101.1 Programs cannot paint over the theme** · S
   - AC: D96: with a theme on its own colors, `ThemeOptions` ends with `set-option -gq
     allow-default-colours off` on i-mux-core (unset quietly with the i-mux and terminal themes;
     nothing on tmux); the generated config writes it; the pin moves to the i-mux-core with E19.
     Unit tests of the commands and their order.
-- [ ] **T101.2 A confirmation from a menu stays open** · XS
+- [x] **T101.2 A confirmation from a menu stays open** · XS
   - AC: D96: the i-mux-core pin with C12.1; checked by hand here: Close agent… from an agent's
     menu, by mouse, opens the confirmation and its Yes closes the agent.
+  - Status: done. Pin at i-mux-core dc10d81 (its E19, C12.1, C12.2). Checked here with a pty
+    client on a private engine server: a menu opened from a menu item by mouse stays open
+    (released at once or 0.6 s later) and its item runs; on the earlier engine and on tmux 3.8
+    it closed unchosen. Not yet seen in the user's own window: the running server keeps its
+    engine until i-mux restarts.
 
 ## M100: Versions that stay in step (added 2026-11-23)
 
