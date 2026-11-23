@@ -1012,6 +1012,16 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M104: Updates, simpler (added 2026-11-23)
+
+User request: the i-mux row should always have its letter, and i-mux-core needs no row of its
+own (D99).
+
+- [ ] **T104.1 i-mux always has its letter; no i-mux-core row** · XS
+  - AC: D99: `versions.Collect` lists i-mux, then the agents; the i-mux row's `u` runs `imux
+    update` in every case, its note unchanged; the engine row, its `t` and its messages are
+    gone. Unit and e2e tests updated.
+
 ## M103: Updates sees a release out today (added 2026-11-23)
 
 User report: Settings → Updates shows no letter on the i-mux row while a newer i-mux is out
