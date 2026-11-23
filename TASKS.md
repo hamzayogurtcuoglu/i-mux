@@ -1012,6 +1012,21 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M101: Windows: adding a machine (added 2026-11-23)
+
+User report (Windows 11, a WSL machine at `user@172.x.x.x`): a machine cannot be added; every
+`ssh` i-mux starts fails with `getsockname failed: Not a socket`, because Windows' OpenSSH has
+no `ControlMaster` (D96).
+
+- [ ] **T101.1 Machines on Windows without a master connection** · S
+  - AC: D96: on Windows `machine.Options` has no `ControlMaster`, `ControlPath` or
+    `ControlPersist`, and Reconnect and Remove run no `ssh -O exit` (`ssh_share_windows.go`;
+    macOS and Linux keep them, their tests unchanged); when `imux machine add` or `reconnect`
+    signs in but the background check answers `auth`, the message says the machine needs SSH
+    key sign-in on Windows (en, tr). Tests: a Windows test that the options hold none of the
+    master's and every other one; the POSIX test keeps the master's options; checked by hand
+    from Windows 11 against a WSL machine.
+
 ## M100: Versions that stay in step (added 2026-11-23)
 
 User report: 0.71.x is out, yet the i-mux installed on the WSL machine was a 0.65.0 development
