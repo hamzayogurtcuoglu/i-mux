@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.71.4] - 2026-11-23
+
 ### Fixed
 
 - **i-mux can be updated from Settings as soon as a release is out.** Settings → Updates read
