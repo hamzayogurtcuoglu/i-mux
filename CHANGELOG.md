@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A development build is offered the newer releases.** An i-mux built from a checkout
+  (`v0.65.0-3-ga514af6`) said it was the latest even when 0.71.1 was out, and showed no ⬆. It now
+  counts as its tag plus some commits: Settings → Updates, the rail and `imux update` offer every
+  release above that tag, and `imux update` replaces the build with it.
+- **No install or release from an old checkout.** `make install-local` fetches first and stops
+  when the checkout is behind `origin` (`git pull` first, or `STALE_OK=1`), and the release steps
+  start with a fetch, so a version is never built or tagged from a tree that missed a release
+  made on another machine.
+
 ## [0.71.1] - 2026-11-22
 
 ### Fixed

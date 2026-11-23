@@ -90,11 +90,37 @@ func parse(v string) (n [3]int, ok bool) {
 	return n, true
 }
 
-// Newer reports whether release a is newer than b; never for versions that
-// are not releases.
+// parseBuild reads a release like parse, and also a development build in
+// `git describe` form ("v0.65.0-3-ga514af6", "v0.65.0-dirty"), which
+// `make install-local` builds: it gives the build's tag, which the build is at
+// or past (D95).
+func parseBuild(v string) (n [3]int, ok bool) {
+	v = strings.TrimSuffix(strings.TrimSpace(v), "-dirty")
+	if f := strings.Split(v, "-"); len(f) == 3 && describeTail(f[1], f[2]) {
+		v = f[0]
+	}
+	return parse(v)
+}
+
+// describeTail reports whether n and g are what git describe adds after a
+// tag ("-3-ga514af6"): a count of commits and "g" with an abbreviated commit.
+func describeTail(n, g string) bool {
+	if c, err := strconv.Atoi(n); err != nil || c < 0 || strings.HasPrefix(n, "+") {
+		return false
+	}
+	if len(g) < 5 || g[0] != 'g' {
+		return false
+	}
+	return strings.Trim(g[1:], "0123456789abcdef") == ""
+}
+
+// Newer reports whether release a is newer than the running build b: a
+// release, or a development build in git describe form, to which every
+// release above its tag is newer (D95). Never for an a that is not a release,
+// nor for a b that is neither ("dev", a bare commit).
 func Newer(a, b string) bool {
 	x, ok1 := parse(a)
-	y, ok2 := parse(b)
+	y, ok2 := parseBuild(b)
 	if !ok1 || !ok2 {
 		return false
 	}

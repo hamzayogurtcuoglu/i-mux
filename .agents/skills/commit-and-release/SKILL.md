@@ -46,11 +46,22 @@ fails**, and tell the user which checks could not run on this machine.
 
 ## Release steps
 
+0. **Start from the newest `main` (D95).** Releases are cut from more than one machine; a
+   checkout that missed one would tag an old tree or reuse a version number:
+   ```sh
+   git fetch origin --tags
+   git status -sb                           # must not say "behind"
+   git merge-base --is-ancestor origin/main HEAD && echo ok   # HEAD contains origin/main
+   ```
+   If HEAD is behind, `git pull --ff-only` (rebase local commits on it) and run `make ci` again.
+
 1. **Choose the next version (`v0.Y.Z`):**
-   - Check the latest tag:
+   - Check the latest tag, on origin too (the fetch above brought its tags):
      ```sh
      git tag --sort=-version:refname | head -n 5
+     git ls-remote --tags origin | sed 's|.*refs/tags/||; s|\^{}||' | sort -uV | tail -n 3
      ```
+   - The new tag must be above every one of them.
    - Bump minor (`v0.Y.0`) for `feat:` releases; bump patch (`v0.Y.Z`) for `fix:` or `ci:` releases.
 
 2. **Update `CHANGELOG.md` (and `TASKS.md` / `README*.md` if applicable):**
@@ -72,3 +83,6 @@ fails**, and tell the user which checks could not run on this machine.
    ```sh
    make install-local
    ```
+   It refuses to install from a checkout behind its upstream (`scripts/fresh-check.sh`). On a
+   machine that only uses i-mux, `imux update` installs the release itself: a development build
+   (`v0.65.0-3-g…`) is offered every release above its tag.

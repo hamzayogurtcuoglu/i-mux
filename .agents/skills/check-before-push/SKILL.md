@@ -29,6 +29,7 @@ It runs these in order and stops at the first failure (each is a target of its o
 
 | Target | What it catches |
 |---|---|
+| `make fresh-check` | a checkout behind its upstream (it fetches first; offline it says so and goes on): pull before testing what you would push or release (D95) |
 | `make lint-all` | golangci-lint (e2e tests too) and for the Windows build; `go vet` for the Linux, e2e, macOS and Windows builds |
 | `make generate-check` | a stale `docs/CONFIG.md` (it regenerates it: review and commit it) |
 | `make check-fixtures` | real paths, secrets or emails in `testdata/` |

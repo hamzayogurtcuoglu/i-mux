@@ -17,7 +17,7 @@ PKGS      ?= ./...
 export CGO_ENABLED = 0
 
 .PHONY: all build install test race e2e e2e-core-argv lint fmt bench fuzz-short check-fixtures size clean generate \
-	ci lint-all generate-check shellcheck test-macos
+	ci lint-all generate-check shellcheck test-macos fresh-check
 
 all: lint test build
 
@@ -28,7 +28,10 @@ build: ## Build bin/imux and bin/imux-core (the engine, from go.mod's pin; D83)
 # A new file, then mv: overwriting a running imux in place makes macOS kill
 # every imux process (Code Signature Invalid), the sidebars included.
 INSTALL_DIR ?= $(HOME)/.local/bin
-install-local: build ## Install bin/imux and bin/imux-core into ~/.local/bin the safe way (new files, then mv)
+fresh-check: ## Fail when HEAD is behind its upstream (fetched first; STALE_OK=1 skips; D95)
+	@sh scripts/fresh-check.sh
+
+install-local: fresh-check build ## Install bin/imux and bin/imux-core into ~/.local/bin the safe way (new files, then mv)
 	mkdir -p "$(INSTALL_DIR)"
 	cp bin/$(CORE) "$(INSTALL_DIR)/.$(CORE).new.$$$$" && mv -f "$(INSTALL_DIR)/.$(CORE).new.$$$$" "$(INSTALL_DIR)/$(CORE)"
 	cp bin/$(BINARY) "$(INSTALL_DIR)/.$(BINARY).new.$$$$" && mv -f "$(INSTALL_DIR)/.$(BINARY).new.$$$$" "$(INSTALL_DIR)/$(BINARY)"
@@ -47,7 +50,7 @@ race: ## Unit tests with the race detector (needs cgo)
 # CI runs the unit tests on Linux and macOS; a test that passes here can
 # fail there. `make ci` runs what CI runs, as close as this machine can: run
 # it before a push (.agents/skills/check-before-push).
-ci: lint-all generate-check check-fixtures shellcheck race test-macos size e2e ## Every check CI runs, here: run it before a push
+ci: fresh-check lint-all generate-check check-fixtures shellcheck race test-macos size e2e ## Every check CI runs, here: run it before a push
 
 # The Windows build (D85), its e2e tests included (T90.9).
 WINDOWS_LINT ?= ./...

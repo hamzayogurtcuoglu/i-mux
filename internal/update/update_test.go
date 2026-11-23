@@ -32,6 +32,20 @@ func TestNewer(t *testing.T) {
 		{"v0.10.0", "0.9.9", true},
 		{"0.27.0", "dev", false},
 		{"x", "0.1.0", false},
+		// A development build from make install-local (D95).
+		{"0.71.1", "v0.65.0-3-ga514af6", true},
+		{"0.71.1", "v0.65.0-3-ga514af6-dirty", true},
+		{"0.65.1", "v0.65.0-40-ga514af6", true},
+		{"0.65.0", "v0.65.0-3-ga514af6", false},
+		{"0.64.0", "v0.65.0-3-ga514af6", false},
+		{"0.71.1", "v0.71.1-dirty", false},
+		{"0.71.2", "v0.71.1-dirty", true},
+		{"0.71.1", "v0.65.0-3-gzzzzzz", false},
+		{"0.71.1", "v0.65.0-x-ga514af6", false},
+		{"0.71.1", "v0.65.0-rc1", false},
+		{"0.71.1", "a514af6", false},
+		{"0.71.1", "dev-dirty", false},
+		{"v0.65.0-3-ga514af6", "0.60.0", false},
 	} {
 		if got := Newer(c.a, c.b); got != c.want {
 			t.Errorf("Newer(%s, %s) = %v", c.a, c.b, got)
