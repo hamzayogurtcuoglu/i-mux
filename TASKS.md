@@ -1012,6 +1012,17 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M103: Updates sees a release out today (added 2026-11-23)
+
+User report: Settings → Updates shows no letter on the i-mux row while a newer i-mux is out
+(D98).
+
+- [ ] **T103.1 Updates asks GitHub when it opens** · XS
+  - AC: D98: `imux versions` (and its popup) asks `update.Latest` with `update_check` on and
+    remembers the answer; the i-mux row drops its letter only when that live answer says it is
+    the newest; without an answer it keeps the letter. Unit tests of the row with and without a
+    live answer, and of the environment with the check off and failing (no network in tests).
+
 ## M102: Windows: adding a machine (added 2026-11-23)
 
 User report (Windows 11, a WSL machine at `user@172.x.x.x`): a machine cannot be added; every
