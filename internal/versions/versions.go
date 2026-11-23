@@ -16,7 +16,6 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/update"
 )
 
@@ -40,7 +39,6 @@ type Row struct {
 	Note    string          // why it is old, or what to do (lines)
 	Fix     []string        // the command that updates or installs it; nil: none to run
 	Show    string          // Fix as the user would type it
-	Tmux    bool            // the tmux row (its update needs a restart of i-mux's server)
 	Agent   session.AgentID // an agent's row ("" for i-mux and tmux)
 }
 
@@ -61,9 +59,10 @@ type Env struct {
 	Probe   func(r agent.Resolved) string // the agent's version ("" unknown)
 }
 
-// Collect reads every row: i-mux, its engine, then the agents in config order.
+// Collect reads every row: i-mux, then the agents in config order. The
+// engine, i-mux-core, has no row: it ships and updates with i-mux (D99).
 func Collect(ctx context.Context, e Env) []Row {
-	rows := []Row{imuxRow(e), engineRow(ctx, e)}
+	rows := []Row{imuxRow(e)}
 	agents := agent.Ordered(e.Cfg)
 	out := make([]Row, len(agents))
 	var wg sync.WaitGroup
@@ -78,32 +77,16 @@ func Collect(ctx context.Context, e Env) []Row {
 	return append(rows, out...)
 }
 
+// imuxRow is i-mux's row: its letter always runs imux update (D99), which
+// asks GitHub itself and says when this i-mux is the newest.
 func imuxRow(e Env) Row {
 	r := Row{Key: "u", Name: "i-mux", Version: strings.TrimPrefix(e.Current, "v"), Fix: []string{e.Self, "update"}, Show: "imux update"}
 	switch {
 	case update.Newer(e.Latest, e.Current):
 		r.Status, r.Note = Old, i18n.T("versions.imux_new", strings.TrimPrefix(e.Latest, "v"))
 	case e.Latest != "" && e.Live:
-		r.Note, r.Fix, r.Show = i18n.T("versions.newest"), nil, ""
+		r.Note = i18n.T("versions.newest")
 	}
-	return r
-}
-
-// engineRow is tmux's row where there is no tmux (Windows, D85): the engine, i-mux-core, which
-// comes and updates with i-mux, so no package manager is offered (§7.9).
-func engineRow(ctx context.Context, e Env) Row {
-	r := Row{Key: "t", Name: "i-mux-core", Tmux: true}
-	path := tmux.EngineBin()
-	if !filepath.IsAbs(path) {
-		r.Status, r.Note = Missing, i18n.T("versions.engine_missing")
-		return r
-	}
-	v, ok := tmux.ParseVersion(e.Output(ctx, path, "-V"))
-	if !ok || v.EngineVersion() == "" {
-		r.Status, r.Note = Unknown, i18n.T("versions.unknown")
-		return r
-	}
-	r.Version = v.EngineVersion()
 	return r
 }
 
@@ -209,14 +192,11 @@ func agentUpdate(a agent.Info, path, version string) ([]string, string) {
 func pad(s string, w int) string { return s + strings.Repeat(" ", max(w-len([]rune(s)), 0)) }
 
 // Nothing says why a row has nothing to run when its letter is typed
-// (T98.3): up to date, or updated with i-mux; "" for a letter no row has.
+// (T98.3): it is up to date; "" for a letter no row has.
 func Nothing(rows []Row, key string) string {
 	for _, r := range rows {
 		if r.Key != key {
 			continue
-		}
-		if r.Tmux {
-			return i18n.T("versions.with_imux", r.Name)
 		}
 		return i18n.T("versions.up_to_date", r.Name)
 	}

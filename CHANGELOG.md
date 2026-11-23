@@ -6,6 +6,12 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Updates: i-mux always has its letter.** In Settings → Updates, `u` runs `imux update`
+  whether or not a newer i-mux is known; it checks and says when this one is the newest. The
+  i-mux-core row is gone: the engine comes and updates with i-mux.
+
 ## [0.71.4] - 2026-11-23
 
 ### Fixed

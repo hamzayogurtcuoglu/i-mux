@@ -90,9 +90,6 @@ func runVersions(e *Env, args []string) error {
 			fmt.Fprintln(e.Stdout, "\n"+i18n.T("versions.failed", err.Error()))
 		} else {
 			fmt.Fprintln(e.Stdout, "\n"+i18n.T("versions.done"))
-			if row.Tmux {
-				fmt.Fprintln(e.Stdout, i18n.T("versions.tmux_restart"))
-			}
 			if row.Agent != "" && !agent.Resolve(cfg, row.Agent, nil).Installed {
 				a := agent.MustGet(row.Agent)
 				fmt.Fprintln(e.Stdout, i18n.T("install.not_on_path", a.Short, a.Bin))

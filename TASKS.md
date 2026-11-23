@@ -1017,10 +1017,11 @@ slow (about a second).
 User request: the i-mux row should always have its letter, and i-mux-core needs no row of its
 own (D99).
 
-- [ ] **T104.1 i-mux always has its letter; no i-mux-core row** · XS
+- [x] **T104.1 i-mux always has its letter; no i-mux-core row** · XS
   - AC: D99: `versions.Collect` lists i-mux, then the agents; the i-mux row's `u` runs `imux
     update` in every case, its note unchanged; the engine row, its `t` and its messages are
     gone. Unit and e2e tests updated.
+  - Status: done. `engineRow`, `Row.Tmux` and four messages removed (en, tr).
 
 ## M103: Updates sees a release out today (added 2026-11-23)
 

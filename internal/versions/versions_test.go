@@ -60,7 +60,7 @@ func TestAgentAndImuxRows(t *testing.T) {
 		"claude": "2.1.319", "copilot": "1.0.107", "codex": "brew:0.50.0", "opencode": "1.4.2",
 	})
 	rows := Collect(context.Background(), e)
-	if len(rows) != 2+len(agent.Ordered(e.Cfg)) || rows[0].Name != "i-mux" || rows[1].Name != "i-mux-core" {
+	if len(rows) != 1+len(agent.Ordered(e.Cfg)) || rows[0].Name != "i-mux" || rows[1].Name == "i-mux-core" {
 		t.Fatalf("rows %+v", rows)
 	}
 	for name, want := range map[string]string{
@@ -106,12 +106,12 @@ func TestAgentAndImuxRows(t *testing.T) {
 	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0", Latest: "0.34.0"}); r.Status != Old || r.Note != "0.34.0 is out" || r.Show != "imux update" || r.Fix[1] != "update" {
 		t.Errorf("newer out %+v", r)
 	}
-	// Only a live answer (D98) makes it the newest, without a letter; the
-	// daily check's may be hours old, and imux update asks again itself.
+	// Only a live answer (D98) makes it the newest; its letter stays in
+	// every case (D99): imux update asks again itself.
 	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0", Latest: "0.33.0"}); r.Fix == nil || r.Note != "" {
 		t.Errorf("daily check only: %+v", r)
 	}
-	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0", Latest: "0.33.0", Live: true}); r.Status != OK || r.Fix != nil || r.Note != "the newest" {
+	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0", Latest: "0.33.0", Live: true}); r.Status != OK || r.Fix == nil || r.Show != "imux update" || r.Note != "the newest" {
 		t.Errorf("newest %+v", r)
 	}
 	if r := imuxRow(Env{Self: "/x/imux", Current: "v0.33.0"}); r.Fix == nil || r.Note != "" || r.Version != "0.33.0" {
@@ -149,10 +149,9 @@ func TestFormat(t *testing.T) {
 // TestNothing (T98.3): a letter with nothing to run says why.
 func TestNothing(t *testing.T) {
 	i18n.SetLocale("en")
-	rows := []Row{{Key: "u", Name: "i-mux"}, {Key: "t", Name: "i-mux-core", Tmux: true}}
+	rows := []Row{{Key: "c", Name: "Claude Code"}}
 	for key, want := range map[string]string{
-		"u": "i-mux is up to date: nothing to do.",
-		"t": "i-mux-core comes with i-mux: updating i-mux updates it.",
+		"c": "Claude Code is up to date: nothing to do.",
 		"z": "",
 	} {
 		if got := Nothing(rows, key); got != want {
