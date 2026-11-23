@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.71.3] - 2026-11-23
+
 ### Fixed
 
 - **A theme stays on GitHub Copilot's pane.** Copilot's GitHub theme sets the terminal's
