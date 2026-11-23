@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.71.5] - 2026-11-23
+
 ### Changed
 
 - **Updates: i-mux always has its letter.** In Settings → Updates, `u` runs `imux update`
