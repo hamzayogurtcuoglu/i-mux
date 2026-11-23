@@ -135,3 +135,35 @@ func TestTabBarColors(t *testing.T) {
 		t.Errorf("catppuccin's strip %q", got)
 	}
 }
+
+// TestThemeKeepsPanes (D96): a theme that colors the panes turns the
+// engine's OptDefaultColours off, quietly and last, so a program (GitHub
+// Copilot CLI's OSC 11) cannot paint its pane over it; a theme on the
+// terminal's colors and the i-mux theme unset it; tmux, which has no such
+// option, gets neither.
+func TestThemeKeepsPanes(t *testing.T) {
+	engine := Version{Major: 3, Minor: 8, Engine: "imux-core 1.0.0"}
+	find := func(cmds []Cmd) string {
+		for _, c := range cmds {
+			if len(c) >= 3 && c[2] == OptDefaultColours {
+				return strings.Join(c, " ")
+			}
+		}
+		return ""
+	}
+	nord := ThemeOptions(theme.Builtin("nord"), engine)
+	if got := find(nord); got != "set-option -gq "+OptDefaultColours+" off" {
+		t.Errorf("nord: %q", got)
+	}
+	if last := nord[len(nord)-1]; last[2] != OptDefaultColours {
+		t.Errorf("not last: %v", last)
+	}
+	for _, name := range []string{"terminal", theme.Default} {
+		if got := find(ThemeOptions(theme.Builtin(name), engine)); got != "set-option -gqu "+OptDefaultColours {
+			t.Errorf("%s: %q", name, got)
+		}
+	}
+	if got := find(ThemeOptions(theme.Builtin("nord"), Version{Major: 3, Minor: 8})); got != "" {
+		t.Errorf("tmux got %q", got)
+	}
+}

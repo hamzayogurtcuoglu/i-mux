@@ -300,11 +300,14 @@ func GenerateConf(in *ConfInput) string {
 	w("# messages, the copy mode, popups and menus.")
 	pal := theme.Resolve(cfg.Theme, in.Appearance)
 	for _, c := range ThemeOptions(pal, in.Version) {
-		if c[1] == "-gu" {
-			w("set -gu %s", c[2])
-			continue
+		switch c[1] {
+		case "-gu", "-gqu":
+			w("set %s %s", c[1], c[2])
+		case "-gq":
+			w("set -gq %s %s", c[2], Quote(c[3]))
+		default:
+			w("set -g  %s %s", c[2], Quote(c[3]))
 		}
-		w("set -g  %s %s", c[2], Quote(c[3]))
 	}
 	w("# The terminal's own background in the theme's panel while a client shows i-mux, its own")
 	w("# again when the client leaves (D77): with the focus-event strings tmux writes then.")

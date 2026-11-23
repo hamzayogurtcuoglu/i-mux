@@ -66,7 +66,7 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 		for _, o := range classicUnset(v) {
 			out = append(out, Cmd{"set-option", "-gu", o})
 		}
-		return out
+		return append(out, keepPanes(p, v)...)
 	}
 	// The whole window in the theme (D70): every pane (the agents' too) on
 	// its panel and text color with its 16 colors, as a terminal theme
@@ -98,7 +98,7 @@ func ThemeOptions(p theme.Palette, v Version) []Cmd {
 	style("menu-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Text.Tmux())
 	style("menu-selected-style", "bg="+p.SelectionBg.Tmux()+",fg="+p.Text.Tmux())
 	style("menu-border-style", "bg="+p.PanelBg.Tmux()+",fg="+p.Surface1.Tmux())
-	return out
+	return append(out, keepPanes(p, v)...)
 }
 
 // classicUnset are the styles the i-mux theme leaves to tmux.
@@ -115,6 +115,27 @@ func paneUnset(v Version) []string {
 	out = append(out, OptPaneColors)
 	return out
 }
+
+// keepPanes is the engine's OptDefaultColours for palette p (D96): off
+// while the theme colors the panes, so a program cannot paint its pane over
+// it (GitHub Copilot CLI sets the background to GitHub's dark with OSC 11);
+// unset otherwise. Last in ThemeOptions and quiet (-q): an older engine
+// server, without the option, fails on it, and a failing command stops the
+// ones after it. tmux has no such option.
+func keepPanes(p theme.Palette, v Version) []Cmd {
+	if v.Engine == "" {
+		return nil
+	}
+	if base, _, _ := theme.PaneBase(p); base != "" && !p.Classic {
+		return []Cmd{{"set-option", "-gq", OptDefaultColours, "off"}}
+	}
+	return []Cmd{{"set-option", "-gqu", OptDefaultColours}}
+}
+
+// OptDefaultColours is i-mux-core's own option (its E19, not tmux's): off,
+// a pane's program cannot set its default colors (OSC 10/11), so the theme's
+// window-style stays (D96).
+const OptDefaultColours = "allow-default-colours" //nolint:misspell // the engine's spelling
 
 // TermBgItem is the item of terminal-overrides that carries the terminal's
 // own background (D77).
