@@ -1012,6 +1012,20 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M101: The theme on Copilot's pane, confirmations that stay (added 2026-11-23)
+
+User report: Copilot's pane stays black under a theme, and closing an agent shows a popup that
+vanishes when clicked (D96).
+
+- [ ] **T101.1 Programs cannot paint over the theme** · S
+  - AC: D96: with a theme on its own colors, `ThemeOptions` ends with `set-option -gq
+    allow-default-colours off` on i-mux-core (unset quietly with the i-mux and terminal themes;
+    nothing on tmux); the generated config writes it; the pin moves to the i-mux-core with E19.
+    Unit tests of the commands and their order.
+- [ ] **T101.2 A confirmation from a menu stays open** · XS
+  - AC: D96: the i-mux-core pin with C12.1; checked by hand here: Close agent… from an agent's
+    menu, by mouse, opens the confirmation and its Yes closes the agent.
+
 ## M100: Versions that stay in step (added 2026-11-23)
 
 User report: 0.71.x is out, yet the i-mux installed on the WSL machine was a 0.65.0 development
