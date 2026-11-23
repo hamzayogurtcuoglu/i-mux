@@ -46,8 +46,18 @@ func TestShortHandoffChain(t *testing.T) {
 	if len(second) != 3 || !strings.HasPrefix(second[0], "[i-mux handoff · Codex CLI → Claude Code") || second[2] == lines[2] {
 		t.Fatalf("second message %q", second)
 	}
-	doc = h.readFile(second[2])
-	orig, _, _ := strings.Cut(doc[strings.Index(doc, "## Original request"):], "\n## Earlier history")
+	b, err := os.ReadFile(second[2])
+	doc = string(b)
+	at := strings.Index(doc, "## Original request")
+	if err != nil || at < 0 {
+		ents, _ := os.ReadDir(filepath.Dir(second[2]))
+		var names []string
+		for _, e := range ents {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("second handoff %s: %v; in its folder %q; message %q; file %.600q", second[2], err, names, second, doc)
+	}
+	orig, _, _ := strings.Cut(doc[at:], "\n## Earlier history")
 	if !strings.Contains(orig, "fake claude request 1 from pane "+pane) || strings.Contains(orig, "We continue") {
 		t.Fatalf("original request through the chain %.400q", orig)
 	}

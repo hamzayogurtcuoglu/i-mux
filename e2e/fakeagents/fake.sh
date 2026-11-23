@@ -146,14 +146,6 @@ while ! (set -C; : >"$log/$agent-$n.argv") 2>/dev/null; do
 	n=$((n + 1))
 done
 [ $# -eq 0 ] || printf '%s\0' "$@" >"$log/$agent-$n.argv"
-{
-	echo "IMUX_PANE=${IMUX_PANE:-}"
-	echo "IMUX_AGENT=${IMUX_AGENT:-}"
-	echo "TMUX_PANE=${TMUX_PANE:-}"
-	echo "PATH=$PATH"
-	echo "PWD=$PWD"
-	echo "E2E_ENV_PROBE=${E2E_ENV_PROBE:-}"
-} >"$log/$agent-$n.env"
 
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 uuid() {
@@ -259,6 +251,18 @@ EOF
 	return 0
 }
 write_session "$@"
+# The .env comes last: the harness takes it as the run having started
+# (h.run), and a switch right after must find this run's session. With the
+# engine's queries inside imux (D92) a switch is fast enough to get there
+# before a session written after it (as fakeagent does on Windows).
+{
+	echo "IMUX_PANE=${IMUX_PANE:-}"
+	echo "IMUX_AGENT=${IMUX_AGENT:-}"
+	echo "TMUX_PANE=${TMUX_PANE:-}"
+	echo "PATH=$PATH"
+	echo "PWD=$PWD"
+	echo "E2E_ENV_PROBE=${E2E_ENV_PROBE:-}"
+} >"$log/$agent-$n.env"
 
 echo "fake $agent ready (run $n, pane $pane)"
 echo "argc $# · last argument $(printf %s "$last" | wc -c | tr -d ' ') bytes"
