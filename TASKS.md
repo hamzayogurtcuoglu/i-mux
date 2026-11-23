@@ -1012,6 +1012,29 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M105: Signed releases on Windows and macOS (added 2026-11-23)
+
+User report: a company Windows machine would not install i-mux, an unsigned program (D100).
+
+- [ ] **T105.1 Windows: Authenticode signing in the release** · M
+  - AC: D100: `scripts/sign-windows.sh FILE...` signs `.exe` files with jsign 7.6 (fetched once,
+    checked against its SHA-256) from `IMUX_SIGN_*`, timestamped unless `IMUX_SIGN_TSA=none`, and
+    does nothing without `IMUX_SIGN_STORETYPE`; GoReleaser's build hooks, `build-installer.sh`
+    (binaries and `setup.exe`) and NSIS's `!uninstfinalize` call it; the release workflow passes
+    the repository's variables and secret. CI's snapshot signs with a self-signed certificate
+    made on the spot, and its Windows job checks that `setup.exe`, `imux.exe`, `imux-core.exe`
+    and `uninstall.exe` carry it. shellcheck clean.
+- [ ] **T105.2 macOS: signing and notarization in the release** · S
+  - AC: D100: `.goreleaser.yaml`'s `notarize.macos` signs both darwin binaries with
+    `MACOS_SIGN_P12` and notarizes them with the App Store Connect key, only when
+    `MACOS_SIGN_P12` is set; `goreleaser check` passes; a local snapshot with a self-signed
+    certificate signs them (`codesign -dv` shows it).
+- [ ] **T105.3 (USER) Certificates and secrets** · S · deps: T105.1, T105.2
+  - AC: the owner gets a Windows code-signing certificate or service (SignPath Foundation,
+    Certum, Azure Trusted Signing …) and an Apple Developer ID, and sets the variables and
+    secrets `docs/SIGNING.md` lists; the next release is signed (`Get-AuthenticodeSignature`
+    shows Valid, `spctl -a -vv -t install` accepts the macOS binaries).
+
 ## M104: Updates, simpler (added 2026-11-23)
 
 User request: the i-mux row should always have its letter, and i-mux-core needs no row of its
