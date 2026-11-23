@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Windows: machines can be added.** Every `ssh` i-mux started failed at once on Windows
+  (`getsockname failed: Not a socket`): Windows' OpenSSH cannot share one connection per
+  machine. There, each question to a machine now connects on its own, so the machine needs SSH
+  key sign-in, and adding it says so when only a password worked. macOS and Linux are
+  unchanged.
+
 ## [0.71.2] - 2026-11-23
 
 ### Fixed

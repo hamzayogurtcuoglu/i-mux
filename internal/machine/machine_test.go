@@ -141,6 +141,31 @@ func TestArgs(t *testing.T) {
 	}
 }
 
+// The master connection's options are there exactly where ssh can share a
+// connection (D96: not on Windows); every other option is there everywhere.
+func TestOptionsShare(t *testing.T) {
+	testutil.Isolate(t)
+	for _, mode := range []Mode{Background, Interactive, Attach} {
+		o := Options(mode)
+		for _, k := range []string{"ControlMaster=", "ControlPath=", "ControlPersist="} {
+			has := slices.ContainsFunc(o, func(s string) bool { return strings.HasPrefix(s, k) })
+			if has != SharesConnection {
+				t.Errorf("mode %d: %s present %v, SharesConnection %v: %q", mode, k, has, SharesConnection, o)
+			}
+		}
+		for _, want := range []string{"ConnectTimeout=10", "ServerAliveInterval=15", "ServerAliveCountMax=3", "ForwardAgent=no", "ForwardX11=no", "ClearAllForwardings=yes", "PermitLocalCommand=no"} {
+			if !slices.Contains(o, want) {
+				t.Errorf("mode %d: no %s in %q", mode, want, o)
+			}
+		}
+		for i, s := range o {
+			if s == "-o" && (i+1 == len(o) || strings.HasPrefix(o[i+1], "-")) {
+				t.Errorf("mode %d: -o without a value in %q", mode, o)
+			}
+		}
+	}
+}
+
 // RemoteCommand's words reach i-mux on the machine as they were, whatever
 // they hold: the remote shell is run here.
 func TestRemoteCommand(t *testing.T) {
@@ -251,8 +276,11 @@ func TestFailed(t *testing.T) {
 	if s := failed(exit(255), "Host key verification failed.\n", nil); s.Status != StatusAuth {
 		t.Errorf("host key = %+v", s)
 	}
-	if s := failed(exit(127), "i-mux is not installed on this machine\n", nil); s.Status != StatusNoImux {
-		t.Errorf("no i-mux = %+v", s)
+	// An exit code from a real process (Windows has no sh on PATH).
+	if _, err := exec.LookPath("sh"); err == nil {
+		if s := failed(exit(127), "i-mux is not installed on this machine\n", nil); s.Status != StatusNoImux {
+			t.Errorf("no i-mux = %+v", s)
+		}
 	}
 	if s := failed(exit(255), "ssh: connect to host s port 22: Connection refused\n", nil); s.Status != StatusOffline || !strings.Contains(s.Error, "refused") {
 		t.Errorf("offline = %+v", s)

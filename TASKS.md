@@ -1018,7 +1018,7 @@ User report (Windows 11, a WSL machine at `user@172.x.x.x`): a machine cannot be
 `ssh` i-mux starts fails with `getsockname failed: Not a socket`, because Windows' OpenSSH has
 no `ControlMaster` (D96).
 
-- [ ] **T101.1 Machines on Windows without a master connection** · S
+- [x] **T101.1 Machines on Windows without a master connection** · S
   - AC: D96: on Windows `machine.Options` has no `ControlMaster`, `ControlPath` or
     `ControlPersist`, and Reconnect and Remove run no `ssh -O exit` (`ssh_share_windows.go`;
     macOS and Linux keep them, their tests unchanged); when `imux machine add` or `reconnect`
