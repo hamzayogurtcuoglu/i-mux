@@ -248,6 +248,7 @@ var en = map[string]string{
 	"machine.install_first":            "Install i-mux on %s first, then add it again",
 	"machine.install_failed":           "Could not install i-mux on %s",
 	"machine.unreachable":              "Could not reach %s",
+	"machine.needs_key":                "On Windows i-mux asks %s in the background with no password: it needs SSH key sign-in there (ssh-keygen here, then add ~/.ssh/id_ed25519.pub to the machine's ~/.ssh/authorized_keys)",
 	"machine.old_imux":                 "The i-mux on %s is too old to report: update it there (imux update)",
 	"machine.added":                    "Added %s",
 	"machine.none":                     "No machines. Add one: imux machine add <user@host>",

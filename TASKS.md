@@ -1012,6 +1012,21 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M102: Windows: adding a machine (added 2026-11-23)
+
+User report (Windows 11, a WSL machine at `user@172.x.x.x`): a machine cannot be added; every
+`ssh` i-mux starts fails with `getsockname failed: Not a socket`, because Windows' OpenSSH has
+no `ControlMaster` (D97).
+
+- [x] **T102.1 Machines on Windows without a master connection** · S
+  - AC: D97: on Windows `machine.Options` has no `ControlMaster`, `ControlPath` or
+    `ControlPersist`, and Reconnect and Remove run no `ssh -O exit` (`ssh_share_windows.go`;
+    macOS and Linux keep them, their tests unchanged); when `imux machine add` or `reconnect`
+    signs in but the background check answers `auth`, the message says the machine needs SSH
+    key sign-in on Windows (en, tr). Tests: a Windows test that the options hold none of the
+    master's and every other one; the POSIX test keeps the master's options; checked by hand
+    from Windows 11 against a WSL machine.
+
 ## M101: The theme on Copilot's pane, confirmations that stay (added 2026-11-23)
 
 User report: Copilot's pane stays black under a theme, and closing an agent shows a popup that

@@ -229,7 +229,10 @@ func (c *machineCmd) add(name, target string, yes, free bool) error {
 	// Its i-mux must be one that reports (v0.61+).
 	if _, st := machine.Fetch(c.ctx, m); st.Status != machine.StatusOK {
 		msg := i18n.T("machine.old_imux", name)
-		if st.Status == machine.StatusAuth || st.Status == machine.StatusOffline {
+		switch {
+		case needsKey(st):
+			msg = i18n.T("machine.needs_key", target)
+		case st.Status == machine.StatusAuth || st.Status == machine.StatusOffline:
 			msg = i18n.T("machine.unreachable", target) + ": " + st.Error
 		}
 		return c.done(c.fail(errors.New(msg)))
@@ -246,6 +249,13 @@ func (c *machineCmd) add(name, target string, yes, free bool) error {
 func installCommand() string {
 	url := "https://github.com/" + update.Repo + "/releases/latest/download/install.sh"
 	return "curl -fsSL " + url + " | sh -s -- --yes"
+}
+
+// needsKey reports a machine the user just signed in to that the
+// background still cannot reach: where ssh shares no connection (Windows,
+// D97) each question signs in on its own, with no one to type a password.
+func needsKey(st machine.State) bool {
+	return st.Status == machine.StatusAuth && !machine.SharesConnection
 }
 
 // ask asks a yes/no question on this terminal (no is the default).
@@ -287,7 +297,7 @@ func (c *machineCmd) list() error {
 
 // remove forgets a machine: its connection closed, its tabs here closed.
 func (c *machineCmd) remove(m machine.Machine) error {
-	_ = exec.Command(machine.SSHBin(), machine.ExitArgs(m)...).Run()
+	machine.CloseConnection(m)
 	if err := machine.Remove(m.Name); err != nil {
 		return c.fail(err)
 	}
@@ -306,13 +316,17 @@ func (c *machineCmd) remove(m machine.Machine) error {
 // reconnect closes the connection and connects again here, where SSH may
 // ask (a popup): the watcher then rides on the new one.
 func (c *machineCmd) reconnect(m machine.Machine) error {
-	_ = exec.Command(machine.SSHBin(), machine.ExitArgs(m)...).Run()
+	machine.CloseConnection(m)
 	fmt.Println(i18n.T("machine.connecting_to", m.Target))
 	code, err := c.ssh(machine.Args(m, machine.Interactive, "version"))
 	if err != nil || code != 0 {
 		return c.done(c.fail(errors.New(i18n.T("machine.unreachable", m.Target))))
 	}
-	if _, st := machine.Fetch(c.ctx, m); st.Status == machine.StatusOK {
+	_, st := machine.Fetch(c.ctx, m)
+	if needsKey(st) {
+		return c.done(c.fail(errors.New(i18n.T("machine.needs_key", m.Target))))
+	}
+	if st.Status == machine.StatusOK {
 		st.At = time.Now()
 		_ = machine.WriteState(m.Name, st)
 		sidebar.RefreshAll(c.ctx, c.w.T)

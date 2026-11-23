@@ -249,6 +249,7 @@ var tr = map[string]string{
 	"machine.install_first":            "Önce %s üzerine i-mux kur, sonra yeniden ekle",
 	"machine.install_failed":           "%s üzerine i-mux kurulamadı",
 	"machine.unreachable":              "%s adresine ulaşılamadı",
+	"machine.needs_key":                "Windows'ta i-mux %s adresine arka planda parolasız bağlanır: orada SSH anahtarıyla giriş gerekiyor (burada ssh-keygen, sonra ~/.ssh/id_ed25519.pub dosyasını makinedeki ~/.ssh/authorized_keys dosyasına ekle)",
 	"machine.old_imux":                 "%s üzerindeki i-mux rapor veremeyecek kadar eski: orada güncelle (imux update)",
 	"machine.added":                    "%s eklendi",
 	"machine.none":                     "Makine yok. Eklemek için: imux machine add <kullanici@sunucu>",

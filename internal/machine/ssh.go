@@ -2,6 +2,7 @@ package machine
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -35,20 +36,24 @@ const (
 )
 
 // Options are the ssh options every command gets (D73): one master
-// connection per machine that each command rides on; dead connections
-// noticed; nothing of this computer forwarded to the machine. Host keys
-// are checked as the user's configuration says: StrictHostKeyChecking is
-// never set.
+// connection per machine that each command rides on (where ssh can share
+// one: SharesConnection, D97); dead connections noticed; nothing of this
+// computer forwarded to the machine. Host keys are checked as the user's
+// configuration says: StrictHostKeyChecking is never set.
 func Options(mode Mode) []string {
 	batch := "yes"
 	if mode != Background {
 		batch = "no"
 	}
-	o := []string{
-		"-o", "BatchMode=" + batch,
-		"-o", "ControlMaster=auto",
-		"-o", "ControlPath=" + filepath.Join(ControlDir(), "%C"),
-		"-o", "ControlPersist=600",
+	o := []string{"-o", "BatchMode=" + batch}
+	if SharesConnection {
+		o = append(o,
+			"-o", "ControlMaster=auto",
+			"-o", "ControlPath="+filepath.Join(ControlDir(), "%C"),
+			"-o", "ControlPersist=600",
+		)
+	}
+	o = append(o,
 		"-o", "ConnectTimeout=10",
 		"-o", "ServerAliveInterval=15",
 		"-o", "ServerAliveCountMax=3",
@@ -56,7 +61,7 @@ func Options(mode Mode) []string {
 		"-o", "ForwardX11=no",
 		"-o", "ClearAllForwardings=yes",
 		"-o", "PermitLocalCommand=no",
-	}
+	)
 	if mode == Attach {
 		return append(o, "-t")
 	}
@@ -99,6 +104,14 @@ func ShellArgs(m Machine) []string {
 // ExitArgs closes m's master connection (Reconnect, Remove).
 func ExitArgs(m Machine) []string {
 	return []string{"-o", "ControlPath=" + filepath.Join(ControlDir(), "%C"), "-O", "exit", "--", m.Target}
+}
+
+// CloseConnection closes m's master connection, when ssh shares one
+// (SharesConnection); a failure (none open) is no matter.
+func CloseConnection(m Machine) {
+	if SharesConnection {
+		_ = exec.Command(SSHBin(), ExitArgs(m)...).Run()
+	}
 }
 
 // shQuote is s in single quotes for a POSIX shell.
