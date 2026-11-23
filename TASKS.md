@@ -1012,6 +1012,21 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M100: Versions that stay in step (added 2026-11-23)
+
+User report: 0.71.x is out, yet the i-mux installed on the WSL machine was a 0.65.0 development
+build from a checkout 76 commits behind, and it said it was the latest (D95).
+
+- [ ] **T100.1 A development build is offered newer releases** · XS
+  - AC: D95: `update.Newer(latest, cur)` reads `cur` in `git describe` form (`vX.Y.Z-N-gHASH`,
+    `-dirty`) as `X.Y.Z` plus commits: a release above `X.Y.Z` is newer, the same or older is
+    not; `dev` and other forms stay never older; `latest` must be a release. Unit tests.
+- [ ] **T100.2 No install or release from a stale checkout** · XS
+  - AC: D95: `make install-local` fetches the upstream (offline: says so, goes on) and stops
+    when HEAD is behind it unless `STALE_OK=1`; the `commit-and-release` and
+    `check-before-push` skills fetch first and check HEAD contains `origin/main` and the new
+    tag is above every tag on origin. Checked here with a checkout behind its upstream.
+
 ## M99: The Nerd Font in every install, icons as the terminal draws them (added 2026-11-22)
 
 User report: a fresh install on a company Windows machine showed `?` for every icon (D94).
