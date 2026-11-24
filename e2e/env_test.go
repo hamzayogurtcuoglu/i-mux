@@ -201,6 +201,58 @@ func TestNewAgentWithEnv(t *testing.T) {
 	}
 }
 
+// TestWorktreeEnvFromAPane (D101): `imux worktree new --env` typed in a
+// pane (TMUX and TMUX_PANE of a shell pane) starts the new project's agent
+// with the environment and gives its own pane the agent's options and
+// @imux_env; the panes of the window it ran in get none of them:
+// new-session -d leaves that window current, so the options name the new
+// session's pane.
+func TestWorktreeEnvFromAPane(t *testing.T) {
+	h := newH(t, "")
+	p := h.Homes.Project
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", p}, args...)...)
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com", "GIT_COMMITTER_NAME=t",
+			"GIT_COMMITTER_EMAIL=t@example.com", "GIT_CONFIG_GLOBAL=/dev/null")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	testutil.WriteFile(t, filepath.Join(p, "README.md"), []byte("hi\n"))
+	git("init", "-q", "-b", "main")
+	git("add", "-A")
+	git("commit", "-q", "-m", "first")
+	testutil.WriteFile(t, filepath.Join(h.Homes.Imux, "env", "glm.env"), []byte("E2E_ENV_PROBE="+envSecret+"\n"))
+	pane := h.startSession("claude")
+	h.run("claude", 1)
+	h.attach(120, 30)
+	shell := strings.TrimSpace(h.mustTmux("split-window", "-d", "-t", pane, "-P", "-F", "#{pane_id}", "sh"))
+	inside := []string{"TMUX=" + strings.TrimSpace(h.mustTmux("display-message", "-p", "#{socket_path},#{pid},0")), "TMUX_PANE=" + shell}
+	if out, errOut, err := h.imuxEnv(inside, "worktree", "new", "fix-env", "claude", "--env", "glm"); err != nil {
+		t.Fatalf("worktree new: %v\n%s%s", err, out, errOut)
+	}
+	h.run("claude", 2)
+	if env := h.runEnv("claude", 2); env["E2E_ENV_PROBE"] != envSecret {
+		t.Fatalf("the worktree's Claude: %v", env)
+	}
+	if got := h.paneOpt(shell, "#{@imux_agent}|#{@imux_env}|#{@imux_label}"); got != "||" {
+		t.Fatalf("the pane the command ran in got %q", got)
+	}
+	if got := h.paneOpt(pane, "#{@imux_env}"); got != "" {
+		t.Fatalf("the agent beside it got @imux_env %q", got)
+	}
+	found := ""
+	h.waitFor("the worktree's pane", 5*time.Second, func() bool {
+		for _, l := range strings.Split(h.mustTmux("list-panes", "-a", "-F", "#{pane_id}|#{@imux_agent}|#{@imux_env}|#{session_path}"), "\n") {
+			if f := strings.Split(l, "|"); len(f) == 4 && f[1] == "claude" && f[2] == "glm" && strings.HasSuffix(filepath.ToSlash(f[3]), "/fix-env") {
+				found = f[0]
+			}
+		}
+		return found != ""
+	})
+}
+
 // TestEnvNewPopup (T89.7): the Env view's + opens the New environment
 // dialog in a popup in the middle of the client: what is typed shows as
 // the name it makes; Enter writes the file and opens it in the editor in

@@ -230,7 +230,7 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	target := p.ID
 	if req.NewPane {
 		l.Pane, l.Env = "", req.Env
-		np, err := w.launchNew(ctx, l, func(cmd []string) tmux.Cmd {
+		np, err := w.launchNew(ctx, l, "", func(cmd []string) tmux.Cmd {
 			return append(tmux.Cmd{"split-window", "-h", "-t", p.ID, "-c", l.CWD, "-P", "-F", "#{pane_id}"}, cmd...)
 		})
 		if err != nil {

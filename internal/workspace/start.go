@@ -24,8 +24,12 @@ import (
 
 // launchNew starts a run in a new pane created by create (new-session,
 // new-window or split-window with -P -F '#{pane_id}'), setting the pane
-// options in the same exec so a fast-exiting agent cannot race them.
-func (w *WS) launchNew(ctx context.Context, l Launch, create func(cmd []string) tmux.Cmd) (string, error) {
+// options in the same exec so a fast-exiting agent cannot race them. A
+// split or a window made without -d is the current pane for the options
+// that follow (target ""); new-session -d is not, and imux run inside a
+// pane would set them on that pane, so a new session's are given its
+// target (sessionTarget).
+func (w *WS) launchNew(ctx context.Context, l Launch, target string, create func(cmd []string) tmux.Cmd) (string, error) {
 	spec, te, err := w.Spec(l)
 	if err != nil {
 		return "", err
@@ -35,9 +39,13 @@ func (w *WS) launchNew(ctx context.Context, l Launch, create func(cmd []string) 
 		return "", err
 	}
 	cmds := []tmux.Cmd{create(w.execCmd(p))}
-	cmds = append(cmds, optCmds("", te, append(append(Trail{}, l.Before...), te), l.CWD, w.Label(l.Agent))...)
+	cmds = append(cmds, optCmds(target, te, append(append(Trail{}, l.Before...), te), l.CWD, w.Label(l.Agent))...)
 	if l.Env != "" && envfile.Exists(l.Env) {
-		cmds = append(cmds, tmux.Cmd{"set-option", "-p", OptEnv, l.Env})
+		c := tmux.Cmd{"set-option", "-p"}
+		if target != "" {
+			c = append(c, "-t", target)
+		}
+		cmds = append(cmds, append(c, OptEnv, l.Env))
 	}
 	out, err := w.T.Run(ctx, cmds...)
 	if err != nil {
@@ -50,6 +58,10 @@ func (w *WS) launchNew(ctx context.Context, l Launch, create func(cmd []string) 
 	}
 	return pane, nil
 }
+
+// sessionTarget is the pane of session name that new-session made: its
+// window and pane are the current ones.
+func sessionTarget(name string) string { return "=" + name + ":" }
 
 // HasSession reports whether the named session exists.
 func (w *WS) HasSession(ctx context.Context, name string) (bool, error) {
@@ -102,7 +114,7 @@ func (w *WS) StartEnv(ctx context.Context, id session.AgentID, cwd, env string) 
 			return nil, err
 		}
 	}
-	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, func(cmd []string) tmux.Cmd {
+	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, sessionTarget(name), func(cmd []string) tmux.Cmd {
 		return append(tmux.Cmd{"new-session", "-d", "-s", name, "-c", cwd, "-P", "-F", "#{pane_id}"}, cmd...)
 	})
 	if err != nil {
@@ -127,7 +139,7 @@ func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID,
 	if err != nil {
 		return "", err
 	}
-	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, func(cmd []string) tmux.Cmd {
+	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, "", func(cmd []string) tmux.Cmd {
 		return append(tmux.Cmd{"new-window", "-a", "-t", strings.TrimSpace(win), "-c", cwd, "-P", "-F", "#{pane_id}"}, cmd...)
 	})
 	if err == nil {
@@ -140,7 +152,7 @@ func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID,
 // Split opens a pane with agent id next to pane, in the same directory,
 // with environment env ("" none, D101).
 func (w *WS) Split(ctx context.Context, pane string, id session.AgentID, cwd string, horizontal, before bool, env string) (string, error) {
-	return w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, func(cmd []string) tmux.Cmd {
+	return w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, "", func(cmd []string) tmux.Cmd {
 		return append(splitCmd(pane, cwd, horizontal, before), cmd...)
 	})
 }
@@ -180,7 +192,7 @@ func (w *WS) StartPrompt(ctx context.Context, p *Pane, id session.AgentID, promp
 				dir = "-v"
 			}
 		}
-		np, err := w.launchNew(ctx, l, func(cmd []string) tmux.Cmd {
+		np, err := w.launchNew(ctx, l, "", func(cmd []string) tmux.Cmd {
 			return append(tmux.Cmd{"split-window", dir, "-t", p.ID, "-c", p.CWD, "-P", "-F", "#{pane_id}"}, cmd...)
 		})
 		if err != nil {

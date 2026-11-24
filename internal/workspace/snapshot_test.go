@@ -113,7 +113,8 @@ func TestRestoreWithoutAgents(t *testing.T) {
 	}
 	for _, want := range []string{
 		"new-session -d -s " + res.Session + " -c " + h.Project + " -P -F #{pane_id} /opt/imux/bin/imux __empty ;",
-		"; set-option -p @imux_role empty", "; set-option -p @imux_cwd " + h.Project, "; set-option -p @imux_label No agents",
+		"; set-option -p -t =" + res.Session + ": @imux_role empty", "; set-option -p -t =" + res.Session + ": @imux_cwd " + h.Project,
+		"; set-option -p -t =" + res.Session + ": @imux_label No agents",
 	} {
 		if !strings.Contains(batch, want) {
 			t.Errorf("batch lacks %q:\n%s", want, batch)

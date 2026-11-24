@@ -185,7 +185,9 @@ func TestLabelAndDefaultAgent(t *testing.T) {
 }
 
 // TestStartBatchesOptions: the new session and its pane options are set in
-// one tmux exec, targeting the pane the first command created.
+// one tmux exec, naming the pane the first command created: new-session -d
+// does not make it the current pane, so options with no target would go
+// to the caller's pane when imux runs inside one.
 func TestStartBatchesOptions(t *testing.T) {
 	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
 	w, f, h := testWS(t)
@@ -220,10 +222,11 @@ func TestStartBatchesOptions(t *testing.T) {
 	if bar != "marked" {
 		t.Fatalf("no sidebar added and marked:\n%q", f.calls)
 	}
+	tgt := "; set-option -p -t =" + res.Session + ": "
 	for _, want := range []string{
 		"new-session -d -s " + res.Session + " -c " + h.Project, "/opt/imux/bin/imux __exec ",
-		"; set-option -p remain-on-exit on", "; set-option -p @imux_agent claude", "; set-option -p @imux_cwd " + h.Project,
-		"; set-option -p @imux_label Claude", `; set-option -p @imux_trail [{"a":"claude"`,
+		tgt + "remain-on-exit on", tgt + "@imux_agent claude", tgt + "@imux_cwd " + h.Project,
+		tgt + "@imux_label Claude", tgt + `@imux_trail [{"a":"claude"`,
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("batch lacks %q:\n%s", want, joined)

@@ -14,6 +14,13 @@ All notable changes to i-mux are listed here. The format follows
   an environment's menu in the Env view has **New agent with it…**, a terminal's shell starts
   with them, and `imux split`, `imux tab` and `imux worktree new` take `--env <name>`.
 
+### Fixed
+
+- **A project opened from a command in a pane gets its own agent settings.** `imux worktree
+  new`, `imux open` or restoring a project from a shell in an i-mux pane set the new agent's
+  pane settings (its name on the border, its history for switching back) on a pane of the
+  window the command ran in. They now go to the new project's pane. Menus were not affected.
+
 ## [0.71.5] - 2026-11-23
 
 ### Changed

@@ -245,6 +245,7 @@ func (w *WS) Restore(ctx context.Context, f *sources.Finder, snap *ProjectSnap) 
 		for i, p := range panes {
 			l := Launch{Agent: p.Agent, CWD: snap.Dir, ResumeID: w.resumeID(ctx, f, p, snap.Dir), Env: p.Env}
 			var create func(cmd []string) tmux.Cmd
+			target := "" // a split or a window: the options' current pane
 			switch {
 			case i > 0:
 				create = func(cmd []string) tmux.Cmd {
@@ -253,6 +254,7 @@ func (w *WS) Restore(ctx context.Context, f *sources.Finder, snap *ProjectSnap) 
 					return append(tmux.Cmd{"split-window", "-h", "-t", first, "-c", snap.Dir, "-P", "-F", "#{pane_id}"}, cmd...)
 				}
 			case res.Pane == "":
+				target = sessionTarget(name)
 				create = func(cmd []string) tmux.Cmd {
 					return append(tmux.Cmd{"new-session", "-d", "-s", name, "-c", snap.Dir, "-P", "-F", "#{pane_id}"}, cmd...)
 				}
@@ -261,10 +263,10 @@ func (w *WS) Restore(ctx context.Context, f *sources.Finder, snap *ProjectSnap) 
 					return append(tmux.Cmd{"new-window", "-t", "=" + name + ":", "-c", snap.Dir, "-P", "-F", "#{pane_id}"}, cmd...)
 				}
 			}
-			pane, err := w.launchNew(ctx, l, create)
+			pane, err := w.launchNew(ctx, l, target, create)
 			if err != nil && l.ResumeID != "" {
 				l.ResumeID = "" // start it fresh rather than lose the tab
-				pane, err = w.launchNew(ctx, l, create)
+				pane, err = w.launchNew(ctx, l, target, create)
 			}
 			if err != nil {
 				if res.Pane == "" {
@@ -335,9 +337,10 @@ func (w *WS) startsAgent(snap *ProjectSnap) bool {
 // (§9.3 "A project without agents"), and its sidebar unless none of its
 // tabs had one.
 func (w *WS) restoreEmpty(ctx context.Context, name string, snap *ProjectSnap) (*StartResult, error) {
-	// The options that follow in the batch go to the new session's pane.
+	// The options that follow in the batch name the new session's pane:
+	// new-session -d does not make it the current one (launchNew).
 	cmds := append([]tmux.Cmd{{"new-session", "-d", "-s", name, "-c", snap.Dir, "-P", "-F", "#{pane_id}", w.Self, "__empty"}},
-		sidebar.EmptyOpts("", snap.Dir)...)
+		sidebar.EmptyOpts(sessionTarget(name), snap.Dir)...)
 	out, err := w.T.Run(ctx, cmds...)
 	if err != nil {
 		return nil, err

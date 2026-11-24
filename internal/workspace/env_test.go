@@ -372,6 +372,25 @@ func TestNewPanesWithEnv(t *testing.T) {
 	}
 	made("terminal tab", "new-window", from)
 
+	// A new project (a worktree's) names its session's pane.
+	f.errs["has-session"] = "can't find session"
+	f.replies["new-session"] = "%7\n"
+	from = len(f.calls)
+	res, err := w.StartEnv(ctx, "claude", h.Project, "glm")
+	if err != nil || res.Pane != "%7" {
+		t.Fatalf("start: %+v %v", res, err)
+	}
+	for _, c := range f.calls[from:] {
+		if slices.Contains(c, "new-session") {
+			if j := strings.Join(c, " "); !strings.Contains(j, "set-option -p -t ="+res.Session+": "+OptEnv+" glm") {
+				t.Errorf("a new session's @imux_env: %s", j)
+			}
+			if s := execSpec(t, c); s.Env["TOKEN"] != secret {
+				t.Errorf("a new session's spec env %v", s.Env)
+			}
+		}
+	}
+
 	from = len(f.calls)
 	if _, err := w.SplitShell(ctx, "%1", h.Project, true, false, ""); err != nil {
 		t.Fatal(err)

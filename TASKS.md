@@ -1041,7 +1041,7 @@ instead of being opened and then given one from the Env view (which restarts it)
     value on a tmux command line. GUIDE, README and README.tr, CHANGELOG.
   - Status: done. `TestNewAgentWithEnv` (it fails on 0.71.5's binary, which has no 🔑 With
     glm…). `make ci` passed here on Linux; macOS and Windows are checked by CI only.
-- [ ] **T106.4 A new project's options on its own pane** · XS · deps: T106.2
+- [x] **T106.4 A new project's options on its own pane** · XS · deps: T106.2
   - Found in review (the i-mux-core session): `new-session -d` does not make the new pane the
     current one, so `imux worktree new` (since D72), `imux open` or a restore typed in a pane
     set the new agent's pane options, and now `@imux_env`, on the active pane of that window.
@@ -1049,6 +1049,9 @@ instead of being opened and then given one from the Env view (which restarts it)
     (`=<session>:`); splits and windows made without `-d` keep the current pane. Unit tests (the
     batch names the session's pane); e2e: `imux worktree new --env` run with a shell pane's
     `TMUX_PANE` leaves that window's panes alone and sets them on the new project's pane.
+  - Status: done. `sessionTarget`; `TestStartBatchesOptions` and `TestRestoreWithoutAgents`
+    name the target; `TestWorktreeEnvFromAPane` fails before it (the Claude pane beside the
+    shell got `@imux_env glm`).
 
 ## M105: Signed releases on Windows and macOS (added 2026-11-23)
 
