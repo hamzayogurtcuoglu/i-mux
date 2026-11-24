@@ -2066,6 +2066,11 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
     is a shell at its prompt for Apply and Remove (started by i-mux). In the "No agents" pane
     `@imux_env` is set first, then the agent (or shell) starts in its place. A new worktree's
     project starts its agent with it; when the project is already open nothing starts, as before.
+  - **A new session's options name its pane** (`-t =<session>:`, T106.4): a split or a window
+    made without `-d` is the current pane for the options that follow it in the exec, but
+    `new-session -d` is not, so from a command typed in a pane (`imux worktree new`, `imux open`,
+    a restore: `TMUX_PANE` set) options with no target went to the active pane of that window.
+    Menus run their commands without `TMUX_PANE` and were not affected.
   - **A name with no file** (deleted after the menu opened, or mistyped): nothing starts, and the
     message (the CLI's error) says that no environment has that name. A name that cannot be one
     is a usage error, as for `imux env`.
