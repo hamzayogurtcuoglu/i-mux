@@ -1012,6 +1012,46 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M109: The workspace from a phone (added 2026-11-24)
+
+User request: see the terminal and control the agents from the phone, and answer an agent that
+waits away from the desk (D104).
+
+- [ ] **T109.1 `imux remote`: the server and pairing** · M
+  - AC: D104: `imux remote` starts a TLS web server in imux, off until started, and shows a QR
+    code with its address and a one-time pairing key; a paired device gets a token, the devices
+    are listed and can be removed (`imux remote devices`, `imux remote forget`); `imux remote
+    stop` ends it; requests without a valid token are refused. Unit tests.
+- [ ] **T109.2 The mobile web app** · L · deps: T109.1
+  - AC: D104: a PWA served by imux lists projects and agents with their states; a pane shows
+    live in xterm.js from the engine's output of that pane, at the pane's size, without
+    resizing the desktop's windows; keys go back to the pane; buttons for Yes / No / Enter /
+    Ctrl+C and a text box; a read-only mode. Works on iOS Safari and Android Chrome. e2e with a
+    headless browser against fake agents.
+- [ ] **T109.3 Notifications on the phone** · M · deps: T109.2
+  - AC: D104: when an agent needs the user, a web push notification reaches the paired phone
+    (the installed PWA); opening it shows that pane. Without content by default; the question's
+    text only when the user turns it on.
+- [ ] **T109.4 Anywhere, without setup** · L · deps: T109.2
+  - AC: D104: an end-to-end encrypted relay so the phone reaches imux from any network without
+    Tailscale; the relay sees no content. Decision on hosting first.
+
+## M108: Checkpoints: undo any agent turn (added 2026-11-24)
+
+User request: one click takes the project back to before an agent's turn, whatever the CLI
+(D103).
+
+- [ ] **T108.1 Recording checkpoints** · M
+  - AC: D103: before each turn (Claude Code's and Codex's hooks; the watcher's idle → working for
+    the others) the project's files are recorded under `refs/imux/checkpoints/<pane>/<n>` with a
+    temporary index, untracked files included and `.gitignore` respected; HEAD, the index, the
+    branch and the files are untouched; the last 50 per project are kept; nothing outside a git
+    repository. Unit tests with real git in a temp folder (paths as on macOS, Linux, Windows).
+- [ ] **T108.2 Checkpoints… and Restore** · M · deps: T108.1
+  - AC: D103: the agent's row menu opens Checkpoints… (time, the prompt's first line, `git diff
+    --stat` against now); a checkpoint shows its diff; Restore records the present first, then
+    puts the checkpoint's files back and removes files added since. Unit and e2e tests.
+
 ## M107: Agents ask each other, across projects and CLIs (added 2026-11-24)
 
 User request: an agent can ask another live agent (in another project, in any CLI) a question or
