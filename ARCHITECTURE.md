@@ -180,6 +180,7 @@ done by tmux on a dedicated socket. i-mux only:
 | D98 | **Updates asks GitHub when it opens** (added 2026-11-23, at the user's request; M103; refines T98.3 and §9 "Versions and updates"): the Versions popup (Settings → Updates) and `imux versions` ask for the latest release (`update.Latest`, 5 s at most) before they list the rows, when `update_check` is on, and keep it in `state.json` as the daily check does. The i-mux row has no letter only when that answer says this i-mux is the newest; when the answer could not be had (offline, a proxy, `update_check = false`) the row keeps its letter, since `imux update` asks again itself. Every system: `update.Latest` is the same HTTP request on macOS, Linux, WSL and Windows (Windows' proxy as Go's `http` reads it). | The popup read only the daily check in `state.json`: a release out since then (0.71.3 a few hours after 0.71.2) left the i-mux row "the newest" and without a letter, so i-mux could not be updated from Settings. |
 | D99 | **Updates: i-mux always has its letter, and i-mux-core is not a row** (added 2026-11-23, at the user's request; M104; refines D98 and T98.3): the i-mux row of the Versions popup (Settings → Updates) and of `imux versions` always shows `u`, which runs `imux update` whether a newer release is known or not (`imux update` asks GitHub itself and says when this i-mux is the newest); its note still says "the newest" or that a release is out. The i-mux-core row is gone: the engine ships and updates with i-mux, and a running server keeps its engine until i-mux restarts (`imux update` says so). Every system: the same rows on macOS, Linux, WSL and Windows. | The user found the i-mux row without a letter confusing even when it was right (a release out a minute earlier is not "newest" to them until they try), and the i-mux-core row a second thing to look at that one cannot update on its own. |
 | D100 | **Releases can be code-signed on Windows and macOS, turned on by the repository's settings** (added 2026-11-23, at the owner's request; M105): the release signs `imux` and `imux-core` on both systems, and on Windows `setup.exe` and its uninstaller too, once the owner has a certificate; until then it builds unsigned, as before. Windows: `scripts/sign-windows.sh` signs with Authenticode through jsign (7.6, its jar checked against its SHA-256), which runs on the Linux release runner and takes a certificate from a file, a cloud HSM or a signing service (`IMUX_SIGN_STORETYPE`: `TRUSTEDSIGNING`, `SIGNPATH`, `ESIGNER`, `DIGICERTONE`, `AZUREKEYVAULT`, `PKCS12` …, with `IMUX_SIGN_KEYSTORE`, `IMUX_SIGN_ALIAS` and the secret `IMUX_SIGN_STOREPASS`, read by jsign from the environment, never put on a command line), timestamped (`IMUX_SIGN_TSA`, RFC 3161; `none` for none); with no store type it signs nothing. GoReleaser's build hook signs each Windows binary before it is archived and checksummed, `scripts/build-installer.sh` signs the binaries it builds and `setup.exe`, and NSIS's `!uninstfinalize` signs the uninstaller it writes. CI's snapshot signs everything with a throw-away self-signed certificate and its Windows job checks each file carries that signature, so the path is tested before a real certificate exists. macOS: GoReleaser's `notarize.macos` (quill, on the Linux runner) signs both binaries with a Developer ID certificate (`MACOS_SIGN_P12`, base64, and `MACOS_SIGN_PASSWORD`) and notarizes them with an App Store Connect API key (`MACOS_NOTARY_ISSUER_ID`, `MACOS_NOTARY_KEY_ID`, `MACOS_NOTARY_KEY`), only when `MACOS_SIGN_P12` is set. Linux needs no signing: `checksums.txt` stays what the installers check. `docs/SIGNING.md` says how to get a certificate and set the secrets. | Company Windows machines (the owner's employer's among them) refuse unsigned programs, from SmartScreen's warning to policies that run only trusted publishers; macOS's Gatekeeper treats a downloaded unsigned binary the same way. Since 2023 a code-signing key must live in hardware or a cloud HSM, so the signing runs through a service from CI rather than with a key file in a secret. jsign signs PE files and NSIS installers on Linux, where the release already runs, and speaks to every such service; quill does the same for macOS. Testing with a self-signed certificate keeps the signed path from breaking unnoticed while no certificate is set. |
+| D101 | **A new agent can start with an environment** (added 2026-11-24, at the user's request; M106; refines D84 and D40): every menu that starts a new agent or terminal lists the environments under its choices: the place menu of Agents' **+**, the split menus (`prefix v`, `prefix -`, Ctrl+Alt+arrows, and Agents' **+** over a "No agents" pane) and New tab's. **🔑 With glm…** (`1`–`9`, in the Env view's order) opens the same menu again for that environment: its title names it (`Claude · 🔑 glm: open where?`), what is chosen then starts with it (`imux split\|tab … --env glm`; 🌿 In a new worktree… too), and **🔑 Without glm…** (`0`) goes back. An environment's menu in the Env view adds **New agent with it…**: the New agent menu for it, then where. The new pane gets `@imux_env` in the exec that makes it, so it is as if the environment had been applied (the border, the Env view's `● this pane`, a switch, return or restart keep it), but the agent starts once, with the variables, instead of starting and then restarting. A terminal's shell starts with them through `imux __exec`, as the shell an agent exits to (D84). With no environments the menus are as before. CLI: `imux split\|tab <agent\|shell> --env <name>`, `imux worktree new <branch> [agent] --env <name>`; a name with no file stops before anything starts. Every system: the same menus and commands on macOS, Linux, WSL and Windows (a name is `[a-z0-9_-]`, safe in every command form, §9.2a; on Windows the engine's shell gets the variables as the shell after an agent does); values reach programs only through the 0600 launch spec; listing the environments reads their files and starts no process; choosing one runs one more `imux __menu`, as choosing an agent does. | The user wanted to open an agent already on an environment (Claude on the GLM plan) from the **+**, instead of opening it, then applying the environment in the Env view, which restarts it. display-menu has no check boxes or submenus: a choice that opens the menu again is the closest to one, and the environments in the menu itself save a click for the usual one or two. Every menu that opens an agent gets it, so no way of opening one lacks it. |
 
 ## 4. Components
 
@@ -1369,7 +1370,8 @@ moving a session to another CLI as our extra. Drawn in the terminal with our own
   since its state changed (`<1m`, `9m`, `2h`, `3d`) and the state. Click: go to it (switching
   project if needed). **+** (header): which agent (or Terminal), then where (D40): right, left,
   down or up of the target pane, or a new tab (`imux __menu --new`, then `--place <agent>`;
-  `imux split <agent> -h|-v [--before]`, `imux tab <agent>`).
+  `imux split <agent> -h|-v [--before]`, `imux tab <agent>`); the place menu also lists the
+  environments, to start it with one (D101).
 - **Names:** the pane's name (`@imux_name`), else the terminal title the agent sets (Claude Code
   titles it after the task; spinner glyphs stripped; ignored when it is the host name or the
   program name), else the agent's name.
@@ -1986,7 +1988,8 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
   - **A click** applies the environment to the target pane (below). On the target pane's own
     environment, a click opens its menu instead.
   - **A right-click** opens its menu: **Apply to this pane** (on this pane's own: **Apply again**,
-    which loads its changes, and **Remove from this pane**), **Edit**, **Delete…** (asks first).
+    which loads its changes, and **Remove from this pane**), **New agent with it…** (D101, below),
+    **Edit**, **Delete…** (asks first).
 - **Applying it to a pane** (`imux env apply <name> --pane P`) depends on what runs there:
   - **An agent:** a menu asks first: "Restart Claude with glm? The conversation continues." While
     the agent works (D71's `working`), it says that its current turn stops. On yes, `@imux_env` is
@@ -2021,7 +2024,51 @@ endpoint for an agent CLI, a proxy. The user saves it once and applies it to a p
   variables to the launch spec (`respawn` takes the pane's `@imux_env`), so a switch, a return,
   a fallback and an agent started in the "No agents" pane have them. The shell an agent exits to
   (§9.5) starts through `imux __exec` with them. A workspace snapshot (D24) keeps the name and
-  a restored pane gets it back. A new pane split from it does not inherit it: each pane chooses.
+  a restored pane gets it back. A new pane split from it does not inherit it: each pane chooses
+  (a new agent's menus offer the environments, below).
+- **Starting a new agent with one** (D101): the menus that start a new agent or terminal list
+  the environments after their choices, in the Env view's order: the place menu of Agents' **+**
+  (`__menu --place <agent>`), the split menus (`__menu --split h|v [--before]`: `prefix v`,
+  `prefix -`, Ctrl+Alt+arrows, and Agents' **+** over a "No agents" pane) and New tab's
+  (`__menu --tab`, `prefix c`). The New agent menu (the first step of Agents' **+**) lists none:
+  its place menu does.
+
+  ```
+  Claude: open where?             Claude · 🔑 glm: open where?
+   →  Right                  r     →  Right                  r
+   ←  Left                   l     …
+   ↓  Down                   d
+   ↑  Up                     u
+   ───────────────────────────
+   +  New tab                t
+   ───────────────────────────
+   🌿 In a new worktree…     w     🌿 In a new worktree…     w
+   ───────────────────────────     ───────────────────────────
+   🔑 With glm…              1     🔑 Without glm…           0
+   🔑 With proxy…            2     🔑 With proxy…            2
+  ```
+
+  - **🔑 With <name>…** (`1`–`9`; any after the ninth have no key) opens the same menu with
+    `--env <name>`: its title names the environment (`Claude · 🔑 glm: open where?`, `🔑 glm ·
+    Split right: new pane with…`) and every choice in it passes `--env <name>` on (`imux
+    split|tab <agent|shell> … --env <name>`; the worktree prompt's `imux worktree new
+    --from-option --env <name>`: a name has no `%`, so it can be in the prompt's template).
+    **🔑 Without <name>…** (`0`) opens it without; the other environments stay listed, each with
+    its key. With no environments the menus are as before.
+  - **From the Env view:** an environment's menu has **New agent with it…** (`n`): the New agent
+    menu with `--env <name>` (titled `🔑 glm · New agent with:`, without Web page…), then the
+    place menu for it.
+  - **The new pane:** `Launch.Env` is the name, so the launch spec has the variables and
+    `@imux_env` is set in the exec that creates the pane, as for an environment applied later
+    (the border, `● this pane`, a switch, return or restart keep it); the agent starts once. A
+    terminal (`split|tab shell --env`) starts the login shell through `imux __exec` with a 0600
+    spec (`shellCmd`, as the shell an agent exits to; on Windows the engine's shell, §9.2a), and
+    is a shell at its prompt for Apply and Remove (started by i-mux). In the "No agents" pane
+    `@imux_env` is set first, then the agent (or shell) starts in its place. A new worktree's
+    project starts its agent with it; when the project is already open nothing starts, as before.
+  - **A name with no file** (deleted after the menu opened, or mistyped): nothing starts, and the
+    message (the CLI's error) says that no environment has that name. A name that cannot be one
+    is a usage error, as for `imux env`.
 - **Editing** an environment changes what is applied next, not the programs that run with it
   (**Apply again** loads it). A pane started with a command (`sh -c '…'`) is busy even when tmux
   names the shell that runs it: a shell pane is one started as a shell (`pane_start_command`
@@ -3214,7 +3261,7 @@ Agents use their own shell tool to call i-mux. Inside a pane, `TMUX`, `TMUX_PANE
 | `imux attach [session]` | Attach to an existing i-mux session (most recent by default). |
 | `imux ls` | Sessions and panes with agent, cwd, state. |
 | `imux switch <agent> [--pane %N] [--reason manual\|limit] [--no-resume] [--from-session <agent>:<id>]` | Switch the pane (default: the caller's `TMUX_PANE`) with context. `--from-session` takes the context from a conversation picked in the session picker instead of the pane's current one. |
-| `imux split <agent> [-h\|-v]` | New pane with `agent` in the same cwd. |
+| `imux split <agent> [-h\|-v] [--env <name>]` | New pane with `agent` in the same cwd; `--env` starts it with an environment (D101, as `imux tab` and `imux worktree new`). |
 | `imux handoff [--from A] [--to B] [--cwd DIR] [--session ID\|PATH] [--pane %N] [--print] [--budget N] [--delta-since T]` | Build a handoff. Without `--print`, exec `B` in the current terminal (F5). `--from` defaults to the newest session of any agent for the cwd. |
 | `imux sessions [--agent A] [--cwd DIR] [--all]` | List sessions found for the cwd (agent, id, updated, size, first request). |
 | `imux pick [--pane %N]` | Open the session picker (§9.3) on the attached client. This is the same menu as `⧉ Sessions` / `prefix S`. |

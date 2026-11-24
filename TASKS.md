@@ -1012,6 +1012,29 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M106: A new agent with an environment (added 2026-11-24)
+
+User request: an agent opened from Agents' **+** should be able to start with an environment,
+instead of being opened and then given one from the Env view (which restarts it) (D101).
+
+- [ ] **T106.1 The menus list the environments** · S
+  - AC: D101: the place, split and New tab menus end with `🔑 With <name>…` (`1`–`9`) for each
+    environment, nothing when there are none; `__menu --place|--split|--tab|--new --env <name>`
+    opens a menu for it: the title names it, every choice passes `--env` on (the worktree
+    prompt's template too), `🔑 Without <name>…` (`0`) goes back; the New agent menu lists none
+    and, with `--env`, drops Web page…; the Env view's menu has New agent with it… (`n`); a
+    missing name says so; i18n (en, tr); unit tests (items, keys, titles, commands).
+- [ ] **T106.2 Splits, tabs and worktrees start with one** · S · deps: T106.1
+  - AC: D101: `imux split|tab <agent|shell> --env <name>` and `imux worktree new … --env
+    <name>`: an agent's `Launch.Env` (`@imux_env` in the exec that makes the pane), a terminal's
+    shell through `imux __exec` (`shellCmd`) with `@imux_env`, the "No agents" pane's option set
+    before it fills; a name with no file stops before anything starts, a bad name is a usage
+    error; unit tests (the engine commands, no value on them).
+- [ ] **T106.3 End to end and docs** · S · deps: T106.2
+  - AC: e2e: Agents' **+** → Claude → 🔑 With glm… → Right starts Claude once, with the
+    variable, `@imux_env` and the border; a terminal split with `--env` has it (`echo`); no
+    value on a tmux command line. GUIDE, README and README.tr, CHANGELOG.
+
 ## M105: Signed releases on Windows and macOS (added 2026-11-23)
 
 User report: a company Windows machine would not install i-mux, an unsigned program (D100).
