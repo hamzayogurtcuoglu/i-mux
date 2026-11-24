@@ -197,15 +197,15 @@ func TestConfLoadsInEngine(t *testing.T) {
 	if _, err := WriteConf(conf, GenerateConf(in), nil); err != nil {
 		t.Fatal(err)
 	}
-	// start-server with the generated file must not complain.
-	cmd := exec.Command(c.Bin, "-L", c.Socket, "-f", conf, "start-server")
+	// start-server with the generated file must not complain. The session
+	// starts in the same command: a server with none exits (exit-empty), and
+	// a command that reached it as it went failed with "server exited
+	// unexpectedly".
+	cmd := exec.Command(c.Bin, "-L", c.Socket, "-f", conf, "start-server", ";", "new-session", "-d", "-s", "conf", "sleep", "30")
 	if out, err := cmd.CombinedOutput(); err != nil || len(out) > 0 {
 		t.Fatalf("start-server: %v %s", err, out)
 	}
 	c.Config = conf
-	if _, err := c.Do(Cmd{"new-session", "-d", "-s", "conf", "sleep", "30"}); err != nil {
-		t.Fatal(err)
-	}
 	// Sourcing it again (as Reload does) reports errors on stderr.
 	if err := c.Reload(ctx, conf); err != nil {
 		t.Fatalf("reload: %v", err)
