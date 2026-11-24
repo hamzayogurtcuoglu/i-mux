@@ -1036,22 +1036,6 @@ waits away from the desk (D104).
   - AC: D104: an end-to-end encrypted relay so the phone reaches imux from any network without
     Tailscale; the relay sees no content. Decision on hosting first.
 
-## M108: Checkpoints: undo any agent turn (added 2026-11-24)
-
-User request: one click takes the project back to before an agent's turn, whatever the CLI
-(D103).
-
-- [ ] **T108.1 Recording checkpoints** · M
-  - AC: D103: before each turn (Claude Code's and Codex's hooks; the watcher's idle → working for
-    the others) the project's files are recorded under `refs/imux/checkpoints/<pane>/<n>` with a
-    temporary index, untracked files included and `.gitignore` respected; HEAD, the index, the
-    branch and the files are untouched; the last 50 per project are kept; nothing outside a git
-    repository. Unit tests with real git in a temp folder (paths as on macOS, Linux, Windows).
-- [ ] **T108.2 Checkpoints… and Restore** · M · deps: T108.1
-  - AC: D103: the agent's row menu opens Checkpoints… (time, the prompt's first line, `git diff
-    --stat` against now); a checkpoint shows its diff; Restore records the present first, then
-    puts the checkpoint's files back and removes files added since. Unit and e2e tests.
-
 ## M107: Agents ask each other, across projects and CLIs (added 2026-11-24)
 
 User request: an agent can ask another live agent (in another project, in any CLI) a question or
