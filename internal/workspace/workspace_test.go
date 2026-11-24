@@ -260,7 +260,7 @@ func TestNewWindowEnsuresWatcher(t *testing.T) {
 	called := false
 	EnsureWatcher = func(*WS) { called = true }
 	defer func() { EnsureWatcher = func(*WS) {} }()
-	if _, err := w.NewWindow(context.Background(), "%3", "claude", h.Project); err != nil {
+	if _, err := w.NewWindow(context.Background(), "%3", "claude", h.Project, ""); err != nil {
 		t.Fatal(err)
 	}
 	if !called {

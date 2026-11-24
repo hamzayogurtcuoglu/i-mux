@@ -173,6 +173,27 @@ func runEnv(e *Env, args []string) error {
 	return usage
 }
 
+// checkEnvName checks a --env name (D101): "" is none; a name that cannot
+// be an environment's is a usage error.
+func checkEnvName(name string) error {
+	if name != "" && !envfile.ValidName(name) {
+		return &UsageError{Msg: i18n.T("env.bad_name", name)}
+	}
+	return nil
+}
+
+// checkEnv is checkEnvName, and a name with no file is an error, so a new
+// agent asked to start with it does not start at all (D101).
+func checkEnv(name string) error {
+	if err := checkEnvName(name); err != nil {
+		return err
+	}
+	if name != "" && !envfile.Exists(name) {
+		return errors.New(i18n.T("env.not_found", name))
+	}
+	return nil
+}
+
 // envNewDialog is `imux env new` with no name, on a terminal (in, out: the
 // Env view's popup): the New environment dialog asks the name, then the
 // new file opens in the editor, on the line under its template (T89.7).

@@ -73,6 +73,12 @@ type StartResult struct {
 // Start creates the project's session with agent id in cwd, or finds the
 // existing one. The caller attaches afterwards.
 func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartResult, error) {
+	return w.StartEnv(ctx, id, cwd, "")
+}
+
+// StartEnv is Start with environment env ("" none) for the agent it starts
+// (D101); a session that exists is found as it is.
+func (w *WS) StartEnv(ctx context.Context, id session.AgentID, cwd, env string) (*StartResult, error) {
 	name := SessionName(cwd)
 	ok, err := w.HasSession(ctx, name)
 	if err != nil {
@@ -96,7 +102,7 @@ func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartR
 			return nil, err
 		}
 	}
-	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd}, func(cmd []string) tmux.Cmd {
+	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, func(cmd []string) tmux.Cmd {
 		return append(tmux.Cmd{"new-session", "-d", "-s", name, "-c", cwd, "-P", "-F", "#{pane_id}"}, cmd...)
 	})
 	if err != nil {
@@ -109,8 +115,8 @@ func (w *WS) Start(ctx context.Context, id session.AgentID, cwd string) (*StartR
 }
 
 // NewWindow opens a window with agent id next to the caller's pane (imux
-// invoked inside the workspace).
-func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID, cwd string) (string, error) {
+// invoked inside the workspace), with environment env ("" none, D101).
+func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID, cwd, env string) (string, error) {
 	if id == "" {
 		var err error
 		if id, err = w.DefaultAgent(); err != nil {
@@ -121,7 +127,7 @@ func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID,
 	if err != nil {
 		return "", err
 	}
-	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd}, func(cmd []string) tmux.Cmd {
+	pane, err := w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, func(cmd []string) tmux.Cmd {
 		return append(tmux.Cmd{"new-window", "-a", "-t", strings.TrimSpace(win), "-c", cwd, "-P", "-F", "#{pane_id}"}, cmd...)
 	})
 	if err == nil {
@@ -131,9 +137,10 @@ func (w *WS) NewWindow(ctx context.Context, fromPane string, id session.AgentID,
 	return pane, err
 }
 
-// Split opens a pane with agent id next to pane, in the same directory.
-func (w *WS) Split(ctx context.Context, pane string, id session.AgentID, cwd string, horizontal, before bool) (string, error) {
-	return w.launchNew(ctx, Launch{Agent: id, CWD: cwd}, func(cmd []string) tmux.Cmd {
+// Split opens a pane with agent id next to pane, in the same directory,
+// with environment env ("" none, D101).
+func (w *WS) Split(ctx context.Context, pane string, id session.AgentID, cwd string, horizontal, before bool, env string) (string, error) {
+	return w.launchNew(ctx, Launch{Agent: id, CWD: cwd, Env: env}, func(cmd []string) tmux.Cmd {
 		return append(splitCmd(pane, cwd, horizontal, before), cmd...)
 	})
 }
@@ -333,28 +340,51 @@ var execFunc = sysx.Exec
 // ShellAgent is the name menus and commands use for a plain terminal.
 const ShellAgent = "shell"
 
-// SplitShell opens the user's shell (no agent) next to pane, in cwd.
-func (w *WS) SplitShell(ctx context.Context, pane, cwd string, horizontal, before bool) (string, error) {
-	out, err := w.T.Run(ctx, splitCmd(pane, cwd, horizontal, before))
+// SplitShell opens the user's shell (no agent) next to pane, in cwd, with
+// environment env ("" none, D101).
+func (w *WS) SplitShell(ctx context.Context, pane, cwd string, horizontal, before bool, env string) (string, error) {
+	np, err := w.newShell(ctx, splitCmd(pane, cwd, horizontal, before), cwd, env)
 	if err != nil {
 		return "", err
 	}
 	w.RefreshSidebars(ctx)
-	return strings.TrimSpace(out), nil
+	return np, nil
 }
 
 // NewShellWindow opens a tab with the user's shell after fromPane's tab,
-// with a sidebar.
-func (w *WS) NewShellWindow(ctx context.Context, fromPane, cwd string) (string, error) {
+// with a sidebar and environment env ("" none, D101).
+func (w *WS) NewShellWindow(ctx context.Context, fromPane, cwd, env string) (string, error) {
 	win, err := w.T.Run(ctx, tmux.Cmd{"display-message", "-p", "-t", fromPane, "#{window_id}"})
 	if err != nil {
 		return "", err
 	}
-	out, err := w.T.Run(ctx, tmux.Cmd{"new-window", "-a", "-t", strings.TrimSpace(win), "-c", cwd, "-P", "-F", "#{pane_id}"})
+	pane, err := w.newShell(ctx, tmux.Cmd{"new-window", "-a", "-t", strings.TrimSpace(win), "-c", cwd, "-P", "-F", "#{pane_id}"}, cwd, env)
 	if err != nil {
 		return "", err
 	}
-	pane := strings.TrimSpace(out)
 	w.maybeSidebar(ctx, pane)
 	return pane, nil
+}
+
+// newShell runs create (a split-window or new-window that prints the new
+// pane's id) for the user's shell. With environment env the shell starts
+// through `imux __exec` with its variables, and the pane gets @imux_env in
+// the same exec (D101), as launchNew does for an agent.
+func (w *WS) newShell(ctx context.Context, create tmux.Cmd, cwd, env string) (string, error) {
+	cmds, spec := []tmux.Cmd{create}, ""
+	if env != "" && envfile.Exists(env) {
+		argv, path, err := w.shellSpec(sysx.ShellArgv(w.loginShell(ctx)), "", cwd, env)
+		if err != nil {
+			return "", err
+		}
+		cmds, spec = []tmux.Cmd{append(create, argv...), {"set-option", "-p", OptEnv, env}}, path
+	}
+	out, err := w.T.Run(ctx, cmds...)
+	if err != nil {
+		if spec != "" {
+			os.Remove(spec)
+		}
+		return "", err
+	}
+	return strings.TrimSpace(strings.SplitN(out, "\n", 2)[0]), nil
 }

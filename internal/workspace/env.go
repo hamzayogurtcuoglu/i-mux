@@ -280,6 +280,8 @@ func (w *WS) EnvRowMenu(ctx context.Context, name, pane, client string) *Menu {
 		} else {
 			items = append(items, MenuItem{Name: i18n.T("env.apply_here"), Key: "a", Cmd: w.ui(append([]string{"env", "apply", name}, tgt...)...)})
 		}
+		// Or a new agent that starts with it (D101).
+		items = append(items, MenuItem{Name: i18n.T("env.new_agent"), Key: "n", Cmd: w.ui(append([]string{"__menu", "--new", "--env", name}, tgt...)...)})
 	}
 	items = append(items,
 		MenuItem{Name: i18n.T("env.edit"), Key: "e", Cmd: w.popupCmd("90%", "90%", "env", "edit", name)},

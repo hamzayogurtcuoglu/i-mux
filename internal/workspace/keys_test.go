@@ -154,11 +154,11 @@ func TestSwapPane(t *testing.T) {
 func TestSplitMenuBefore(t *testing.T) {
 	i18n.SetLocale("en")
 	w, _, _ := testWS(t)
-	m := w.SplitMenu(&Pane{ID: "%1"}, "c1", true, true)
+	m := w.SplitMenu(&Pane{ID: "%1"}, "c1", true, true, "")
 	if m.Title != "Split left: new pane with…" || !strings.Contains(m.Items[0].Cmd, "split claude -h --before --pane %1") {
 		t.Errorf("left: %q %q", m.Title, m.Items[0].Cmd)
 	}
-	if m := w.SplitMenu(&Pane{ID: "%1"}, "", false, false); m.Title != "Split down: new pane with…" || strings.Contains(m.Items[0].Cmd, "--before") {
+	if m := w.SplitMenu(&Pane{ID: "%1"}, "", false, false, ""); m.Title != "Split down: new pane with…" || strings.Contains(m.Items[0].Cmd, "--before") {
 		t.Errorf("down: %q %q", m.Title, m.Items[0].Cmd)
 	}
 }
@@ -281,7 +281,7 @@ func TestWorktreeMenus(t *testing.T) {
 	i18n.SetLocale("en")
 	w, _, _ := testWS(t)
 	p := &Pane{ID: "%14"}
-	m := w.PlaceMenu(p, "c1", "codex")
+	m := w.PlaceMenu(p, "c1", "codex", "")
 	last := m.Items[len(m.Items)-1]
 	if last.Key != "w" || last.Name != "🌿 In a new worktree…" {
 		t.Fatalf("place menu ends with %+v", last)
@@ -291,7 +291,7 @@ func TestWorktreeMenus(t *testing.T) {
 		strings.Contains(tmpl, "%14") || !strings.Contains(tmpl, "worktree new --from-option") || !strings.Contains(tmpl, "-t c1") {
 		t.Errorf("prompt %q", last.Cmd)
 	}
-	if m := w.PlaceMenu(p, "c1", ShellAgent); strings.Contains(m.Items[len(m.Items)-1].Name, "worktree") {
+	if m := w.PlaceMenu(p, "c1", ShellAgent, ""); strings.Contains(m.Items[len(m.Items)-1].Name, "worktree") {
 		t.Error("a terminal in a worktree")
 	}
 	wt := Worktree{Path: "/r.worktrees/fix", Branch: "fix", Main: "/r", Base: "main"}

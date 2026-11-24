@@ -20,7 +20,7 @@ import (
 func init() {
 	register(&command{
 		Name:    "worktree",
-		Args:    "new <branch> [agent] | diff | merge | remove [--force]  [--session S]",
+		Args:    "new <branch> [agent] [--env <name>] | diff | merge | remove [--force]  [--session S]",
 		Summary: "cmd.worktree",
 		Run:     runWorktree,
 	})
@@ -36,13 +36,17 @@ func runWorktree(e *Env, args []string) error {
 	clientF := fs.String("client", "", "the client to show it on")
 	fromOpt := fs.Bool("from-option", false, "new: the branch, pane, client and agent from the prompt's options")
 	force := fs.Bool("force", false, "remove: even with changes")
+	envF := fs.String("env", "", "new: the agent starts with this environment (imux env ls)")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
 	}
-	usage := &UsageError{Msg: i18n.T("cli.usage", "worktree new <branch> [agent] | diff | merge | remove [--force]")}
+	usage := &UsageError{Msg: i18n.T("cli.usage", "worktree new <branch> [agent] [--env <name>] | diff | merge | remove [--force]")}
 	if len(pos) == 0 {
 		return usage
+	}
+	if err := checkEnvName(*envF); err != nil {
+		return err
 	}
 	w, _, err := newWorkspace(e, false)
 	if err != nil {
@@ -70,7 +74,10 @@ func runWorktree(e *Env, args []string) error {
 				return nil // the prompt was left empty
 			}
 		}
-		return wc.create(branch, session.AgentID(agentID))
+		if err := checkEnv(*envF); err != nil {
+			return wc.fail(err)
+		}
+		return wc.create(branch, session.AgentID(agentID), *envF)
 	case "diff", "merge", "remove", "ask":
 		s, err := wc.session(*sessionF)
 		if err != nil {
@@ -140,8 +147,9 @@ func (c *worktreeCmd) session(s string) (string, error) {
 	return workspace.SessionName(cwd), nil
 }
 
-// create opens the worktree from the pane's project (or this folder).
-func (c *worktreeCmd) create(branch string, agent session.AgentID) error {
+// create opens the worktree from the pane's project (or this folder), its
+// agent with environment env ("" none).
+func (c *worktreeCmd) create(branch string, agent session.AgentID, env string) error {
 	dir := ""
 	if p := firstNonEmpty(c.pane, os.Getenv("TMUX_PANE")); p != "" {
 		if pn, err := c.w.PaneTarget(c.ctx, p); err == nil {
@@ -158,7 +166,7 @@ func (c *worktreeCmd) create(branch string, agent session.AgentID) error {
 	if err := c.w.EnsureConf(c.ctx); err != nil {
 		return err
 	}
-	res, path, err := c.w.NewWorktree(c.ctx, dir, branch, agent)
+	res, path, err := c.w.NewWorktree(c.ctx, dir, branch, agent, env)
 	if errors.Is(err, workspace.ErrNotGit) {
 		return c.fail(errors.New(i18n.T("worktree.not_git")))
 	}

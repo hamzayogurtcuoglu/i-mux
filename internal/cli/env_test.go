@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
 
@@ -46,5 +47,29 @@ func TestEnvDialogPopup(t *testing.T) {
 	}
 	if _, _, code := runCLI(t, "env", "new"); code != ExitUsage {
 		t.Fatalf("env new without a terminal: exit %d", code)
+	}
+}
+
+// TestEnvFlag (D101): --env of split, tab and worktree new takes an
+// environment's name: one that cannot be a name is a usage error before
+// anything runs; one with no file is an error that names it.
+func TestEnvFlag(t *testing.T) {
+	testutil.Isolate(t)
+	for _, args := range [][]string{
+		{"split", "claude", "--env", "Not A Name"}, {"tab", "shell", "--env", "x/y"}, {"worktree", "new", "fix", "--env", "UPPER"},
+	} {
+		if _, _, code := runCLI(t, args...); code != ExitUsage {
+			t.Errorf("%v: exit %d, want a usage error", args, code)
+		}
+	}
+	if err := checkEnv("glm"); err == nil || !strings.Contains(err.Error(), "glm") {
+		t.Errorf("a missing environment: %v", err)
+	}
+	testutil.WriteFile(t, envfile.Path("glm"), []byte("A=1\n"))
+	if err := checkEnv("glm"); err != nil {
+		t.Errorf("glm: %v", err)
+	}
+	if err := checkEnv(""); err != nil {
+		t.Errorf("none: %v", err)
 	}
 }

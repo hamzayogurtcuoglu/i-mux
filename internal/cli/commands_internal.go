@@ -24,7 +24,7 @@ func init() {
 	})
 	register(&command{
 		Name:    "__menu",
-		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v [--before] | --keys | --limits | --changes | --tab | --project S | --close-project S | --close-tab | --agent | --close-agent]",
+		Args:    "--pane %N [--client C] [--sessions [--page N] | --session <agent>:<id> | --split h|v [--before] [--env E] | --new [--env E] | --place <agent> [--env E] | --keys | --limits | --changes | --tab [--env E] | --project S | --close-project S | --close-tab | --agent | --close-agent]",
 		Summary: "cmd.internal",
 		Hidden:  true,
 		Run:     runMenu,
@@ -66,6 +66,7 @@ func runMenu(e *Env, args []string) error {
 	beforeF := fs.Bool("before", false, "with --split: left or up instead")
 	newF := fs.Bool("new", false, "ask which agent a new pane starts with, then where")
 	placeF := fs.String("place", "", "ask where agent (or shell) opens: right, left, down, up or a new tab")
+	envF := fs.String("env", "", "with --new, --place, --split, --tab: the new agent starts with this environment")
 	keysF := fs.Bool("keys", false, "show the keys")
 	limitsF := fs.Bool("limits", false, "open the limits popup")
 	changesF := fs.Bool("changes", false, "menu of the changed files")
@@ -93,6 +94,11 @@ func runMenu(e *Env, args []string) error {
 	}
 	pane = p.ID // a sidebar's commands act on its target pane
 	client := *clientF
+	env := *envF
+	if err := checkEnv(env); err != nil {
+		w.Message(ctx, client, pane, err.Error())
+		return err
+	}
 	var m *workspace.Menu
 	switch {
 	case *limitsF:
@@ -100,7 +106,7 @@ func runMenu(e *Env, args []string) error {
 	case *keysF:
 		return w.ShowKeys(ctx, p, client)
 	case *tabF:
-		m = w.TabMenu(p, client)
+		m = w.TabMenu(p, client, env)
 	case *projectF != "":
 		if m, err = w.ProjectMenu(ctx, *projectF, client, pane); err != nil {
 			w.Message(ctx, client, pane, err.Error())
@@ -132,11 +138,11 @@ func runMenu(e *Env, args []string) error {
 			return nil
 		}
 	case *splitF != "":
-		m = w.SplitMenu(p, client, *splitF == "h", *beforeF)
+		m = w.SplitMenu(p, client, *splitF == "h", *beforeF, env)
 	case *newF:
-		m = w.NewAgentMenu(p, client)
+		m = w.NewAgentMenu(p, client, env)
 	case *placeF != "":
-		m = w.PlaceMenu(p, client, *placeF)
+		m = w.PlaceMenu(p, client, *placeF, env)
 	case *sessionsF:
 		if *pinF {
 			m = w.PinMenu(ctx, sources.New(cfg), p, client, *pageF)

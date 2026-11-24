@@ -286,12 +286,17 @@ func runTab(e *Env, args []string) error {
 	fs := newFlags(e, "tab")
 	paneF := fs.String("pane", "", "a pane of the project (default: this pane)")
 	clientF := fs.String("client", "", "client for messages")
+	envF := fs.String("env", "", "start it with this environment (imux env ls)")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		return &UsageError{Msg: i18n.T("cli.usage", "tab <agent|shell>")}
+		return &UsageError{Msg: i18n.T("cli.usage", "tab <agent|shell> [--env <name>]")}
+	}
+	env := *envF
+	if err := checkEnvName(env); err != nil {
+		return err
 	}
 	var id session.AgentID
 	shell := pos[0] == workspace.ShellAgent
@@ -313,8 +318,12 @@ func runTab(e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
+	if err := checkEnv(env); err != nil {
+		w.Message(ctx, *clientF, p.ID, err.Error())
+		return err
+	}
 	if shell {
-		np, err := w.NewShellWindow(ctx, p.ID, p.CWD)
+		np, err := w.NewShellWindow(ctx, p.ID, p.CWD, env)
 		if err != nil {
 			w.Message(ctx, *clientF, p.ID, err.Error())
 			return err
@@ -327,7 +336,7 @@ func runTab(e *Env, args []string) error {
 		w.Message(ctx, *clientF, p.ID, err.Error())
 		return err
 	}
-	np, err := w.NewWindow(ctx, p.ID, id, p.CWD)
+	np, err := w.NewWindow(ctx, p.ID, id, p.CWD, env)
 	if err != nil {
 		w.Message(ctx, *clientF, p.ID, err.Error())
 		return err

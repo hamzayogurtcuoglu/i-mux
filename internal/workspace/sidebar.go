@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/agent"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/envfile"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/gitinfo"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
@@ -150,8 +151,9 @@ func (w *WS) ToggleSidebar(ctx context.Context, pane, mode string) (bool, error)
 // RefreshSidebars makes every sidebar redraw.
 func (w *WS) RefreshSidebars(ctx context.Context) { sidebar.RefreshAll(ctx, w.T) }
 
-// SplitMenu asks which agent the new pane next to p starts with.
-func (w *WS) SplitMenu(p *Pane, client string, horizontal, before bool) *Menu {
+// SplitMenu asks which agent the new pane next to p starts with; with
+// environment env ("" none) it starts with it (D101).
+func (w *WS) SplitMenu(p *Pane, client string, horizontal, before bool, env string) *Menu {
 	dir, title := "-v", i18n.T("split.down")
 	if horizontal {
 		dir, title = "-h", i18n.T("split.right")
@@ -161,7 +163,7 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal, before bool) *Menu {
 		if before { // left or up (Ctrl+Alt+← ↑, D67)
 			a = append(a, "--before")
 		}
-		return append(a, uiTarget(p.ID, client)...)
+		return append(withEnv(a, env), uiTarget(p.ID, client)...)
 	}
 	if before {
 		title = i18n.T("split.up")
@@ -169,7 +171,7 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal, before bool) *Menu {
 			title = i18n.T("split.left")
 		}
 	}
-	m := &Menu{Title: title}
+	m := &Menu{Title: envTitle(title, env)}
 	for _, a := range agent.Ordered(w.Cfg) {
 		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: w.ui(args(string(a.ID))...)}
 		if !w.Installed(a.ID) {
@@ -184,19 +186,31 @@ func (w *WS) SplitMenu(p *Pane, client string, horizontal, before bool) *Menu {
 		Name: i18n.T("menu.terminal"), Key: "t",
 		Cmd: w.ui(args(ShellAgent)...),
 	})
+	m.Items = append(m.Items, envItems(env, func(e string) string {
+		a := []string{"__menu", "--split", dir[1:]}
+		if before {
+			a = append(a, "--before")
+		}
+		return w.ui(append(withEnv(a, e), uiTarget(p.ID, client)...)...)
+	})...)
 	return m
 }
 
 // NewAgentMenu asks which agent a new pane starts with (the sidebar's "+"
-// of Agents); PlaceMenu then asks where it opens. In the project's "No
-// agents" pane the agent starts in its place.
-func (w *WS) NewAgentMenu(p *Pane, client string) *Menu {
+// of Agents); PlaceMenu then asks where it opens, and lists the
+// environments. In the project's "No agents" pane the agent starts in its
+// place. With env (the Env view's New agent with it…) the agent starts
+// with that environment (D101).
+func (w *WS) NewAgentMenu(p *Pane, client, env string) *Menu {
 	if p.IsEmpty() {
-		return w.SplitMenu(p, client, true, false)
+		return w.SplitMenu(p, client, true, false, env)
 	}
-	m := &Menu{Title: i18n.T("new_agent.title")}
+	place := func(id string) string {
+		return w.ui(append(withEnv([]string{"__menu", "--place", id}, env), uiTarget(p.ID, client)...)...)
+	}
+	m := &Menu{Title: envTitle(i18n.T("new_agent.title"), env)}
 	for _, a := range agent.Ordered(w.Cfg) {
-		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: w.ui(append([]string{"__menu", "--place", string(a.ID)}, uiTarget(p.ID, client)...)...)}
+		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: place(string(a.ID))}
 		if !w.Installed(a.ID) {
 			it.Name += " " + i18n.T("menu.not_installed")
 			it.Disabled, it.Key = true, ""
@@ -205,28 +219,31 @@ func (w *WS) NewAgentMenu(p *Pane, client string) *Menu {
 		}
 		m.Items = append(m.Items, it)
 	}
-	m.Items = append(m.Items, Separator(), MenuItem{
-		Name: i18n.T("menu.terminal"), Key: "t",
-		Cmd: w.ui(append([]string{"__menu", "--place", ShellAgent}, uiTarget(p.ID, client)...)...),
-	})
-	// A page in the browser: a dev server's address, or a file (D47).
-	m.Items = append(m.Items, MenuItem{Name: i18n.T("menu.web_page"), Key: "w", Cmd: w.WebPrompt(p.ID, client)})
+	m.Items = append(m.Items, Separator(), MenuItem{Name: i18n.T("menu.terminal"), Key: "t", Cmd: place(ShellAgent)})
+	if env == "" {
+		// A page in the browser: a dev server's address, or a file (D47).
+		m.Items = append(m.Items, MenuItem{Name: i18n.T("menu.web_page"), Key: "w", Cmd: w.WebPrompt(p.ID, client)})
+	}
 	return m
 }
 
 // PlaceMenu asks where agent id (or ShellAgent) opens: in a new pane right
-// of, left of, below or above p, or in a new tab.
-func (w *WS) PlaceMenu(p *Pane, client, id string) *Menu {
+// of, left of, below or above p, or in a new tab; with environment env
+// ("" none), and the environments to choose another (D101).
+func (w *WS) PlaceMenu(p *Pane, client, id, env string) *Menu {
 	name := i18n.T("menu.terminal")
 	if a, ok := agent.Get(session.AgentID(id)); ok {
 		name = a.Short
+	}
+	if env != "" {
+		name = i18n.T("env.agent_with", name, env)
 	}
 	split := func(dir string, before bool) string {
 		args := []string{"split", id, dir}
 		if before {
 			args = append(args, "--before")
 		}
-		return w.ui(append(args, uiTarget(p.ID, client)...)...)
+		return w.ui(append(withEnv(args, env), uiTarget(p.ID, client)...)...)
 	}
 	m := &Menu{Title: i18n.T("place.title", name), Items: []MenuItem{
 		{Name: i18n.T("place.right"), Key: "r", Cmd: split("-h", false)},
@@ -234,13 +251,59 @@ func (w *WS) PlaceMenu(p *Pane, client, id string) *Menu {
 		{Name: i18n.T("place.down"), Key: "d", Cmd: split("-v", false)},
 		{Name: i18n.T("place.up"), Key: "u", Cmd: split("-v", true)},
 		Separator(),
-		{Name: i18n.T("place.tab"), Key: "t", Cmd: w.ui(append([]string{"tab", id}, uiTarget(p.ID, client)...)...)},
+		{Name: i18n.T("place.tab"), Key: "t", Cmd: w.ui(append(withEnv([]string{"tab", id}, env), uiTarget(p.ID, client)...)...)},
 	}}
 	if id != ShellAgent {
 		// An agent of its own in a worktree of the project (D72).
-		m.Items = append(m.Items, Separator(), MenuItem{Name: i18n.T("place.worktree"), Key: "w", Cmd: w.WorktreePrompt(p.ID, client, id)})
+		m.Items = append(m.Items, Separator(), MenuItem{Name: i18n.T("place.worktree"), Key: "w", Cmd: w.WorktreePrompt(p.ID, client, id, env)})
 	}
+	m.Items = append(m.Items, envItems(env, func(e string) string {
+		return w.ui(append(withEnv([]string{"__menu", "--place", id}, e), uiTarget(p.ID, client)...)...)
+	})...)
 	return m
+}
+
+// envItems are the environments a menu that starts a new agent lists
+// (D101): 🔑 With <name>… for each, keys 1–9 in the Env view's order, and
+// 🔑 Without <cur>… (0) when the menu is for cur. reopen is the command
+// that opens the menu again for an environment ("" for none). None without
+// environments.
+func envItems(cur string, reopen func(env string) string) []MenuItem {
+	envs := envfile.List()
+	if len(envs) == 0 {
+		return nil
+	}
+	items := []MenuItem{Separator()}
+	if cur != "" {
+		items = append(items, MenuItem{Name: i18n.T("env.without", cur), Key: "0", Cmd: reopen("")})
+	}
+	for i, e := range envs {
+		if e.Name == cur {
+			continue
+		}
+		key := ""
+		if i < 9 {
+			key = strconv.Itoa(i + 1)
+		}
+		items = append(items, MenuItem{Name: i18n.T("env.with", e.Name), Key: key, Cmd: reopen(e.Name)})
+	}
+	return items
+}
+
+// withEnv adds --env env to an imux command's arguments ("" adds nothing).
+func withEnv(args []string, env string) []string {
+	if env == "" {
+		return args
+	}
+	return append(args, "--env", env)
+}
+
+// envTitle is a menu's title for environment env ("" leaves it).
+func envTitle(title, env string) string {
+	if env == "" {
+		return title
+	}
+	return i18n.T("env.menu_title", env, title)
 }
 
 // ChangesMenu lists the target project's changed files (git status); each
@@ -273,11 +336,15 @@ func (w *WS) ChangesMenu(ctx context.Context, p *Pane, client string) *Menu {
 	return m
 }
 
-// TabMenu asks which agent a new tab starts with.
-func (w *WS) TabMenu(p *Pane, client string) *Menu {
-	m := &Menu{Title: i18n.T("tab.title")}
+// TabMenu asks which agent a new tab starts with; with environment env
+// ("" none) it starts with it (D101).
+func (w *WS) TabMenu(p *Pane, client, env string) *Menu {
+	tab := func(id string) string {
+		return w.ui(append(withEnv([]string{"tab", id}, env), uiTarget(p.ID, client)...)...)
+	}
+	m := &Menu{Title: envTitle(i18n.T("tab.title"), env)}
 	for _, a := range agent.Ordered(w.Cfg) {
-		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: w.ui(append([]string{"tab", string(a.ID)}, uiTarget(p.ID, client)...)...)}
+		it := MenuItem{Name: a.Short, Key: a.Key, Cmd: tab(string(a.ID))}
 		if !w.Installed(a.ID) {
 			it.Name += " " + i18n.T("menu.not_installed")
 			it.Disabled, it.Key = true, ""
@@ -286,10 +353,10 @@ func (w *WS) TabMenu(p *Pane, client string) *Menu {
 		}
 		m.Items = append(m.Items, it)
 	}
-	m.Items = append(m.Items, Separator(), MenuItem{
-		Name: i18n.T("menu.terminal"), Key: "t",
-		Cmd: w.ui(append([]string{"tab", ShellAgent}, uiTarget(p.ID, client)...)...),
-	})
+	m.Items = append(m.Items, Separator(), MenuItem{Name: i18n.T("menu.terminal"), Key: "t", Cmd: tab(ShellAgent)})
+	m.Items = append(m.Items, envItems(env, func(e string) string {
+		return w.ui(append(withEnv([]string{"__menu", "--tab"}, e), uiTarget(p.ID, client)...)...)
+	})...)
 	return m
 }
 

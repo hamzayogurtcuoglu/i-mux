@@ -14,6 +14,7 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/launch"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/sidebar"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sources"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 )
@@ -292,11 +293,123 @@ func TestEnvRowMenu(t *testing.T) {
 		!strings.Contains(cmdOf(m, "x"), "env confirm-rm glm") || cmdOf(m, "r") != "" {
 		t.Fatalf("items %+v", m.Items)
 	}
+	// A new agent with it (D101): the New agent menu for it.
+	if !strings.Contains(cmdOf(m, "n"), "__menu --new --env glm --pane %1") {
+		t.Fatalf("new agent with it: %q", cmdOf(m, "n"))
+	}
 	f.replies["display-message"] = envPaneRow(&Pane{ID: "%1", CWD: h.Project, Command: "bash", Env: "glm"})
 	m = w.EnvRowMenu(context.Background(), "glm", "%1", "")
 	if !strings.Contains(cmdOf(m, "r"), "env clear --pane %1") || !strings.Contains(cmdOf(m, "a"), "env apply glm --pane %1") {
 		t.Fatalf("on its pane %+v", m.Items)
 	}
+}
+
+// execSpec reads the launch spec that a tmux exec runs (imux __exec).
+func execSpec(t *testing.T, call []string) *launch.Spec {
+	t.Helper()
+	i := slices.Index(call, "__exec")
+	if i < 0 || i+1 >= len(call) {
+		t.Fatalf("no spec in %q", call)
+	}
+	s, err := launch.Read(call[i+1], false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// A new agent or terminal asked for with an environment starts with it
+// (D101): the launch spec has its variables and @imux_env is set in the
+// exec that makes the pane. Without one a terminal is the plain shell, as
+// before. No value is ever on a tmux command line.
+func TestNewPanesWithEnv(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths and login shell; Windows starts them in the e2e suite")
+	w, f, h := testWS(t)
+	writeEnv(t, "glm", "TOKEN="+secret+"\n")
+	f.replies["show-options"] = "/bin/sh\n"
+	f.replies["split-window"] = "%9\n"
+	f.replies["new-window"] = "%8\n"
+	f.replies["display-message"] = "@1\n"
+	ctx := context.Background()
+	made := func(what, create string, from int) *launch.Spec {
+		t.Helper()
+		for _, c := range f.calls[from:] {
+			if !slices.Contains(c, create) {
+				continue
+			}
+			if j := strings.Join(c, " "); !strings.Contains(j, "set-option -p "+OptEnv+" glm") {
+				t.Errorf("%s: no @imux_env in the exec that makes the pane: %s", what, j)
+			}
+			s := execSpec(t, c)
+			if s.Env["TOKEN"] != secret {
+				t.Errorf("%s: spec env %v", what, s.Env)
+			}
+			return s
+		}
+		t.Fatalf("%s: no %s", what, create)
+		return nil
+	}
+
+	from := len(f.calls)
+	if np, err := w.Split(ctx, "%1", "claude", h.Project, true, false, "glm"); err != nil || np != "%9" {
+		t.Fatalf("split: %q %v", np, err)
+	}
+	if s := made("agent", "split-window", from); s.Agent != "claude" || s.Bin != "/opt/bin/claude" {
+		t.Errorf("agent spec %+v", s)
+	}
+
+	from = len(f.calls)
+	if np, err := w.SplitShell(ctx, "%1", h.Project, false, true, "glm"); err != nil || np != "%9" {
+		t.Fatalf("terminal: %q %v", np, err)
+	}
+	if s := made("terminal", "split-window", from); s.Bin != "/bin/sh" || !slices.Equal(s.Args, []string{"-l"}) || s.Agent != "" || s.Dir != h.Project {
+		t.Errorf("shell spec %+v", s)
+	}
+
+	from = len(f.calls)
+	if np, err := w.NewShellWindow(ctx, "%1", h.Project, "glm"); err != nil || np != "%8" {
+		t.Fatalf("terminal tab: %q %v", np, err)
+	}
+	made("terminal tab", "new-window", from)
+
+	from = len(f.calls)
+	if _, err := w.SplitShell(ctx, "%1", h.Project, true, false, ""); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range f.calls[from:] {
+		if slices.Contains(c, "split-window") && (slices.Contains(c, "__exec") || slices.Contains(c, OptEnv)) {
+			t.Errorf("a terminal without an environment: %q", c)
+		}
+	}
+	noSecret(t, f)
+}
+
+// The "No agents" pane takes the environment before its agent starts in
+// its place (D101).
+func TestFillEmptyWithEnv(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
+	w, f, h := testWS(t)
+	writeEnv(t, "glm", "TOKEN="+secret+"\n")
+	p := &Pane{ID: "%4", CWD: h.Project, Role: sidebar.RoleEmpty}
+	if err := w.FillEmpty(context.Background(), p, "claude", "glm"); err != nil {
+		t.Fatal(err)
+	}
+	set, respawn := -1, -1
+	for i, c := range f.calls {
+		if strings.Contains(strings.Join(c, " "), "set-option -p -t %4 "+OptEnv+" glm") && set < 0 {
+			set = i
+		}
+		if slices.Contains(c, "respawn-pane") {
+			respawn = i
+		}
+	}
+	if set < 0 || respawn < set {
+		t.Fatalf("@imux_env at %d, respawn at %d", set, respawn)
+	}
+	if s := specOf(t, f); s.Agent != "claude" || s.Env["TOKEN"] != secret {
+		t.Fatalf("spec %+v", s)
+	}
+	noSecret(t, f)
 }
 
 // Deleting an environment unsets it from the panes that have it.

@@ -77,6 +77,9 @@ type SwitchReq struct {
 	// NewPane opens the target in a new pane split from Pane (side by side)
 	// instead of replacing Pane's agent. Used with From.
 	NewPane bool
+	// Env is the environment the new pane, or the "No agents" pane that
+	// Pane is, starts with ("" none, or that pane's own; D101).
+	Env string
 }
 
 // SwitchResult says what happened.
@@ -115,6 +118,13 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 			return nil, err
 		}
 		defer lock.release(ctx)
+	}
+	if req.Env != "" && !req.NewPane && p.IsEmpty() && req.Env != p.Env {
+		// The "No agents" pane takes it first, as FillEmpty (D101).
+		if err := w.setEnvOpt(ctx, p.ID, req.Env); err != nil {
+			return nil, err
+		}
+		p.Env = req.Env
 	}
 
 	all, err := w.Panes(ctx)
@@ -219,7 +229,7 @@ func (w *WS) Switch(ctx context.Context, f *sources.Finder, req SwitchReq) (*Swi
 	}
 	target := p.ID
 	if req.NewPane {
-		l.Pane = ""
+		l.Pane, l.Env = "", req.Env
 		np, err := w.launchNew(ctx, l, func(cmd []string) tmux.Cmd {
 			return append(tmux.Cmd{"split-window", "-h", "-t", p.ID, "-c", l.CWD, "-P", "-F", "#{pane_id}"}, cmd...)
 		})

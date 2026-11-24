@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A new agent can start with an environment.** The Agents **+** → an agent → **🔑 With glm…**
+  → where: the agent starts once, with that environment's variables, instead of being opened
+  and then restarted from the Env view. The split and New tab menus list the environments too,
+  an environment's menu in the Env view has **New agent with it…**, a terminal's shell starts
+  with them, and `imux split`, `imux tab` and `imux worktree new` take `--env <name>`.
+
 ## [0.71.5] - 2026-11-23
 
 ### Changed

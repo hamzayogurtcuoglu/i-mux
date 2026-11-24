@@ -22,15 +22,17 @@ const (
 )
 
 // WorktreePrompt asks the branch of a new worktree for agent, started from
-// pane's project (the place menu's 🌿 In a new worktree…).
-func (w *WS) WorktreePrompt(pane, client, agent string) string {
+// pane's project (the place menu's 🌿 In a new worktree…), with
+// environment env ("" none, D101): a name has no "%", so it can be in the
+// template.
+func (w *WS) WorktreePrompt(pane, client, agent, env string) string {
 	c := "set-option -g " + OptWTPane + " " + tmux.Quote(pane) +
 		" ; set-option -g " + OptWTClient + " " + tmux.Quote(client) +
 		" ; set-option -g " + OptWTAgent + " " + tmux.Quote(agent) + " ; command-prompt"
 	if client != "" {
 		c += " -t " + tmux.Quote(client)
 	}
-	tmpl := "set-option -g " + OptWTBranch + " \"%%%\" ; " + tmux.RunShell(w.Self, "worktree", "new", "--from-option")
+	tmpl := "set-option -g " + OptWTBranch + " \"%%%\" ; " + tmux.RunShell(w.Self, withEnv([]string{"worktree", "new", "--from-option"}, env)...)
 	return c + " -p " + tmux.Quote(i18n.T("worktree.prompt")) + " " + tmux.Quote(tmpl)
 }
 
@@ -38,9 +40,10 @@ func (w *WS) WorktreePrompt(pane, client, agent string) string {
 var ErrNotGit = errors.New("not a git repository")
 
 // NewWorktree opens branch's worktree of the repository dir is in as a
-// project with agent ("" the default): <repo>.worktrees/<branch>, with a
-// new branch from HEAD, or the branch when it exists (D72).
-func (w *WS) NewWorktree(ctx context.Context, dir, branch string, agent session.AgentID) (*StartResult, string, error) {
+// project with agent ("" the default) and environment env ("" none, D101):
+// <repo>.worktrees/<branch>, with a new branch from HEAD, or the branch
+// when it exists (D72).
+func (w *WS) NewWorktree(ctx context.Context, dir, branch string, agent session.AgentID, env string) (*StartResult, string, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return nil, "", errors.New(i18n.T("worktree.no_branch"))
@@ -59,7 +62,7 @@ func (w *WS) NewWorktree(ctx context.Context, dir, branch string, agent session.
 			return nil, path, err
 		}
 	}
-	res, err := w.Start(ctx, agent, path)
+	res, err := w.StartEnv(ctx, agent, path, env)
 	return res, path, err
 }
 

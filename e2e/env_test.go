@@ -124,6 +124,83 @@ func TestEnvironments(t *testing.T) {
 	}
 }
 
+// TestNewAgentWithEnv (T106.3, D101): Agents' + → Claude → 🔑 With glm… →
+// Right starts Claude once, with the environment's variable, @imux_env and
+// the border; a terminal split with --env has it at its prompt, and a
+// conversation continued in a new pane with --env too; no value is ever on
+// a tmux command line.
+func TestNewAgentWithEnv(t *testing.T) {
+	h := newH(t, sidebarConfig)
+	testutil.WriteFile(t, filepath.Join(h.Homes.Imux, "env", "glm.env"), []byte("E2E_ENV_PROBE="+envSecret+"\n"))
+	pane, bar := h.startWithSidebar()
+	claudeID := h.run("claude", 1)[1]
+	c, _ := h.attach(140, 40)
+	c.waitScreen(h, "AGENTS", 10*time.Second)
+
+	time.Sleep(500 * time.Millisecond)
+	x, y := h.plusOf(bar, "AGENTS")
+	mark := c.Mark()
+	c.Click(0, x, y)
+	c.waitScreenAfter(h, mark, "New agent with:", 5*time.Second)
+	c.Write("c")
+	c.waitScreenAfter(h, mark, "With glm", 5*time.Second)
+	time.Sleep(200 * time.Millisecond)
+	mark = c.Mark()
+	c.Write("1")
+	c.waitScreenAfter(h, mark, "Without glm", 5*time.Second)
+	time.Sleep(200 * time.Millisecond)
+	c.Write("r")
+	h.run("claude", 2)
+	if env := h.runEnv("claude", 2); env["E2E_ENV_PROBE"] != envSecret {
+		t.Fatalf("the new Claude's environment %v", env)
+	}
+	newPane := ""
+	h.waitFor("the new pane", 5*time.Second, func() bool {
+		for _, l := range strings.Split(h.mustTmux("list-panes", "-a", "-F", "#{pane_id} #{@imux_agent} #{@imux_env}"), "\n") {
+			if f := strings.Fields(l); len(f) == 3 && f[0] != pane && f[1] == "claude" && f[2] == "glm" {
+				newPane = f[0]
+			}
+		}
+		return newPane != ""
+	})
+	if border := h.paneOpt(newPane, "#{T:pane-border-format}"); !strings.Contains(border, "🔑 glm") {
+		t.Fatalf("border %q", border)
+	}
+	if got := h.paneOpt(pane, "#{@imux_env}"); got != "" {
+		t.Fatalf("the first pane got %q", got)
+	}
+	h.noRun("claude", 3, 1500*time.Millisecond) // started once, not restarted
+
+	// A terminal with it: its shell has the variable at its prompt.
+	h.mustTmux("set-option", "-g", "default-shell", posixShell())
+	shell := strings.TrimSpace(h.mustImux("split", "shell", "-v", "--env", "glm", "--pane", pane))
+	if got := h.paneOpt(shell, "#{@imux_env}"); got != "glm" {
+		t.Fatalf("terminal %q: @imux_env %q", shell, got)
+	}
+	h.waitFor("the terminal's prompt", 10*time.Second, func() bool {
+		return strings.ContainsAny(h.capture(shell), "$#")
+	})
+	h.mustTmux("send-keys", "-t", shell, "echo probe=[$E2E_ENV_PROBE]", "Enter")
+	h.waitFor("the terminal has the variable", 10*time.Second, func() bool {
+		return strings.Contains(h.capture(shell), "probe=["+envSecret+"]")
+	})
+
+	// A conversation continued in a new pane, with it.
+	h.mustImux("split", "claude", "-h", "--from-session", "claude:"+claudeID, "--env", "glm", "--pane", pane)
+	if argv := h.run("claude", 3); !strings.Contains(strings.Join(argv, " "), claudeID) {
+		t.Fatalf("continued argv %q", argv)
+	}
+	if env := h.runEnv("claude", 3); env["E2E_ENV_PROBE"] != envSecret {
+		t.Fatalf("the continued Claude's environment %v", env)
+	}
+
+	for _, r := range h.records() {
+		if strings.Contains(strings.Join(r.Args, " "), envSecret) {
+			t.Fatalf("a value on a tmux command line: %q", r.Args)
+		}
+	}
+}
+
 // TestEnvNewPopup (T89.7): the Env view's + opens the New environment
 // dialog in a popup in the middle of the client: what is typed shows as
 // the name it makes; Enter writes the file and opens it in the editor in

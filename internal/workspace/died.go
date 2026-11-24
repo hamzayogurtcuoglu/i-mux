@@ -139,6 +139,16 @@ func (w *WS) shellCmd(ctx context.Context, pane, dir, env string) []string {
 	if env == "" || !envfile.Exists(env) {
 		return argv
 	}
+	if cmd, _, err := w.shellSpec(argv, pane, dir, env); err == nil {
+		return cmd
+	}
+	return argv
+}
+
+// shellSpec writes the 0600 launch spec that runs shell argv in dir with
+// environment env, and returns the pane command that runs it and the
+// spec's path.
+func (w *WS) shellSpec(argv []string, pane, dir, env string) ([]string, string, error) {
 	bin := argv[0]
 	if !filepath.IsAbs(bin) {
 		if p, err := exec.LookPath(bin); err == nil {
@@ -146,14 +156,14 @@ func (w *WS) shellCmd(ctx context.Context, pane, dir, env string) []string {
 		}
 	}
 	spec := &launch.Spec{Bin: bin, Args: argv[1:], Dir: dir, Env: envWith(map[string]string{}, env), Pane: pane}
-	if spec.Validate() != nil {
-		return argv
+	if err := spec.Validate(); err != nil {
+		return nil, "", err
 	}
 	path, err := writeSpec(spec)
 	if err != nil {
-		return argv
+		return nil, "", err
 	}
-	return w.execCmd(path)
+	return w.execCmd(path), path, nil
 }
 
 // loginShell returns tmux's default-shell (else $SHELL, else /bin/sh).

@@ -94,7 +94,7 @@ and where the work stopped. No re-explaining, no copy-paste.
   <tr>
     <td valign="top">
       <img src="docs/images/icons/key.svg" width="16" alt=""> <b>Environments</b><br>
-      Apply saved API keys, proxies or endpoints to a single pane.
+      Apply saved API keys, proxies or endpoints to a single pane, or start a new agent with them.
     </td>
     <td valign="top">
       <img src="docs/images/icons/graph.svg" width="16" alt=""> <b>Usage panel</b><br>

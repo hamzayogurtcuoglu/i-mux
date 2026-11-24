@@ -76,7 +76,7 @@ func (w *WS) Click(ctx context.Context, f *sources.Finder, rng string, p *Pane, 
 		}
 		return w.Show(ctx, m, client, p.ID)
 	case ClickNewTab:
-		return w.Show(ctx, w.TabMenu(p, client), client, p.ID)
+		return w.Show(ctx, w.TabMenu(p, client, ""), client, p.ID)
 	case ClickCloseTab:
 		m, err := w.CloseTabMenu(ctx, p, client)
 		if err != nil {

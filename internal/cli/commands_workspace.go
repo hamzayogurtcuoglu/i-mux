@@ -188,7 +188,7 @@ func defaultAction(e *Env, args []string) error {
 		}
 	}
 	if pane := os.Getenv("TMUX_PANE"); pane != "" && w.T.Inside(os.Getenv("TMUX")) {
-		p, err := w.NewWindow(ctx, pane, id, cwd)
+		p, err := w.NewWindow(ctx, pane, id, cwd, "")
 		if err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func runLs(e *Env, args []string) error {
 func init() {
 	register(&command{
 		Name:    "split",
-		Args:    "<agent|shell> [-h|-v] [--pane %N]",
+		Args:    "<agent|shell> [-h|-v] [--before] [--env <name>] [--pane %N]",
 		Summary: "cmd.split",
 		Run:     runSplit,
 	})
@@ -316,12 +316,17 @@ func runSplit(e *Env, args []string) error {
 	paneF := fs.String("pane", "", "pane to split (default: this pane, $TMUX_PANE)")
 	clientF := fs.String("client", "", "tmux client to show messages on")
 	fromF := fs.String("from-session", "", "continue this conversation (<agent>:<id>) in the new pane")
+	envF := fs.String("env", "", "start it with this environment (imux env ls)")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 || *horiz && *vert {
-		return &UsageError{Msg: i18n.T("cli.usage", "split <agent|shell> [-h|-v] [--before]")}
+		return &UsageError{Msg: i18n.T("cli.usage", "split <agent|shell> [-h|-v] [--before] [--env <name>]")}
+	}
+	env := *envF
+	if err := checkEnvName(env); err != nil {
+		return err
 	}
 	var id session.AgentID
 	shell := pos[0] == workspace.ShellAgent
@@ -344,9 +349,13 @@ func runSplit(e *Env, args []string) error {
 		return err
 	}
 	pane = p.ID // a sidebar's commands act on its target pane
+	if err := checkEnv(env); err != nil {
+		w.Message(ctx, *clientF, pane, err.Error())
+		return err
+	}
 	if p.IsEmpty() && *fromF == "" {
 		// The project's "No agents" pane: the agent starts in its place.
-		if err := w.FillEmpty(ctx, p, id); err != nil {
+		if err := w.FillEmpty(ctx, p, id, env); err != nil {
 			w.Message(ctx, *clientF, pane, err.Error())
 			return err
 		}
@@ -360,7 +369,7 @@ func runSplit(e *Env, args []string) error {
 			w.Message(ctx, *clientF, pane, workspace.SwitchError(id, err))
 			return err
 		}
-		res, err := w.Switch(ctx, f, workspace.SwitchReq{Pane: p.ID, To: id, From: &ref, NewPane: !p.IsEmpty(), Client: *clientF})
+		res, err := w.Switch(ctx, f, workspace.SwitchReq{Pane: p.ID, To: id, From: &ref, NewPane: !p.IsEmpty(), Client: *clientF, Env: env})
 		if err != nil {
 			w.Message(ctx, *clientF, pane, workspace.SwitchError(id, err))
 			return err
@@ -372,7 +381,7 @@ func runSplit(e *Env, args []string) error {
 		return nil
 	}
 	if shell {
-		np, err := w.SplitShell(ctx, p.ID, p.CWD, *horiz, *before)
+		np, err := w.SplitShell(ctx, p.ID, p.CWD, *horiz, *before, env)
 		if err != nil {
 			w.Message(ctx, *clientF, pane, err.Error())
 			return err
@@ -380,7 +389,7 @@ func runSplit(e *Env, args []string) error {
 		fmt.Fprintln(e.Stdout, np)
 		return nil
 	}
-	np, err := w.Split(ctx, p.ID, id, p.CWD, *horiz, *before)
+	np, err := w.Split(ctx, p.ID, id, p.CWD, *horiz, *before, env)
 	if err != nil {
 		w.Message(ctx, *clientF, pane, workspace.SwitchError(id, err))
 		return err

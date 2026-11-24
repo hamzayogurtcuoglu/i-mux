@@ -316,9 +316,17 @@ func (w *WS) LeaveEmpty(ctx context.Context, pane string) error {
 func (p *Pane) IsEmpty() bool { return p.Role == sidebar.RoleEmpty }
 
 // FillEmpty starts agent id (or, with id "", the user's shell) in the "No
-// agents" pane p, which becomes an ordinary pane.
-func (w *WS) FillEmpty(ctx context.Context, p *Pane, id session.AgentID) error {
+// agents" pane p, which becomes an ordinary pane. With environment env the
+// pane takes it first, so what starts there has it (D101); "" keeps the
+// pane's own.
+func (w *WS) FillEmpty(ctx context.Context, p *Pane, id session.AgentID, env string) error {
 	defer w.RefreshSidebars(ctx)
+	if env != "" && env != p.Env {
+		if err := w.setEnvOpt(ctx, p.ID, env); err != nil {
+			return err
+		}
+		p.Env = env
+	}
 	if id != "" {
 		return w.respawn(ctx, p, Launch{Agent: id, CWD: p.CWD}, nil, "")
 	}

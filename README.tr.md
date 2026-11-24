@@ -94,7 +94,7 @@ işin kaldığı yer. Yeniden anlatmak yok, kopyala-yapıştır yok.
   <tr>
     <td valign="top">
       <img src="docs/images/icons/key.svg" width="16" alt=""> <b>Ortamlar</b><br>
-      Kayıtlı API anahtarlarını, proxy'leri ya da uç noktaları tek bir bölmeye uygulayın.
+      Kayıtlı API anahtarlarını, proxy'leri ya da uç noktaları tek bir bölmeye uygulayın ya da yeni bir agent'ı onlarla başlatın.
     </td>
     <td valign="top">
       <img src="docs/images/icons/graph.svg" width="16" alt=""> <b>Kullanım paneli</b><br>

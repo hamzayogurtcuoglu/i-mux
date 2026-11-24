@@ -1017,23 +1017,30 @@ slow (about a second).
 User request: an agent opened from Agents' **+** should be able to start with an environment,
 instead of being opened and then given one from the Env view (which restarts it) (D101).
 
-- [ ] **T106.1 The menus list the environments** · S
+- [x] **T106.1 The menus list the environments** · S
   - AC: D101: the place, split and New tab menus end with `🔑 With <name>…` (`1`–`9`) for each
     environment, nothing when there are none; `__menu --place|--split|--tab|--new --env <name>`
     opens a menu for it: the title names it, every choice passes `--env` on (the worktree
     prompt's template too), `🔑 Without <name>…` (`0`) goes back; the New agent menu lists none
     and, with `--env`, drops Web page…; the Env view's menu has New agent with it… (`n`); a
     missing name says so; i18n (en, tr); unit tests (items, keys, titles, commands).
-- [ ] **T106.2 Splits, tabs and worktrees start with one** · S · deps: T106.1
+  - Status: done. `envItems`, `withEnv` and `envTitle` in `workspace/sidebar.go`, `__menu
+    --env`; `TestMenusOfferEnvironments`, `TestEnvRowMenu`.
+- [x] **T106.2 Splits, tabs and worktrees start with one** · S · deps: T106.1
   - AC: D101: `imux split|tab <agent|shell> --env <name>` and `imux worktree new … --env
     <name>`: an agent's `Launch.Env` (`@imux_env` in the exec that makes the pane), a terminal's
     shell through `imux __exec` (`shellCmd`) with `@imux_env`, the "No agents" pane's option set
     before it fills; a name with no file stops before anything starts, a bad name is a usage
     error; unit tests (the engine commands, no value on them).
-- [ ] **T106.3 End to end and docs** · S · deps: T106.2
+  - Status: done. `newShell` and `shellSpec` (a terminal), `StartEnv`, and `SwitchReq.Env` so
+    `split --from-session --env` continues a conversation with it too; `TestNewPanesWithEnv`,
+    `TestFillEmptyWithEnv`, `TestEnvFlag`.
+- [x] **T106.3 End to end and docs** · S · deps: T106.2
   - AC: e2e: Agents' **+** → Claude → 🔑 With glm… → Right starts Claude once, with the
     variable, `@imux_env` and the border; a terminal split with `--env` has it (`echo`); no
     value on a tmux command line. GUIDE, README and README.tr, CHANGELOG.
+  - Status: done. `TestNewAgentWithEnv` (it fails on 0.71.5's binary, which has no 🔑 With
+    glm…). `make ci` passed here on Linux; macOS and Windows are checked by CI only.
 
 ## M105: Signed releases on Windows and macOS (added 2026-11-23)
 
