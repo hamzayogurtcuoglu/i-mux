@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.72.0] - 2026-11-24
+
 ### Added
 
 - **A new agent can start with an environment.** The Agents **+** → an agent → **🔑 With glm…**
