@@ -1012,6 +1012,38 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M107: Agents ask each other, across projects and CLIs (added 2026-11-24)
+
+User request: an agent can ask another live agent (in another project, in any CLI) a question or
+give it a task, and get the answer back (D102). Builds on the agent bus (M5, docs/AGENT-BUS.md).
+No new panel in this version.
+
+- [ ] **T107.1 Targets across projects** · S
+  - AC: D102: a target is `<project>/<agent>`, a pane's name, an agent name (the one live pane
+    in the caller's project, else the only one on the server) or a pane id; an ambiguous target
+    fails and lists the matches; `imux panes` shows each pane's address. Unit tests.
+- [ ] **T107.2 `imux ask` and `imux task`** · M · deps: T107.1
+  - AC: D102: the request goes to the target's pane as the bus sends it (tagged, size and rate
+    limits, never one's own pane), after the target is idle (a queue per pane); the reply is the
+    target's first complete assistant reply after the request, read from its session file
+    (Claude Code, Antigravity, Copilot, Codex, OpenCode); done when the hooks say so (Claude
+    Code, Codex) or screen and session stay unchanged; `task` adds `git diff --stat` of the
+    target's project; `--json` and `--timeout`; a task chain deeper than two is refused. Unit
+    tests with fake session files; e2e with the fake agents.
+- [ ] **T107.3 Confirmation across projects** · S · deps: T107.2
+  - AC: D102: a request to another project waits for a menu on the target's client (Deliver /
+    Refuse); within one project it goes at once; Settings → Agents → **Agent messages** (On /
+    Ask first / Off, `[bus]` in config.toml) sets it. Unit tests; e2e of the menu.
+- [ ] **T107.4 `imux mcp`: an MCP server for every agent** · M · deps: T107.2
+  - AC: D102: `imux mcp` speaks MCP over stdio with `list_agents`, `ask_agent` and
+    `delegate_task`, each a thin layer over T107.1–T107.3, and knows its caller's pane;
+    `imux mcp install` lists the CLIs found and adds the server to each one's MCP settings only
+    when the user says yes for it, keeping a backup; `imux mcp uninstall` takes it out. Unit
+    tests of the protocol and of each CLI's settings with fakes; no real agent is started.
+- [ ] **T107.5 Docs** · XS · deps: T107.2–T107.4
+  - AC: docs/AGENT-BUS.md, the user guide and the README describe asking and tasks, the
+    addresses, the MCP install and the confirmation.
+
 ## M106: A new agent with an environment (added 2026-11-24)
 
 User request: an agent opened from Agents' **+** should be able to start with an environment,
