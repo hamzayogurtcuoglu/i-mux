@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#11151c">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#0b0e14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,50 +11,55 @@
 <title>i-mux</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="stylesheet" href="/xterm.css">
 <link rel="stylesheet" href="/app.css">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
-<header id="top">
-  <button id="back" class="icon" hidden aria-label="Back">‹</button>
-  <h1 id="title">i-mux</h1>
-  <span id="status" class="dot off" title="offline"></span>
-</header>
+<div id="app">
+  <header id="bar">
+    <span id="dot" class="dot"></span>
+    <span id="name">i-mux</span>
+    <span class="spacer"></span>
+    <button id="smaller" class="tool" aria-label="Smaller text">A−</button>
+    <button id="bigger" class="tool" aria-label="Larger text">A+</button>
+    <button id="kbd" class="tool" aria-label="Keyboard"><svg viewBox="0 0 24 16" width="20" height="14" aria-hidden="true"><rect x="1" y="1" width="22" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 5h2M9 5h2M13 5h2M17 5h2M5 8.5h2M9 8.5h2M13 8.5h2M17 8.5h2M7 12h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </header>
 
-<main>
+  <main id="stage">
+    <div id="term"></div>
+    <div id="toast" hidden></div>
+  </main>
+
+  <nav id="keys">
+    <button data-seq="esc">Esc</button>
+    <button data-seq="tab">Tab</button>
+    <button data-mod="ctrl" class="mod">Ctrl</button>
+    <button data-mod="alt" class="mod">Alt</button>
+    <button data-seq="left">←</button>
+    <button data-seq="up">↑</button>
+    <button data-seq="down">↓</button>
+    <button data-seq="right">→</button>
+    <button data-seq="prefix" class="accent" title="i-mux prefix (Ctrl+B)">^B</button>
+    <button data-seq="ctrlc" class="danger">^C</button>
+    <button data-seq="pgup">PgUp</button>
+    <button data-seq="pgdn">PgDn</button>
+    <button data-seq="enter" class="wide">⏎</button>
+  </nav>
+
   <section id="pair" hidden>
-    <div class="card center">
-      <div class="logo">⇄</div>
+    <div class="card">
+      <svg class="logo" viewBox="0 0 512 512" aria-hidden="true"><path d="M144 196h196l-48-48M368 316H172l48 48" fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <h2 data-t="pair_title">Pair this phone</h2>
-      <p data-t="pair_body">On your computer, open i-mux, click <b>Phone</b> on the sidebar and choose <b>Pair a phone</b>. Then scan the QR code with this phone's camera.</p>
+      <ol>
+        <li data-t="pair_1">On your computer, click <b>Phone</b> on i-mux's sidebar.</li>
+        <li data-t="pair_2">Type <b>p</b> and Enter: a QR code appears.</li>
+        <li data-t="pair_3">Scan it with this phone's camera.</li>
+      </ol>
       <p id="pair-error" class="error" hidden></p>
     </div>
   </section>
-
-  <section id="list" hidden></section>
-
-  <section id="pane" hidden>
-    <div id="screen-wrap"><pre id="screen"></pre></div>
-  </section>
-</main>
-
-<footer id="controls" hidden>
-  <div class="keys">
-    <button data-key="1">1</button>
-    <button data-key="2">2</button>
-    <button data-key="3">3</button>
-    <button data-key="Enter" class="wide">Enter</button>
-    <button data-key="Escape">Esc</button>
-    <button data-key="Up">↑</button>
-    <button data-key="Down">↓</button>
-    <button data-key="Tab">Tab</button>
-    <button data-key="C-c" class="danger">^C</button>
-  </div>
-  <form id="say">
-    <input id="text" type="text" autocomplete="off" autocapitalize="sentences" enterkeyhint="send" placeholder="Message">
-    <button type="submit" class="send" data-t="send">Send</button>
-  </form>
-</footer>
-<div id="watching" class="note" hidden data-t="read_only">This phone only watches.</div>
+</div>
 </body>
 </html>

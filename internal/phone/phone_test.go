@@ -4,11 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -105,27 +110,61 @@ func TestPairing(t *testing.T) {
 	}
 }
 
-// fakeEngine is a workspace with one project and two agents.
-type fakeEngine struct {
+// fakeStream is a stream client: it says "screen of <name> <cols>x<rows>"
+// when it starts, and records what the phone sends.
+type fakeStream struct {
 	mu     sync.Mutex
-	screen string
-	sent   []string
+	input  []string
+	sizes  []string
+	done   chan struct{}
+	once   sync.Once
+	closed bool
 }
 
-func (f *fakeEngine) Projects(context.Context) ([]Project, error) {
-	return []Project{{Name: "api", Branch: "main", Agents: []Agent{{Pane: "%1", CLI: "claude", State: "working"}, {Pane: "%2", CLI: "codex", State: "blocked"}}}}, nil
-}
-
-func (f *fakeEngine) Screen(_ context.Context, pane string) (Screen, error) {
+func (f *fakeStream) Input(b []byte) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return Screen{Text: pane + ": " + f.screen, Width: 80, Height: 24}, nil
+	f.input = append(f.input, string(b))
+	return nil
 }
 
-func (f *fakeEngine) Send(_ context.Context, pane, text string, keys []string) error {
+func (f *fakeStream) Resize(c, r int) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.sent = append(f.sent, pane+"|"+text+"|"+strings.Join(keys, ","))
+	f.sizes = append(f.sizes, fmt.Sprintf("%dx%d", c, r))
+	return nil
+}
+
+func (f *fakeStream) Close() error {
+	f.once.Do(func() { f.mu.Lock(); f.closed = true; f.mu.Unlock(); close(f.done) })
+	return nil
+}
+
+func (f *fakeStream) Done() <-chan struct{} { return f.done }
+
+type fakeEngine struct {
+	mu      sync.Mutex
+	streams []*fakeStream
+	desktop [2]int
+}
+
+func (f *fakeEngine) Attach(_ context.Context, name string, cols, rows int, out io.Writer) (Stream, error) {
+	st := &fakeStream{done: make(chan struct{})}
+	f.mu.Lock()
+	f.streams = append(f.streams, st)
+	f.mu.Unlock()
+	_, _ = fmt.Fprintf(out, "screen of %s %dx%d", name, cols, rows)
+	return st, nil
+}
+
+func (f *fakeEngine) DesktopSize(context.Context) (int, int) { return f.desktop[0], f.desktop[1] }
+
+func (f *fakeEngine) stream(i int) *fakeStream {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if i < len(f.streams) {
+		return f.streams[i]
+	}
 	return nil
 }
 
@@ -140,7 +179,7 @@ type phone struct {
 func newPhone(t *testing.T, eng Engine) (*phone, *Store) {
 	t.Helper()
 	st := &Store{Dir: t.TempDir()}
-	s := &Server{Store: st, Engine: eng, Every: 10 * time.Millisecond, AgentsEvery: 10 * time.Millisecond}
+	s := &Server{Store: st, Engine: eng}
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { close(s.Done); srv.Close() })
 	p, err := st.NewPairing(time.Now())
@@ -182,10 +221,15 @@ func (p *phone) cmd(v map[string]any) int {
 	return resp.StatusCode
 }
 
-// events opens the stream and returns its decrypted messages.
-func (p *phone) events(ctx context.Context) (<-chan map[string]any, int) {
+type event struct {
+	name string
+	data string
+}
+
+// term opens the stream and returns its events, decrypted.
+func (p *phone) term(ctx context.Context, cols, rows int) (<-chan event, int) {
 	p.t.Helper()
-	u := p.srv.URL + "/api/events?d=" + url.QueryEscape(p.id) + "&a=" + url.QueryEscape(p.seal(map[string]any{"op": "events"}))
+	u := p.srv.URL + "/api/term?d=" + url.QueryEscape(p.id) + "&a=" + url.QueryEscape(p.seal(map[string]any{"op": "term", "cols": cols, "rows": rows}))
 	req, _ := http.NewRequestWithContext(ctx, "GET", u, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -195,102 +239,101 @@ func (p *phone) events(ctx context.Context) (<-chan map[string]any, int) {
 		resp.Body.Close()
 		return nil, resp.StatusCode
 	}
-	ch := make(chan map[string]any, 64)
+	ch := make(chan event, 64)
 	go func() {
 		defer resp.Body.Close()
 		defer close(ch)
 		sc := bufio.NewScanner(resp.Body)
 		sc.Buffer(make([]byte, 1<<20), 1<<20)
+		name := ""
 		for sc.Scan() {
-			line, ok := strings.CutPrefix(sc.Text(), "data: ")
+			line := sc.Text()
+			if n, ok := strings.CutPrefix(line, "event: "); ok {
+				name = n
+				continue
+			}
+			data, ok := strings.CutPrefix(line, "data: ")
 			if !ok {
 				continue
 			}
-			plain, _, err := Open(p.key, p.id, line)
+			plain, _, err := Open(p.key, p.id, data)
 			if err != nil {
 				p.t.Errorf("an event not sealed for this phone: %v", err)
 				return
 			}
-			var m map[string]any
-			_ = json.Unmarshal(plain, &m)
-			ch <- m
+			ch <- event{name: name, data: string(plain)}
+			name = ""
 		}
 	}()
 	return ch, 200
 }
 
-func next(t *testing.T, ch <-chan map[string]any, kind string) map[string]any {
+func next(t *testing.T, ch <-chan event, name string) event {
 	t.Helper()
 	timeout := time.After(5 * time.Second)
 	for {
 		select {
-		case m, ok := <-ch:
+		case e, ok := <-ch:
 			if !ok {
-				t.Fatalf("stream ended before %s", kind)
+				t.Fatalf("stream ended before %q", name)
 			}
-			if m["t"] == kind {
-				return m
+			if e.name == name {
+				return e
 			}
 		case <-timeout:
-			t.Fatalf("no %s", kind)
+			t.Fatalf("no %q event", name)
 		}
 	}
 }
 
-// TestServer: a paired phone gets the agents and the screen it watches,
-// sealed; it types into an agent's pane; the server refuses what it must.
+func eventually(t *testing.T, what string, cond func() bool) {
+	t.Helper()
+	for i := 0; i < 500; i++ {
+		if cond() {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %s", what)
+}
+
+// TestServer: a paired phone gets the workspace's terminal output, sealed,
+// at its size; its keys and sizes reach the stream; the server refuses what
+// it must.
 func TestServer(t *testing.T) {
-	eng := &fakeEngine{screen: "hello"}
+	eng := &fakeEngine{desktop: [2]int{200, 50}}
 	p, st := newPhone(t, eng)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ch, code := p.events(ctx)
+	ch, code := p.term(ctx, 60, 30)
 	if code != 200 {
-		t.Fatalf("events: %d", code)
+		t.Fatalf("term: %d", code)
 	}
-	if h := next(t, ch, "hello"); h["read_only"] != false || h["name"] != "test phone" {
-		t.Errorf("hello %v", h)
+	if h := next(t, ch, "hello"); !strings.Contains(h.data, `"read_only":false`) || !strings.Contains(h.data, `"cols":60`) {
+		t.Errorf("hello %s", h.data)
 	}
-	a := next(t, ch, "agents")
-	if b, _ := json.Marshal(a["projects"]); !strings.Contains(string(b), `"pane":"%2"`) {
-		t.Errorf("agents %s", b)
+	name := ClientName(p.id)
+	if out := next(t, ch, ""); out.data != "screen of "+name+" 60x30" {
+		t.Errorf("output %q", out.data)
 	}
-	if c := p.cmd(map[string]any{"op": "watch", "pane": "%2"}); c != 204 {
-		t.Fatalf("watch: %d", c)
+	eventually(t, "the stream", func() bool { return eng.stream(0) != nil })
+
+	if c := p.cmd(map[string]any{"op": "input", "data": base64.StdEncoding.EncodeToString([]byte("\x1b[<0;3;4M"))}); c != 204 {
+		t.Fatalf("input: %d", c)
 	}
-	sc := next(t, ch, "screen")
-	if b, _ := json.Marshal(sc["screen"]); !strings.Contains(string(b), `"text":"%2: hello"`) {
-		t.Errorf("screen %s", b)
+	if c := p.cmd(map[string]any{"op": "resize", "cols": 90, "rows": 9999}); c != 204 {
+		t.Fatalf("resize: %d", c)
 	}
-	eng.mu.Lock()
-	eng.screen = "changed"
-	eng.mu.Unlock()
-	if b, _ := json.Marshal(next(t, ch, "screen")["screen"]); !strings.Contains(string(b), "changed") {
-		t.Errorf("no new screen: %s", b)
+	s0 := eng.stream(0)
+	s0.mu.Lock()
+	in, sizes := strings.Join(s0.input, "|"), strings.Join(s0.sizes, "|")
+	s0.mu.Unlock()
+	if in != "\x1b[<0;3;4M" || sizes != fmt.Sprintf("90x%d", MaxRows) {
+		t.Errorf("input %q sizes %q", in, sizes)
 	}
 
-	if c := p.cmd(map[string]any{"op": "send", "pane": "%2", "text": "yes please", "keys": []string{"Enter"}}); c != 204 {
-		t.Fatalf("send: %d", c)
-	}
-	if c := p.cmd(map[string]any{"op": "send", "pane": "%2", "keys": []string{"C-c", "1"}}); c != 204 {
-		t.Fatalf("keys: %d", c)
-	}
-	eng.mu.Lock()
-	sent := strings.Join(eng.sent, " / ")
-	eng.mu.Unlock()
-	if sent != "%2|yes please|Enter / %2||C-c,1" {
-		t.Errorf("sent %q", sent)
-	}
-
-	// Refused: a key not on the list, a pane that is no agent's, a message
-	// sealed again (a replay), another device's id.
-	if c := p.cmd(map[string]any{"op": "send", "pane": "%2", "keys": []string{"C-d"}}); c != 400 {
-		t.Errorf("unknown key: %d", c)
-	}
-	if c := p.cmd(map[string]any{"op": "send", "pane": "%9", "text": "x"}); c != 404 {
-		t.Errorf("not an agent: %d", c)
-	}
-	m := p.seal(map[string]any{"op": "watch", "pane": "%1"})
+	// Refused: a replayed message, another device, bad data, a big paste.
+	m := p.seal(map[string]any{"op": "resize", "cols": 80, "rows": 24})
 	body, _ := json.Marshal(map[string]string{"d": p.id, "m": m})
 	for i, want := range []int{204, 401} {
 		resp, err := http.Post(p.srv.URL+"/api/cmd", "application/json", bytes.NewReader(body))
@@ -303,39 +346,67 @@ func TestServer(t *testing.T) {
 		}
 	}
 	stranger := &phone{t: t, srv: p.srv, id: "nobody", key: p.key}
-	if c := stranger.cmd(map[string]any{"op": "watch", "pane": "%1"}); c != 401 {
+	if c := stranger.cmd(map[string]any{"op": "input", "data": "eA=="}); c != 401 {
 		t.Errorf("unknown device: %d", c)
 	}
-	if _, c := stranger.events(ctx); c != 401 {
-		t.Errorf("unknown device's events: %d", c)
+	if _, c := stranger.term(ctx, 80, 24); c != 401 {
+		t.Errorf("unknown device's stream: %d", c)
+	}
+	if c := p.cmd(map[string]any{"op": "input", "data": "not base64!"}); c != 400 {
+		t.Errorf("bad data: %d", c)
+	}
+	big := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("x"), MaxInput+1))
+	if c := p.cmd(map[string]any{"op": "input", "data": big}); c != 400 {
+		t.Errorf("too big: %d", c)
 	}
 
-	// Read-only: watches, never types.
+	// A new stream ends the old one: one client a phone.
+	ch2, _ := p.term(ctx, 70, 20)
+	next(t, ch2, "hello")
+	eventually(t, "the second stream", func() bool { return eng.stream(1) != nil })
+	select {
+	case <-s0.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("the first stream was not closed")
+	}
+
+	// Read-only: the desktop's size, no input, resizes ignored.
 	if err := st.SetReadOnly(p.id, true); err != nil {
 		t.Fatal(err)
 	}
-	if c := p.cmd(map[string]any{"op": "send", "pane": "%2", "text": "x"}); c != 403 {
-		t.Errorf("read-only send: %d", c)
+	ch3, _ := p.term(ctx, 60, 30)
+	if h := next(t, ch3, "hello"); !strings.Contains(h.data, `"read_only":true`) || !strings.Contains(h.data, `"cols":200`) {
+		t.Errorf("read-only hello %s", h.data)
 	}
-	if c := p.cmd(map[string]any{"op": "watch", "pane": "%1"}); c != 204 {
-		t.Errorf("read-only watch: %d", c)
+	eventually(t, "the read-only stream", func() bool { return eng.stream(2) != nil })
+	if c := p.cmd(map[string]any{"op": "input", "data": "eA=="}); c != 403 {
+		t.Errorf("read-only input: %d", c)
 	}
+	if c := p.cmd(map[string]any{"op": "resize", "cols": 50, "rows": 20}); c != 204 {
+		t.Errorf("read-only resize: %d", c)
+	}
+	if n := len(eng.stream(2).sizes); n != 0 {
+		t.Errorf("a read-only phone resized: %v", eng.stream(2).sizes)
+	}
+
 	// Forgotten: nothing any more.
 	if err := st.Forget(p.id); err != nil {
 		t.Fatal(err)
 	}
-	if c := p.cmd(map[string]any{"op": "watch", "pane": "%1"}); c != 401 {
+	if c := p.cmd(map[string]any{"op": "resize", "cols": 80, "rows": 24}); c != 401 {
 		t.Errorf("forgotten device: %d", c)
 	}
 }
 
-// TestStatic: the app's files, with headers that keep it to itself.
+// TestStatic: the app's files, xterm.js compressed, the font when there is
+// one, with headers that keep the app to itself.
 func TestStatic(t *testing.T) {
 	s := &Server{Store: &Store{Dir: t.TempDir()}, Engine: &fakeEngine{}}
 	srv := httptest.NewServer(s.Handler())
 	defer srv.Close()
-	for _, f := range []string{"/", "/app.js", "/app.css", "/noble-aes.js", "/manifest.webmanifest", "/icon.svg"} {
-		resp, err := http.Get(srv.URL + f)
+	client := &http.Client{Transport: &http.Transport{DisableCompression: true}}
+	for _, f := range []string{"/", "/app.js", "/app.css", "/noble-aes.js", "/xterm.mjs", "/xterm.css", "/manifest.webmanifest", "/icon.svg", "/LICENSE-xterm.txt"} {
+		resp, err := client.Get(srv.URL + f)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -346,9 +417,28 @@ func TestStatic(t *testing.T) {
 		if csp := resp.Header.Get("Content-Security-Policy"); !strings.Contains(csp, "script-src 'self'") || resp.Header.Get("Referrer-Policy") != "no-referrer" {
 			t.Errorf("%s: headers %v", f, resp.Header)
 		}
+		if f == "/xterm.mjs" && (resp.Header.Get("Content-Encoding") != "gzip" || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/javascript")) {
+			t.Errorf("xterm.mjs: %v", resp.Header)
+		}
 	}
 	if resp, _ := http.Get(srv.URL + "/../phone.go"); resp.StatusCode != 404 {
 		t.Errorf("outside the app: %d", resp.StatusCode)
+	}
+	if resp, _ := http.Get(srv.URL + "/font.ttf"); resp.StatusCode != 404 {
+		t.Errorf("no font: %d", resp.StatusCode)
+	}
+	font := filepath.Join(t.TempDir(), "f.ttf")
+	if err := os.WriteFile(font, []byte("ttf"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	old := FontFile
+	FontFile = font
+	defer func() { FontFile = old }()
+	resp, _ := http.Get(srv.URL + "/font.ttf")
+	b, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != 200 || string(b) != "ttf" || resp.Header.Get("Content-Type") != "font/ttf" {
+		t.Errorf("font: %d %q", resp.StatusCode, b)
 	}
 }
 

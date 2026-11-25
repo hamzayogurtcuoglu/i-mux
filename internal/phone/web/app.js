@@ -1,28 +1,26 @@
-// i-mux on a phone (D104): pairs from the QR code's fragment, then talks to
-// imux with every message sealed (AES-256-GCM, the key from the QR code,
-// the device's id as additional data). No inline code: the page's CSP
-// allows only these files.
+// i-mux on a phone (D104, D105): the workspace itself, drawn by xterm.js from
+// the engine's terminal output; taps are the mouse, the keyboard and the key
+// bar are the keys. Every message both ways is sealed with the key from the
+// QR code (AES-256-GCM, the device's id as additional data).
+import { Terminal } from "/xterm.mjs";
 import { gcm } from "/noble-aes.js";
 
+const $ = (s) => document.querySelector(s);
 const TR = (navigator.language || "").toLowerCase().startsWith("tr");
 const T = {
   pair_title: TR ? "Bu telefonu eşleştir" : "Pair this phone",
-  pair_body: TR
-    ? "Bilgisayarda i-mux'ta kenar paneldeki <b>Phone</b>'a tıklayıp <b>Telefon eşleştir</b>'i seçin. Sonra QR kodu bu telefonun kamerasıyla okutun."
-    : "On your computer, open i-mux, click <b>Phone</b> on the sidebar and choose <b>Pair a phone</b>. Then scan the QR code with this phone's camera.",
-  send: TR ? "Gönder" : "Send",
-  read_only: TR ? "Bu telefon sadece izliyor." : "This phone only watches.",
-  no_agents: TR ? "Açık agent yok." : "No agents are running.",
-  working: TR ? "çalışıyor" : "working",
-  blocked: TR ? "seni bekliyor" : "needs you",
-  idle: TR ? "boşta" : "idle",
-  paired_failed: TR ? "Eşleştirme olmadı: " : "Pairing failed: ",
+  pair_1: TR ? "Bilgisayarda i-mux kenar panelindeki <b>Phone</b>'a tıklayın." : "On your computer, click <b>Phone</b> on i-mux's sidebar.",
+  pair_2: TR ? "<b>p</b> yazıp Enter'a basın: bir QR kod çıkar." : "Type <b>p</b> and Enter: a QR code appears.",
+  pair_3: TR ? "QR kodu bu telefonun kamerasıyla okutun." : "Scan it with this phone's camera.",
+  pair_failed: TR ? "Eşleştirme olmadı: " : "Pairing failed: ",
   forgotten: TR ? "Bu telefon artık eşli değil. Yeniden eşleştirin." : "This phone is not paired any more. Pair it again.",
-  message: TR ? "Mesaj" : "Message",
+  offline: TR ? "Bağlantı yok, yeniden deneniyor…" : "Offline, trying again…",
+  watching: TR ? "Sadece izleme" : "Watching only",
+  failed: TR ? "i-mux'a bağlanılamadı: " : "Could not reach i-mux: ",
 };
-const $ = (s) => document.querySelector(s);
+for (const el of document.querySelectorAll("[data-t]")) el.innerHTML = T[el.dataset.t]; // our own text
 
-// --- keys and sealing -------------------------------------------------
+// --- sealing ----------------------------------------------------------------
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 function b64uDecode(s) {
@@ -30,22 +28,16 @@ function b64uDecode(s) {
   while (s.length % 4) s += "=";
   return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 }
-function b64uEncode(b) {
+function b64Encode(b) {
   let s = "";
-  for (const x of b) s += String.fromCharCode(x);
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
 }
+const b64uEncode = (b) => b64Encode(b).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const KEY = "imux-phone";
-function saved() {
-  try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; }
-}
-let me = saved(); // {id, key}
-let key = null, aad = null;
-function useDevice(d) {
-  me = d;
-  key = b64uDecode(d.key);
-  aad = enc.encode(d.id);
-}
+let me = null, key = null, aad = null;
+try { me = JSON.parse(localStorage.getItem(KEY)); } catch {}
+function useDevice(d) { me = d; key = b64uDecode(d.key); aad = enc.encode(d.id); }
 function seal(obj) {
   obj.ts = Date.now();
   const nonce = crypto.getRandomValues(new Uint8Array(12));
@@ -57,250 +49,321 @@ function seal(obj) {
 }
 function unseal(s) {
   const b = b64uDecode(s);
-  return JSON.parse(dec.decode(gcm(key, b.subarray(0, 12), aad).decrypt(b.subarray(12))));
+  return gcm(key, b.subarray(0, 12), aad).decrypt(b.subarray(12));
 }
 
-// --- pairing ----------------------------------------------------------
+// --- pairing ----------------------------------------------------------------
 async function pairFromFragment() {
   const m = location.hash.match(/^#p=([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/);
   if (!m) return;
   history.replaceState(null, "", location.pathname); // the key leaves the address bar
-  const name = (navigator.userAgentData && navigator.userAgentData.platform) ||
-    (/iPhone|iPad|Android/.exec(navigator.userAgent) || ["Phone"])[0];
+  const name = (/iPhone|iPad|Android/.exec(navigator.userAgent) || ["Phone"])[0];
   try {
-    const r = await fetch("/api/pair", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: m[1], name }),
-    });
+    const r = await fetch("/api/pair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: m[1], name }) });
     if (!r.ok) throw new Error((await r.text()).trim());
     const { id } = await r.json();
-    const d = { id, key: m[2] };
-    localStorage.setItem(KEY, JSON.stringify(d));
-    me = d;
+    me = { id, key: m[2] };
+    localStorage.setItem(KEY, JSON.stringify(me));
   } catch (e) {
-    const p = $("#pair-error");
-    p.textContent = T.paired_failed + e.message;
-    p.hidden = false;
+    showPair(T.pair_failed + e.message);
   }
 }
-
-// --- the stream ---------------------------------------------------------
-let es = null, retry = null, readOnly = false;
-let projects = [], watching = null;
-function setStatus(on) {
-  const d = $("#status");
-  d.className = "dot " + (on ? "on" : "off");
+function showPair(err) {
+  $("#pair").hidden = false;
+  const p = $("#pair-error");
+  p.hidden = !err;
+  p.textContent = err || "";
 }
+
+// --- the terminal -------------------------------------------------------------
+const stage = $("#stage");
+const box = $("#term");
+let fontFamily = "ui-monospace, Menlo, monospace";
+let fontSize = Math.min(20, Math.max(6, parseFloat(localStorage.getItem("imux-fs")) || 9));
+let readOnly = false;
+let term = null;
+let cell = { w: 6, h: 12 };
+
+async function loadFont() {
+  try {
+    const f = new FontFace("IMuxNerd", "url(/font.ttf)");
+    await f.load();
+    document.fonts.add(f);
+    fontFamily = '"IMuxNerd", ' + fontFamily;
+  } catch { /* no Nerd Font served: the icons fall back */ }
+}
+
+function measure() {
+  const c = document.createElement("canvas").getContext("2d");
+  c.font = `${fontSize}px ${fontFamily}`;
+  const w = c.measureText("W".repeat(20)).width / 20;
+  cell = { w: Math.max(3, w), h: Math.ceil(fontSize * 1.18) };
+  // xterm's own cell size, when it has drawn: the true one.
+  const dims = term && term._core && term._core._renderService && term._core._renderService.dimensions;
+  if (dims && dims.css && dims.css.cell && dims.css.cell.width) cell = { w: dims.css.cell.width, h: dims.css.cell.height };
+}
+
+function fitSize() {
+  measure();
+  return {
+    cols: Math.max(20, Math.floor(stage.clientWidth / cell.w)),
+    rows: Math.max(5, Math.floor(stage.clientHeight / cell.h)),
+  };
+}
+
+function makeTerm() {
+  term = new Terminal({
+    fontFamily, fontSize, lineHeight: 1.0, cursorBlink: false, allowProposedApi: true,
+    scrollback: 0, macOptionIsMeta: true, convertEol: false,
+    theme: {
+      background: "#000000", foreground: "#d0d7de", cursor: "#39c5cf", selectionBackground: "#39c5cf55",
+      black: "#484f58", red: "#ff7b72", green: "#3fb950", yellow: "#d29922", blue: "#58a6ff", magenta: "#bc8cff", cyan: "#39c5cf", white: "#b1bac4",
+      brightBlack: "#6e7681", brightRed: "#ffa198", brightGreen: "#56d364", brightYellow: "#e3b341", brightBlue: "#79c0ff", brightMagenta: "#d2a8ff", brightCyan: "#56d4dd", brightWhite: "#ffffff",
+    },
+  });
+  term.open(box);
+  term.onData((d) => typed(d));
+  term.onBinary((d) => send(Uint8Array.from(d, (c) => c.charCodeAt(0) & 255)));
+  keyboard(false);
+}
+
+// A watching phone draws the desktop's size, scaled to the screen.
+function place() {
+  if (!term) return;
+  const el = term.element;
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const scale = readOnly && w > 0 ? Math.min(1, stage.clientWidth / w, stage.clientHeight / h) : 1;
+  box.style.transform = scale < 1 ? `scale(${scale})` : "";
+}
+
+// --- the stream -------------------------------------------------------------
+let es = null, retry = null, connected = false;
+function status(on) {
+  connected = on;
+  $("#dot").className = "dot " + (on ? "on" : "off");
+}
+function toast(msg, ms) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.hidden = !msg;
+  clearTimeout(toast.timer);
+  if (msg && ms) toast.timer = setTimeout(() => (t.hidden = true), ms);
+}
+
 function connect() {
   clearTimeout(retry);
   if (es) es.close();
-  const u = "/api/events?d=" + encodeURIComponent(me.id) + "&a=" + encodeURIComponent(seal({ op: "events" }));
-  es = new EventSource(u);
-  es.onopen = () => setStatus(true);
+  const { cols, rows } = fitSize();
+  term.resize(cols, rows);
+  es = new EventSource("/api/term?d=" + encodeURIComponent(me.id) + "&a=" + encodeURIComponent(seal({ op: "term", cols, rows })));
+  es.addEventListener("hello", (e) => {
+    const h = JSON.parse(dec.decode(unseal(e.data)));
+    readOnly = !!h.read_only;
+    $("#app").classList.toggle("watching", readOnly);
+    $("#name").textContent = readOnly ? "i-mux · " + T.watching : "i-mux";
+    term.reset();
+    term.resize(h.cols, h.rows);
+    place();
+    status(true);
+    toast("");
+  });
   es.onmessage = (e) => {
-    let m;
-    try { m = unseal(e.data); } catch { return; }
-    if (m.t === "hello") {
-      readOnly = !!m.read_only;
-      if (watching) { cmd({ op: "watch", pane: watching.pane }); showPane(watching); }
-    } else if (m.t === "agents") {
-      projects = m.projects || [];
-      if (!watching) renderList();
-    } else if (m.t === "screen" && watching && m.pane === watching.pane) {
-      renderScreen(m.screen);
-    }
+    try { term.write(unseal(e.data)); } catch {}
   };
-  es.onerror = async () => {
-    setStatus(false);
+  es.addEventListener("failed", (e) => {
+    let msg = "";
+    try { msg = JSON.parse(dec.decode(unseal(e.data))).error; } catch {}
+    toast(T.failed + msg);
     es.close();
-    // A forgotten phone: the server refuses it; anything else, try again.
+    status(false);
+    retry = setTimeout(connect, 4000);
+  });
+  es.addEventListener("end", () => { es.close(); status(false); retry = setTimeout(connect, 1500); });
+  es.onerror = async () => {
+    es.close();
+    status(false);
     try {
-      const r = await fetch("/api/events?d=" + encodeURIComponent(me.id) + "&a=x");
-      if (r.status === 401 && !(await r.text()).includes("refused")) return forgotten();
+      const r = await fetch("/api/term?d=" + encodeURIComponent(me.id) + "&a=x");
+      if (r.status === 401 && (await r.text()).includes("not paired")) {
+        localStorage.removeItem(KEY);
+        return showPair(T.forgotten);
+      }
     } catch {}
+    toast(T.offline);
     retry = setTimeout(connect, 2000);
   };
 }
-function forgotten() {
-  localStorage.removeItem(KEY);
-  me = null;
-  showPair(T.forgotten);
-}
-async function cmd(obj) {
-  try {
-    const r = await fetch("/api/cmd", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ d: me.id, m: seal(obj) }),
-    });
-    return r.status;
-  } catch { return 0; }
-}
 
-// --- views --------------------------------------------------------------
-function showPair(err) {
-  $("#pair").hidden = false;
-  $("#list").hidden = $("#pane").hidden = $("#controls").hidden = $("#watching").hidden = true;
-  $("#back").hidden = true;
-  $("#title").textContent = "i-mux";
-  if (err) { const p = $("#pair-error"); p.textContent = err; p.hidden = false; }
+// Input goes out in order, one request at a time, in small batches.
+let pending = [], sending = false;
+function send(bytes) {
+  if (readOnly || !connected) return;
+  pending.push(bytes);
+  if (!sending) flush();
 }
-function label(a) { return a.name || a.cli; }
-function renderList() {
-  const el = $("#list");
-  $("#pair").hidden = $("#pane").hidden = $("#controls").hidden = $("#watching").hidden = true;
-  $("#back").hidden = true;
-  $("#title").textContent = "i-mux";
-  el.hidden = false;
-  el.replaceChildren();
-  const any = projects.some((p) => p.agents.length);
-  if (!any) {
-    const e = document.createElement("p");
-    e.className = "empty";
-    e.textContent = T.no_agents;
-    el.append(e);
-    return;
+async function flush() {
+  sending = true;
+  while (pending.length) {
+    const n = pending.reduce((a, b) => a + b.length, 0);
+    const all = new Uint8Array(n);
+    let o = 0;
+    for (const b of pending) { all.set(b, o); o += b.length; }
+    pending = [];
+    try {
+      await fetch("/api/cmd", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ d: me.id, m: seal({ op: "input", data: b64Encode(all) }) }) });
+    } catch {}
   }
-  for (const p of projects) {
-    if (!p.agents.length) continue;
-    const box = document.createElement("div");
-    box.className = "project";
-    const h = document.createElement("h3");
-    h.textContent = p.name;
-    if (p.branch) {
-      const b = document.createElement("span");
-      b.className = "branch";
-      b.textContent = "⎇ " + p.branch;
-      h.append(b);
-    }
-    box.append(h);
-    for (const a of p.agents) {
-      const row = document.createElement("button");
-      row.className = "agent";
-      const n = document.createElement("span");
-      n.className = "name";
-      n.textContent = label(a);
-      if (a.name) {
-        const c = document.createElement("span");
-        c.className = "cli";
-        c.textContent = a.cli;
-        n.append(c);
-      }
-      const st = a.state === "working" || a.state === "blocked" ? a.state : "idle";
-      const badge = document.createElement("span");
-      badge.className = "badge " + st;
-      badge.textContent = T[st];
-      row.append(n, badge);
-      row.onclick = () => { watching = { pane: a.pane, title: p.name + " · " + label(a) }; cmd({ op: "watch", pane: a.pane }); showPane(watching); };
-      box.append(row);
-    }
-    el.append(box);
+  sending = false;
+}
+function sendText(s) { send(enc.encode(s)); }
+async function resize() {
+  if (!term) return;
+  const { cols, rows } = fitSize();
+  if (readOnly) { place(); return; }
+  if (cols === term.cols && rows === term.rows) return;
+  term.resize(cols, rows);
+  if (connected) {
+    try { await fetch("/api/cmd", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ d: me.id, m: seal({ op: "resize", cols, rows }) }) }); } catch {}
   }
 }
-function showPane(w) {
-  $("#pair").hidden = $("#list").hidden = true;
-  $("#pane").hidden = false;
-  $("#back").hidden = false;
-  $("#title").textContent = w.title;
-  $("#controls").hidden = readOnly;
-  $("#watching").hidden = !readOnly;
-}
-$("#back").onclick = () => { watching = null; $("#screen").replaceChildren(); renderList(); };
 
-// --- the screen: SGR colours into spans (no inline styles in HTML; the
-// CSSOM is allowed by the CSP) --------------------------------------------
-const BASE = ["#484f58", "#ff7b72", "#3fb950", "#d29922", "#58a6ff", "#bc8cff", "#39c5cf", "#b1bac4",
-  "#6e7681", "#ffa198", "#56d364", "#e3b341", "#79c0ff", "#d2a8ff", "#56d4dd", "#ffffff"];
-function c256(n) {
-  if (n < 16) return BASE[n];
-  if (n < 232) { n -= 16; const l = [0, 95, 135, 175, 215, 255]; return `rgb(${l[Math.floor(n / 36)]},${l[Math.floor(n / 6) % 6]},${l[n % 6]})`; }
-  const g = 8 + (n - 232) * 10; return `rgb(${g},${g},${g})`;
+// --- keys ---------------------------------------------------------------------
+const mods = { ctrl: false, alt: false };
+function setMod(m, on) {
+  mods[m] = on;
+  document.querySelector(`[data-mod="${m}"]`).classList.toggle("on", on);
 }
-function renderScreen(sc) {
-  const pre = $("#screen");
-  const wrap = $("#screen-wrap");
-  const fit = Math.max(7, Math.min(14, (wrap.clientWidth - 16) / (Math.max(sc.w, 20) * 0.6)));
-  pre.style.fontSize = fit + "px";
-  const frag = document.createDocumentFragment();
-  let st = {};
-  let buf = "";
-  const flush = () => {
-    if (!buf) return;
-    const s = document.createElement("span");
-    let fg = st.fg, bg = st.bg;
-    if (st.rev) [fg, bg] = [bg || "#000", fg || "#d0d7de"];
-    if (fg) s.style.color = fg;
-    if (bg) s.style.backgroundColor = bg;
-    if (st.bold) s.style.fontWeight = "700";
-    if (st.dim) s.style.opacity = "0.6";
-    if (st.italic) s.style.fontStyle = "italic";
-    if (st.under) s.style.textDecoration = "underline";
-    s.textContent = buf;
-    frag.append(s);
-    buf = "";
-  };
-  const re = /\x1b\[([0-9;:]*)m|\x1b\[[0-9;?]*[A-Za-z]|\x1b[()][A-Za-z0-9]|([^\x1b]+)/g;
-  let m;
-  while ((m = re.exec(sc.text))) {
-    if (m[2] !== undefined) { buf += m[2]; continue; }
-    if (m[1] === undefined) continue;
-    flush();
-    const p = m[1] === "" ? [0] : m[1].split(/[;:]/).map((x) => parseInt(x || "0", 10));
-    for (let i = 0; i < p.length; i++) {
-      const c = p[i];
-      if (c === 0) st = {};
-      else if (c === 1) st.bold = true;
-      else if (c === 2) st.dim = true;
-      else if (c === 3) st.italic = true;
-      else if (c === 4) st.under = true;
-      else if (c === 7) st.rev = true;
-      else if (c === 22) st.bold = st.dim = false;
-      else if (c === 23) st.italic = false;
-      else if (c === 24) st.under = false;
-      else if (c === 27) st.rev = false;
-      else if (c >= 30 && c <= 37) st.fg = BASE[c - 30];
-      else if (c >= 90 && c <= 97) st.fg = BASE[c - 82];
-      else if (c >= 40 && c <= 47) st.bg = BASE[c - 40];
-      else if (c >= 100 && c <= 107) st.bg = BASE[c - 92];
-      else if (c === 39) st.fg = undefined;
-      else if (c === 49) st.bg = undefined;
-      else if ((c === 38 || c === 48) && p[i + 1] === 5) { st[c === 38 ? "fg" : "bg"] = c256(p[i + 2] || 0); i += 2; }
-      else if ((c === 38 || c === 48) && p[i + 1] === 2) { st[c === 38 ? "fg" : "bg"] = `rgb(${p[i + 2] | 0},${p[i + 3] | 0},${p[i + 4] | 0})`; i += 4; }
+// typed is what the keyboard gives, with a held Ctrl or Alt from the bar.
+function typed(d) {
+  if ((mods.ctrl || mods.alt) && d.length === 1) {
+    let c = d;
+    if (mods.ctrl) {
+      const k = d.toLowerCase().charCodeAt(0);
+      if (k >= 97 && k <= 122) c = String.fromCharCode(k - 96);
+      else if (d === " ") c = "\x00";
+      else if (d === "[") c = "\x1b";
     }
+    if (mods.alt) c = "\x1b" + c;
+    setMod("ctrl", false);
+    setMod("alt", false);
+    return sendText(c);
   }
-  flush();
-  const atBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 4;
-  pre.replaceChildren(frag);
-  if (atBottom) wrap.scrollTop = wrap.scrollHeight;
+  sendText(d);
 }
-
-// --- input ----------------------------------------------------------------
-for (const b of document.querySelectorAll("[data-key]")) {
-  b.onclick = () => watching && cmd({ op: "send", pane: watching.pane, keys: [b.dataset.key] });
-}
-$("#say").onsubmit = (e) => {
-  e.preventDefault();
-  const t = $("#text");
-  if (!watching || !t.value) return;
-  cmd({ op: "send", pane: watching.pane, text: t.value, keys: ["Enter"] });
-  t.value = "";
+function app() { return term && term.modes && term.modes.applicationCursorKeysMode; }
+const SEQ = {
+  esc: () => "\x1b", tab: () => "\t", enter: () => "\r", ctrlc: () => "\x03", prefix: () => "\x02",
+  up: () => (app() ? "\x1bOA" : "\x1b[A"), down: () => (app() ? "\x1bOB" : "\x1b[B"),
+  right: () => (app() ? "\x1bOC" : "\x1b[C"), left: () => (app() ? "\x1bOD" : "\x1b[D"),
+  pgup: () => "\x1b[5~", pgdn: () => "\x1b[6~",
 };
-
-// --- start ----------------------------------------------------------------
-for (const el of document.querySelectorAll("[data-t]")) {
-  const k = el.dataset.t;
-  if (k === "pair_body") el.innerHTML = T[k]; // our own text, with <b>
-  else el.textContent = T[k];
+for (const b of document.querySelectorAll("#keys button")) {
+  // pointerdown, not click: the keyboard stays open and nothing loses focus.
+  b.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (navigator.vibrate) navigator.vibrate(8);
+    if (b.dataset.mod) return setMod(b.dataset.mod, !mods[b.dataset.mod]);
+    let s = SEQ[b.dataset.seq]();
+    if (mods.alt) s = "\x1b" + s;
+    setMod("ctrl", false);
+    setMod("alt", false);
+    sendText(s);
+  });
 }
-$("#text").placeholder = T.message;
+
+// The phone's keyboard opens only when asked: taps are the mouse.
+let kbdOn = false;
+function keyboard(on) {
+  kbdOn = on;
+  $("#kbd").classList.toggle("on", on);
+  const ta = term && term.textarea;
+  if (!ta) return;
+  ta.setAttribute("inputmode", on ? "text" : "none");
+  ta.setAttribute("autocapitalize", "off");
+  ta.setAttribute("autocorrect", "off");
+  ta.setAttribute("spellcheck", "false");
+  if (on) ta.focus(); else ta.blur();
+}
+$("#kbd").addEventListener("pointerdown", (e) => { e.preventDefault(); keyboard(!kbdOn); });
+
+function setFont(px) {
+  fontSize = Math.min(20, Math.max(6, px));
+  localStorage.setItem("imux-fs", String(fontSize));
+  term.options.fontSize = fontSize;
+  setTimeout(resize, 30);
+}
+$("#smaller").addEventListener("pointerdown", (e) => { e.preventDefault(); setFont(fontSize - 1); });
+$("#bigger").addEventListener("pointerdown", (e) => { e.preventDefault(); setFont(fontSize + 1); });
+
+// --- touch: a tap is a click (the browser's own), a long press a right-click,
+// a swipe the mouse wheel ------------------------------------------------------
+function cellAt(x, y) {
+  const r = term.element.querySelector(".xterm-screen").getBoundingClientRect();
+  const s = r.width / (term.cols * cell.w) || 1; // the watching scale
+  return {
+    col: Math.min(term.cols, Math.max(1, Math.floor((x - r.left) / (cell.w * s)) + 1)),
+    row: Math.min(term.rows, Math.max(1, Math.floor((y - r.top) / (cell.h * s)) + 1)),
+  };
+}
+function mouse(btn, x, y, release) {
+  const { col, row } = cellAt(x, y);
+  sendText(`\x1b[<${btn};${col};${row}${release ? "m" : "M"}`);
+}
+let touch = null;
+stage.addEventListener("touchstart", (e) => {
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  touch = { x: t.clientX, y: t.clientY, acc: 0, moved: false, long: false };
+  touch.timer = setTimeout(() => {
+    if (!touch || touch.moved) return;
+    touch.long = true;
+    if (navigator.vibrate) navigator.vibrate(15);
+    mouse(2, touch.x, touch.y, false);
+    mouse(2, touch.x, touch.y, true);
+  }, 500);
+}, { passive: true });
+stage.addEventListener("touchmove", (e) => {
+  if (!touch || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  const dy = t.clientY - touch.y;
+  if (!touch.moved && Math.abs(dy) < 8 && Math.abs(t.clientX - touch.x) < 8) return;
+  touch.moved = true;
+  clearTimeout(touch.timer);
+  e.preventDefault();
+  touch.acc += dy;
+  touch.y = t.clientY;
+  const step = cell.h * 1.5;
+  while (Math.abs(touch.acc) >= step) {
+    const up = touch.acc > 0;
+    touch.acc -= up ? step : -step;
+    if (term.modes.mouseTrackingMode !== "none") {
+      mouse(up ? 64 : 65, t.clientX, t.clientY, false);
+    } else {
+      term.scrollLines(up ? -1 : 1);
+    }
+  }
+}, { passive: false });
+stage.addEventListener("touchend", (e) => {
+  if (!touch) return;
+  clearTimeout(touch.timer);
+  if (touch.moved || touch.long) e.preventDefault(); // no click after a swipe or a right-click
+  touch = null;
+  if (!kbdOn && term.textarea) term.textarea.blur();
+}, { passive: false });
+
+let resizeTimer = null;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 150); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && me && key && !connected) connect();
+});
+
+// --- start --------------------------------------------------------------------
 await pairFromFragment();
 if (me && me.id && me.key) {
   useDevice(me);
+  await loadFont();
+  makeTerm();
   connect();
-} else {
+} else if ($("#pair").hidden) {
   showPair();
 }
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && me && key) connect();
-});

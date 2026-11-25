@@ -268,8 +268,9 @@ See [Configuration](docs/CONFIG.md) for every option.
 
 ## <img src="docs/images/icons/zap.svg" width="22" alt=""> Your phone
 
-Turn on **Phone** on the sidebar, scan the QR code, and your phone shows your agents and their
-screens live: answer them, send a message, stop one. At home on the same Wi-Fi, anywhere with
+Turn on **Phone** on the sidebar, scan the QR code, and your phone shows i-mux itself: the same
+sidebar, tabs, agents and menus as your computer. Tap to click, swipe to scroll, type with the
+phone's keyboard and a key bar. At home on the same Wi-Fi, anywhere with
 [Tailscale](https://tailscale.com). Every message is encrypted with a key only your computer and
 your phone hold. See the [user guide](docs/GUIDE.md#your-phone).
 
