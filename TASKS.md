@@ -1052,6 +1052,15 @@ turn it on and off from the sidebar (D104).
   - Status: done as a popup (like Limits) rather than a sidebar view: on / off, pair (the QR
     code), read-only and forget by number. The rail shows labels only when every item fits with
     one, so Help never falls off a short pane now that the rail has one more item.
+- [ ] **T109.6 The phone shows i-mux itself** · L · deps: T109.2
+  - AC: D105: i-mux-core is pinned at its C11.2 (`engine.Attach`); a phone's stream starts a
+    stream client `phone-<device>` on the desktop's session (else the newest), of the phone's
+    size, whose output reaches the phone sealed and whose input and resizes come from the
+    phone (a read-only phone sends none); one stream per device, a new one closing the old;
+    the app draws it with xterm.js and the bundled Nerd Font; taps are mouse clicks, swipes
+    scroll, the keyboard and a key bar type; A− / A+ change the font and so the size; turning
+    the phone resizes. Unit tests of the stream with a fake attach; an e2e that attaches a
+    stream client to a real workspace and sees the sidebar in its output.
 - [ ] **T109.5 Anywhere: relay and notifications** · L · deps: T109.3
   - AC: D104: after a hosting decision by the owner: an outbound relay over HTTPS (through the
     system's proxy) for any network, carrying only sealed messages, and web push when an agent
