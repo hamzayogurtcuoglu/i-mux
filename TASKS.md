@@ -1012,6 +1012,76 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M110: Several agents together (added 2026-11-25)
+
+User request (from a brainstorm): the agents should work together: several on one task, keeping
+the best result (D105); another CLI reviewing what an agent just did (D106); one task going
+through several agents in turn (D107); and one prompt to many agents at once (D108).
+
+- [ ] **T110.1 Arena: worktrees and start** · M
+  - AC: D105: `imux arena new "<task>" --agents a,b[,c,d] [--name N] [--env E]` takes two to
+    four installed agents; each gets `<repo>.worktrees/arena-<name>-<agent>` on a new branch
+    `arena/<name>/<agent>` from HEAD and starts there with the task as its first message (and the
+    environment, D101); the projects are marked as the arena's; a name in use is refused, and
+    outside git the worktree message shows. Unit tests (paths, branches, argv, environment) with
+    git in a temp folder; e2e with the fake agents.
+- [ ] **T110.2 Arena: the dialog and the group** · M · deps: T110.1
+  - AC: D105: Agents' **+** → **⚔ Arena…** opens a popup: the task (several lines), the
+    installed agents to tick (a limited one says until when), the name (a slug of the task,
+    editable); Enter starts it. PROJECTS lists the contenders under the repository, grouped
+    under `⚔ <name>`, each with its state. i18n (en, tr); unit tests (the dialog, the rows).
+- [ ] **T110.3 Arena: compare, pick, clean up** · M · deps: T110.1
+  - AC: D105: `imux arena compare <name>` and the group's **Compare…**: per contender its state,
+    working time and `git diff --stat` against the base (commits and uncommitted changes), and
+    `[arena] test`'s result in its worktree when asked; a row opens its diff, two side by side.
+    **Pick <agent>…** (asked first) commits its changes in its worktree and merges its branch
+    into the base as D72 does, then offers **Remove the others** (worktrees and projects,
+    branches kept). Unit tests (git in a temp folder); e2e: two fake agents write different
+    files, one is picked and merged, the other removed.
+- [ ] **T110.4 Second opinion: the review run** · M
+  - AC: D106: `imux review [--pane P] [--reviewer <cli>]` runs the reviewer headless as Jobs
+    run (its read-only flags) in the pane's project, with the fixed prompt over `git diff HEAD`
+    and the new files (200 KB at most, else "too large"); the result (`IMUX_LGTM`, else the
+    problems and their number) is kept per pane with the turn it reviewed; the reviewer is never
+    the agent reviewed. Unit tests with fake CLIs.
+- [ ] **T110.5 Second opinion: when a turn ends** · S · deps: T110.4
+  - AC: D106: Settings → Agents → **Second opinion** Off / Ask / Auto and the reviewer (another
+    CLI, or a fixed one), `[review]` in config.toml; on `working` → idle or Done with
+    uncommitted changes the watcher notifies and shows `? review` (Ask) or starts the review
+    (Auto), once per turn; nothing runs while Off. Unit tests of the trigger; e2e with a fake
+    agent that writes a file.
+- [ ] **T110.6 Second opinion: the verdict on the row** · S · deps: T110.4
+  - AC: D106: `✓ review` or `⚠ N review` on the agent's row, dimmed once a later turn changed
+    the project; a click opens the review in the output view with **Send to <agent>** (pasted
+    as the bus pastes, tagged `[review from <CLI>]`, once the agent is idle) and **Dismiss**;
+    the agent menu's **Second opinion…** starts one at any time. i18n; unit and e2e tests.
+- [ ] **T110.7 Recipes: files and runs** · M
+  - AC: D107: recipes in `~/.imux/recipes/*.toml` and `.imux/recipes/*.toml` (steps: `agent`,
+    `prompt` with `{task}` `{previous}` `{diff}`, `access`, `model`, `until` and `max`; `[run]
+    where`), a file's errors reported with their line; `imux recipe ls|run <name> "<task>"`; a
+    run is one `imux __auto exec` running the steps in order as Jobs runs a definition, each
+    report going into the next prompt, stopping at a failed step; `until` runs a step again
+    while its command fails, `max` times at most. Unit tests with fake CLIs.
+- [ ] **T110.8 Recipes: in Jobs** · M · deps: T110.7
+  - AC: D107: Jobs lists **RECIPES**; 🚀 opens the Run panel with a **Task** box and when (a
+    scheduled recipe keeps its task); the output view shows the steps (`── 2/3 Codex ·
+    implement ──`); the report and its notification are a Job's; the three samples are written
+    once into `~/.imux/recipes`. i18n; unit tests; e2e: a two-step recipe with fake CLIs passes
+    the first step's report to the second.
+- [ ] **T110.9 Broadcast: `imux broadcast`** · S · deps: T107.1, T107.2
+  - AC: D108: `imux broadcast [--to <target>,…] "<text>"` pastes to each target as the bus does,
+    a busy one once it is idle (M107's queue); from the user's terminal it is untagged, from an
+    agent's pane it is that agent's message (tag, limits, confirmation); the bus's size limit.
+    Unit tests; e2e with the fake agents, one of them working.
+- [ ] **T110.10 Broadcast: the popup** · S · deps: T110.9
+  - AC: D108: AGENTS' title menu and `prefix B` (`broadcast_key_prefix`) open **Broadcast…**:
+    the live agents of every project (the current project's ticked, shells not) under a text
+    box; Enter sends; a queued pane shows `⏳ queued`; the last selection is kept. i18n; unit
+    tests; e2e.
+- [ ] **T110.11 Docs** · XS · deps: T110.3, T110.6, T110.8, T110.10
+  - AC: README and README.tr, the user guide, docs/AGENT-BUS.md for broadcasts, and the
+    CHANGELOG with each release.
+
 ## M109: The workspace from a phone (added 2026-11-24)
 
 User request: see the terminal and control the agents from the phone, at home and away, and
