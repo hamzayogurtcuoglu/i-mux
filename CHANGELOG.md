@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.73.0] - 2026-11-25
+
 ### Added
 
 - **i-mux on your phone.** **Phone** on the sidebar (or `imux phone pair`) shows a QR code; scan
