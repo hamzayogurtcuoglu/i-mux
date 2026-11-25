@@ -1017,11 +1017,14 @@ slow (about a second).
 User request: see the terminal and control the agents from the phone, at home and away, and
 turn it on and off from the sidebar (D104).
 
-- [ ] **T109.1 A QR code in the terminal** · S
+- [x] **T109.1 A QR code in the terminal** · S
   - AC: D104: `internal/qr` encodes text (byte mode, versions 1–10, level M, every mask
     scored) and draws it with half blocks, black on white with its quiet zone; a test decodes
     what it draws with an independent decoder (outside the repository) and checks the
     patterns against the standard.
+  - Status: done. OpenCV decoded versions 1, 6, 8 and 10 (`QR_DUMP` writes them); the unit tests
+    keep the verified "HELLO" code and check finders, timing and both format copies for
+    versions 1 to 10.
 - [ ] **T109.2 The remote server, pairing and sealing** · L · deps: T109.1
   - AC: D104: `imux __remote-serve` (started by `imux remote on`, recorded like the web view's
     server, stopped by `imux remote off`) serves the app and its API on the LAN; `imux remote
