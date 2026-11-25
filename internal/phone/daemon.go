@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hamzayogurtcuoglu/i-mux/internal/nerdfont"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
 )
@@ -82,7 +81,6 @@ func Serve(ctx context.Context, st *Store, eng Engine) error {
 		case <-ctx.Done():
 		}
 	}()
-	FontFile = fontFile()
 	srv := &Server{Store: st, Engine: eng, Done: make(chan struct{})}
 	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
@@ -96,26 +94,6 @@ func Serve(ctx context.Context, st *Store, eng Engine) error {
 		return err
 	}
 	return nil
-}
-
-// fontFile is the Nerd Font's regular style for the phone (D105): the copy
-// that ships with imux (D94), else the one installed for the user.
-func fontFile() string {
-	const regular = "JetBrainsMonoNerdFont-Regular.ttf"
-	if d := nerdfont.Bundled(); d != "" {
-		return filepath.Join(d, regular)
-	}
-	if sys, err := nerdfont.Detect(context.Background()); err == nil {
-		if p := filepath.Join(sys.FontDir, regular); fileExists(p) {
-			return p
-		}
-	}
-	return ""
-}
-
-func fileExists(p string) bool {
-	fi, err := os.Stat(p)
-	return err == nil && fi.Mode().IsRegular()
 }
 
 func listen(port int) (net.Listener, error) {

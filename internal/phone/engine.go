@@ -2,63 +2,113 @@ package phone
 
 import (
 	"context"
-	"errors"
-	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/gitops"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
-// AttachFunc starts a stream client of the engine in this process:
-// i-mux-core's engine.Attach (its E19), which cmd/imux sets (D105). nil, as
-// in test binaries: no stream.
-var AttachFunc func(ctx context.Context, args []string, name string, cols, rows int, out io.Writer) (Stream, error)
-
-// ErrNoEngine means this imux does not carry the engine (a test binary).
-var ErrNoEngine = errors.New("phone: this imux does not carry the engine")
+// RoleSidebar is the @imux_role of a sidebar pane, which the phone never
+// lists (sidebar.RoleSidebar).
+const RoleSidebar = "sidebar"
 
 // TmuxEngine is the workspace on i-mux's engine (D87).
-type TmuxEngine struct{ T *tmux.Client }
+type TmuxEngine struct {
+	T *tmux.Client
 
-// desktop is the most recently used client that is no phone's: its
-// session and size.
-func (e *TmuxEngine) desktop(ctx context.Context) (session string, cols, rows int) {
-	out, err := e.T.Run(ctx, tmux.Cmd{"list-clients", "-F", "#{client_name}\t#{client_session}\t#{client_width}\t#{client_height}\t#{client_activity}"})
+	mu       sync.Mutex
+	branches map[string]branch // project folder → its branch, read at most every 30 s
+}
+
+type branch struct {
+	name string
+	at   time.Time
+}
+
+// Projects lists the sessions with their live agent panes, as the remote
+// machines' report does (D73).
+func (e *TmuxEngine) Projects(ctx context.Context) ([]Project, error) {
+	out, err := e.T.Run(ctx, tmux.Cmd{
+		"list-panes", "-a", "-F",
+		"#{session_name}\t#{session_path}\t#{pane_id}\t#{@imux_agent}\t#{@imux_name}\t#{@imux_state}\t#{@imux_state_at}\t#{@imux_role}\t#{pane_dead}",
+	})
 	if err != nil {
-		return "", 0, 0
+		return nil, err
 	}
-	var best int64 = -1
-	for _, f := range tmux.Rows(out, 5) {
-		if strings.HasPrefix(f[0], "phone-") {
-			continue
+	byName := map[string]*Project{}
+	var order []string
+	paths := map[string]string{}
+	for _, f := range tmux.Rows(out, 9) {
+		p := byName[f[0]]
+		if p == nil {
+			p = &Project{Name: filepath.Base(f[1]), Agents: []Agent{}}
+			byName[f[0]] = p
+			order = append(order, f[0])
+			paths[f[0]] = f[1]
 		}
-		act, _ := strconv.ParseInt(f[4], 10, 64)
-		if act > best {
-			best = act
-			session = f[1]
-			cols, _ = strconv.Atoi(f[2])
-			rows, _ = strconv.Atoi(f[3])
+		if f[7] == RoleSidebar || f[3] == "" || f[8] == "1" {
+			continue // the UI, a plain shell, or an agent that ended
 		}
+		since, _ := strconv.ParseInt(f[6], 10, 64)
+		p.Agents = append(p.Agents, Agent{Pane: f[2], CLI: f[3], Name: f[4], State: f[5], Since: since})
 	}
-	return session, cols, rows
+	out2 := make([]Project, 0, len(order))
+	for _, s := range order {
+		p := byName[s]
+		p.Branch = e.branch(ctx, paths[s])
+		out2 = append(out2, *p)
+	}
+	return out2, nil
 }
 
-// DesktopSize is the desktop client's size.
-func (e *TmuxEngine) DesktopSize(ctx context.Context) (int, int) {
-	_, c, r := e.desktop(ctx)
-	return c, r
+func (e *TmuxEngine) branch(ctx context.Context, dir string) string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.branches == nil {
+		e.branches = map[string]branch{}
+	}
+	if b, ok := e.branches[dir]; ok && time.Since(b.at) < 30*time.Second {
+		return b.name
+	}
+	name := gitops.CurrentBranch(ctx, dir)
+	e.branches[dir] = branch{name: name, at: time.Now()}
+	return name
 }
 
-// Attach starts the phone's client on the session the desktop shows, else
-// the newest.
-func (e *TmuxEngine) Attach(ctx context.Context, name string, cols, rows int, out io.Writer) (Stream, error) {
-	if AttachFunc == nil {
-		return nil, ErrNoEngine
+// Screen is pane's visible screen with its colors, and its size.
+func (e *TmuxEngine) Screen(ctx context.Context, pane string) (Screen, error) {
+	out, err := e.T.Run(ctx,
+		tmux.DelimCmd("size"), tmux.Cmd{"display-message", "-p", "-t", pane, "#{pane_width}\t#{pane_height}"},
+		tmux.DelimCmd("screen"), tmux.Cmd{"capture-pane", "-p", "-e", "-t", pane})
+	if err != nil {
+		return Screen{}, err
 	}
-	args := append(e.T.BaseArgs(), "-u", "attach-session")
-	if s, _, _ := e.desktop(ctx); s != "" {
-		args = append(args, "-t", "="+s)
+	sec := tmux.Sections(out)
+	var sc Screen
+	if f := strings.Split(strings.TrimSpace(sec["size"]), "\t"); len(f) == 2 {
+		sc.Width, _ = strconv.Atoi(f[0])
+		sc.Height, _ = strconv.Atoi(f[1])
 	}
-	return AttachFunc(ctx, args, name, cols, rows, out)
+	sc.Text = strings.TrimRight(sec["screen"], "\n")
+	return sc, nil
+}
+
+// Send types text literally, then the keys, into pane.
+func (e *TmuxEngine) Send(ctx context.Context, pane, text string, keys []string) error {
+	var cmds []tmux.Cmd
+	if text != "" {
+		cmds = append(cmds, tmux.Cmd{"send-keys", "-t", pane, "-l", "--", text})
+	}
+	if len(keys) > 0 {
+		cmds = append(cmds, append(tmux.Cmd{"send-keys", "-t", pane}, keys...))
+	}
+	if len(cmds) == 0 {
+		return nil
+	}
+	_, err := e.T.Run(ctx, cmds...)
+	return err
 }

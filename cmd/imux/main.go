@@ -7,13 +7,10 @@
 package main
 
 import (
-	"context"
-	"io"
 	"os"
 
 	"github.com/hamzayogurtcuoglu/i-mux-core/engine"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/cli"
-	"github.com/hamzayogurtcuoglu/i-mux/internal/phone"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
@@ -23,15 +20,5 @@ func main() {
 	}
 	tmux.CarriesEngine = true
 	tmux.EngineCommand = engine.Command // engine queries inside this process (D92)
-	phone.AttachFunc = attachStream     // the phone's view of the workspace (D105)
 	os.Exit(cli.Main(os.Args))
-}
-
-// attachStream is a stream client of the engine for the phone (D105).
-func attachStream(ctx context.Context, args []string, name string, cols, rows int, out io.Writer) (phone.Stream, error) {
-	c, err := engine.Attach(ctx, args, engine.Terminal{Name: name, Cols: cols, Rows: rows}, out)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
 }

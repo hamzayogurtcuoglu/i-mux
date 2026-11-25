@@ -2,66 +2,78 @@ package phone
 
 import (
 	"context"
+	"crypto/sha256"
 	"embed"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
 	"mime"
 	"net/http"
-	"os"
 	"path"
 	"strings"
 	"sync"
 	"time"
 )
 
-// Stream is a client of the workspace whose terminal is the phone (D105):
-// the engine's output goes to the writer it was started with.
-type Stream interface {
-	Input(b []byte) error
-	Resize(cols, rows int) error
-	Close() error
-	Done() <-chan struct{}
+// Agent is an agent pane as the phone lists it.
+type Agent struct {
+	Pane  string `json:"pane"`
+	CLI   string `json:"cli"`
+	Name  string `json:"name,omitempty"`
+	State string `json:"state,omitempty"` // working, idle or blocked (the watcher's)
+	Since int64  `json:"since,omitempty"` // unix seconds of the state's change
+}
+
+// Project is a project (an imux session) and its agents.
+type Project struct {
+	Name   string  `json:"name"`
+	Branch string  `json:"branch,omitempty"`
+	Agents []Agent `json:"agents"`
+}
+
+// Screen is a pane's visible screen, with its colors (SGR escapes).
+type Screen struct {
+	Text   string `json:"text"`
+	Width  int    `json:"w"`
+	Height int    `json:"h"`
 }
 
 // Engine is what the server needs of the workspace; tests replace it.
 type Engine interface {
-	// Attach starts a stream client named name, cols × rows, on the
-	// session the desktop shows (else the newest); its output goes to out.
-	Attach(ctx context.Context, name string, cols, rows int, out io.Writer) (Stream, error)
-	// DesktopSize is the size of the desktop's most recently used client,
-	// 0, 0 when there is none.
-	DesktopSize(ctx context.Context) (cols, rows int)
+	Projects(ctx context.Context) ([]Project, error)
+	Screen(ctx context.Context, pane string) (Screen, error)
+	// Send types text (literally) and then keys (tmux key names) into pane.
+	Send(ctx context.Context, pane, text string, keys []string) error
 }
 
-// Size limits for a phone's terminal.
-const (
-	MinCols, MaxCols = 20, 400
-	MinRows, MaxRows = 5, 200
-	// MaxInput is the most a phone sends at once (a paste).
-	MaxInput = 16 << 10
-)
+// Keys the phone may send, by the names its buttons use.
+var Keys = map[string]string{
+	"Enter": "Enter", "Escape": "Escape", "Tab": "Tab", "BSpace": "BSpace", "Space": "Space",
+	"Up": "Up", "Down": "Down", "Left": "Left", "Right": "Right", "C-c": "C-c",
+	"1": "1", "2": "2", "3": "3", "4": "4", "y": "y", "n": "n",
+}
+
+// MaxText is the longest text the phone may type at once.
+const MaxText = 4000
 
 //go:embed web
 var webFS embed.FS
 
-// FontFile is the Nerd Font file the phone draws with (D94's bundled copy,
-// else the installed one); the server's start sets it. "" serves none.
-var FontFile = ""
-
-// Server is the phone's side of imux: the app, pairing and the sealed
-// stream of the workspace.
+// Server is the phone's side of imux: the app, pairing and the sealed API.
 type Server struct {
 	Store  *Store
 	Engine Engine
 	Now    func() time.Time
+	// Every is how often the watched screen is looked at; Agents how often
+	// the agents are (tests shorten them).
+	Every, AgentsEvery time.Duration
 
-	guard   Guard
-	mu      sync.Mutex
-	streams map[string]Stream // device → its stream
-	Done    chan struct{}     // closed when the server stops
+	guard Guard
+	mu    sync.Mutex
+	watch map[string]string        // device → the pane it watches
+	poke  map[string]chan struct{} // device → its streams' wake-up
+	Done  chan struct{}            // closed when the server stops
 }
 
 func (s *Server) now() time.Time {
@@ -78,19 +90,19 @@ func (s *Server) Handler() http.Handler {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/pair", s.pair)
-	mux.HandleFunc("GET /api/term", s.term)
+	mux.HandleFunc("GET /api/events", s.events)
 	mux.HandleFunc("POST /api/cmd", s.cmd)
-	mux.HandleFunc("GET /font.ttf", s.font)
 	mux.HandleFunc("GET /", s.static)
 	return headers(mux)
 }
 
 // headers keeps the app to its own files, out of frames and caches, and
-// never sends a referrer. Styles may be inline: xterm.js sets its own.
+// never sends a referrer (the pairing key is in the fragment, which no
+// browser sends; this keeps the address out of logs too).
 func headers(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hd := w.Header()
-		hd.Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+		hd.Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
 		hd.Set("X-Content-Type-Options", "nosniff")
 		hd.Set("Referrer-Policy", "no-referrer")
 		hd.Set("Cache-Control", "no-store")
@@ -103,51 +115,21 @@ func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 	if name == "" {
 		name = "index.html"
 	}
-	gz := false
+	if strings.HasPrefix(name, "LICENSE") {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	}
 	b, err := fs.ReadFile(webFS, "web/"+name)
 	if err != nil {
-		// A large file is kept compressed and served as it is (every
-		// browser the app runs in takes gzip).
-		if b, err = fs.ReadFile(webFS, "web/"+name+".gz"); err != nil {
-			http.NotFound(w, r)
-			return
-		}
-		gz = true
+		http.NotFound(w, r)
+		return
 	}
-	switch {
-	case strings.HasPrefix(name, "LICENSE"):
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	case strings.HasSuffix(name, ".webmanifest"):
+	if ct := mime.TypeByExtension(path.Ext(name)); ct != "" && w.Header().Get("Content-Type") == "" {
+		w.Header().Set("Content-Type", ct)
+	}
+	if strings.HasSuffix(name, ".webmanifest") {
 		w.Header().Set("Content-Type", "application/manifest+json")
-	case strings.HasSuffix(name, ".mjs"), strings.HasSuffix(name, ".js"):
-		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-	default:
-		if ct := mime.TypeByExtension(path.Ext(name)); ct != "" {
-			w.Header().Set("Content-Type", ct)
-		}
-	}
-	if gz {
-		w.Header().Set("Content-Encoding", "gzip")
 	}
 	_, _ = w.Write(b)
-}
-
-// font is the Nerd Font, so the sidebar's icons draw on the phone as on the
-// desktop (D105).
-func (s *Server) font(w http.ResponseWriter, r *http.Request) {
-	if FontFile == "" {
-		http.NotFound(w, r)
-		return
-	}
-	f, err := os.Open(FontFile)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	defer f.Close()
-	w.Header().Set("Content-Type", "font/ttf")
-	w.Header().Set("Cache-Control", "max-age=604800")
-	_, _ = io.Copy(w, f)
 }
 
 // pair takes the QR code's token: the device it pairs, whose key the phone
@@ -182,20 +164,16 @@ func (s *Server) device(id string) (*Device, Key, int) {
 
 // Cmd is a message from the phone.
 type Cmd struct {
-	TS   int64  `json:"ts"`
-	Op   string `json:"op"`             // term, input, resize
-	Data string `json:"data,omitempty"` // input: the bytes, base64
-	Cols int    `json:"cols,omitempty"` // term, resize
-	Rows int    `json:"rows,omitempty"`
-}
-
-func clampSize(cols, rows int) (int, int) {
-	return min(max(cols, MinCols), MaxCols), min(max(rows, MinRows), MaxRows)
+	TS   int64    `json:"ts"`
+	Op   string   `json:"op"`             // events, watch, send
+	Pane string   `json:"pane,omitempty"` // watch, send
+	Text string   `json:"text,omitempty"` // send: typed first
+	Keys []string `json:"keys,omitempty"` // send: then these keys
 }
 
 func (s *Server) cmd(w http.ResponseWriter, r *http.Request) {
 	var req struct{ D, M string }
-	if err := json.NewDecoder(io.LimitReader(r.Body, 4*MaxInput)).Decode(&req); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, 64<<10)).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -209,40 +187,44 @@ func (s *Server) cmd(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "refused", http.StatusUnauthorized)
 		return
 	}
-	s.mu.Lock()
-	st := s.streams[d.ID]
-	s.mu.Unlock()
-	if st == nil {
-		http.Error(w, "no stream", http.StatusConflict)
+	s.Store.Touch(d.ID, s.now())
+	ctx := r.Context()
+	if c.Pane != "" && !s.isAgent(ctx, c.Pane) {
+		http.Error(w, "no such agent", http.StatusNotFound)
 		return
 	}
 	switch c.Op {
-	case "input":
+	case "watch":
+		s.mu.Lock()
+		if s.watch == nil {
+			s.watch = map[string]string{}
+		}
+		s.watch[d.ID] = c.Pane
+		s.mu.Unlock()
+		s.wake(d.ID)
+	case "send":
 		if d.ReadOnly {
 			http.Error(w, "this phone only watches", http.StatusForbidden)
 			return
 		}
-		b, err := base64.StdEncoding.DecodeString(c.Data)
-		if err != nil || len(b) > MaxInput {
+		if c.Pane == "" || len(c.Text) > MaxText {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
-		if err := st.Input(b); err != nil {
-			http.Error(w, "the stream ended", http.StatusGone)
+		var keys []string
+		for _, k := range c.Keys {
+			tk, ok := Keys[k]
+			if !ok {
+				http.Error(w, "unknown key", http.StatusBadRequest)
+				return
+			}
+			keys = append(keys, tk)
+		}
+		if err := s.Engine.Send(ctx, c.Pane, c.Text, keys); err != nil {
+			http.Error(w, "could not send", http.StatusBadGateway)
 			return
 		}
-	case "resize":
-		if d.ReadOnly {
-			// A watching phone keeps the desktop's size: it never resizes
-			// the windows.
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		cols, rows := clampSize(c.Cols, c.Rows)
-		if err := st.Resize(cols, rows); err != nil {
-			http.Error(w, "the stream ended", http.StatusGone)
-			return
-		}
+		s.wake(d.ID)
 	default:
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
@@ -250,72 +232,45 @@ func (s *Server) cmd(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// sse writes sealed Server-Sent Events, one at a time.
-type sse struct {
-	mu  sync.Mutex
-	w   http.ResponseWriter
-	fl  http.Flusher
-	key Key
-	id  string
-}
-
-func (e *sse) event(name string, plain []byte) error {
-	sealed, err := Seal(e.key, e.id, plain)
+// isAgent reports whether pane is an agent pane the phone may see.
+func (s *Server) isAgent(ctx context.Context, pane string) bool {
+	ps, err := s.Engine.Projects(ctx)
 	if err != nil {
-		return err
+		return false
 	}
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if name != "" {
-		if _, err := fmt.Fprintf(e.w, "event: %s\n", name); err != nil {
-			return err
+	for _, p := range ps {
+		for _, a := range p.Agents {
+			if a.Pane == pane {
+				return true
+			}
 		}
 	}
-	if _, err := fmt.Fprintf(e.w, "data: %s\n\n", sealed); err != nil {
-		return err
-	}
-	e.fl.Flush()
-	return nil
+	return false
 }
 
-// Write is the engine's output: one sealed event per write.
-func (e *sse) Write(p []byte) (int, error) {
-	if err := e.event("", p); err != nil {
-		return 0, err
+func (s *Server) wake(id string) {
+	s.mu.Lock()
+	ch := s.poke[id]
+	s.mu.Unlock()
+	if ch != nil {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
 	}
-	return len(p), nil
 }
 
-func (e *sse) beat() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if _, err := io.WriteString(e.w, ": beat\n\n"); err != nil {
-		return err
-	}
-	e.fl.Flush()
-	return nil
-}
-
-// ClientName is the stream client's name for a device.
-func ClientName(id string) string {
-	if len(id) > 8 {
-		id = id[:8]
-	}
-	return "phone-" + id
-}
-
-// term is the phone's view of the workspace (D105): a stream client of the
-// phone's size (a watching phone: the desktop's), its output sealed as
-// events. A device has one stream; a new one ends the old. The request
-// proves the key with a sealed {"op":"term"} in a.
-func (s *Server) term(w http.ResponseWriter, r *http.Request) {
+// events streams the device's sealed updates (Server-Sent Events): hello,
+// the agents when they change, the watched pane's screen when it changes.
+// The request proves the key with a sealed {"op":"events"} in a.
+func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	d, k, code := s.device(r.URL.Query().Get("d"))
 	if d == nil {
 		http.Error(w, "not paired", code)
 		return
 	}
 	var c Cmd
-	if err := OpenChecked(k, d.ID, r.URL.Query().Get("a"), &s.guard, s.now(), &c); err != nil || c.Op != "term" {
+	if err := OpenChecked(k, d.ID, r.URL.Query().Get("a"), &s.guard, s.now(), &c); err != nil || c.Op != "events" {
 		http.Error(w, "refused", http.StatusUnauthorized)
 		return
 	}
@@ -324,69 +279,98 @@ func (s *Server) term(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no streaming", http.StatusInternalServerError)
 		return
 	}
-	ctx := r.Context()
-	cols, rows := clampSize(c.Cols, c.Rows)
-	if d.ReadOnly {
-		if dc, dr := s.Engine.DesktopSize(ctx); dc > 0 && dr > 0 {
-			cols, rows = dc, dr
-		}
-	}
 	s.Store.Touch(d.ID, s.now())
 	h := w.Header()
 	h.Set("Content-Type", "text/event-stream")
 	h.Set("X-Accel-Buffering", "no")
-	out := &sse{w: w, fl: fl, key: k, id: d.ID}
-	hello, _ := json.Marshal(map[string]any{"read_only": d.ReadOnly, "cols": cols, "rows": rows, "name": d.Name})
-	if out.event("hello", hello) != nil {
-		return
-	}
-	// The old stream ends before the new one attaches: one client a phone.
+	ch := make(chan struct{}, 1)
 	s.mu.Lock()
-	old := s.streams[d.ID]
-	delete(s.streams, d.ID)
-	s.mu.Unlock()
-	if old != nil {
-		_ = old.Close()
-		select {
-		case <-old.Done():
-		case <-time.After(2 * time.Second):
-		}
+	if s.poke == nil {
+		s.poke = map[string]chan struct{}{}
 	}
-	st, err := s.Engine.Attach(ctx, ClientName(d.ID), cols, rows, out)
-	if err != nil {
-		msg, _ := json.Marshal(map[string]string{"error": err.Error()})
-		_ = out.event("failed", msg)
-		return
-	}
-	s.mu.Lock()
-	if s.streams == nil {
-		s.streams = map[string]Stream{}
-	}
-	s.streams[d.ID] = st
+	s.poke[d.ID] = ch
 	s.mu.Unlock()
 	defer func() {
 		s.mu.Lock()
-		if s.streams[d.ID] == st {
-			delete(s.streams, d.ID)
+		if s.poke[d.ID] == ch {
+			delete(s.poke, d.ID)
 		}
 		s.mu.Unlock()
-		_ = st.Close()
 	}()
-	beat := time.NewTicker(15 * time.Second)
-	defer beat.Stop()
+
+	send := func(v any) bool {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return false
+		}
+		sealed, err := Seal(k, d.ID, b)
+		if err != nil {
+			return false
+		}
+		if _, err := fmt.Fprintf(w, "data: %s\n\n", sealed); err != nil {
+			return false
+		}
+		fl.Flush()
+		return true
+	}
+	if !send(map[string]any{"t": "hello", "read_only": d.ReadOnly, "name": d.Name}) {
+		return
+	}
+	every, agentsEvery := s.Every, s.AgentsEvery
+	if every <= 0 {
+		every = 250 * time.Millisecond
+	}
+	if agentsEvery <= 0 {
+		agentsEvery = 2 * time.Second
+	}
+	ctx := r.Context()
+	tick := time.NewTicker(every)
+	defer tick.Stop()
+	var lastAgents, lastScreen [32]byte
+	lastPane := ""
+	nextAgents, nextBeat := time.Time{}, s.now().Add(15*time.Second)
 	for {
+		now := s.now()
+		if !now.Before(nextAgents) {
+			nextAgents = now.Add(agentsEvery)
+			if ps, err := s.Engine.Projects(ctx); err == nil {
+				b, _ := json.Marshal(ps)
+				if sum := sha256.Sum256(b); sum != lastAgents {
+					lastAgents = sum
+					if !send(map[string]any{"t": "agents", "projects": ps}) {
+						return
+					}
+				}
+			}
+		}
+		s.mu.Lock()
+		pane := s.watch[d.ID]
+		s.mu.Unlock()
+		if pane != "" {
+			if sc, err := s.Engine.Screen(ctx, pane); err == nil {
+				b, _ := json.Marshal(sc)
+				if sum := sha256.Sum256(b); sum != lastScreen || pane != lastPane {
+					lastScreen, lastPane = sum, pane
+					if !send(map[string]any{"t": "screen", "pane": pane, "screen": sc}) {
+						return
+					}
+				}
+			}
+		}
+		if !now.Before(nextBeat) {
+			nextBeat = now.Add(15 * time.Second)
+			if _, err := io.WriteString(w, ": beat\n\n"); err != nil {
+				return
+			}
+			fl.Flush()
+		}
 		select {
 		case <-ctx.Done():
 			return
 		case <-s.Done:
 			return
-		case <-st.Done():
-			_ = out.event("end", []byte(`{}`))
-			return
-		case <-beat.C:
-			if out.beat() != nil {
-				return
-			}
+		case <-tick.C:
+		case <-ch:
 		}
 	}
 }

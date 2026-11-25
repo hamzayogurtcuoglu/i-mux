@@ -187,27 +187,23 @@ GNOME Terminal …). It works with the terminal closed too. Turn it and its soun
 
 ## Your phone
 
-**Phone** on the rail (above Limits), or `imux phone`, shows i-mux itself on your phone: the same
-sidebar, tabs, agents, menus and popups as on your computer (D104, D105). It is off until you turn
-it on.
+**Phone** on the rail (above Limits), or `imux phone`, lets a phone see and answer your agents
+(D104). It is off until you turn it on.
 
 1. **Phone → Pair a phone…** (or `imux phone pair`) turns it on and shows a QR code. Scan it with
-   the phone's camera within two minutes; the page that opens is your workspace. Add it to the
-   home screen to open it like an app.
-2. **Tap** to click (the sidebar, tabs, menus, buttons), **press and hold** to right-click,
-   **swipe** to scroll. **⌨** opens the phone's keyboard; the bar below has Esc, Tab, Ctrl, Alt,
-   the arrows, the i-mux prefix (^B), Ctrl+C, Page Up/Down and Enter. **A− / A+** change the text
-   size; turning the phone sideways gives more room.
+   the phone's camera within two minutes; the page that opens is i-mux. Add it to the home screen
+   to open it like an app.
+2. The phone lists your projects and agents with their state (working, needs you, idle). Tap one
+   to see its screen live; the buttons answer what it asks (1, 2, 3, Enter, Esc, arrows, Ctrl+C)
+   and the box sends a message.
 3. **At home** the phone reaches i-mux on the same Wi-Fi. **Anywhere**: with
    [Tailscale](https://tailscale.com) on the computer and the phone, the QR code carries its
    address and the phone reaches i-mux wherever it is, while the computer is on.
 
-While you use the phone, the windows take its size; they go back to your computer's size as soon
-as you use the computer again. A phone made to only watch (`r 1` in the Phone popup) never changes
-them. Every message between the two is encrypted with a key that only they hold (it is in the QR
-code and never crosses the network). `f 1` forgets a phone, `o` turns phone access off. The first
-time, Windows and macOS ask whether imux may accept incoming connections: allow it on private
-networks.
+Every message between the two is encrypted with a key that only they hold (it is in the QR code
+and never crosses the network). In the Phone popup, `r 1` makes phone 1 only watch, `f 1` forgets
+it, `o` turns phone access off. The first time, Windows and macOS ask whether imux may accept
+incoming connections: allow it on private networks.
 
 ## Pasting images
 

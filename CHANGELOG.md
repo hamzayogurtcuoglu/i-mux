@@ -6,13 +6,6 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
-### Changed
-
-- **Your phone shows i-mux itself.** The phone app is now your workspace exactly as on your
-  computer: the sidebar, tabs, agents, menus and popups, with the Nerd Font icons. Tap to click,
-  press and hold to right-click, swipe to scroll; the phone's keyboard and a key bar (Esc, Tab,
-  Ctrl, Alt, arrows, the prefix, Ctrl+C, Page Up/Down, Enter) type; A− / A+ change the size.
-
 ## [0.73.0] - 2026-11-25
 
 ### Added
