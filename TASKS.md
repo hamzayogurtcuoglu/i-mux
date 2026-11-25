@@ -1014,27 +1014,36 @@ slow (about a second).
 
 ## M109: The workspace from a phone (added 2026-11-24)
 
-User request: see the terminal and control the agents from the phone, and answer an agent that
-waits away from the desk (D104).
+User request: see the terminal and control the agents from the phone, at home and away, and
+turn it on and off from the sidebar (D104).
 
-- [ ] **T109.1 `imux remote`: the server and pairing** · M
-  - AC: D104: `imux remote` starts a TLS web server in imux, off until started, and shows a QR
-    code with its address and a one-time pairing key; a paired device gets a token, the devices
-    are listed and can be removed (`imux remote devices`, `imux remote forget`); `imux remote
-    stop` ends it; requests without a valid token are refused. Unit tests.
-- [ ] **T109.2 The mobile web app** · L · deps: T109.1
-  - AC: D104: a PWA served by imux lists projects and agents with their states; a pane shows
-    live in xterm.js from the engine's output of that pane, at the pane's size, without
-    resizing the desktop's windows; keys go back to the pane; buttons for Yes / No / Enter /
-    Ctrl+C and a text box; a read-only mode. Works on iOS Safari and Android Chrome. e2e with a
-    headless browser against fake agents.
-- [ ] **T109.3 Notifications on the phone** · M · deps: T109.2
-  - AC: D104: when an agent needs the user, a web push notification reaches the paired phone
-    (the installed PWA); opening it shows that pane. Without content by default; the question's
-    text only when the user turns it on.
-- [ ] **T109.4 Anywhere, without setup** · L · deps: T109.2
-  - AC: D104: an end-to-end encrypted relay so the phone reaches imux from any network without
-    Tailscale; the relay sees no content. Decision on hosting first.
+- [ ] **T109.1 A QR code in the terminal** · S
+  - AC: D104: `internal/qr` encodes text (byte mode, versions 1–10, level M, every mask
+    scored) and draws it with half blocks, black on white with its quiet zone; a test decodes
+    what it draws with an independent decoder (outside the repository) and checks the
+    patterns against the standard.
+- [ ] **T109.2 The remote server, pairing and sealing** · L · deps: T109.1
+  - AC: D104: `imux __remote-serve` (started by `imux remote on`, recorded like the web view's
+    server, stopped by `imux remote off`) serves the app and its API on the LAN; `imux remote
+    pair` makes a one-time token and key valid for two minutes and shows the QR code; pairing
+    stores the device; every later message is sealed with AES-256-GCM, its timestamp within a
+    minute and its nonce never seen; the agents and the watched pane's screen go out by SSE,
+    keys and text come in by POST; read-only devices cannot send; `imux remote devices`,
+    `readonly` and `forget`. Unit tests of sealing, pairing, replay, read-only and the API with
+    a fake engine.
+- [ ] **T109.3 The phone app** · L · deps: T109.2
+  - AC: D104: an embedded PWA: pairs from the URL's fragment and keeps the key in the phone;
+    lists projects and agents with their states; shows a pane live (colours, at its size);
+    buttons for Yes / No / Enter / Esc / Ctrl+C and arrows; a text box; reconnects by itself;
+    works in iOS Safari and Android Chrome. The ciphers are noble-ciphers, vendored (MIT).
+- [ ] **T109.4 Phone on the rail** · M · deps: T109.2
+  - AC: D104: **Phone** on the rail, above Limits, opens the Phone view: on / off, the
+    address(es), **Pair a phone…** (the QR code in a popup), the devices with read-only and
+    remove. English and Turkish. Tests of the view.
+- [ ] **T109.5 Anywhere: relay and notifications** · L · deps: T109.3
+  - AC: D104: after a hosting decision by the owner: an outbound relay over HTTPS (through the
+    system's proxy) for any network, carrying only sealed messages, and web push when an agent
+    needs the user.
 
 ## M107: Agents ask each other, across projects and CLIs (added 2026-11-24)
 
