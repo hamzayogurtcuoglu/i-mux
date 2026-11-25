@@ -1062,6 +1062,8 @@ func (s *sidebar) do(ctx context.Context, a Action) {
 		s.spawn(append([]string{"__menu", "--sessions"}, tgt...))
 	case ActLimits:
 		s.spawn(append([]string{"__menu", "--limits"}, tgt...))
+	case ActPhone:
+		s.spawn(append([]string{"__menu", "--phone"}, tgt...))
 	case ActKeys:
 		s.spawn(append([]string{"__menu", "--keys"}, tgt...))
 	case ActRename:

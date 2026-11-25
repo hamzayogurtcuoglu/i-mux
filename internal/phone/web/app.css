@@ -1,0 +1,76 @@
+:root {
+  --bg: #11151c;
+  --panel: #171c25;
+  --line: #262d3a;
+  --text: #d8dee9;
+  --muted: #8a94a6;
+  --accent: #39c5cf;
+  --working: #39c5cf;
+  --blocked: #f0b429;
+  --idle: #6b7486;
+  --danger: #ff6b6b;
+  --mono: ui-monospace, "JetBrainsMono Nerd Font", "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%; }
+body { display: flex; flex-direction: column; min-height: 100dvh; }
+[hidden] { display: none !important; }
+
+header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; background: var(--panel);
+  border-bottom: 1px solid var(--line); }
+header h1 { flex: 1; margin: 0; font-size: 17px; font-weight: 600; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.icon { background: none; border: 0; color: var(--accent); font-size: 30px; line-height: 1;
+  padding: 0 6px 2px 0; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--idle); flex: none; }
+.dot.on { background: #3fb950; }
+.dot.off { background: var(--danger); }
+
+main { flex: 1; display: flex; flex-direction: column; }
+.card { margin: 16px; padding: 24px 20px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; }
+.center { text-align: center; }
+.logo { font-size: 44px; color: var(--accent); }
+.card h2 { margin: 8px 0; font-size: 20px; }
+.card p { color: var(--muted); }
+.error { color: var(--danger) !important; }
+
+#list { padding: 8px 16px 24px; }
+.project { margin-top: 14px; }
+.project h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--muted); }
+.project h3 .branch { margin-left: 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.agent { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px;
+  margin-bottom: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  color: var(--text); font: inherit; text-align: left; }
+.agent:active { background: var(--line); }
+.agent .name { flex: 1; font-weight: 600; }
+.agent .cli { color: var(--muted); font-weight: 400; margin-left: 6px; }
+.badge { padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge.working { color: var(--bg); background: var(--working); }
+.badge.blocked { color: var(--bg); background: var(--blocked); }
+.badge.idle { color: var(--text); background: var(--line); }
+.empty { margin: 40px 16px; text-align: center; color: var(--muted); }
+
+#pane { flex: 1; min-height: 0; }
+#screen-wrap { height: 100%; overflow: auto; -webkit-overflow-scrolling: touch; background: #000; }
+#screen { margin: 0; padding: 8px; font: 12px/1.2 var(--mono); white-space: pre; color: #d0d7de;
+  min-width: max-content; }
+
+footer { position: sticky; bottom: 0; padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px);
+  background: var(--panel); border-top: 1px solid var(--line); }
+.keys { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
+.keys button, .send { flex: none; min-width: 44px; height: 40px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text); font: 600 15px var(--mono); }
+.keys button:active, .send:active { background: var(--line); }
+.keys .wide { min-width: 70px; }
+.keys .danger { color: var(--danger); }
+form { display: flex; gap: 8px; margin: 0; }
+#text { flex: 1; min-width: 0; height: 42px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 16px; }
+.send { background: var(--accent); color: var(--bg); border: 0; font-family: inherit; }
+.note { position: sticky; bottom: 0; padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px);
+  text-align: center; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); }

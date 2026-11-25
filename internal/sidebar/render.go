@@ -21,6 +21,7 @@ const (
 	ActSplitV                 // split it one above the other
 	ActSessions               // session picker
 	ActLimits                 // limits popup
+	ActPhone                  // the Phone popup (D104)
 	ActKeys                   // keys help
 	ActProject                // switch the client to project Session
 	ActOpen                   // ask for a folder and open it as a project

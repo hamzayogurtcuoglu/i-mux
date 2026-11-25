@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **i-mux on your phone.** **Phone** on the sidebar (or `imux phone pair`) shows a QR code; scan
+  it and your phone lists your agents, shows their screens live and answers them (1, 2, 3, Enter,
+  Esc, arrows, Ctrl+C, a message). At home on the same Wi-Fi, anywhere with Tailscale. Every
+  message is encrypted with a key only the computer and the phone hold. Off until turned on;
+  phones can be made watch-only or forgotten.
+
 ## [0.72.0] - 2026-11-24
 
 ### Added

@@ -1025,24 +1025,33 @@ turn it on and off from the sidebar (D104).
   - Status: done. OpenCV decoded versions 1, 6, 8 and 10 (`QR_DUMP` writes them); the unit tests
     keep the verified "HELLO" code and check finders, timing and both format copies for
     versions 1 to 10.
-- [ ] **T109.2 The remote server, pairing and sealing** · L · deps: T109.1
-  - AC: D104: `imux __remote-serve` (started by `imux remote on`, recorded like the web view's
-    server, stopped by `imux remote off`) serves the app and its API on the LAN; `imux remote
+- [x] **T109.2 The phone server, pairing and sealing** · L · deps: T109.1
+  - AC: D104: `imux __phone-serve` (started by `imux phone on`, recorded like the web view's
+    server, stopped by `imux phone off`) serves the app and its API on the LAN; `imux phone
     pair` makes a one-time token and key valid for two minutes and shows the QR code; pairing
     stores the device; every later message is sealed with AES-256-GCM, its timestamp within a
     minute and its nonce never seen; the agents and the watched pane's screen go out by SSE,
-    keys and text come in by POST; read-only devices cannot send; `imux remote devices`,
+    keys and text come in by POST; read-only devices cannot send; `imux phone devices`,
     `readonly` and `forget`. Unit tests of sealing, pairing, replay, read-only and the API with
     a fake engine.
-- [ ] **T109.3 The phone app** · L · deps: T109.2
+  - Status: done (`internal/phone`, `imux phone`). The daemon was also run here in a temporary
+    home with its own engine socket: the app and its headers served, a pairing by its token,
+    the device listed, the server stopped by `imux phone off`.
+- [x] **T109.3 The phone app** · L · deps: T109.2
   - AC: D104: an embedded PWA: pairs from the URL's fragment and keeps the key in the phone;
     lists projects and agents with their states; shows a pane live (colours, at its size);
     buttons for Yes / No / Enter / Esc / Ctrl+C and arrows; a text box; reconnects by itself;
     works in iOS Safari and Android Chrome. The ciphers are noble-ciphers, vendored (MIT).
-- [ ] **T109.4 Phone on the rail** · M · deps: T109.2
+  - Status: written and served (`internal/phone/web`); its syntax checked here. Not yet tried
+    on a real iPhone or Android phone: the owner tries it first. noble-ciphers is 2.4.0's
+    `aes.js` as jsDelivr bundles it, with its licence beside it.
+- [x] **T109.4 Phone on the rail** · M · deps: T109.2
   - AC: D104: **Phone** on the rail, above Limits, opens the Phone view: on / off, the
     address(es), **Pair a phone…** (the QR code in a popup), the devices with read-only and
     remove. English and Turkish. Tests of the view.
+  - Status: done as a popup (like Limits) rather than a sidebar view: on / off, pair (the QR
+    code), read-only and forget by number. The rail shows labels only when every item fits with
+    one, so Help never falls off a short pane now that the rail has one more item.
 - [ ] **T109.5 Anywhere: relay and notifications** · L · deps: T109.3
   - AC: D104: after a hosting decision by the owner: an outbound relay over HTTPS (through the
     system's proxy) for any network, carrying only sealed messages, and web push when an agent

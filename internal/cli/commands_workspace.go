@@ -168,6 +168,7 @@ func defaultAction(e *Env, args []string) error {
 	// puts it in place when no installer did.
 	if !*detach && os.Getenv("TMUX") == "" && isTerminal(os.Stdin) {
 		autoFont(e, cfg)
+		EnsurePhone() // the phone server, when it was left on (D104)
 	}
 	// Unless imux starts in an open project, ask which one to open when
 	// there is a workspace to go back to, and in the home folder (a

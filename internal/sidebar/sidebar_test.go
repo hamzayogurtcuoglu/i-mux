@@ -1351,7 +1351,7 @@ func TestHoverAndSelection(t *testing.T) {
 	m.View = ViewExplorer
 	m.Tree = []TreeRow{{Path: "docs", Name: "docs", Dir: true}, {Path: "main.go", Name: "main.go"}, {Path: "x.go", Name: "x.go"}}
 	m.Selected = "main.go"
-	w, h := 41, 30
+	w, h := 41, 36 // tall enough for the rail's labels
 	sc := Render(m, w, h, NoItem)
 	rowOf := func(sub string) int {
 		for i, l := range sc.Lines {

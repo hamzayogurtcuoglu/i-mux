@@ -266,6 +266,14 @@ on_arrival = "wait"     # sizi bekler | "continue": yarım kalan isteğe devam e
 
 Tüm seçenekler için [Configuration](docs/CONFIG.md) belgesine bakın.
 
+## <img src="docs/images/icons/zap.svg" width="22" alt=""> Telefonunuz
+
+Kenar panelde **Phone**'u açın, QR kodu okutun; telefonunuz agent'larınızı ve ekranlarını canlı
+gösterir: cevap verin, mesaj gönderin, durdurun. Evde aynı Wi-Fi'de, her yerden
+[Tailscale](https://tailscale.com) ile. Her mesaj sadece bilgisayarınızın ve telefonunuzun
+bildiği bir anahtarla şifrelenir. Ayrıntılar [kullanım rehberinde](docs/GUIDE.md#your-phone)
+(İngilizce).
+
 ## Devir nasıl çalışır
 
 i-mux her agent'ın yerel oturum dosyalarını ve `git status` çıktısını okur. Kısa bir devir

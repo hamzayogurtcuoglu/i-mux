@@ -14,6 +14,7 @@ Everything i-mux does, view by view. For installation and a short tour, see the
 - [The editor](#the-editor)
 - [Web pages, live](#web-pages-live)
 - [Notifications](#notifications)
+- [Your phone](#your-phone)
 - [Pasting images](#pasting-images)
 - [OpenCode](#opencode)
 - [The engine](#the-engine)
@@ -183,6 +184,26 @@ are not looking at it, a notification comes: macOS's notification center, the Li
 (`notify-send`), or, over SSH or on a server, your terminal's own (iTerm2, Ghostty, WezTerm, kitty,
 GNOME Terminal …). It works with the terminal closed too. Turn it and its sound off in Settings, or set
 `[notify] command` to send it anywhere (a push to your phone).
+
+## Your phone
+
+**Phone** on the rail (above Limits), or `imux phone`, lets a phone see and answer your agents
+(D104). It is off until you turn it on.
+
+1. **Phone → Pair a phone…** (or `imux phone pair`) turns it on and shows a QR code. Scan it with
+   the phone's camera within two minutes; the page that opens is i-mux. Add it to the home screen
+   to open it like an app.
+2. The phone lists your projects and agents with their state (working, needs you, idle). Tap one
+   to see its screen live; the buttons answer what it asks (1, 2, 3, Enter, Esc, arrows, Ctrl+C)
+   and the box sends a message.
+3. **At home** the phone reaches i-mux on the same Wi-Fi. **Anywhere**: with
+   [Tailscale](https://tailscale.com) on the computer and the phone, the QR code carries its
+   address and the phone reaches i-mux wherever it is, while the computer is on.
+
+Every message between the two is encrypted with a key that only they hold (it is in the QR code
+and never crosses the network). In the Phone popup, `r 1` makes phone 1 only watch, `f 1` forgets
+it, `o` turns phone access off. The first time, Windows and macOS ask whether imux may accept
+incoming connections: allow it on private networks.
 
 ## Pasting images
 

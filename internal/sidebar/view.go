@@ -326,12 +326,12 @@ const (
 )
 
 // railIcons are the rail's icons per theme: agents, files, search, git,
-// limits, help, settings, jobs, remote, env. Nerd Font codicons (v3):
-// hubot, files, search, source_control, dashboard, question,
-// settings-gear, watch, remote-explorer, key.
-var railIcons = map[string][10]string{
-	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueb7c", "\ueb39", "\ueb11"},
-	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "⏰", "💻", "🔑"},
+// limits, help, settings, jobs, remote, env, phone. Nerd Font codicons
+// (v3): hubot, files, search, source_control, dashboard, question,
+// settings-gear, watch, remote-explorer, key; and Font Awesome's mobile.
+var railIcons = map[string][11]string{
+	IconsNerd:  {"\ueb08", "\ueaf0", "\uea6d", "\uea68", "\ueacd", "\ueb32", "\ueb51", "\ueb7c", "\ueb39", "\ueb11", "\uf10b"},
+	IconsEmoji: {"🤖", "📁", "🔍", "🔀", "📊", "❓", "🔧", "⏰", "💻", "🔑", "📱"},
 }
 
 // railItems are the rail's icons: the views at the top, then the bottom
@@ -350,6 +350,7 @@ func railItems(theme string) (top, bottom []railItem) {
 		{icon: ic[7], label: "rail.schedule", view: ViewAuto},
 		{icon: ic[9], label: "rail.env", view: ViewEnv},
 	}, []railItem{
+		{icon: ic[10], label: "rail.phone", action: Action{Kind: ActPhone}},
 		{icon: ic[4], label: "rail.limits", action: Action{Kind: ActLimits}},
 		{icon: ic[6], label: "rail.settings", action: Action{Kind: ActSettings}},
 		{icon: ic[5], label: "rail.help", action: Action{Kind: ActKeys}},
@@ -447,7 +448,9 @@ const (
 // sidebar is tall enough.
 func withRail(content []Line, m Model, w, h int) []Line {
 	top, bottom := railItems(m.Icons)
-	tall := h == 0 || h >= railTall
+	// Labels only where every item fits with its label: else the icons
+	// alone, so the bottom items (Help last) never fall off the pane.
+	tall := h == 0 || h >= max(railTall, (len(top)+len(bottom))*3)
 	step := 2
 	if tall {
 		step = 3

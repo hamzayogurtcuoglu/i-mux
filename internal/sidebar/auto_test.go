@@ -221,7 +221,7 @@ func TestRailSchedule(t *testing.T) {
 	i18n.SetLocale("en")
 	m := model()
 	m.AutoRunning = 2
-	sc := Render(m, 41, 30, NoItem)
+	sc := Render(m, 41, 36, NoItem) // tall enough for the rail's labels
 	schedRow := -1
 	for i, l := range sc.Lines {
 		if a := l.ActionAt(1); a.Kind == ActView && a.Section == ViewAuto && schedRow < 0 {

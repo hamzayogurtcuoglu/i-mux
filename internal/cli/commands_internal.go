@@ -69,6 +69,7 @@ func runMenu(e *Env, args []string) error {
 	envF := fs.String("env", "", "with --new, --place, --split, --tab: the new agent starts with this environment")
 	keysF := fs.Bool("keys", false, "show the keys")
 	limitsF := fs.Bool("limits", false, "open the limits popup")
+	phoneF := fs.Bool("phone", false, "open the Phone popup (D104)")
 	changesF := fs.Bool("changes", false, "menu of the changed files")
 	tabF := fs.Bool("tab", false, "ask which agent a new tab starts with")
 	projectF := fs.String("project", "", "menu of a project (session)")
@@ -103,6 +104,8 @@ func runMenu(e *Env, args []string) error {
 	switch {
 	case *limitsF:
 		return w.ShowLimits(client)
+	case *phoneF:
+		return showPhone(w, client)
 	case *keysF:
 		return w.ShowKeys(ctx, p, client)
 	case *tabF:

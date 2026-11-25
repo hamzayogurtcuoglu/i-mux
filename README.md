@@ -266,6 +266,13 @@ on_arrival = "wait"     # wait for you | "continue" the unfinished request
 
 See [Configuration](docs/CONFIG.md) for every option.
 
+## <img src="docs/images/icons/zap.svg" width="22" alt=""> Your phone
+
+Turn on **Phone** on the sidebar, scan the QR code, and your phone shows your agents and their
+screens live: answer them, send a message, stop one. At home on the same Wi-Fi, anywhere with
+[Tailscale](https://tailscale.com). Every message is encrypted with a key only your computer and
+your phone hold. See the [user guide](docs/GUIDE.md#your-phone).
+
 ## How the handoff works
 
 i-mux reads each agent's local session files and `git status`. It writes a condensed handoff to
