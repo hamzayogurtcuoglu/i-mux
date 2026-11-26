@@ -274,6 +274,26 @@ screens live: answer them, send a message, stop one. At home on the same Wi-Fi, 
 [Tailscale](https://tailscale.com). Every message is encrypted with a key only your computer and
 your phone hold. See the [user guide](docs/GUIDE.md#your-phone).
 
+### Phone on WSL2
+
+If a phone on your Wi-Fi cannot reach i-mux running in WSL2, enable mirrored networking in
+`%UserProfile%\.wslconfig` on Windows:
+
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+Save the file, run `wsl --shutdown` in PowerShell, then reopen WSL. In WSL, run `imux phone`
+and note the port in the address it prints. In **Administrator PowerShell**, allow that port
+through the WSL firewall (replace `8765` with your port):
+
+```powershell
+New-NetFirewallHyperVRule -Name imux-phone -DisplayName "i-mux Phone" -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 8765 -Action Allow
+```
+
+Finally, run `imux phone pair` in WSL and scan the new QR code.
+
 ## How the handoff works
 
 i-mux reads each agent's local session files and `git status`. It writes a condensed handoff to

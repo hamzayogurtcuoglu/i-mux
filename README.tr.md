@@ -275,6 +275,26 @@ gösterir: cevap verin, mesaj gönderin, durdurun. Evde aynı Wi-Fi'de, her yerd
 bildiği bir anahtarla şifrelenir. Ayrıntılar [kullanım rehberinde](docs/GUIDE.md#your-phone)
 (İngilizce).
 
+### WSL2'de telefon bağlantısı
+
+Aynı Wi-Fi'deki telefon WSL2'de çalışan i-mux'a bağlanamıyorsa, Windows'ta
+`%UserProfile%\.wslconfig` dosyasına mirrored ağ ayarını ekleyin:
+
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+Dosyayı kaydedin, PowerShell'de `wsl --shutdown` çalıştırın ve WSL'yi yeniden açın. WSL'de
+`imux phone` çalıştırıp gösterilen adresteki port numarasını not edin. **Yönetici PowerShell**'de
+WSL güvenlik duvarında bu porta izin verin (`8765` yerine kendi portunuzu yazın):
+
+```powershell
+New-NetFirewallHyperVRule -Name imux-phone -DisplayName "i-mux Phone" -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 8765 -Action Allow
+```
+
+Son olarak WSL'de `imux phone pair` çalıştırıp yeni QR kodunu okutun.
+
 ## Devir nasıl çalışır
 
 i-mux her agent'ın yerel oturum dosyalarını ve `git status` çıktısını okur. Kısa bir devir
