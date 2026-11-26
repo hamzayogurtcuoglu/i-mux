@@ -1175,6 +1175,13 @@ turn it on and off from the sidebar (D104).
     a phone's size against a fake engine (the list, a pane with Copilot's question as buttons);
     not yet on a real phone.
 
+- [ ] **T109.8 A friendlier phone app** · S · deps: T109.7
+  - AC: D111: quick prompt chips (defaults in English and Turkish, + saves, a long press
+    removes, kept in localStorage); a swipe opens the next or previous agent, "n/m" in the
+    header; an offline bar and a notice when a send fails; numbered pairing steps; a home-screen
+    tip once, not in standalone mode; a double tap fits the font. Only `internal/phone/web`
+    changes. Checked with `node --check` and in headless Chromium at a phone's size.
+
 - [ ] **T109.5 Anywhere: relay and notifications** · L · deps: T109.3
   - AC: D104: after a hosting decision by the owner: an outbound relay over HTTPS (through the
     system's proxy) for any network, carrying only sealed messages, and web push when an agent
