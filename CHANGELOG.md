@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.74.0] - 2026-11-26
+
 ### Added
 
 - **Approve all.** Settings → Agents → **Approve all** (or `auto_approve = true`) starts every
