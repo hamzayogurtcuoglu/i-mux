@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.76.0] - 2026-11-26
+
 ### Changed
 
 - **The phone app is easier to use.** Quick prompts above the message box send a saved
