@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.75.0] - 2026-11-26
+
 ### Changed
 
 - **A better phone app.** It takes your i-mux theme's colors; the list starts with who needs you
