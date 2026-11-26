@@ -43,19 +43,16 @@ type Info struct {
 	// UpdateArgs make the CLI update itself (`claude update`); nil when its
 	// package manager does it (Codex: npm or Homebrew).
 	UpdateArgs []string
-	// ApproveFlag makes the interactive CLI approve every tool call itself
-	// (D109): `auto_approve` puts it before the agent's args.
-	ApproveFlag string
 }
 
 var registry = []Info{
-	{ID: session.Claude, Key: "c", Bin: "claude", Vendor: "Anthropic", InstallHint: "npm i -g @anthropic-ai/claude-code", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}, ApproveFlag: "--dangerously-skip-permissions"},
-	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", Dirs: []string{".local/bin"}, ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}, ApproveFlag: "--dangerously-skip-permissions"},
-	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}, ApproveFlag: "--allow-all"},
-	{ID: session.Codex, Key: "x", Bin: "codex", Vendor: "OpenAI", InstallHint: "npm i -g @openai/codex", ApproveFlag: "--dangerously-bypass-approvals-and-sandbox"},
+	{ID: session.Claude, Key: "c", Bin: "claude", Vendor: "Anthropic", InstallHint: "npm i -g @anthropic-ai/claude-code", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
+	{ID: session.Antigravity, Key: "a", Bin: "agy", Vendor: "Google", InstallHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash", Dirs: []string{".local/bin"}, ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
+	{ID: session.Copilot, Key: "p", Bin: "copilot", Vendor: "GitHub", InstallHint: "npm i -g @github/copilot", ReadDirFlag: "--add-dir", UpdateArgs: []string{"update"}},
+	{ID: session.Codex, Key: "x", Bin: "codex", Vendor: "OpenAI", InstallHint: "npm i -g @openai/codex"},
 	// OpenCode 2's own installer: i-mux needs OpenCode 2, and the first one
 	// (opencode.ai/install) and npm's opencode-ai give OpenCode 1 (D79).
-	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "curl -fsSL https://opencode.ai/v2/install | bash (or: npm i -g @opencode/cli, or: brew install opencode)", InstallCmd: "curl -fsSL https://opencode.ai/v2/install | bash", Dirs: []string{".opencode/bin"}, UpdateArgs: []string{"upgrade"}, ApproveFlag: "--auto"},
+	{ID: session.OpenCode, Key: "e", Bin: "opencode", Vendor: "any model", InstallHint: "curl -fsSL https://opencode.ai/v2/install | bash (or: npm i -g @opencode/cli, or: brew install opencode)", InstallCmd: "curl -fsSL https://opencode.ai/v2/install | bash", Dirs: []string{".opencode/bin"}, UpdateArgs: []string{"upgrade"}},
 }
 
 func init() {
@@ -129,18 +126,6 @@ func ReadDirArgs(id session.AgentID, dir string) []string {
 		return nil
 	}
 	return []string{a.ReadDirFlag + "=" + dir}
-}
-
-// ApproveArgs are the arguments that make agent id approve every tool
-// call, file edit and command itself (D109), for `auto_approve`: nil when
-// args (the agent's configured ones) already have the switch, or the CLI
-// has none.
-func ApproveArgs(id session.AgentID, args []string) []string {
-	a, ok := Get(id)
-	if !ok || a.ApproveFlag == "" || slices.Contains(args, a.ApproveFlag) {
-		return nil
-	}
-	return []string{a.ApproveFlag}
 }
 
 // Vars are the template placeholders.

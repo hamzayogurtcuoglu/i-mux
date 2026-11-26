@@ -259,7 +259,6 @@ imux config init    # writes a commented ~/.imux/config.toml
 
 ```toml
 on_limit = "ask"        # ask | auto (switch to the next agent) | off
-auto_approve = false    # true: agents approve every tool call themselves (Settings → Approve all)
 
 [handoff]
 on_arrival = "wait"     # wait for you | "continue" the unfinished request

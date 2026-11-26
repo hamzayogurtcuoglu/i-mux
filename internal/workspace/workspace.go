@@ -299,9 +299,6 @@ func (w *WS) Spec(l Launch) (*launch.Spec, TrailEntry, error) {
 	if l.Agent == session.Codex && w.Cfg.Hooks.Enabled && !agenthook.CodexHasNotify(agenthook.CodexHome(paths.UserHome())) {
 		argv = append(argv, agenthook.CodexArgs(w.Self)...)
 	}
-	if w.Cfg.AutoApprove {
-		argv = append(argv, agent.ApproveArgs(l.Agent, ac.Args)...) // D109
-	}
 	argv = append(append(argv, ac.Args...), agent.Expand(tpl, vars)...)
 	te := TrailEntry{Agent: l.Agent, Start: w.Now().UnixMilli(), Handoff: l.Handoff, Resumed: l.ResumeID != ""}
 	switch {

@@ -113,7 +113,7 @@ groups:
 | Group | Rows |
 |---|---|
 | Appearance | **Theme** (its first item follows the terminal's light/dark), **Icons** (its last item installs the Nerd Font) |
-| Agents | **At a limit** (ask, switch, do nothing), **After a handoff** (wait, continue), **Notifications** (on, silent, off), **Approve all** (off, on ⚠) |
+| Agents | **At a limit** (ask, switch, do nothing), **After a handoff** (wait, continue), **Notifications** (on, silent, off) |
 | Editing | **Editor**, **Image paste** |
 
 Enter or a click on a row opens a menu of its values (● marks the current one); pick one or press
@@ -121,15 +121,6 @@ its number. **Updates** (or `imux versions`) lists i-mux, its engine and every a
 version and the command that updates it, or installs it when it is missing; press its letter to
 run it right there. **Config file…** opens `config.toml`, where the rest is (agent states from
 their hooks, `[hooks] enabled`, among them).
-
-**Approve all** makes the agents i-mux starts approve every tool call, file edit and command
-themselves, without asking you, in their own panes too: Claude Code and Antigravity start with
-`--dangerously-skip-permissions`, Copilot with `--allow-all`, Codex with
-`--dangerously-bypass-approvals-and-sandbox` and OpenCode with `--auto` (`auto_approve = true`
-in `config.toml`). It is off by default: an agent that asks nothing can change and delete files
-and run any command, so turn it on for projects you trust. It applies to agents started after
-you turn it on; restart a running one to give it the switch. Claude Code asks once, the first
-time, to accept its bypass mode.
 
 **AI completion in the editor** works like Copilot in VS Code: choose **Editor → Neovim +
 Copilot** and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a

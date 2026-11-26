@@ -259,7 +259,6 @@ imux config init    # açıklamalı bir ~/.imux/config.toml yazar
 
 ```toml
 on_limit = "ask"        # ask | auto (sıradaki agent'a geç) | off
-auto_approve = false    # true: agent'lar her aracı kendisi onaylar (Ayarlar → Hepsini onayla)
 
 [handoff]
 on_arrival = "wait"     # sizi bekler | "continue": yarım kalan isteğe devam eder

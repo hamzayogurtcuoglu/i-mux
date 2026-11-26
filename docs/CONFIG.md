@@ -14,7 +14,6 @@ line number.
 | `default_agent` | `""` | Agent started by a plain `imux`. "" = first installed agent in `order`. |
 | `on_limit` | `"ask"` | What happens when an agent hits its usage limit: ask  = show a "continue in ..." menu (default) auto = switch to the first installed, non-limited agent in `order` off  = only show the limit in the status bar |
 | `on_exit` | `"shell"` | What a pane does when its agent exits: "shell" (drop to your login shell) or "close". |
-| `auto_approve` | `false` | Agents i-mux starts approve every tool call, file edit and command themselves, without asking (Claude Code and Antigravity --dangerously-skip-permissions, Copilot --allow-all, Codex --dangerously-bypass-approvals-and-sandbox, OpenCode --auto). Careful: they can then change and delete files and run any command. Applies to agents started after it is turned on. |
 | `update_check` | `true` | Ask GitHub once a day whether a newer i-mux is out (Settings then offers it). |
 | `locale` | `""` | UI language: "" = from IMUX_LANG / LANG; "en" or "tr". |
 | `editor` | `""` | Editor files open in from the sidebar and search ("micro", "vim", "code" ...). "" = micro, then $VISUAL, $EDITOR, nano, vim. |
@@ -125,13 +124,6 @@ on_limit      = "ask"
 
 # What a pane does when its agent exits: "shell" (drop to your login shell) or "close".
 on_exit       = "shell"
-
-# Agents i-mux starts approve every tool call, file edit and command themselves,
-# without asking (Claude Code and Antigravity --dangerously-skip-permissions,
-# Copilot --allow-all, Codex --dangerously-bypass-approvals-and-sandbox,
-# OpenCode --auto). Careful: they can then change and delete files and run any
-# command. Applies to agents started after it is turned on.
-auto_approve  = false
 
 # Ask GitHub once a day whether a newer i-mux is out (Settings then offers it).
 update_check  = true

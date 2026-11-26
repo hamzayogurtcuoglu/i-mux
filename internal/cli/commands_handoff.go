@@ -208,9 +208,6 @@ func runHandoff(e *Env, args []string) (err error) {
 		prompt = handoff.Message{From: from, To: to, At: now(), Path: path, Limit: reason.Limit, Delta: !since.IsZero()}.Text()
 		argv = agent.ReadDirArgs(to, filepath.Dir(path))
 	}
-	if cfg.AutoApprove {
-		argv = append(argv, agent.ApproveArgs(to, ac.Args)...) // D109
-	}
 	argv = append(append(argv, ac.Args...), agent.Expand(ac.NewArgs, agent.Vars{Prompt: prompt, UUID: agent.NewUUID()})...)
 	if !agent.HasPrompt(ac.NewArgs) {
 		fmt.Fprintln(e.Stderr, i18n.T("handoff.no_prompt_flag", path))

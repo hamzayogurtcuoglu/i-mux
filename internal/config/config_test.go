@@ -270,6 +270,13 @@ func TestRemovedKeysQuiet(t *testing.T) {
 	if err != nil || len(warns) != 0 {
 		t.Fatalf("err %v, warnings %q", err, warns)
 	}
+	// Approve all's key, written by Settings in v0.74.0 (D109).
+	if _, warns, err := Parse([]byte("auto_approve = true\n")); err != nil || len(warns) != 0 {
+		t.Fatalf("auto_approve: err %v, warnings %q", err, warns)
+	}
+	if _, warns, _ := Parse([]byte("auto_aprove = true\n")); len(warns) != 1 {
+		t.Fatalf("a mistyped top-level key: warnings %q", warns)
+	}
 	if _, warns, _ := Parse([]byte("[git]\ncommit_agnet = \"claude\"\n")); len(warns) != 1 {
 		t.Fatalf("a mistyped key: warnings %q", warns)
 	}

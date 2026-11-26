@@ -6,6 +6,13 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- **Approve all** (from 0.74.0). It did not help where it was wanted: Copilot under an
+  organization policy still asks whatever `--allow-all` says. A config that still has
+  `auto_approve` loads with no warning. To have an agent approve everything, put its switch in
+  `[agents.<id>] args` (for example `args = ["--dangerously-skip-permissions"]` for Claude).
+
 ## [0.74.0] - 2026-11-26
 
 ### Added

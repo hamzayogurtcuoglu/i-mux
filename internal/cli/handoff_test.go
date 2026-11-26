@@ -109,30 +109,6 @@ func TestHandoffExecsTarget(t *testing.T) {
 	}
 }
 
-// TestHandoffAutoApprove (D109): `imux handoff` starts the target with its
-// approve-everything switch when auto_approve is on.
-func TestHandoffAutoApprove(t *testing.T) {
-	testutil.SkipOnWindows(t, "the target agent is an sh script")
-	h := testutil.Isolate(t)
-	inProject(t, h)
-	writeClaude(t, h, "11111111-0000-4000-8000-000000000001", "fix the bug", testutil.FrozenTime)
-	fake := filepath.Join(h.Home, "fakebin", "agy")
-	testutil.WriteFile(t, fake, []byte("#!/bin/sh\nexit 0\n"))
-	_ = os.Chmod(fake, 0o755)
-	t.Setenv("PATH", filepath.Dir(fake)+":/usr/bin:/bin")
-	testutil.WriteFile(t, paths.Config(), []byte("auto_approve = true\n"))
-	var got *launch.Spec
-	launchExec = func(s *launch.Spec) error { got = s; return nil }
-	defer func() { launchExec = launch.Exec }()
-	if _, errOut, code := runCLI(t, "handoff", "--from", "claude", "--to", "antigravity"); code != 0 {
-		t.Fatalf("exit %d: %s", code, errOut)
-	}
-	if got == nil || len(got.Args) != 4 || got.Args[0] != "--add-dir="+paths.Handoffs() ||
-		got.Args[1] != "--dangerously-skip-permissions" || got.Args[2] != "-i" {
-		t.Fatalf("spec %+v", got)
-	}
-}
-
 func TestHandoffTargetNotInstalled(t *testing.T) {
 	testutil.SkipOnWindows(t, "macOS and Linux install commands")
 	h := testutil.Isolate(t)

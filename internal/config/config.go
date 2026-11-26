@@ -33,6 +33,8 @@ var RemovedAgents = map[string]string{
 var removedKeys = map[string]bool{
 	// The ✨ commit messages' agent and model (D29, removed in v0.55: D65).
 	"git.commit_agent": true, "git.commit_model": true,
+	// Approve all (D109: v0.74.0, removed in v0.74.1).
+	"auto_approve": true,
 }
 
 // Duration is a time.Duration written as a Go duration string ("2.5s").
@@ -207,9 +209,8 @@ type Tmux struct {
 type Config struct {
 	Order        []string          `toml:"order"`
 	DefaultAgent string            `toml:"default_agent"`
-	OnLimit      string            `toml:"on_limit"`     // ask | auto | off
-	OnExit       string            `toml:"on_exit"`      // shell | close
-	AutoApprove  bool              `toml:"auto_approve"` // agents approve every tool call themselves (D109)
+	OnLimit      string            `toml:"on_limit"` // ask | auto | off
+	OnExit       string            `toml:"on_exit"`  // shell | close
 	UpdateCheck  bool              `toml:"update_check"`
 	Locale       string            `toml:"locale"`
 	Editor       string            `toml:"editor"` // "" = micro, $VISUAL, $EDITOR, nano, vim
@@ -422,6 +423,9 @@ func Parse(data []byte) (*Config, []string, error) {
 	for _, k := range md.Undecoded() {
 		if len(k) >= 2 && k[0] == "agents" && !slices.Contains(AgentIDs, k[1]) {
 			continue // already reported
+		}
+		if removedKeys[k.String()] {
+			continue
 		}
 		warnings = append(warnings, fmt.Sprintf("unknown key %q ignored", k.String()))
 	}

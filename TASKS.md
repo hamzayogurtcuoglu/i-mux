@@ -1042,11 +1042,13 @@ the organization's policy, so it did not help where it was wanted.
 - [x] ~~**T111.4 Check each CLI (USER)**~~ · XS · deps: T111.1
   - Dropped with the feature (Q33 closed): Copilot 1.0.116 with `--allow-all` still asked,
     "Organization policy requires confirmation".
-- [ ] **T111.5 Remove Approve all** · S
+- [x] **T111.5 Remove Approve all** · S
   - AC: D109: the Settings row, its menu and i18n keys, `auto_approve`, `agent.ApproveArgs` and
     the launch changes are gone; a config with `auto_approve` loads with no warning
     (`removedKeys`, top-level keys too); GUIDE, README, README.tr, docs/CONFIG.md, CHANGELOG
     (Removed). Unit test: the removed key is quiet, a mistyped one still warns.
+  - Status: done. The feature commit reverted; `removedKeys` checked for every undecoded key;
+    `TestRemovedKeysQuiet`.
 
 ## M110: Several agents together (added 2026-11-25)
 
