@@ -25,13 +25,18 @@
 </header>
 
 <button id="banner" class="banner" hidden></button>
+<div id="offline" class="offline" hidden data-t="offline">Offline, trying again…</div>
 
 <main>
   <section id="pair" hidden>
     <div class="card center">
       <div class="logo">⇄</div>
       <h2 data-t="pair_title">Pair this phone</h2>
-      <p data-t="pair_body">On your computer, open i-mux, click <b>Phone</b> on the sidebar and choose <b>Pair a phone</b>. Then scan the QR code with this phone's camera.</p>
+      <ol class="steps">
+        <li data-t="step1">On your computer, click <b>Phone</b> on i-mux's sidebar.</li>
+        <li data-t="step2">Choose <b>Pair a phone</b>: a QR code shows.</li>
+        <li data-t="step3">Scan it with this phone's camera.</li>
+      </ol>
       <p id="pair-error" class="error" hidden></p>
     </div>
   </section>
@@ -64,11 +69,13 @@
     <button id="smaller" class="tool" aria-label="Smaller">A−</button>
     <button id="larger" class="tool" aria-label="Larger">A+</button>
   </div>
+  <div id="prompts" class="prompts"></div>
   <form id="say">
     <textarea id="text" rows="1" autocomplete="off" autocapitalize="sentences" enterkeyhint="send" placeholder="Message"></textarea>
     <button type="submit" class="send" aria-label="Send">➤</button>
   </form>
 </footer>
 <div id="watching" class="note" hidden data-t="read_only">This phone only watches.</div>
+<div id="toast" class="toast" hidden></div>
 </body>
 </html>

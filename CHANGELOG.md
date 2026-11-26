@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The phone app is easier to use.** Quick prompts above the message box send a saved
+  sentence with one tap (+ saves your own, a long press removes one); swipe left or right to
+  move to the next agent, and the header says which one of how many; a bar says when the
+  connection is down, and a notice when something could not be sent; numbered pairing steps;
+  a one-time tip on adding it to the home screen; a double tap fits the screen again.
+
 ## [0.75.0] - 2026-11-26
 
 ### Changed

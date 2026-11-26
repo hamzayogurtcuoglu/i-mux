@@ -9,9 +9,9 @@ import { choices } from "/choices.js";
 const TR = (navigator.language || "").toLowerCase().startsWith("tr");
 const T = {
   pair_title: TR ? "Bu telefonu eşleştir" : "Pair this phone",
-  pair_body: TR
-    ? "Bilgisayarda i-mux'ta kenar paneldeki <b>Phone</b>'a tıklayıp <b>Telefon eşleştir</b>'i seçin. Sonra QR kodu bu telefonun kamerasıyla okutun."
-    : "On your computer, open i-mux, click <b>Phone</b> on the sidebar and choose <b>Pair a phone</b>. Then scan the QR code with this phone's camera.",
+  step1: TR ? "Bilgisayarda i-mux'un kenar panelindeki <b>Telefon</b>'a tıklayın." : "On your computer, click <b>Phone</b> on i-mux's sidebar.",
+  step2: TR ? "<b>Telefon eşleştir</b>'i seçin: bir QR kod çıkar." : "Choose <b>Pair a phone</b>: a QR code shows.",
+  step3: TR ? "QR kodu bu telefonun kamerasıyla okutun." : "Scan it with this phone's camera.",
   read_only: TR ? "Bu telefon sadece izliyor." : "This phone only watches.",
   no_agents: TR ? "Açık agent yok." : "No agents are running.",
   no_agents_hint: TR ? "Bilgisayarda bir agent başlatınca burada görünür." : "Start an agent on your computer and it shows here.",
@@ -27,7 +27,18 @@ const T = {
   earlier: TR ? "Önceki satırlar" : "Earlier lines",
   paired_failed: TR ? "Eşleştirme olmadı: " : "Pairing failed: ",
   forgotten: TR ? "Bu telefon artık eşli değil. Yeniden eşleştirin." : "This phone is not paired any more. Pair it again.",
-  offline: TR ? "bağlantı yok, yeniden deneniyor" : "offline, trying again",
+  offline: TR ? "Bağlantı yok, yeniden deneniyor…" : "Offline, trying again…",
+  send_offline: TR ? "Gönderilemedi: bağlantı yok" : "Not sent: offline",
+  send_readonly: TR ? "Bu telefon sadece izliyor" : "This phone only watches",
+  send_gone: TR ? "Bu agent artık yok" : "This agent is gone",
+  send_failed: TR ? "Gönderilemedi" : "Not sent",
+  prompt_add: TR ? "Önce kutuya yazın, sonra + ile kaydedin" : "Type it in the box first, then + saves it",
+  prompt_saved: TR ? "Kaydedildi" : "Saved",
+  prompt_remove: TR ? "“%s” silinsin mi?" : "Remove “%s”?",
+  fit: TR ? "Ekrana sığdırıldı" : "Fit to the screen",
+  tip_ios: TR ? "Uygulama gibi açmak için: Paylaş → <b>Ana Ekrana Ekle</b>." : "To open it like an app: Share → <b>Add to Home Screen</b>.",
+  tip_other: TR ? "Uygulama gibi açmak için: tarayıcı menüsü → <b>Uygulamayı yükle</b> (ya da Ana ekrana ekle)." : "To open it like an app: the browser's menu → <b>Install app</b> (or Add to Home screen).",
+  ok: TR ? "Tamam" : "OK",
   message: TR ? "Mesaj" : "Message",
 };
 const $ = (s) => document.querySelector(s);
@@ -133,12 +144,14 @@ function setStatus(on) {
   const d = $("#status");
   d.className = "dot " + (on ? "on" : "off");
   d.title = on ? "" : T.offline;
+  $("#offline").hidden = on || !me;
 }
 function connect() {
   clearTimeout(retry);
   if (es) es.close();
   const u = "/api/events?d=" + encodeURIComponent(me.id) + "&a=" + encodeURIComponent(seal({ op: "events" }));
   es = new EventSource(u);
+  $("#status").hidden = false;
   es.onopen = () => setStatus(true);
   es.onmessage = (e) => {
     let m;
@@ -249,6 +262,7 @@ function setTitle(title, sub) {
 }
 function showPair(err) {
   only("#pair");
+  $("#status").hidden = true; // nothing to be connected to yet
   $("#back").hidden = true;
   setTitle("i-mux");
   if (err) { const p = $("#pair-error"); p.textContent = err; p.hidden = false; }
@@ -290,6 +304,7 @@ function renderList() {
     sum.append(c);
   }
   list.append(sum);
+  if (showTip()) list.prepend(tip());
   const waiting = everyone.filter(({ a }) => stateOf(a) === "blocked");
   if (waiting.length) {
     const g = el("div", "group attention");
@@ -334,7 +349,9 @@ function showPane() {
 function updatePaneTitle() {
   const x = watching && find(watching.pane);
   if (!x) { setTitle("i-mux", ""); return; }
-  setTitle(label(x.a), x.p.name + " · " + stateText(x.a));
+  const list = all();
+  const at = list.findIndex((y) => y.a.pane === watching.pane);
+  setTitle(label(x.a), x.p.name + " · " + stateText(x.a) + (list.length > 1 ? " · " + (at + 1) + "/" + list.length : ""));
 }
 function leave() {
   watching = null;
@@ -458,10 +475,20 @@ function renderChoices(text) {
 }
 
 // --- input ----------------------------------------------------------------
-function send(what) {
+async function send(what) {
   if (!watching) return;
   stick = true;
-  cmd(Object.assign({ op: "send", pane: watching.pane }, what));
+  const code = await cmd(Object.assign({ op: "send", pane: watching.pane }, what));
+  if (code === 204) return;
+  toast(code === 0 ? T.send_offline : code === 403 ? T.send_readonly : code === 404 ? T.send_gone : T.send_failed);
+}
+let toastTimer = null;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
 }
 for (const b of document.querySelectorAll("[data-key]")) {
   b.onclick = () => { tap(); send({ keys: [b.dataset.key] }); };
@@ -483,13 +510,120 @@ $("#say").onsubmit = (e) => {
   grow();
 };
 
+
+// --- D111: quick prompts --------------------------------------------------
+const PROMPTS = "imux-phone-prompts";
+const DEFAULTS = TR
+  ? ["Devam et", "Testleri çalıştır", "Ne yaptığını kısaca özetle", "Değişiklikleri commit et"]
+  : ["Continue", "Run the tests", "Summarize what you did", "Commit the changes"];
+function prompts() {
+  try { const p = JSON.parse(localStorage.getItem(PROMPTS)); if (Array.isArray(p)) return p; } catch {}
+  return DEFAULTS.slice();
+}
+function savePrompts(p) { localStorage.setItem(PROMPTS, JSON.stringify(p.slice(0, 30))); renderPrompts(); }
+function renderPrompts() {
+  const box = $("#prompts");
+  box.replaceChildren();
+  for (const p of prompts()) {
+    const b = el("button", "", p);
+    let held = null, long = false;
+    b.addEventListener("pointerdown", () => {
+      long = false;
+      held = setTimeout(() => {
+        long = true;
+        navigator.vibrate && navigator.vibrate(20);
+        if (confirm(T.prompt_remove.replace("%s", p))) savePrompts(prompts().filter((x) => x !== p));
+      }, 550);
+    });
+    for (const ev of ["pointerup", "pointerleave", "pointercancel"]) b.addEventListener(ev, () => clearTimeout(held));
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+    b.onclick = () => { if (long) return; tap(); send({ text: p, keys: ["Enter"] }); };
+    box.append(b);
+  }
+  const add = el("button", "add", "+");
+  add.setAttribute("aria-label", T.prompt_saved);
+  add.onclick = () => {
+    const v = text.value.trim().replace(/\s+/g, " ");
+    if (!v) return toast(T.prompt_add);
+    if (!prompts().includes(v)) savePrompts([...prompts(), v]);
+    tap();
+    toast(T.prompt_saved);
+  };
+  box.append(add);
+}
+
+// --- D111: swipe to the next or previous agent ------------------------------
+let touch = null;
+function onTouchStart(e) {
+  const t = e.touches[0];
+  touch = e.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now(), header: !!e.target.closest("header") } : null;
+}
+function onTouchEnd(e) {
+  if (!touch || !watching) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+  const quick = Date.now() - touch.at < 600;
+  const wrap = $("#screen-wrap");
+  const flat = wrap.scrollWidth <= wrap.clientWidth + 2;
+  const from = touch;
+  touch = null;
+  if (!quick || Math.abs(dx) < 70 || Math.abs(dy) > 45 || !(from.header || flat)) return;
+  const list = all();
+  const at = list.findIndex((y) => y.a.pane === watching.pane);
+  if (at < 0 || list.length < 2) return;
+  const next = list[(at + (dx < 0 ? 1 : -1) + list.length) % list.length];
+  const pane = $("#pane");
+  pane.classList.remove("slide-l", "slide-r");
+  void pane.offsetWidth;
+  pane.classList.add(dx < 0 ? "slide-l" : "slide-r");
+  tap();
+  openAgent(next.p, next.a);
+}
+for (const t of [$("#pane"), $("header")]) {
+  t.addEventListener("touchstart", onTouchStart, { passive: true });
+  t.addEventListener("touchend", onTouchEnd, { passive: true });
+}
+
+// --- D111: a double tap fits the screen again -------------------------------
+let lastTap = 0;
+$("#screen-wrap").addEventListener("touchend", (e) => {
+  if (e.changedTouches.length !== 1) return;
+  const now = Date.now();
+  if (now - lastTap < 300) {
+    lastTap = 0;
+    if (scale !== 1) {
+      scale = 1;
+      localStorage.setItem(FONT, "1");
+      if (lastScreen) renderScreen(lastScreen);
+      toast(T.fit);
+    }
+  } else lastTap = now;
+}, { passive: true });
+
+// --- D111: the home-screen tip, once ----------------------------------------
+const TIP = "imux-phone-tip";
+function standalone() {
+  return navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+}
+function showTip() { return !standalone() && !localStorage.getItem(TIP); }
+function tip() {
+  const box = el("div", "tip");
+  const s = el("span");
+  s.innerHTML = /iPhone|iPad|iPod/.test(navigator.userAgent) ? T.tip_ios : T.tip_other; // our own text, with <b>
+  const ok = el("button", "", T.ok);
+  ok.onclick = () => { localStorage.setItem(TIP, "1"); box.remove(); };
+  box.append(s, ok);
+  return box;
+}
+
 // --- start ----------------------------------------------------------------
 for (const e of document.querySelectorAll("[data-t]")) {
   const k = e.dataset.t;
-  if (k === "pair_body") e.innerHTML = T[k]; // our own text, with <b>
+  if (k.startsWith("step")) e.innerHTML = T[k]; // our own text, with <b>
   else e.textContent = T[k];
 }
 text.placeholder = T.message;
+renderPrompts();
 await pairFromFragment();
 if (me && me.id && me.key) {
   useDevice(me);

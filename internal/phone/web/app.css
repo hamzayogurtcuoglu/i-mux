@@ -155,3 +155,41 @@ form { display: flex; align-items: flex-end; gap: 8px; margin: 0; }
   font-size: 18px; }
 .note { flex: none; padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px);
   text-align: center; color: var(--muted); background: var(--panel); border-top: 1px solid var(--line); }
+
+/* --- D111: connection, notices, pairing steps, the home-screen tip, quick
+   prompts, swipes ------------------------------------------------------ */
+.offline { flex: none; padding: 7px 16px; font-size: 13px; font-weight: 600; text-align: center;
+  color: var(--text); background: color-mix(in srgb, var(--red) 28%, var(--panel));
+  border-bottom: 1px solid var(--line); }
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 150px); z-index: 9;
+  transform: translateX(-50%); max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 12px;
+  background: var(--text); color: var(--bg); font-size: 14px; font-weight: 600; text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35); animation: rise .2s ease-out; }
+@keyframes rise { from { transform: translate(-50%, 12px); opacity: 0; } }
+.steps { margin: 18px 0 4px; padding: 0; list-style: none; counter-reset: s; text-align: left; }
+.steps li { position: relative; margin: 0 0 12px; padding: 4px 0 0 40px; color: var(--muted);
+  counter-increment: s; }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 0; display: grid;
+  place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--surface);
+  color: var(--accent); font-weight: 700; }
+.steps b { color: var(--text); }
+.tip { display: flex; gap: 12px; align-items: flex-start; margin: 2px 0 12px; padding: 12px 14px;
+  border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); font-size: 14px; }
+.tip span { flex: 1; color: var(--muted); }
+.tip b { color: var(--text); }
+.tip button { flex: none; padding: 5px 12px; border-radius: 999px; border: 0; background: var(--accent);
+  color: var(--on-accent); font-weight: 700; font-size: 13px; }
+.prompts { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }
+.prompts::-webkit-scrollbar { display: none; }
+.prompts button { flex: none; max-width: 70vw; height: 34px; padding: 0 13px; border-radius: 999px;
+  border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 14px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: none;
+  -webkit-user-select: none; -webkit-touch-callout: none; }
+.prompts button:active { background: var(--surface); color: var(--text); }
+.prompts .add { color: var(--accent); border-style: dashed; font-weight: 700; }
+#screen-wrap { touch-action: manipulation; }
+#pane.slide-l #screen { animation: slide-l .18s ease-out; }
+#pane.slide-r #screen { animation: slide-r .18s ease-out; }
+@keyframes slide-l { from { transform: translateX(40px); opacity: .3; } }
+@keyframes slide-r { from { transform: translateX(-40px); opacity: .3; } }
