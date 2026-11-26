@@ -1160,6 +1160,17 @@ turn it on and off from the sidebar (D104).
   - Status: done as a popup (like Limits) rather than a sidebar view: on / off, pair (the QR
     code), read-only and forget by number. The rail shows labels only when every item fits with
     one, so Help never falls off a short pane now that the rail has one more item.
+- [ ] **T109.7 A better phone app** · M · deps: T109.3
+  - AC: D110: `hello` carries the desktop's theme (dark, and light when it follows the
+    terminal), as hex per token, read at each connection; `watch` takes `lines` (0–500) and the
+    screen then has that much scrollback; the keys `BTab` and `4`–`9`; the app: summary and
+    "needs you" first, project cards, CLI marks, state with its time, quick answers from the
+    screen's numbered choices, key bar, growing message box, A− / A+, back to the bottom,
+    Earlier, a banner and vibration when an agent starts to wait; English and Turkish. Only
+    `internal/phone` and the server's start change. Unit tests (the theme in hello, the
+    colors' hex, lines clamped and passed on, the new keys); the app's syntax checked
+    (`node --check`) and its choice parser tested with node.
+
 - [ ] **T109.5 Anywhere: relay and notifications** · L · deps: T109.3
   - AC: D104: after a hosting decision by the owner: an outbound relay over HTTPS (through the
     system's proxy) for any network, carrying only sealed messages, and web push when an agent
