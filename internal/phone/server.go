@@ -42,7 +42,9 @@ type Screen struct {
 // Engine is what the server needs of the workspace; tests replace it.
 type Engine interface {
 	Projects(ctx context.Context) ([]Project, error)
-	Screen(ctx context.Context, pane string) (Screen, error)
+	// Screen is pane's screen with lines of its scrollback above it (0:
+	// what is visible).
+	Screen(ctx context.Context, pane string, lines int) (Screen, error)
 	// Send types text (literally) and then keys (tmux key names) into pane.
 	Send(ctx context.Context, pane, text string, keys []string) error
 }
@@ -51,8 +53,12 @@ type Engine interface {
 var Keys = map[string]string{
 	"Enter": "Enter", "Escape": "Escape", "Tab": "Tab", "BSpace": "BSpace", "Space": "Space",
 	"Up": "Up", "Down": "Down", "Left": "Left", "Right": "Right", "C-c": "C-c",
-	"1": "1", "2": "2", "3": "3", "4": "4", "y": "y", "n": "n",
+	"1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9",
+	"y": "y", "n": "n", "BTab": "BTab",
 }
+
+// MaxLines is the most scrollback the phone may ask for (D110).
+const MaxLines = 500
 
 // MaxText is the longest text the phone may type at once.
 const MaxText = 4000
@@ -64,14 +70,16 @@ var webFS embed.FS
 type Server struct {
 	Store  *Store
 	Engine Engine
-	Now    func() time.Time
+	// Look is the desktop's theme, sent in hello (D110); nil for none.
+	Look func() Look
+	Now  func() time.Time
 	// Every is how often the watched screen is looked at; Agents how often
 	// the agents are (tests shorten them).
 	Every, AgentsEvery time.Duration
 
 	guard Guard
 	mu    sync.Mutex
-	watch map[string]string        // device → the pane it watches
+	watch map[string]watch         // device → the pane it watches
 	poke  map[string]chan struct{} // device → its streams' wake-up
 	Done  chan struct{}            // closed when the server stops
 }
@@ -169,6 +177,14 @@ type Cmd struct {
 	Pane string   `json:"pane,omitempty"` // watch, send
 	Text string   `json:"text,omitempty"` // send: typed first
 	Keys []string `json:"keys,omitempty"` // send: then these keys
+	// Lines is watch's scrollback above the screen (D110), at most MaxLines.
+	Lines int `json:"lines,omitempty"`
+}
+
+// watch is what a device watches: a pane, with lines of scrollback.
+type watch struct {
+	pane  string
+	lines int
 }
 
 func (s *Server) cmd(w http.ResponseWriter, r *http.Request) {
@@ -197,9 +213,9 @@ func (s *Server) cmd(w http.ResponseWriter, r *http.Request) {
 	case "watch":
 		s.mu.Lock()
 		if s.watch == nil {
-			s.watch = map[string]string{}
+			s.watch = map[string]watch{}
 		}
-		s.watch[d.ID] = c.Pane
+		s.watch[d.ID] = watch{pane: c.Pane, lines: min(max(c.Lines, 0), MaxLines)}
 		s.mu.Unlock()
 		s.wake(d.ID)
 	case "send":
@@ -313,7 +329,11 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		fl.Flush()
 		return true
 	}
-	if !send(map[string]any{"t": "hello", "read_only": d.ReadOnly, "name": d.Name}) {
+	hello := map[string]any{"t": "hello", "read_only": d.ReadOnly, "name": d.Name}
+	if s.Look != nil {
+		hello["theme"] = s.Look()
+	}
+	if !send(hello) {
 		return
 	}
 	every, agentsEvery := s.Every, s.AgentsEvery
@@ -344,10 +364,10 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		s.mu.Lock()
-		pane := s.watch[d.ID]
+		wt := s.watch[d.ID]
 		s.mu.Unlock()
-		if pane != "" {
-			if sc, err := s.Engine.Screen(ctx, pane); err == nil {
+		if pane := wt.pane; pane != "" {
+			if sc, err := s.Engine.Screen(ctx, pane, wt.lines); err == nil {
 				b, _ := json.Marshal(sc)
 				if sum := sha256.Sum256(b); sum != lastScreen || pane != lastPane {
 					lastScreen, lastPane = sum, pane

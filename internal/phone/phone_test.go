@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,6 +14,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hamzayogurtcuoglu/i-mux/internal/theme"
 )
 
 // TestSeal: sealed for one device opens with its key and id only, and any
@@ -110,16 +113,22 @@ type fakeEngine struct {
 	mu     sync.Mutex
 	screen string
 	sent   []string
+	lines  int // the scrollback asked for last
 }
 
 func (f *fakeEngine) Projects(context.Context) ([]Project, error) {
 	return []Project{{Name: "api", Branch: "main", Agents: []Agent{{Pane: "%1", CLI: "claude", State: "working"}, {Pane: "%2", CLI: "codex", State: "blocked"}}}}, nil
 }
 
-func (f *fakeEngine) Screen(_ context.Context, pane string) (Screen, error) {
+func (f *fakeEngine) Screen(_ context.Context, pane string, lines int) (Screen, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return Screen{Text: pane + ": " + f.screen, Width: 80, Height: 24}, nil
+	f.lines = lines
+	text := pane + ": " + f.screen
+	if lines > 0 {
+		text = fmt.Sprintf("[%d earlier] ", lines) + text
+	}
+	return Screen{Text: text, Width: 80, Height: 24}, nil
 }
 
 func (f *fakeEngine) Send(_ context.Context, pane, text string, keys []string) error {
@@ -139,8 +148,13 @@ type phone struct {
 
 func newPhone(t *testing.T, eng Engine) (*phone, *Store) {
 	t.Helper()
+	return newPhoneLook(t, eng, nil)
+}
+
+func newPhoneLook(t *testing.T, eng Engine, look func() Look) (*phone, *Store) {
+	t.Helper()
 	st := &Store{Dir: t.TempDir()}
-	s := &Server{Store: st, Engine: eng, Every: 10 * time.Millisecond, AgentsEvery: 10 * time.Millisecond}
+	s := &Server{Store: st, Engine: eng, Look: look, Every: 10 * time.Millisecond, AgentsEvery: 10 * time.Millisecond}
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { close(s.Done); srv.Close() })
 	p, err := st.NewPairing(time.Now())
@@ -334,7 +348,7 @@ func TestStatic(t *testing.T) {
 	s := &Server{Store: &Store{Dir: t.TempDir()}, Engine: &fakeEngine{}}
 	srv := httptest.NewServer(s.Handler())
 	defer srv.Close()
-	for _, f := range []string{"/", "/app.js", "/app.css", "/noble-aes.js", "/manifest.webmanifest", "/icon.svg"} {
+	for _, f := range []string{"/", "/app.js", "/app.css", "/noble-aes.js", "/choices.js", "/manifest.webmanifest", "/icon.svg"} {
 		resp, err := http.Get(srv.URL + f)
 		if err != nil {
 			t.Fatal(err)
@@ -357,5 +371,75 @@ func TestPairURL(t *testing.T) {
 	u := PairURL("100.101.1.2", 7655, Pending{Token: "tok", Key: "key"})
 	if u != "http://100.101.1.2:7655/#p=tok.key" {
 		t.Fatal(u)
+	}
+}
+
+// TestMore (D110): hello carries the desktop's theme; watch asks for
+// scrollback (clamped); the phone may send Shift+Tab and 4-9.
+func TestMore(t *testing.T) {
+	eng := &fakeEngine{screen: "hi"}
+	p, _ := newPhoneLook(t, eng, func() Look { return Look{Colors: map[string]string{"accent": "#39c5cf"}} })
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch, _ := p.events(ctx)
+	if b, _ := json.Marshal(next(t, ch, "hello")["theme"]); string(b) != `{"colors":{"accent":"#39c5cf"}}` {
+		t.Errorf("theme %s", b)
+	}
+	if c := p.cmd(map[string]any{"op": "watch", "pane": "%1", "lines": 200}); c != 204 {
+		t.Fatalf("watch: %d", c)
+	}
+	if b, _ := json.Marshal(next(t, ch, "screen")["screen"]); !strings.Contains(string(b), "[200 earlier] %1: hi") {
+		t.Errorf("scrollback: %s", b)
+	}
+	for _, c := range []struct{ ask, want int }{{100000, MaxLines}, {-5, 0}} {
+		if code := p.cmd(map[string]any{"op": "watch", "pane": "%1", "lines": c.ask}); code != 204 {
+			t.Fatalf("watch %d: %d", c.ask, code)
+		}
+		deadline := time.Now().Add(5 * time.Second)
+		for {
+			eng.mu.Lock()
+			got := eng.lines
+			eng.mu.Unlock()
+			if got == c.want {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("lines %d asked: %d, want %d", c.ask, got, c.want)
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}
+	if c := p.cmd(map[string]any{"op": "send", "pane": "%1", "keys": []string{"BTab", "7"}}); c != 204 {
+		t.Errorf("new keys: %d", c)
+	}
+	// No theme: hello has none.
+	q, _ := newPhone(t, eng)
+	ch2, _ := q.events(ctx)
+	if h := next(t, ch2, "hello"); h["theme"] != nil {
+		t.Errorf("theme without one: %v", h["theme"])
+	}
+}
+
+// TestLookOf (D110): a 24-bit theme's colors as they are, the i-mux theme's
+// 256 colors as xterm's, the terminal's own left out; light only when the
+// theme follows the terminal.
+func TestLookOf(t *testing.T) {
+	l := LookOf(theme.Config{Name: "catppuccin"})
+	if l.Colors["accent"] == "" || len(l.Colors["accent"]) != 7 || l.Light != nil {
+		t.Errorf("catppuccin: %v", l)
+	}
+	if l := LookOf(theme.Config{Name: "catppuccin", AutoSwitch: true}); l.Light == nil || l.Light["panel_bg"] == l.Colors["panel_bg"] {
+		t.Errorf("auto: %v", l)
+	}
+	if l := LookOf(theme.Config{Name: "terminal"}); l.Colors != nil {
+		t.Errorf("terminal theme sent colors: %v", l.Colors)
+	}
+	for in, want := range map[string]string{
+		"#a1b2c3": "#a1b2c3", "colour16": "#000000", "colour231": "#ffffff", "colour244": "#808080",
+		"colour9": "#ff0000", "red": "", "default": "", "colour300": "",
+	} {
+		if got := hexOf(in); got != want {
+			t.Errorf("hexOf(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

@@ -52,8 +52,8 @@ func (s *Store) SetOn(on bool) error { return s.write("settings.json", Settings{
 
 // Serve runs the server until a stop signal: on every interface (the
 // phone is on the LAN or Tailscale), at Port or the next free one,
-// recorded in server.json.
-func Serve(ctx context.Context, st *Store, eng Engine) error {
+// recorded in server.json. look is the desktop's theme (D110).
+func Serve(ctx context.Context, st *Store, eng Engine, look func() Look) error {
 	ln, err := listen(Port)
 	if err != nil {
 		return err
@@ -81,7 +81,7 @@ func Serve(ctx context.Context, st *Store, eng Engine) error {
 		case <-ctx.Done():
 		}
 	}()
-	srv := &Server{Store: st, Engine: eng, Done: make(chan struct{})}
+	srv := &Server{Store: st, Engine: eng, Look: look, Done: make(chan struct{})}
 	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		<-ctx.Done()

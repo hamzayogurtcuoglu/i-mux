@@ -1,8 +1,10 @@
-// i-mux on a phone (D104): pairs from the QR code's fragment, then talks to
-// imux with every message sealed (AES-256-GCM, the key from the QR code,
-// the device's id as additional data). No inline code: the page's CSP
-// allows only these files.
+// i-mux on a phone (D104, D110): pairs from the QR code's fragment, then
+// talks to imux with every message sealed (AES-256-GCM, the key from the QR
+// code, the device's id as additional data). No inline code: the page's CSP
+// allows only these files. The desktop is never changed by what the phone
+// shows: it reads the agents and a pane's screen, and types into it.
 import { gcm } from "/noble-aes.js";
+import { choices } from "/choices.js";
 
 const TR = (navigator.language || "").toLowerCase().startsWith("tr");
 const T = {
@@ -10,17 +12,32 @@ const T = {
   pair_body: TR
     ? "Bilgisayarda i-mux'ta kenar paneldeki <b>Phone</b>'a tıklayıp <b>Telefon eşleştir</b>'i seçin. Sonra QR kodu bu telefonun kamerasıyla okutun."
     : "On your computer, open i-mux, click <b>Phone</b> on the sidebar and choose <b>Pair a phone</b>. Then scan the QR code with this phone's camera.",
-  send: TR ? "Gönder" : "Send",
   read_only: TR ? "Bu telefon sadece izliyor." : "This phone only watches.",
   no_agents: TR ? "Açık agent yok." : "No agents are running.",
+  no_agents_hint: TR ? "Bilgisayarda bir agent başlatınca burada görünür." : "Start an agent on your computer and it shows here.",
   working: TR ? "çalışıyor" : "working",
   blocked: TR ? "seni bekliyor" : "needs you",
   idle: TR ? "boşta" : "idle",
+  needs_you: TR ? "Seni bekleyenler" : "Needs you",
+  waits: TR ? "%s seni bekliyor" : "%s needs you",
+  now: TR ? "şimdi" : "now",
+  min: TR ? "dk" : "m",
+  hour: TR ? "sa" : "h",
+  day: TR ? "g" : "d",
+  earlier: TR ? "Önceki satırlar" : "Earlier lines",
   paired_failed: TR ? "Eşleştirme olmadı: " : "Pairing failed: ",
   forgotten: TR ? "Bu telefon artık eşli değil. Yeniden eşleştirin." : "This phone is not paired any more. Pair it again.",
+  offline: TR ? "bağlantı yok, yeniden deneniyor" : "offline, trying again",
   message: TR ? "Mesaj" : "Message",
 };
 const $ = (s) => document.querySelector(s);
+const el = (tag, cls, text) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+};
+const tap = () => navigator.vibrate && navigator.vibrate(8);
 
 // --- keys and sealing -------------------------------------------------
 const enc = new TextEncoder();
@@ -85,12 +102,37 @@ async function pairFromFragment() {
   }
 }
 
+
+// --- the desktop's theme (D110) -------------------------------------------
+let look = null;
+function applyTheme() {
+  const root = document.documentElement.style;
+  for (let i = root.length - 1; i >= 0; i--) if (root[i].startsWith("--t-")) root.removeProperty(root[i]);
+  if (!look) return;
+  const light = look.light && matchMedia("(prefers-color-scheme: light)").matches;
+  const colors = (light ? look.light : look.colors) || {};
+  for (const [k, v] of Object.entries(colors)) root.setProperty("--t-" + k, v);
+  const bg = colors.sidebar_bg || colors.panel_bg;
+  if (bg) document.querySelector('meta[name="theme-color"]').content = bg;
+  if (colors.accent) root.setProperty("--on-accent", luma(colors.accent) > 0.55 ? "#0b0e13" : "#ffffff");
+  const term = colors.sidebar_bg || colors.panel_bg;
+  if (term && luma(term) > 0.6) { root.setProperty("--term-bg", term); root.setProperty("--term-fg", colors.text || "#24292f"); }
+  else { root.removeProperty("--term-bg"); root.removeProperty("--term-fg"); }
+}
+function luma(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+}
+matchMedia("(prefers-color-scheme: light)").addEventListener("change", applyTheme);
+
 // --- the stream ---------------------------------------------------------
 let es = null, retry = null, readOnly = false;
-let projects = [], watching = null;
+let projects = [], watching = null, lines = 0;
+const states = new Map(); // pane → its last state, to see one start waiting
 function setStatus(on) {
   const d = $("#status");
   d.className = "dot " + (on ? "on" : "off");
+  d.title = on ? "" : T.offline;
 }
 function connect() {
   clearTimeout(retry);
@@ -103,10 +145,13 @@ function connect() {
     try { m = unseal(e.data); } catch { return; }
     if (m.t === "hello") {
       readOnly = !!m.read_only;
-      if (watching) { cmd({ op: "watch", pane: watching.pane }); showPane(watching); }
+      look = m.theme || null;
+      applyTheme();
+      if (watching) { watch(); showPane(); }
     } else if (m.t === "agents") {
       projects = m.projects || [];
-      if (!watching) renderList();
+      noticeWaiting();
+      if (watching) updatePaneTitle(); else renderList();
     } else if (m.t === "screen" && watching && m.pane === watching.pane) {
       renderScreen(m.screen);
     }
@@ -137,76 +182,169 @@ async function cmd(obj) {
     return r.status;
   } catch { return 0; }
 }
+function watch() { return cmd({ op: "watch", pane: watching.pane, lines }); }
+
+// --- agents ---------------------------------------------------------------
+const MARK = { claude: "Cl", antigravity: "Ag", copilot: "Cp", codex: "Cx", opencode: "Oc" };
+const CLI = { claude: "Claude", antigravity: "Antigravity", copilot: "Copilot", codex: "Codex", opencode: "OpenCode" };
+function label(a) { return a.name || CLI[a.cli] || a.cli; }
+function stateOf(a) { return a.state === "working" || a.state === "blocked" ? a.state : "idle"; }
+function ago(since) {
+  if (!since) return "";
+  const s = Math.max(0, Date.now() / 1000 - since);
+  if (s < 60) return T.now;
+  if (s < 3600) return Math.floor(s / 60) + T.min;
+  if (s < 86400) return Math.floor(s / 3600) + T.hour;
+  return Math.floor(s / 86400) + T.day;
+}
+function stateText(a) {
+  const t = ago(a.since);
+  return T[stateOf(a)] + (t ? " · " + t : "");
+}
+function all() {
+  const out = [];
+  for (const p of projects) for (const a of p.agents) out.push({ p, a });
+  return out;
+}
+function find(pane) { return all().find((x) => x.a.pane === pane); }
+
+// An agent that starts waiting for you while you look elsewhere: a banner,
+// a buzz, and the count in the title.
+let bannerPane = null;
+function noticeWaiting() {
+  let waiting = 0;
+  for (const { p, a } of all()) {
+    const st = stateOf(a);
+    if (st === "blocked") waiting++;
+    const was = states.get(a.pane);
+    states.set(a.pane, st);
+    if (st === "blocked" && was && was !== "blocked" && (!watching || watching.pane !== a.pane || document.hidden)) {
+      bannerPane = a.pane;
+      const b = $("#banner");
+      b.textContent = T.waits.replace("%s", label(a) + " · " + p.name);
+      b.hidden = false;
+      navigator.vibrate && navigator.vibrate([60, 60, 60]);
+    }
+  }
+  if (bannerPane && !(find(bannerPane) && stateOf(find(bannerPane).a) === "blocked")) hideBanner();
+  document.title = waiting ? `(${waiting}) i-mux` : "i-mux";
+}
+function hideBanner() { bannerPane = null; $("#banner").hidden = true; }
+$("#banner").onclick = () => {
+  const x = bannerPane && find(bannerPane);
+  hideBanner();
+  if (x) openAgent(x.p, x.a);
+};
 
 // --- views --------------------------------------------------------------
+function only(id) {
+  for (const s of ["#pair", "#list", "#pane"]) $(s).hidden = s !== id;
+  $("#controls").hidden = $("#watching").hidden = true;
+}
+function setTitle(title, sub) {
+  $("#title").textContent = title;
+  const s = $("#subtitle");
+  s.textContent = sub || "";
+  s.hidden = !sub;
+}
 function showPair(err) {
-  $("#pair").hidden = false;
-  $("#list").hidden = $("#pane").hidden = $("#controls").hidden = $("#watching").hidden = true;
+  only("#pair");
   $("#back").hidden = true;
-  $("#title").textContent = "i-mux";
+  setTitle("i-mux");
   if (err) { const p = $("#pair-error"); p.textContent = err; p.hidden = false; }
 }
-function label(a) { return a.name || a.cli; }
+function agentRow(p, a, withProject) {
+  const st = stateOf(a);
+  const row = el("button", "agent st-" + st);
+  const mark = el("span", "mark " + a.cli, MARK[a.cli] || (a.cli || "?").slice(0, 2));
+  const body = el("span", "body");
+  const name = el("span", "name", label(a));
+  if (a.name) name.append(el("small", "", CLI[a.cli] || a.cli));
+  else if (withProject) name.append(el("small", "", p.name));
+  body.append(name, el("span", "sub", stateText(a)));
+  row.append(mark, body, el("span", "chev", "›"));
+  row.onclick = () => { tap(); openAgent(p, a); };
+  return row;
+}
 function renderList() {
-  const el = $("#list");
-  $("#pair").hidden = $("#pane").hidden = $("#controls").hidden = $("#watching").hidden = true;
+  const list = $("#list");
+  only("#list");
   $("#back").hidden = true;
-  $("#title").textContent = "i-mux";
-  el.hidden = false;
-  el.replaceChildren();
-  const any = projects.some((p) => p.agents.length);
-  if (!any) {
-    const e = document.createElement("p");
-    e.className = "empty";
-    e.textContent = T.no_agents;
-    el.append(e);
+  setTitle("i-mux");
+  const scroll = list.scrollTop;
+  list.replaceChildren();
+  const everyone = all();
+  if (!everyone.length) {
+    const e = el("div", "empty");
+    e.append(el("span", "big", "⌁"), el("div", "", T.no_agents), el("small", "", T.no_agents_hint));
+    list.append(e);
     return;
+  }
+  const count = { blocked: 0, working: 0, idle: 0 };
+  for (const { a } of everyone) count[stateOf(a)]++;
+  const sum = el("div", "summary");
+  for (const st of ["blocked", "working", "idle"]) {
+    if (!count[st]) continue;
+    const c = el("span", "chip " + st);
+    c.append(el("i"), el("b", "", String(count[st])), document.createTextNode(T[st]));
+    sum.append(c);
+  }
+  list.append(sum);
+  const waiting = everyone.filter(({ a }) => stateOf(a) === "blocked");
+  if (waiting.length) {
+    const g = el("div", "group attention");
+    g.append(el("h3", "", T.needs_you));
+    for (const { p, a } of waiting) g.append(agentRow(p, a, true));
+    list.append(g);
   }
   for (const p of projects) {
     if (!p.agents.length) continue;
-    const box = document.createElement("div");
-    box.className = "project";
-    const h = document.createElement("h3");
-    h.textContent = p.name;
-    if (p.branch) {
-      const b = document.createElement("span");
-      b.className = "branch";
-      b.textContent = "⎇ " + p.branch;
-      h.append(b);
-    }
+    const box = el("div", "project");
+    const h = el("div", "phead");
+    h.append(el("span", "pname", p.name));
+    if (p.branch) h.append(el("span", "branch", "⎇ " + p.branch));
+    h.append(el("span", "count", String(p.agents.length)));
     box.append(h);
-    for (const a of p.agents) {
-      const row = document.createElement("button");
-      row.className = "agent";
-      const n = document.createElement("span");
-      n.className = "name";
-      n.textContent = label(a);
-      if (a.name) {
-        const c = document.createElement("span");
-        c.className = "cli";
-        c.textContent = a.cli;
-        n.append(c);
-      }
-      const st = a.state === "working" || a.state === "blocked" ? a.state : "idle";
-      const badge = document.createElement("span");
-      badge.className = "badge " + st;
-      badge.textContent = T[st];
-      row.append(n, badge);
-      row.onclick = () => { watching = { pane: a.pane, title: p.name + " · " + label(a) }; cmd({ op: "watch", pane: a.pane }); showPane(watching); };
-      box.append(row);
-    }
-    el.append(box);
+    for (const a of p.agents) box.append(agentRow(p, a, false));
+    list.append(box);
   }
+  list.scrollTop = scroll;
 }
-function showPane(w) {
-  $("#pair").hidden = $("#list").hidden = true;
-  $("#pane").hidden = false;
+function openAgent(p, a) {
+  if (bannerPane === a.pane) hideBanner();
+  const first = !watching;
+  watching = { pane: a.pane };
+  lines = 0;
+  lastText = "";
+  $("#screen").replaceChildren();
+  $("#choices").hidden = true;
+  stick = true;
+  watch();
+  showPane();
+  if (first) history.pushState({ pane: a.pane }, "");
+}
+function showPane() {
+  only("#pane");
   $("#back").hidden = false;
-  $("#title").textContent = w.title;
+  $("#earlier").hidden = lines >= 500;
   $("#controls").hidden = readOnly;
   $("#watching").hidden = !readOnly;
+  updatePaneTitle();
 }
-$("#back").onclick = () => { watching = null; $("#screen").replaceChildren(); renderList(); };
+function updatePaneTitle() {
+  const x = watching && find(watching.pane);
+  if (!x) { setTitle("i-mux", ""); return; }
+  setTitle(label(x.a), x.p.name + " · " + stateText(x.a));
+}
+function leave() {
+  watching = null;
+  lines = 0;
+  $("#screen").replaceChildren();
+  renderList();
+}
+$("#back").onclick = () => history.back();
+addEventListener("popstate", () => { if (watching) leave(); });
+setInterval(() => { if (!document.hidden && projects.length) { if (watching) updatePaneTitle(); else renderList(); } }, 30000);
 
 // --- the screen: SGR colours into spans (no inline styles in HTML; the
 // CSSOM is allowed by the CSP) --------------------------------------------
@@ -217,11 +355,19 @@ function c256(n) {
   if (n < 232) { n -= 16; const l = [0, 95, 135, 175, 215, 255]; return `rgb(${l[Math.floor(n / 36)]},${l[Math.floor(n / 6) % 6]},${l[n % 6]})`; }
   const g = 8 + (n - 232) * 10; return `rgb(${g},${g},${g})`;
 }
+const FONT = "imux-phone-font";
+let scale = Math.min(2.5, Math.max(0.5, parseFloat(localStorage.getItem(FONT)) || 1));
+let lastScreen = null, lastText = "", stick = true;
+function fontSize(sc) {
+  const wrap = $("#screen-wrap");
+  const fit = (wrap.clientWidth - 16) / (Math.max(sc.w, 20) * 0.6);
+  return Math.max(6, Math.min(22, fit * scale));
+}
 function renderScreen(sc) {
+  lastScreen = sc;
   const pre = $("#screen");
   const wrap = $("#screen-wrap");
-  const fit = Math.max(7, Math.min(14, (wrap.clientWidth - 16) / (Math.max(sc.w, 20) * 0.6)));
-  pre.style.fontSize = fit + "px";
+  pre.style.fontSize = fontSize(sc) + "px";
   const frag = document.createDocumentFragment();
   let st = {};
   let buf = "";
@@ -229,7 +375,7 @@ function renderScreen(sc) {
     if (!buf) return;
     const s = document.createElement("span");
     let fg = st.fg, bg = st.bg;
-    if (st.rev) [fg, bg] = [bg || "#000", fg || "#d0d7de"];
+    if (st.rev) [fg, bg] = [bg || "var(--term-bg)", fg || "var(--term-fg)"];
     if (fg) s.style.color = fg;
     if (bg) s.style.backgroundColor = bg;
     if (st.bold) s.style.fontWeight = "700";
@@ -270,30 +416,80 @@ function renderScreen(sc) {
     }
   }
   flush();
-  const atBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 4;
   pre.replaceChildren(frag);
-  if (atBottom) wrap.scrollTop = wrap.scrollHeight;
+  if (stick) wrap.scrollTop = wrap.scrollHeight;
+  if (sc.text !== lastText) { lastText = sc.text; renderChoices(sc.text); }
+}
+$("#screen-wrap").addEventListener("scroll", () => {
+  const w = $("#screen-wrap");
+  stick = w.scrollTop + w.clientHeight >= w.scrollHeight - 24;
+  $("#bottom").hidden = stick;
+}, { passive: true });
+$("#bottom").onclick = () => { const w = $("#screen-wrap"); stick = true; w.scrollTop = w.scrollHeight; };
+function rescale(by) {
+  tap();
+  scale = Math.min(2.5, Math.max(0.5, Math.round(scale * by * 100) / 100));
+  localStorage.setItem(FONT, String(scale));
+  if (lastScreen) renderScreen(lastScreen);
+}
+$("#smaller").onclick = () => rescale(1 / 1.15);
+$("#larger").onclick = () => rescale(1.15);
+$("#earlier").onclick = () => {
+  tap();
+  lines = Math.min(500, lines + 200);
+  $("#earlier").hidden = lines >= 500;
+  stick = false;
+  watch();
+};
+addEventListener("resize", () => { if (lastScreen && watching) renderScreen(lastScreen); });
+
+// Quick answers: the agent's numbered choices as large buttons.
+function renderChoices(text) {
+  const box = $("#choices");
+  const cs = readOnly ? [] : choices(text);
+  box.replaceChildren();
+  box.hidden = !cs.length;
+  for (const c of cs) {
+    const b = el("button", c.current ? "current" : "");
+    b.append(el("b", "", String(c.n)), el("span", "", c.label));
+    b.onclick = () => { tap(); send({ keys: [String(c.n)] }); };
+    box.append(b);
+  }
 }
 
 // --- input ----------------------------------------------------------------
-for (const b of document.querySelectorAll("[data-key]")) {
-  b.onclick = () => watching && cmd({ op: "send", pane: watching.pane, keys: [b.dataset.key] });
+function send(what) {
+  if (!watching) return;
+  stick = true;
+  cmd(Object.assign({ op: "send", pane: watching.pane }, what));
 }
+for (const b of document.querySelectorAll("[data-key]")) {
+  b.onclick = () => { tap(); send({ keys: [b.dataset.key] }); };
+}
+const text = $("#text");
+function grow() { text.style.height = "auto"; text.style.height = Math.min(text.scrollHeight, 132) + "px"; }
+text.addEventListener("input", grow);
+text.addEventListener("keydown", (e) => {
+  // Enter sends; Shift+Enter (a hardware keyboard) is a new line.
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#say").requestSubmit(); }
+});
 $("#say").onsubmit = (e) => {
   e.preventDefault();
-  const t = $("#text");
-  if (!watching || !t.value) return;
-  cmd({ op: "send", pane: watching.pane, text: t.value, keys: ["Enter"] });
-  t.value = "";
+  if (!watching) return;
+  tap();
+  if (!text.value) { send({ keys: ["Enter"] }); return; }
+  send({ text: text.value.replace(/\r?\n/g, " "), keys: ["Enter"] });
+  text.value = "";
+  grow();
 };
 
 // --- start ----------------------------------------------------------------
-for (const el of document.querySelectorAll("[data-t]")) {
-  const k = el.dataset.t;
-  if (k === "pair_body") el.innerHTML = T[k]; // our own text, with <b>
-  else el.textContent = T[k];
+for (const e of document.querySelectorAll("[data-t]")) {
+  const k = e.dataset.t;
+  if (k === "pair_body") e.innerHTML = T[k]; // our own text, with <b>
+  else e.textContent = T[k];
 }
-$("#text").placeholder = T.message;
+text.placeholder = T.message;
 await pairFromFragment();
 if (me && me.id && me.key) {
   useDevice(me);

@@ -11,6 +11,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/phone"
@@ -115,7 +116,15 @@ func runPhone(e *Env, args []string) error {
 // on`).
 func runPhoneServe(_ *Env, _ []string) error {
 	eng := &phone.TmuxEngine{T: tmux.New(paths.TmuxConf())}
-	return phone.Serve(context.Background(), phone.DefaultStore(), eng)
+	// The desktop's theme, read at each phone's connection (D110).
+	look := func() phone.Look {
+		cfg, _, err := config.Load(paths.Config())
+		if err != nil {
+			return phone.Look{}
+		}
+		return phone.LookOf(cfg.Theme)
+	}
+	return phone.Serve(context.Background(), phone.DefaultStore(), eng, look)
 }
 
 func phoneOn(e *Env, st *phone.Store, self string) error {

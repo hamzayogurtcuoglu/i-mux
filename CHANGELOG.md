@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **A better phone app.** It takes your i-mux theme's colors; the list starts with who needs you
+  and shows each agent's state with how long it has been in it; when an agent asks something
+  ("1. Yes / 2. No"), its choices are big buttons; more keys (⇧Tab, ←, →, ⌫), a message box
+  that grows, A− / A+, a button back to the bottom and earlier lines of the pane; a banner and
+  a buzz when an agent starts waiting for you. The desktop is never changed by the phone.
+
 ## [0.74.1] - 2026-11-26
 
 ### Removed

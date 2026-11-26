@@ -79,11 +79,16 @@ func (e *TmuxEngine) branch(ctx context.Context, dir string) string {
 	return name
 }
 
-// Screen is pane's visible screen with its colors, and its size.
-func (e *TmuxEngine) Screen(ctx context.Context, pane string) (Screen, error) {
+// Screen is pane's visible screen with its colors, and its size; with
+// lines, that much of its scrollback above it (D110).
+func (e *TmuxEngine) Screen(ctx context.Context, pane string, lines int) (Screen, error) {
+	capture := tmux.Cmd{"capture-pane", "-p", "-e", "-t", pane}
+	if lines > 0 {
+		capture = append(capture, "-S", "-"+strconv.Itoa(lines))
+	}
 	out, err := e.T.Run(ctx,
 		tmux.DelimCmd("size"), tmux.Cmd{"display-message", "-p", "-t", pane, "#{pane_width}\t#{pane_height}"},
-		tmux.DelimCmd("screen"), tmux.Cmd{"capture-pane", "-p", "-e", "-t", pane})
+		tmux.DelimCmd("screen"), capture)
 	if err != nil {
 		return Screen{}, err
 	}

@@ -1160,7 +1160,7 @@ turn it on and off from the sidebar (D104).
   - Status: done as a popup (like Limits) rather than a sidebar view: on / off, pair (the QR
     code), read-only and forget by number. The rail shows labels only when every item fits with
     one, so Help never falls off a short pane now that the rail has one more item.
-- [ ] **T109.7 A better phone app** · M · deps: T109.3
+- [x] **T109.7 A better phone app** · M · deps: T109.3
   - AC: D110: `hello` carries the desktop's theme (dark, and light when it follows the
     terminal), as hex per token, read at each connection; `watch` takes `lines` (0–500) and the
     screen then has that much scrollback; the keys `BTab` and `4`–`9`; the app: summary and
@@ -1170,6 +1170,10 @@ turn it on and off from the sidebar (D104).
     `internal/phone` and the server's start change. Unit tests (the theme in hello, the
     colors' hex, lines clamped and passed on, the new keys); the app's syntax checked
     (`node --check`) and its choice parser tested with node.
+  - Status: done. `phone.Look`, `LookOf`, `Colors` (`look.go`); `watch` with `lines`;
+    `web/choices.js`; `TestMore`, `TestLookOf`. The app was checked here in headless Chromium at
+    a phone's size against a fake engine (the list, a pane with Copilot's question as buttons);
+    not yet on a real phone.
 
 - [ ] **T109.5 Anywhere: relay and notifications** · L · deps: T109.3
   - AC: D104: after a hosting decision by the owner: an outbound relay over HTTPS (through the
