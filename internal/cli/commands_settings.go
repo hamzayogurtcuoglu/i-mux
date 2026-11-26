@@ -51,6 +51,7 @@ var settingKeys = map[string]settingKey{
 	"icons":        {"tmux", "icons", []string{"auto", "nerd", "emoji"}, true},
 	"on_arrival":   {"handoff", "on_arrival", []string{"wait", "continue"}, true},
 	"on_limit":     {"", "on_limit", []string{"ask", "auto", "off"}, true},
+	"auto_approve": {"", "auto_approve", []string{"on", "off"}, false}, // agents approve everything (D109)
 	"completion":   {"completion", "enabled", []string{"on", "off"}, false},
 	"notify":       {"notify", "enabled", []string{"on", "off"}, false},
 	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},

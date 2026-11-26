@@ -49,7 +49,7 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	got := strings.Join(names, "|")
 	want := "-APPEARANCE|t   Theme            i-mux|i   Icons            Auto|" +
-		"-AGENTS|l   At a limit       Ask|w   After a handoff  Wait|n   Notifications    On|" +
+		"-AGENTS|l   At a limit       Ask|w   After a handoff  Wait|n   Notifications    On|y   Approve all      Off|" +
 		"-EDITING|e   Editor           Auto (the viewer)|v   Image paste      On| |" +
 		"u   Updates          dev|o   Config file…"
 	if m.Title != "Settings" || got != want {
@@ -57,7 +57,7 @@ func TestSettingsMenu(t *testing.T) {
 	}
 	for key, which := range map[string]string{
 		"e": "editor", "n": "notifications", "v": "paste_images", "i": "icons", "t": "theme",
-		"w": "on_arrival", "l": "on_limit",
+		"w": "on_arrival", "l": "on_limit", "y": "auto_approve",
 	} {
 		if c := cmdOf(m, key); !strings.Contains(c, "__settings menu "+which+" --pane %1 --client c1") {
 			t.Errorf("%s: %q does not open the %s menu", key, c, which)
@@ -76,6 +76,7 @@ func TestSettingsMenu(t *testing.T) {
 	// Values change the rows.
 	w.Cfg.Completion.Enabled, w.Cfg.Theme.AutoSwitch, w.Cfg.Notify.Sound = true, true, false
 	w.Cfg.Tmux.Icons, w.Cfg.OnLimit, w.Cfg.Handoff.OnArrival = "emoji", "off", "continue"
+	w.Cfg.AutoApprove = true
 	got = ""
 	for _, it := range w.SettingsMenu("%1", "").Items {
 		got += it.Name + "|"
@@ -83,6 +84,7 @@ func TestSettingsMenu(t *testing.T) {
 	for _, want := range []string{
 		"Theme            i-mux · auto|", "Icons            Emoji|", "At a limit       Do nothing|",
 		"After a handoff  Continue|", "Notifications    Silent|", "Editor           Neovim + Copilot|",
+		"Approve all      On ⚠|",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("menu lacks %q:\n%s", want, got)
@@ -137,6 +139,17 @@ func TestSettingMenus(t *testing.T) {
 	w.Cfg.Notify.Sound = false
 	if r := rows(w.SettingMenu("notifications", "", "")); r != "1   On, with sound|2 ● On, silent|3   Off" {
 		t.Errorf("silent: %q", r)
+	}
+	// Approve all (D109): Off and On ⚠, then a line saying when it applies.
+	m = w.SettingMenu("auto_approve", "%1", "c1")
+	if m.Title != "Approve all: agents never ask" ||
+		rows(m) != "1 ● Off: each agent asks as usual|2   On ⚠: approve every tool call, edit and command| |   For agents started after this; running ones restart to get it" ||
+		!strings.Contains(cmdOf(m, "2"), "__settings set auto_approve on --pane %1 --client c1") || !m.Items[3].Disabled {
+		t.Errorf("approve all: %q %q", m.Title, rows(m))
+	}
+	w.Cfg.AutoApprove = true
+	if r := rows(w.SettingMenu("auto_approve", "", "")); !strings.HasPrefix(r, "1   Off: each agent asks as usual|2 ● On ⚠") {
+		t.Errorf("approve all on: %q", r)
 	}
 	if w.SettingMenu("nope", "", "") != nil {
 		t.Error("a menu for an unknown row")

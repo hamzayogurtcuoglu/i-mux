@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Approve all.** Settings → Agents → **Approve all** (or `auto_approve = true`) starts every
+  agent i-mux starts with its CLI's own switch for approving everything itself, in its
+  interactive pane too: Claude Code and Antigravity `--dangerously-skip-permissions`, Copilot
+  `--allow-all`, Codex `--dangerously-bypass-approvals-and-sandbox`, OpenCode `--auto`. Off by
+  default; it applies to agents started after it is turned on.
+
 ## [0.73.0] - 2026-11-25
 
 ### Added

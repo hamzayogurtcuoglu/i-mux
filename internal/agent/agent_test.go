@@ -256,3 +256,22 @@ func TestInstallCommand(t *testing.T) {
 		t.Errorf("configured: %q", got)
 	}
 }
+
+// TestApproveArgs (D109): each CLI's approve-everything switch, none when
+// the agent's args already have it or for an unknown agent.
+func TestApproveArgs(t *testing.T) {
+	for id, want := range map[session.AgentID]string{
+		session.Claude: "--dangerously-skip-permissions", session.Antigravity: "--dangerously-skip-permissions",
+		session.Copilot: "--allow-all", session.Codex: "--dangerously-bypass-approvals-and-sandbox", session.OpenCode: "--auto",
+	} {
+		if got := ApproveArgs(id, []string{"--model", "x"}); len(got) != 1 || got[0] != want {
+			t.Errorf("%s: %q", id, got)
+		}
+		if got := ApproveArgs(id, []string{want}); got != nil {
+			t.Errorf("%s twice: %q", id, got)
+		}
+	}
+	if got := ApproveArgs("nope", nil); got != nil {
+		t.Errorf("unknown: %q", got)
+	}
+}

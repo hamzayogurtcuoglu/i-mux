@@ -86,6 +86,7 @@ func (w *WS) SettingsMenu(pane, client string) *Menu {
 			{"l", i18n.T("settings.on_limit"), limitLabel(cfg.OnLimit), menu("on_limit")},
 			{"w", i18n.T("settings.on_arrival"), labels(arrivalValue(cfg.Handoff.OnArrival)), menu("on_arrival")},
 			{"n", i18n.T("settings.notify"), notifyLabel(cfg.Notify.Enabled, cfg.Notify.Sound), menu("notifications")},
+			{"y", i18n.T("settings.approve"), approveLabel(cfg.AutoApprove), menu("auto_approve")},
 		}},
 		{i18n.T("settings.group_editing"), []row{
 			{"e", i18n.T("settings.editor"), w.editorLabel(), menu("editor")},
@@ -150,6 +151,14 @@ func onOffLabel(on bool) string {
 	return i18n.T("settings.off")
 }
 
+// approveLabel is the Approve all row's value (D109): Off, or On ⚠.
+func approveLabel(on bool) string {
+	if on {
+		return i18n.T("settings.approve_on")
+	}
+	return i18n.T("settings.off")
+}
+
 func onOffValue(on bool) string {
 	if on {
 		return "on"
@@ -206,6 +215,11 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 			{"off", i18n.T("settings.off")},
 		}
 		return w.ChoiceMenu(i18n.T("settings.notify_title"), "notifications", notifyValue(cfg.Notify.Enabled, cfg.Notify.Sound), cs, pane, client)
+	case "auto_approve":
+		cs := []Choice{{"off", i18n.T("settings.approve_off_row")}, {"on", i18n.T("settings.approve_on_row")}}
+		m := w.ChoiceMenu(i18n.T("settings.approve_title"), "auto_approve", onOffValue(cfg.AutoApprove), cs, pane, client)
+		m.Items = append(m.Items, Separator(), MenuItem{Name: "  " + i18n.T("settings.approve_note"), Disabled: true})
+		return m
 	case "paste_images":
 		return w.ChoiceMenu(i18n.T("settings.paste_title"), "paste_images", onOffValue(cfg.Paste.Images), onOff, pane, client)
 	case "icons":

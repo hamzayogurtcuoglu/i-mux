@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -154,6 +155,59 @@ func TestSpecNewResumeAndMissing(t *testing.T) {
 	w.Cfg.Handoff.MaxArgBytes = 10
 	if _, _, err := w.Spec(Launch{Agent: "antigravity", Prompt: strings.Repeat("x", 11)}); !errors.Is(err, launch.ErrTooLarge) {
 		t.Fatalf("argv guard: %v", err)
+	}
+}
+
+// TestSpecAutoApprove (D109): with auto_approve every agent starts with
+// its CLI's approve-everything switch, before its args and the template
+// (Codex's before its resume subcommand), once; without it, none.
+func TestSpecAutoApprove(t *testing.T) {
+	testutil.SkipOnWindows(t, "POSIX agent paths (/opt/bin); Windows spawns agents in the e2e suite")
+	w, _, h := testWS(t)
+	bins := map[session.AgentID]agent.Resolved{}
+	for _, id := range []session.AgentID{"claude", "antigravity", "copilot", "codex", "opencode"} {
+		bins[id] = agent.Resolved{Agent: id, Installed: true, Path: "/opt/bin/" + string(id), PathEnv: "/opt/bin:/usr/bin"}
+	}
+	w.SetBins(bins)
+	w.Cfg.Agents["claude"].Args = []string{"--model", "opus"}
+	for _, c := range []struct {
+		id   session.AgentID
+		flag string
+	}{
+		{"claude", "--dangerously-skip-permissions"},
+		{"antigravity", "--dangerously-skip-permissions"},
+		{"copilot", "--allow-all"},
+		{"codex", "--dangerously-bypass-approvals-and-sandbox"},
+		{"opencode", "--auto"},
+	} {
+		w.Cfg.AutoApprove = false
+		off, _, err := w.Spec(Launch{Agent: c.id, CWD: h.Project, Prompt: "go"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if slices.Contains(off.Args, c.flag) {
+			t.Errorf("%s off: %q", c.id, off.Args)
+		}
+		w.Cfg.AutoApprove = true
+		on, _, _ := w.Spec(Launch{Agent: c.id, CWD: h.Project, Prompt: "go"})
+		if len(on.Args) != len(off.Args)+1 || on.Args[0] != c.flag {
+			t.Errorf("%s on: %q (off %q)", c.id, on.Args, off.Args)
+		}
+		res, _, _ := w.Spec(Launch{Agent: c.id, CWD: h.Project, Prompt: "delta", ResumeID: "ses_1"})
+		if res.Args[0] != c.flag {
+			t.Errorf("%s resume: %q", c.id, res.Args)
+		}
+	}
+	// Codex: the switch before `resume`.
+	s, _, _ := w.Spec(Launch{Agent: "codex", CWD: h.Project, Prompt: "delta", ResumeID: "abc"})
+	if !reflect.DeepEqual(s.Args, []string{"--dangerously-bypass-approvals-and-sandbox", "resume", "abc", "delta"}) {
+		t.Errorf("codex resume: %q", s.Args)
+	}
+	// Already in the agent's args: not twice.
+	w.Cfg.Agents["copilot"].Args = []string{"--allow-all"}
+	s, _, _ = w.Spec(Launch{Agent: "copilot", CWD: h.Project})
+	if !reflect.DeepEqual(s.Args, []string{"--allow-all"}) {
+		t.Errorf("copilot with --allow-all in args: %q", s.Args)
 	}
 }
 

@@ -207,8 +207,9 @@ type Tmux struct {
 type Config struct {
 	Order        []string          `toml:"order"`
 	DefaultAgent string            `toml:"default_agent"`
-	OnLimit      string            `toml:"on_limit"` // ask | auto | off
-	OnExit       string            `toml:"on_exit"`  // shell | close
+	OnLimit      string            `toml:"on_limit"`     // ask | auto | off
+	OnExit       string            `toml:"on_exit"`      // shell | close
+	AutoApprove  bool              `toml:"auto_approve"` // agents approve every tool call themselves (D109)
 	UpdateCheck  bool              `toml:"update_check"`
 	Locale       string            `toml:"locale"`
 	Editor       string            `toml:"editor"` // "" = micro, $VISUAL, $EDITOR, nano, vim

@@ -66,11 +66,14 @@ func TestSetSetting(t *testing.T) {
 	if err := setSetting("on_limit", "off"); err != nil {
 		t.Fatal(err)
 	}
+	if err := setSetting("auto_approve", "on"); err != nil {
+		t.Fatal(err)
+	}
 	cfg, _, err := config.Load(paths.Config())
-	if err != nil || cfg.Tmux.Icons != "nerd" || !cfg.Completion.Enabled || cfg.OnLimit != "off" {
+	if err != nil || cfg.Tmux.Icons != "nerd" || !cfg.Completion.Enabled || cfg.OnLimit != "off" || !cfg.AutoApprove {
 		t.Fatalf("config %v %+v", err, cfg)
 	}
-	for _, bad := range [][2]string{{"icons", "big"}, {"nope", "x"}, {"on_limit", "sometimes"}} {
+	for _, bad := range [][2]string{{"icons", "big"}, {"nope", "x"}, {"on_limit", "sometimes"}, {"auto_approve", "yes"}} {
 		if err := setSetting(bad[0], bad[1]); err == nil {
 			t.Errorf("%s=%s accepted", bad[0], bad[1])
 		}

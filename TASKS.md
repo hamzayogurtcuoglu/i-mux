@@ -1017,7 +1017,7 @@ slow (about a second).
 User request: a setting that makes Claude, Copilot and the other agents approve every tool call
 themselves, in their interactive panes too, not only in Jobs' headless runs (D109).
 
-- [ ] **T111.1 The switch on every launch** · S
+- [x] **T111.1 The switch on every launch** · S
   - AC: D109: `auto_approve` (top level, default false) in the config, its template and
     docs/CONFIG.md; `agent.ApproveArgs` gives each CLI's switch (Claude Code and Antigravity
     `--dangerously-skip-permissions`, Copilot `--allow-all`, Codex
@@ -1025,12 +1025,17 @@ themselves, in their interactive panes too, not only in Jobs' headless runs (D10
     and `imux handoff` put it before the agent's `args` when on, once (not when `args` already
     has it), and nothing when off; Jobs unchanged. Unit tests (each agent's argv on and off, a
     resume, the switch already in `args`, the handoff's argv).
-- [ ] **T111.2 Settings → Agents → Approve all** · S · deps: T111.1
+  - Status: done. `Info.ApproveFlag` and `agent.ApproveArgs`; `WS.Spec` and `imux handoff`;
+    `TestApproveArgs`, `TestSpecAutoApprove`, `TestHandoffAutoApprove`.
+- [x] **T111.2 Settings → Agents → Approve all** · S · deps: T111.1
   - AC: D109: the row (`y`) shows Off or On ⚠; its menu has Off and On ⚠ (approve everything) and
     a line saying it applies to agents started after; `__settings set auto_approve on|off` writes
     the key; i18n (en, tr); unit tests (the row, the menu, the key written).
-- [ ] **T111.3 Docs** · XS · deps: T111.2
+  - Status: done. `approveLabel`, `SettingMenu("auto_approve")`, `settingKeys`;
+    `TestSettingsMenu`, `TestSettingMenus`, `TestSetSetting`.
+- [x] **T111.3 Docs** · XS · deps: T111.2
   - AC: GUIDE, README and README.tr, CHANGELOG.
+  - Status: done (GUIDE Settings, README and README.tr Configuration, CHANGELOG Unreleased).
 - [ ] **T111.4 Check each CLI (USER)** · XS · deps: T111.1
   - AC: Q33: with Approve all on, one session of each installed CLI runs a command without
     asking; the result goes into ARCHITECTURE §20/§21 (flag names only).
