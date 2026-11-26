@@ -1017,6 +1017,9 @@ slow (about a second).
 User request: a setting that makes Claude, Copilot and the other agents approve every tool call
 themselves, in their interactive panes too, not only in Jobs' headless runs (D109).
 
+Shipped in v0.74.0 and removed in v0.74.1 at the user's request (D109): Copilot still asked under
+the organization's policy, so it did not help where it was wanted.
+
 - [x] **T111.1 The switch on every launch** · S
   - AC: D109: `auto_approve` (top level, default false) in the config, its template and
     docs/CONFIG.md; `agent.ApproveArgs` gives each CLI's switch (Claude Code and Antigravity
@@ -1036,9 +1039,14 @@ themselves, in their interactive panes too, not only in Jobs' headless runs (D10
 - [x] **T111.3 Docs** · XS · deps: T111.2
   - AC: GUIDE, README and README.tr, CHANGELOG.
   - Status: done (GUIDE Settings, README and README.tr Configuration, CHANGELOG Unreleased).
-- [ ] **T111.4 Check each CLI (USER)** · XS · deps: T111.1
-  - AC: Q33: with Approve all on, one session of each installed CLI runs a command without
-    asking; the result goes into ARCHITECTURE §20/§21 (flag names only).
+- [x] ~~**T111.4 Check each CLI (USER)**~~ · XS · deps: T111.1
+  - Dropped with the feature (Q33 closed): Copilot 1.0.116 with `--allow-all` still asked,
+    "Organization policy requires confirmation".
+- [ ] **T111.5 Remove Approve all** · S
+  - AC: D109: the Settings row, its menu and i18n keys, `auto_approve`, `agent.ApproveArgs` and
+    the launch changes are gone; a config with `auto_approve` loads with no warning
+    (`removedKeys`, top-level keys too); GUIDE, README, README.tr, docs/CONFIG.md, CHANGELOG
+    (Removed). Unit test: the removed key is quiet, a mistyped one still warns.
 
 ## M110: Several agents together (added 2026-11-25)
 
