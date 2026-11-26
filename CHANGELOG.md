@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.74.1] - 2026-11-26
+
 ### Removed
 
 - **Approve all** (from 0.74.0). It did not help where it was wanted: Copilot under an
