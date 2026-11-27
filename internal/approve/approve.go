@@ -1,12 +1,11 @@
-// Package approve reads the agents' permission prompts on the screen and
-// gives the key that answers each with its plain yes, this once (D112):
-// the watcher sends it when Auto-approve is on (on_permission = "approve").
+// Package approve reads the agents' prompts on the screen and gives the key
+// for the first choice matching the configured words (D112, D113).
+// The watcher sends it when Auto-approve is on (on_permission = "approve").
 //
 // A prompt is answered only when it is the last thing on the screen: the
 // choices, then only blank lines, box borders and key hints, the question
-// line above them. A transcript's numbered list, a question above the input
-// box, a menu of the CLI's own and a plan whose first option is not the
-// plain yes are all left to the user.
+// line above them. Choices above an input box or followed by other output
+// are left to the user.
 package approve
 
 import (

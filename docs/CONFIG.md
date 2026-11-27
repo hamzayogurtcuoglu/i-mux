@@ -15,6 +15,7 @@ line number.
 | `on_limit` | `"ask"` | What happens when an agent hits its usage limit: ask  = show a "continue in ..." menu (default) auto = switch to the first installed, non-limited agent in `order` off  = only show the limit in the status bar |
 | `on_exit` | `"shell"` | What a pane does when its agent exits: "shell" (drop to your login shell) or "close". |
 | `on_permission` | `"wait"` | What i-mux does when an agent asks your permission (a tool call, a file edit, a command): wait    = nothing: the agent waits for your answer (default) approve = i-mux answers Yes for you, once per question, from the prompt on the agent's screen (Settings → Agents → Auto-approve). Careful: an agent whose prompts are answered can change and delete files and run any command. |
+| `approve_words` | `["yes", "allow"]` | The words that make a choice on an agent's screen an approval to take (with Auto-approve on): the first choice whose text holds one of them, case-insensitive, is answered — "1. Yes" on every CLI today. Edit the list here (Settings → Config file…); empty restores the defaults. |
 | `update_check` | `true` | Ask GitHub once a day whether a newer i-mux is out (Settings then offers it). |
 | `locale` | `""` | UI language: "" = from IMUX_LANG / LANG; "en" or "tr". |
 | `editor` | `""` | Editor files open in from the sidebar and search ("micro", "vim", "code" ...). "" = micro, then $VISUAL, $EDITOR, nano, vim. |
@@ -134,6 +135,12 @@ on_exit       = "shell"
 #             Careful: an agent whose prompts are answered can change and
 #             delete files and run any command.
 on_permission = "wait"
+
+# The words that make a choice on an agent's screen an approval to take
+# (with Auto-approve on): the first choice whose text holds one of them,
+# case-insensitive, is answered — "1. Yes" on every CLI today. Edit the
+# list here (Settings → Config file…); empty restores the defaults.
+approve_words = ["yes", "allow"]
 
 # Ask GitHub once a day whether a newer i-mux is out (Settings then offers it).
 update_check  = true

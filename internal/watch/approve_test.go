@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hamzayogurtcuoglu/i-mux/internal/config"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/session"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/testutil"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
@@ -17,7 +18,7 @@ import (
 func TestApprover(t *testing.T) {
 	clk := testutil.Clock()
 	f := &fakeServer{screens: map[string]string{}, screensE: map[string]string{}}
-	a := &Approver{T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: f}, On: true}
+	a := &Approver{T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: f}, On: true, Words: config.DefaultApproveWords}
 	ctx := context.Background()
 	start := clk.Now()
 	inst := func(id string) string { return id + "@" + strconv.FormatInt(start.UnixMilli(), 10) }
@@ -118,7 +119,7 @@ func TestApprover(t *testing.T) {
 func TestApproverOpenCode(t *testing.T) {
 	clk := testutil.Clock()
 	f := &fakeServer{screens: map[string]string{}, screensE: map[string]string{}}
-	a := &Approver{T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: f}, On: true}
+	a := &Approver{T: &tmux.Client{Bin: "tmux", Socket: "t", Runner: f}, On: true, Words: config.DefaultApproveWords}
 	ctx := context.Background()
 	prompt := "△ Permission required\n Allow once  Allow always  Reject  enter confirm\n"
 	f.screens["%4"] = prompt

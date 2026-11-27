@@ -1001,7 +1001,7 @@ var tr = map[string]string{
 	"settings.auto_approve_title":    "Otomatik onay: i-mux senin yerine cevaplar",
 	"settings.auto_approve_wait_row": "Kapalı: her agent cevabını bekler",
 	"settings.auto_approve_on_row":   "Açık ⚠: i-mux her izin sorusuna Evet der",
-	"settings.auto_approve_note":     "Her soruda bir kez, asla \"bir daha sorma\" demez; agent'lar böylece dosyaları değiştirip her komutu çalıştırabilir",
+	"settings.auto_approve_note":     "Her soruda bir kez, ilk eşleşen seçenek; kelimeler (%s): config.toml'de approve_words — sonraki işlemlere de izin verebilir",
 	"editor.missing":                 "%s kurulu değil: paket yöneticinle kur, sonra yeniden seç.",
 	"editor.now":                     "✓ Dosyalar artık %s ile açılır.",
 	"editor.install_cmd":             "%s kurulu değil; şununla kurulur: %s",

@@ -262,6 +262,8 @@ on_limit = "ask"        # ask | auto (switch to the next agent) | off
 
 on_permission = "wait"  # wait for your answer | "approve": i-mux answers Yes for you
 
+approve_words = ["yes", "allow"]  # the words that make a choice an approval
+
 [handoff]
 on_arrival = "wait"     # wait for you | "continue" the unfinished request
 ```

@@ -6,6 +6,17 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.78.0] - 2026-11-27
+
+### Added
+
+- **Auto-approve's words are yours.** The answer is the first choice, in the order listed, whose
+  text holds one of `approve_words` (default `["yes", "allow"]`, case-insensitive) — so the plain
+  yes, choice 1, on every CLI today, and a plan or a trust question too, for their first choice
+  says yes. Edit the list in `config.toml` (Settings → **Config file…**); empty restores the
+  defaults. Matching is literal, not a regular expression; a matching choice can also approve
+  future actions or change an agent's mode.
+
 ## [0.77.0] - 2026-11-27
 
 ### Added

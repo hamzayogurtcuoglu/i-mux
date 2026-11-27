@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -160,6 +161,27 @@ patterns = [{ re = 'x', severity = "panic" }]`,
 	} {
 		if _, _, err := Parse([]byte(src)); err == nil {
 			t.Errorf("%q should be rejected", src)
+		}
+	}
+}
+
+// The approve words are kept as they are matched: trimmed, lower-case,
+// without doubles, and never none — a cleared list restores the defaults
+// (D113).
+func TestApproveWords(t *testing.T) {
+	if got := NormalizeWords([]string{" YES ", "yes", "Evet", ""}); len(got) != 2 || got[0] != "yes" || got[1] != "evet" {
+		t.Errorf("normalized: %q", got)
+	}
+	for _, src := range []string{`approve_words = []`, `approve_words = ["Onayla", "RUN"]`} {
+		cfg, _, err := Parse([]byte(src))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if src == `approve_words = []` && !slices.Equal(cfg.ApproveWordList(), DefaultApproveWords) {
+			t.Errorf("an empty list: %q", cfg.ApproveWordList())
+		}
+		if src != `approve_words = []` && !slices.Equal(cfg.ApproveWordList(), []string{"onayla", "run"}) {
+			t.Errorf("own words: %q", cfg.ApproveWordList())
 		}
 	}
 }

@@ -255,7 +255,8 @@ func (w *WS) SettingMenu(which, pane, client string) *Menu {
 	case "on_permission":
 		cs := []Choice{{"wait", i18n.T("settings.auto_approve_wait_row")}, {"approve", i18n.T("settings.auto_approve_on_row")}}
 		m := w.ChoiceMenu(i18n.T("settings.auto_approve_title"), "on_permission", autoApproveValue(cfg.OnPermission), cs, pane, client)
-		m.Items = append(m.Items, Separator(), MenuItem{Name: "  " + i18n.T("settings.auto_approve_note"), Disabled: true})
+		m.Items = append(m.Items, Separator(),
+			MenuItem{Name: "  " + i18n.T("settings.auto_approve_note", strings.Join(cfg.ApproveWordList(), ", ")), Disabled: true})
 		return m
 	}
 	return nil

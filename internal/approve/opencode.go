@@ -99,12 +99,13 @@ func openCodeRow(l string) bool {
 	return true
 }
 
-// HighlightedOnce reports whether OpenCode's "Allow once" button is the
-// highlighted one in capture, the screen read with its colors
-// (`capture-pane -e`): the highlighted button's background differs from the
-// others'. When the buttons share a background i-mux cannot tell, and the
-// prompt is left to the user.
-func HighlightedOnce(capture string) bool {
+// Highlighted reports whether the want button ("Allow once", or whichever
+// choice the words picked) is the highlighted one in capture, the screen read
+// with its colors (`capture-pane -e`): the highlighted button's background
+// differs from the others', which share one. When the buttons share a
+// background, or there are only two, i-mux cannot tell, and the prompt is
+// left to the user.
+func Highlighted(capture, want string) bool {
 	bg := map[string]string{}
 	for _, line := range strings.Split(capture, "\n") {
 		cells, text := cellBGs(line)
@@ -124,20 +125,28 @@ func HighlightedOnce(capture string) bool {
 			}
 		}
 	}
-	once, ok := bg["Allow once"]
-	always, hasAlways := bg["Allow always"]
-	reject, hasReject := bg["Reject"]
-	if !ok || !hasAlways || !hasReject {
-		// Without the "always" button there are two, and which of two
-		// backgrounds is the highlighted one cannot be told.
+	w, ok := bg[want]
+	if !ok || w == "" {
 		return false
 	}
-	if once == "" || once == always || once == reject {
-		return false
+	other, others := "", 0
+	for l, b := range bg {
+		if l == want {
+			continue
+		}
+		if b == w {
+			return false // another button shares the choice's background
+		}
+		if others == 0 {
+			other = b
+		} else if b != other {
+			return false // the others do not share one background
+		}
+		others++
 	}
-	// The highlighted button is the one whose background the others do not
-	// share.
-	return always == reject
+	// With fewer than two others there is nothing to tell the highlighted
+	// background from.
+	return others >= 2
 }
 
 // indexOfLabel is where label starts in text, in runes, with the space

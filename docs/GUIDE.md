@@ -123,17 +123,22 @@ run it right there. **Config file…** opens `config.toml`, where the rest is (a
 their hooks, `[hooks] enabled`, among them).
 
 **Auto-approve** answers the agents' permission prompts for you (`on_permission = "approve"` in
-`config.toml`): when an agent stops at "Do you want to run this command?", i-mux sends the CLI's
-own key for the plain yes — Claude Code's and Copilot's `1`, Codex's `y`, Antigravity's `y`,
-OpenCode's Enter. It answers once per prompt, and only the yes for this once: never "Yes, and
-don't ask again", never "Allow always", never a switch to a more permissive mode, so your own
-rules and sessions stay untouched — and a plan to approve, or a question that is not a
-permission, is left to you. The prompt must be the last thing on the agent's screen, so a list in
-the transcript is never taken for one. The agent's row shows `✓ N`, how many prompts i-mux
-answered since you last looked at the pane; what each one was is in the pane, where the CLI
-prints it. It is off by default: an agent whose prompts are answered can change and delete files
-and run any command, so turn it on for projects you trust. Prompts an organization's policy makes
-a CLI ask are answered too.
+`config.toml`): when an agent stops at a question with choices, i-mux looks at them in order and
+presses the key of the **first choice whose text holds one of `approve_words`** — `yes` and
+`allow` by default, matched without regard to case, so "1. Yes" on Claude Code, Copilot, Codex
+and Antigravity, "Allow once" on OpenCode. The words are yours: open **Config file…** (or edit
+`~/.imux/config.toml`) and change `approve_words = ["yes", "allow"]` — a Turkish "evet", a
+narrower word, your own; an empty list goes back to the defaults. The first choice holding a
+word wins, so the plain yes stays the one it takes on every CLI today — and a plan to approve or
+a trust question is answered too, for their first choice says yes. Matching is literal, not a
+regular expression. A matching choice can also allow future actions or change an agent's mode;
+there is no separate filter for "don't ask again". Anything whose choices hold
+none of the words is left to you. The prompt must be the last thing on the agent's screen, so a
+list in the transcript is never taken for one. The agent's row shows `✓ N`, how many prompts
+i-mux answered since you last looked at the pane; what each one was is in the pane, where the
+CLI prints it. It is off by default: an agent whose prompts are answered can change and delete
+files and run any command, so turn it on for projects you trust. Prompts an organization's
+policy makes a CLI ask are answered too.
 
 **AI completion in the editor** works like Copilot in VS Code: choose **Editor → Neovim +
 Copilot** and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a

@@ -262,6 +262,8 @@ on_limit = "ask"        # ask | auto (sıradaki agent'a geç) | off
 
 on_permission = "wait"  # cevabını bekler | "approve": i-mux senin yerine Evet der
 
+approve_words = ["yes", "allow"]  # bir seçeneği onay yapan kelimeler
+
 [handoff]
 on_arrival = "wait"     # sizi bekler | "continue": yarım kalan isteğe devam eder
 ```

@@ -12,14 +12,17 @@ import (
 	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
-// Approver answers the agents' permission prompts when the config says so
-// (D112, `on_permission = "approve"`): one key per prompt, the plain yes,
+// Approver answers the agents' prompts when the config says so
+// (D112, D113, `on_permission = "approve"`): one key per matching prompt,
 // and a count on the pane for the row's "✓ N". It is the watcher's, like
 // the states: no process of its own, one engine query per tick that answers.
 type Approver struct {
 	T   *tmux.Client
 	On  bool
 	Log *log.Logger
+	// Words are the words that make a choice an approval (D113): the first
+	// choice holding one, case-insensitive, is answered.
+	Words []string
 	// GiveUp is how long a prompt may stay after its key was sent before
 	// i-mux leaves it to the user; 0 is DefaultGiveUp. IMUX_APPROVE_GIVEUP
 	// shortens it for tests.
@@ -58,10 +61,11 @@ func (a *Approver) Tick(ctx context.Context, panes []PaneRow, screens map[string
 		return
 	}
 	type pending struct {
-		row  PaneRow
-		inst string
-		hash uint64
-		key  string
+		row   PaneRow
+		inst  string
+		hash  uint64
+		key   string
+		label string // the choice the words picked (OpenCode's highlight)
 	}
 	live := map[string]bool{}
 	var out, colored []pending
@@ -105,11 +109,11 @@ func (a *Approver) Tick(ctx context.Context, panes []PaneRow, screens map[string
 			}
 			continue
 		}
-		key, ok := approve.Key(string(p.Agent), q)
+		key, label, ok := approve.Answer(string(p.Agent), q, a.Words)
 		if !ok || key == "" {
 			continue
 		}
-		pd := pending{row: p, inst: inst, hash: h, key: key}
+		pd := pending{row: p, inst: inst, hash: h, key: key, label: label}
 		if p.Agent == session.OpenCode {
 			colored = append(colored, pd) // Enter takes the highlighted button
 		} else {
@@ -131,7 +135,7 @@ func (a *Approver) Tick(ctx context.Context, panes []PaneRow, screens map[string
 		} else {
 			sec := tmux.Sections(res)
 			for _, pd := range colored {
-				if approve.HighlightedOnce(sec["ap"+pd.row.ID]) {
+				if approve.Highlighted(sec["ap"+pd.row.ID], pd.label) {
 					out = append(out, pd)
 				}
 			}

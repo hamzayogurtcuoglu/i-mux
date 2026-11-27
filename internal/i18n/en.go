@@ -1000,7 +1000,7 @@ var en = map[string]string{
 	"settings.auto_approve_title":    "Auto-approve: i-mux answers for you",
 	"settings.auto_approve_wait_row": "Off: each agent waits for your answer",
 	"settings.auto_approve_on_row":   "On ⚠: i-mux answers Yes to every permission prompt",
-	"settings.auto_approve_note":     "Once per prompt, never \"don't ask again\"; an agent can then change files and run any command",
+	"settings.auto_approve_note":     "Once per prompt, first matching choice; words (%s): approve_words in config.toml — may allow future actions too",
 	"editor.missing":                 "%s is not installed: install it with your package manager, then choose it again.",
 	"editor.now":                     "✓ Files open in %s.",
 	"editor.install_cmd":             "%s is not installed; it installs with: %s",

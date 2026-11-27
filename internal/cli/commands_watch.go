@@ -141,12 +141,13 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	// from the screens it already reads; with no client attached it keeps
 	// reading them, as it does for notifications. IMUX_APPROVE_GIVEUP
 	// shortens the wait before a prompt that stayed is left to the user
-	// (tests).
+	// (tests). The words that make a choice an approval are the config's
+	// (D113).
 	giveUp := time.Duration(0)
 	if d, err := time.ParseDuration(os.Getenv("IMUX_APPROVE_GIVEUP")); err == nil && d > 0 {
 		giveUp = d
 	}
-	approver := &watch.Approver{T: tc, On: cfg.OnPermission == "approve", Log: logger, GiveUp: giveUp}
+	approver := &watch.Approver{T: tc, On: cfg.OnPermission == "approve", Log: logger, GiveUp: giveUp, Words: cfg.ApproveWordList()}
 	var lastSnap time.Time
 	// A new binary or config restarts the watcher: the last one's activity
 	// keeps every agent's state as it was.

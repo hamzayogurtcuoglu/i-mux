@@ -27,7 +27,7 @@ func init() {
 	})
 	register(&command{
 		Name:   "__settings",
-		Args:   "set <key> <value> | menu [commit-agent] | edit  [--pane P] [--client C]",
+		Args:   "set <key> <value> | menu [row] | edit  [--pane P] [--client C]",
 		Hidden: true,
 		Run:    runSettings,
 	})

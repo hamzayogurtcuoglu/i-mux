@@ -27,6 +27,12 @@ on_exit       = "shell"
 #             delete files and run any command.
 on_permission = "wait"
 
+# The words that make a choice on an agent's screen an approval to take
+# (with Auto-approve on): the first choice whose text holds one of them,
+# case-insensitive, is answered — "1. Yes" on every CLI today. Edit the
+# list here (Settings → Config file…); empty restores the defaults.
+approve_words = ["yes", "allow"]
+
 # Ask GitHub once a day whether a newer i-mux is out (Settings then offers it).
 update_check  = true
 

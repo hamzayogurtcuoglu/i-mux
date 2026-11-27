@@ -21,6 +21,33 @@ import (
 // AgentIDs are the agents imux knows, in default order.
 var AgentIDs = []string{"claude", "antigravity", "copilot", "codex", "opencode"}
 
+// DefaultApproveWords are the words that make a choice an approval (D113):
+// every CLI's plain yes holds one of them.
+var DefaultApproveWords = []string{"yes", "allow"}
+
+// NormalizeWords returns the words as they are kept: trimmed, lower-case,
+// without doubles — and never none: the defaults then, so a cleared list
+// starts over rather than answering nothing.
+func NormalizeWords(in []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, w := range in {
+		w = strings.ToLower(strings.TrimSpace(w))
+		if w == "" || seen[w] {
+			continue
+		}
+		seen[w] = true
+		out = append(out, w)
+	}
+	if len(out) == 0 {
+		return slices.Clone(DefaultApproveWords)
+	}
+	return out
+}
+
+// ApproveWordList is ApproveWords as it is matched, never none (D113).
+func (c *Config) ApproveWordList() []string { return NormalizeWords(c.ApproveWords) }
+
 // RemovedAgents were supported once. A config that still names one loads
 // with a warning instead of an error.
 var RemovedAgents = map[string]string{
@@ -214,7 +241,12 @@ type Config struct {
 	// OnPermission is what i-mux does when an agent asks the user's
 	// permission (a tool call, a file edit, a command): "wait" for their
 	// answer, or "approve" and i-mux answers Yes itself (D112).
-	OnPermission string            `toml:"on_permission"` // wait | approve
+	OnPermission string `toml:"on_permission"` // wait | approve
+	// ApproveWords are the words that make a choice on an agent's screen an
+	// approval to take (D113): with Auto-approve on, the first choice whose
+	// text holds one of them, case-insensitive, is answered. Empty uses the
+	// defaults, yes and allow.
+	ApproveWords []string          `toml:"approve_words"`
 	UpdateCheck  bool              `toml:"update_check"`
 	Locale       string            `toml:"locale"`
 	Editor       string            `toml:"editor"` // "" = micro, $VISUAL, $EDITOR, nano, vim
@@ -286,6 +318,7 @@ func Default() *Config {
 		OnLimit:      "ask",
 		OnExit:       "shell",
 		OnPermission: "wait",
+		ApproveWords: slices.Clone(DefaultApproveWords),
 		UpdateCheck:  true,
 		Handoff: Handoff{
 			BudgetChars:       30000,
@@ -448,6 +481,9 @@ func Parse(data []byte) (*Config, []string, error) {
 	for _, a := range cfg.Agents {
 		a.normalize()
 	}
+	// The approve words are kept as they are matched: lower-case, trimmed,
+	// and never none (D113).
+	cfg.ApproveWords = NormalizeWords(cfg.ApproveWords)
 	// Drop removed agents from order and default_agent, with a warning.
 	order := cfg.Order[:0:0]
 	for _, id := range cfg.Order {

@@ -140,10 +140,11 @@ func TestSettingMenus(t *testing.T) {
 	if r := rows(w.SettingMenu("notifications", "", "")); r != "1   On, with sound|2 ● On, silent|3   Off" {
 		t.Errorf("silent: %q", r)
 	}
-	// Auto-approve (D112): Off and On ⚠, then a line saying what it does.
+	// Auto-approve (D112, D113): Off and On ⚠, then a line saying what it
+	// does and where its words are.
 	m = w.SettingMenu("on_permission", "%1", "c1")
 	if m.Title != "Auto-approve: i-mux answers for you" ||
-		rows(m) != "1 ● Off: each agent waits for your answer|2   On ⚠: i-mux answers Yes to every permission prompt| |   Once per prompt, never \"don't ask again\"; an agent can then change files and run any command" ||
+		rows(m) != "1 ● Off: each agent waits for your answer|2   On ⚠: i-mux answers Yes to every permission prompt| |   Once per prompt, first matching choice; words (yes, allow): approve_words in config.toml — may allow future actions too" ||
 		!strings.Contains(cmdOf(m, "2"), "__settings set on_permission approve --pane %1 --client c1") {
 		t.Errorf("auto-approve: %q %q", m.Title, rows(m))
 	}

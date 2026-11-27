@@ -21,11 +21,24 @@ import (
 // puts its pty in that mode too (stty -icanon), so the digit the watcher
 // sends — without a newline — reaches it at once.
 func TestAutoApprove(t *testing.T) {
+	for _, c := range []struct {
+		name, config, label string
+	}{
+		{"defaults", "", "Yes"},
+		{"custom words", "approve_words = [\"ONAYLA\"]\n", "OnAyLa"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			testAutoApprove(t, c.config, c.label)
+		})
+	}
+}
+
+func testAutoApprove(t *testing.T, extraConfig, label string) {
 	t.Setenv("IMUX_APPROVE_GIVEUP", "2s")
-	h := newH(t, "on_permission = \"approve\"\n"+fastLimits)
+	h := newH(t, "on_permission = \"approve\"\n"+extraConfig+fastLimits)
 	raw := "stty -icanon -echo min 1 time 0\n"
 	prompt := "printf 'Do you want to proceed?\\n" +
-		"❯ 1. Yes\\n" +
+		"❯ 1. " + label + "\\n" +
 		"  2. Yes, and do not ask again for this session\\n" +
 		"  3. No, and tell Claude what to do differently (esc)\\n'\n"
 	h.control("claude", raw+prompt+
