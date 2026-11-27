@@ -6,6 +6,8 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.77.0] - 2026-11-27
+
 ### Added
 
 - **Auto-approve.** Settings → Agents → **Auto-approve** (`on_permission = "approve"`) makes
@@ -14,7 +16,8 @@ All notable changes to i-mux are listed here. The format follows
   prompt, and only the yes for this once — never "don't ask again" or "Allow always" — so your
   rules and sessions stay untouched; the agent's row shows `✓ N`, what i-mux answered since you
   last looked. Off by default: an agent whose prompts are answered can change and delete files
-  and run any command.
+  and run any command. Prompts an organization's policy makes Copilot ask are answered too — the
+  ones `--allow-all` never silenced (Approve all, 0.74.0).
 
 ## [0.76.0] - 2026-11-26
 
