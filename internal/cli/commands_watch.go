@@ -137,6 +137,16 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 	keeper := &watch.StatusKeeper{W: w}
 	states := &watch.PaneStates{T: tc, Notify: newNotifier(cfg.Notify, tc).Send}
 	states.Load(context.Background())
+	// Auto-approve (D112): the watcher answers the agents' permission prompts
+	// from the screens it already reads; with no client attached it keeps
+	// reading them, as it does for notifications. IMUX_APPROVE_GIVEUP
+	// shortens the wait before a prompt that stayed is left to the user
+	// (tests).
+	giveUp := time.Duration(0)
+	if d, err := time.ParseDuration(os.Getenv("IMUX_APPROVE_GIVEUP")); err == nil && d > 0 {
+		giveUp = d
+	}
+	approver := &watch.Approver{T: tc, On: cfg.OnPermission == "approve", Log: logger, GiveUp: giveUp}
 	var lastSnap time.Time
 	// A new binary or config restarts the watcher: the last one's activity
 	// keeps every agent's state as it was.
@@ -153,7 +163,8 @@ var newTicker = func(cfg *config.Config, logger *log.Logger) (watch.Ticker, *tmu
 			return keeper.Commands(panes)
 		},
 		OnTickFailed:  keeper.Forget,
-		WatchDetached: cfg.Notify.Enabled,
+		WatchDetached: cfg.Notify.Enabled || cfg.OnPermission == "approve",
+		Approve:       approver,
 		OnActivity: func(at time.Time, changed map[string]time.Time, asking map[string]bool) {
 			a := &bus.Activity{At: at.UnixMilli(), Changed: map[string]int64{}}
 			for p, t := range changed {

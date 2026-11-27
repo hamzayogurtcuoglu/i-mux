@@ -50,4 +50,10 @@ var windowsSkips = map[string]string{
 	// background by writing OSC 11 to the client's tty device (D77), and a Windows client has
 	// none; it gets the background when it attaches, as on every system.
 	"TestThemeTerminalBackground": "a theme change's OSC 11 is written to a client's tty device (D77); Windows clients have none",
+
+	// The fake agent reads the key the watcher sends with the pty in raw
+	// mode; whether MSYS' stty can set that on a ConPTY is unverified there.
+	// The parser, the state machine and the off case are covered by tests
+	// that do run.
+	"TestAutoApprove": "the fake agent's stty raw mode",
 }

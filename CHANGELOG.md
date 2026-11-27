@@ -6,6 +6,16 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Auto-approve.** Settings → Agents → **Auto-approve** (`on_permission = "approve"`) makes
+  i-mux answer the agents' permission prompts itself, from the prompt on the agent's screen:
+  Claude Code's and Copilot's `1`, Codex's `y`, Antigravity's `y`, OpenCode's Enter. Once per
+  prompt, and only the yes for this once — never "don't ask again" or "Allow always" — so your
+  rules and sessions stay untouched; the agent's row shows `✓ N`, what i-mux answered since you
+  last looked. Off by default: an agent whose prompts are answered can change and delete files
+  and run any command.
+
 ## [0.76.0] - 2026-11-26
 
 ### Changed

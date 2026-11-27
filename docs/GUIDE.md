@@ -113,7 +113,7 @@ groups:
 | Group | Rows |
 |---|---|
 | Appearance | **Theme** (its first item follows the terminal's light/dark), **Icons** (its last item installs the Nerd Font) |
-| Agents | **At a limit** (ask, switch, do nothing), **After a handoff** (wait, continue), **Notifications** (on, silent, off) |
+| Agents | **At a limit** (ask, switch, do nothing), **After a handoff** (wait, continue), **Notifications** (on, silent, off), **Auto-approve** (off, on ⚠) |
 | Editing | **Editor**, **Image paste** |
 
 Enter or a click on a row opens a menu of its values (● marks the current one); pick one or press
@@ -121,6 +121,19 @@ its number. **Updates** (or `imux versions`) lists i-mux, its engine and every a
 version and the command that updates it, or installs it when it is missing; press its letter to
 run it right there. **Config file…** opens `config.toml`, where the rest is (agent states from
 their hooks, `[hooks] enabled`, among them).
+
+**Auto-approve** answers the agents' permission prompts for you (`on_permission = "approve"` in
+`config.toml`): when an agent stops at "Do you want to run this command?", i-mux sends the CLI's
+own key for the plain yes — Claude Code's and Copilot's `1`, Codex's `y`, Antigravity's `y`,
+OpenCode's Enter. It answers once per prompt, and only the yes for this once: never "Yes, and
+don't ask again", never "Allow always", never a switch to a more permissive mode, so your own
+rules and sessions stay untouched — and a plan to approve, or a question that is not a
+permission, is left to you. The prompt must be the last thing on the agent's screen, so a list in
+the transcript is never taken for one. The agent's row shows `✓ N`, how many prompts i-mux
+answered since you last looked at the pane; what each one was is in the pane, where the CLI
+prints it. It is off by default: an agent whose prompts are answered can change and delete files
+and run any command, so turn it on for projects you trust. Prompts an organization's policy makes
+a CLI ask are answered too.
 
 **AI completion in the editor** works like Copilot in VS Code: choose **Editor → Neovim +
 Copilot** and files you edit open in Neovim with GitHub's Copilot plugin (Tab accepts a

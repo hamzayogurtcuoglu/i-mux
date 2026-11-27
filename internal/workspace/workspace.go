@@ -383,6 +383,7 @@ func optCmds(target string, te TrailEntry, trail Trail, cwd, label string) []tmu
 		set(OptTrail, trail.String()),
 		// The previous run's state does not carry over to the new one.
 		unset(sidebar.OptState), unset(sidebar.OptStateAt), unset(sidebar.OptDoneAt),
+		unset(sidebar.OptApproved),
 	}
 }
 

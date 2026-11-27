@@ -16,10 +16,11 @@ import (
 
 // fakeServer answers the detector's two execs.
 type fakeServer struct {
-	clients string            // list-clients rows
-	panes   string            // list-panes rows
-	screens map[string]string // pane → capture
-	execs   [][]string
+	clients  string            // list-clients rows
+	panes    string            // list-panes rows
+	screens  map[string]string // pane → capture
+	screensE map[string]string // pane → capture with colors (capture-pane -e)
+	execs    [][]string
 }
 
 func (f *fakeServer) Run(_ context.Context, _ string, args []string) ([]byte, []byte, error) {
@@ -35,7 +36,12 @@ func (f *fakeServer) Run(_ context.Context, _ string, args []string) ([]byte, []
 		case "list-panes":
 			b.WriteString(f.panes)
 		case "capture-pane":
-			b.WriteString(f.screens[args[i+4]])
+			// -p -e -t <pane> reads the screen with its colors (D112).
+			if args[i+2] == "-e" {
+				b.WriteString(f.screensE[args[i+4]])
+			} else {
+				b.WriteString(f.screens[args[i+4]])
+			}
 		}
 	}
 	return []byte(b.String()), nil, nil

@@ -260,6 +260,8 @@ imux config init    # writes a commented ~/.imux/config.toml
 ```toml
 on_limit = "ask"        # ask | auto (switch to the next agent) | off
 
+on_permission = "wait"  # wait for your answer | "approve": i-mux answers Yes for you
+
 [handoff]
 on_arrival = "wait"     # wait for you | "continue" the unfinished request
 ```

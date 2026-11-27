@@ -24,6 +24,9 @@ type PaneRow struct {
 	Width   int
 	Height  int
 	Session string
+	// Approved is how many of the pane's prompts i-mux has answered
+	// (@imux_approved): when the pane was looked at the sidebar resets it.
+	Approved int
 	// Unreaped: dead, but tmux has no exit status or signal for it yet,
 	// so the pane-died hook has not run (see reapNudge).
 	Unreaped bool
@@ -72,6 +75,9 @@ type Detector struct {
 	// attached (at the idle interval), for notifications: a closed terminal
 	// is when they matter most. Limit lines are scanned only when attached.
 	WatchDetached bool
+	// Approve answers the agents' permission prompts when the config says so
+	// (D112): it runs after the screens are read, once per tick.
+	Approve *Approver
 	// OnEvent runs for each new limit or warn line outside grace and
 	// cooldown. It reports whether it prompted or acted, which starts the
 	// pane's cooldown.
@@ -95,7 +101,7 @@ type Detector struct {
 }
 
 const (
-	listFormat   = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}\t#{pane_width}\t#{@imux_hook}\t#{@imux_hook_at}"
+	listFormat   = "#{pane_id}\t#{@imux_agent}\t#{@imux_start}\t#{pane_dead}\t#{pane_height}\t#{session_name}\t#{pane_dead_status}#{pane_dead_signal}\t#{pane_width}\t#{@imux_hook}\t#{@imux_hook_at}\t#{@imux_approved}"
 	clientFormat = "#{client_name}\t#{client_control_mode}\t#{client_session}\t#{client_activity}"
 )
 
@@ -137,11 +143,12 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	var panes, agents []PaneRow
 	nudge := false
 	nudges := map[string]int{}
-	for _, r := range tmux.Rows(sec["panes"], 10) {
+	for _, r := range tmux.Rows(sec["panes"], 11) {
 		p := PaneRow{ID: r[0], Agent: session.AgentID(r[1]), Dead: r[3] == "1", Session: r[5], Hook: r[8]}
 		if ms, err := strconv.ParseInt(r[9], 10, 64); err == nil && ms > 0 {
 			p.HookAt = time.UnixMilli(ms)
 		}
+		p.Approved, _ = strconv.Atoi(strings.TrimSpace(r[10]))
 		p.Unreaped = p.Dead && r[6] == ""
 		p.Height, _ = strconv.Atoi(r[4])
 		p.Width, _ = strconv.Atoi(r[7])
@@ -229,6 +236,9 @@ func (d *Detector) Tick(ctx context.Context) (bool, error) {
 	}
 	for _, p := range agents {
 		d.hooked(p)
+	}
+	if d.Approve != nil {
+		d.Approve.Tick(ctx, agents, d.screens, d.Now())
 	}
 	if d.OnActivity != nil {
 		d.OnActivity(d.Now(), d.changed, d.asking)

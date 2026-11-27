@@ -22,6 +22,7 @@ var (
 	spinFg             string // a working agent's spinner
 	needPill           string // an agent that needs you
 	limitPill          string // a limited agent
+	approvedPill       string // an agent whose prompts i-mux answered (D112)
 	hoverBg            string // the item under the pointer
 	selectBg           string // the selected row (D31)
 	boxBg, boxFocusBg  string // the commit box, and with the cursor in it
@@ -60,6 +61,7 @@ func applyPalette(p theme.Palette) {
 	spinFg = p.Blue.Fg()
 	needPill = tint(p, p.Yellow, "\x1b[48;5;58m") + p.Yellow.Fg()
 	limitPill = tint(p, p.Red, "\x1b[48;5;52m") + p.Red.Fg()
+	approvedPill = tint(p, p.Green, "\x1b[48;5;22m") + p.Green.Fg()
 	hoverBg = theme.HoverBg(p).Bg()
 	selectBg = p.SelectionBg.Bg()
 	boxBg, boxFocusBg = p.Surface0.Bg(), p.Surface1.Bg()
@@ -89,6 +91,7 @@ func classic() {
 	tipStyle = white
 	selBg, spinFg = "\x1b[48;5;236m", "\x1b[38;5;75m"
 	needPill, limitPill = "\x1b[48;5;58m\x1b[38;5;214m", "\x1b[48;5;52m\x1b[38;5;210m"
+	approvedPill = "\x1b[48;5;22m\x1b[38;5;114m"
 	hoverBg, selectBg = "\x1b[48;5;238m", "\x1b[48;5;24m"
 	boxBg, boxFocusBg = "\x1b[48;5;236m", "\x1b[48;5;237m"
 	barTrack, barThumb = "\x1b[38;5;236m│"+reset, "\x1b[38;5;245m┃"+reset

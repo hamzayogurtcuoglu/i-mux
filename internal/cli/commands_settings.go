@@ -48,16 +48,17 @@ type settingKey struct {
 }
 
 var settingKeys = map[string]settingKey{
-	"icons":        {"tmux", "icons", []string{"auto", "nerd", "emoji"}, true},
-	"on_arrival":   {"handoff", "on_arrival", []string{"wait", "continue"}, true},
-	"on_limit":     {"", "on_limit", []string{"ask", "auto", "off"}, true},
-	"completion":   {"completion", "enabled", []string{"on", "off"}, false},
-	"notify":       {"notify", "enabled", []string{"on", "off"}, false},
-	"notify_sound": {"notify", "sound", []string{"on", "off"}, false},
-	"paste_images": {"paste", "images", []string{"on", "off"}, false},
-	"hidden_files": {"explorer", "show_hidden", []string{"on", "off"}, false}, // the explorer's ⋯ (D63)
-	"theme_auto":   {"theme", "auto_switch", []string{"on", "off"}, false},    // follow the terminal's light/dark (D68)
-	"hooks":        {"hooks", "enabled", []string{"on", "off"}, false},        // agents' states from their hooks (D71)
+	"icons":         {"tmux", "icons", []string{"auto", "nerd", "emoji"}, true},
+	"on_arrival":    {"handoff", "on_arrival", []string{"wait", "continue"}, true},
+	"on_limit":      {"", "on_limit", []string{"ask", "auto", "off"}, true},
+	"on_permission": {"", "on_permission", []string{"wait", "approve"}, true}, // Auto-approve (D112)
+	"completion":    {"completion", "enabled", []string{"on", "off"}, false},
+	"notify":        {"notify", "enabled", []string{"on", "off"}, false},
+	"notify_sound":  {"notify", "sound", []string{"on", "off"}, false},
+	"paste_images":  {"paste", "images", []string{"on", "off"}, false},
+	"hidden_files":  {"explorer", "show_hidden", []string{"on", "off"}, false}, // the explorer's ⋯ (D63)
+	"theme_auto":    {"theme", "auto_switch", []string{"on", "off"}, false},    // follow the terminal's light/dark (D68)
+	"hooks":         {"hooks", "enabled", []string{"on", "off"}, false},        // agents' states from their hooks (D71)
 }
 
 // runSettingsOpen opens the Settings menu on the client showing this pane

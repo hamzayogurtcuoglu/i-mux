@@ -207,10 +207,14 @@ type Tmux struct {
 
 // Config is the effective configuration.
 type Config struct {
-	Order        []string          `toml:"order"`
-	DefaultAgent string            `toml:"default_agent"`
-	OnLimit      string            `toml:"on_limit"` // ask | auto | off
-	OnExit       string            `toml:"on_exit"`  // shell | close
+	Order        []string `toml:"order"`
+	DefaultAgent string   `toml:"default_agent"`
+	OnLimit      string   `toml:"on_limit"` // ask | auto | off
+	OnExit       string   `toml:"on_exit"`  // shell | close
+	// OnPermission is what i-mux does when an agent asks the user's
+	// permission (a tool call, a file edit, a command): "wait" for their
+	// answer, or "approve" and i-mux answers Yes itself (D112).
+	OnPermission string            `toml:"on_permission"` // wait | approve
 	UpdateCheck  bool              `toml:"update_check"`
 	Locale       string            `toml:"locale"`
 	Editor       string            `toml:"editor"` // "" = micro, $VISUAL, $EDITOR, nano, vim
@@ -278,10 +282,11 @@ func defaultAgents() map[string]*Agent {
 // Default returns the built-in defaults (§16 of ARCHITECTURE.md).
 func Default() *Config {
 	return &Config{
-		Order:       slices.Clone(AgentIDs),
-		OnLimit:     "ask",
-		OnExit:      "shell",
-		UpdateCheck: true,
+		Order:        slices.Clone(AgentIDs),
+		OnLimit:      "ask",
+		OnExit:       "shell",
+		OnPermission: "wait",
+		UpdateCheck:  true,
 		Handoff: Handoff{
 			BudgetChars:       30000,
 			MaxArgBytes:       102400,
@@ -496,6 +501,7 @@ func (c *Config) validate(src []byte) error {
 		allowed  []string
 	}{
 		{"on_limit", c.OnLimit, []string{"ask", "auto", "off"}},
+		{"on_permission", c.OnPermission, []string{"wait", "approve"}},
 		{"on_arrival", c.Handoff.OnArrival, []string{"wait", "continue"}},
 		{"deliver", c.Handoff.Deliver, []string{"file", "inline"}},
 		{"icons", c.Tmux.Icons, []string{"auto", "nerd", "emoji"}},

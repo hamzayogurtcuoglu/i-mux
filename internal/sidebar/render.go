@@ -311,6 +311,13 @@ func badge(p PaneRow, tick int, compact bool) (string, int) {
 		return pill(limitPill, p.Limited)
 	case p.State == StateBlocked:
 		return pill(needPill, i18n.T("sidebar.needs_you"))
+	case p.Approved > 0 && p.State != StateExited && p.State != StateShell:
+		// Prompts i-mux answered for this agent since the pane was last
+		// looked at (D112); the work it did is in the pane.
+		if compact {
+			return approvedPill + "✓" + reset, 1
+		}
+		return pill(approvedPill, "✓ "+strconv.Itoa(p.Approved))
 	case p.State == StateWorking:
 		return spinFg + spinner[tick%len(spinner)] + reset, 1
 	case p.State == StateExited:

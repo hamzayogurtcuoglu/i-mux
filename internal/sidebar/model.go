@@ -46,6 +46,7 @@ const (
 	OptStateAt  = "@imux_state_at"    // pane: when the state last changed (unix seconds)
 	OptDoneAt   = "@imux_done_at"     // pane: when its work last ended (unix seconds)
 	OptSeen     = "@imux_seen"        // pane: when the user last looked at it (unix seconds)
+	OptApproved = "@imux_approved"    // pane: prompts i-mux answered since it was last looked at (D112)
 	OptTabAuto  = "@imux_tab_auto"    // window: the tab's name from its agent (tab bar)
 	OptTabState = "@imux_tab_state"   // window: the tab's state glyph with its style (tab bar)
 )
@@ -107,7 +108,10 @@ type PaneRow struct {
 	State   string    // working | blocked | done | idle | exited | shell
 	Since   time.Time // when the state began (zero if unknown)
 	Limited string    // reset clock when the agent is limited, e.g. "15:00"
-	Target  bool
+	// Approved is how many of the agent's prompts i-mux answered (D112),
+	// since the pane was last looked at.
+	Approved int
+	Target   bool
 }
 
 // Display is the row's name: the user's name, else the agent's title, else
@@ -228,9 +232,9 @@ type Window struct {
 	Appearance string
 }
 
-const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}\t#{@imux_state_at}\t#{@imux_done_at}\t#{@imux_seen}\t#{@imux_start}\t#{session_attached}\t#{pane_title}\t#{@imux_env}"
+const paneFormat = "#{pane_id}\t#{@imux_role}\t#{@imux_agent}\t#{@imux_label}\t#{@imux_state}\t#{pane_active}\t#{pane_dead}\t#{@imux_cwd}\t#{pane_current_path}\t#{session_name}\t#{@imux_name}\t#{window_id}\t#{window_active}\t#{pane_width}\t#{pane_height}\t#{@imux_state_at}\t#{@imux_done_at}\t#{@imux_seen}\t#{@imux_start}\t#{session_attached}\t#{pane_title}\t#{@imux_env}\t#{@imux_approved}"
 
-const paneFields = 22
+const paneFields = 23
 
 // OptRenamePane and OptRename carry a rename through the command prompt:
 // the pane to name and the answer. A prompt's template turns "%1" into the
@@ -474,6 +478,7 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 			active: r[5] == "1" && r[12] == "1", cwd: r[7], session: r[9], window: r[11],
 			empty: r[1] == RoleEmpty, env: r[21],
 		}
+		p.row.Approved, _ = strconv.Atoi(strings.TrimSpace(r[22]))
 		p.looked = p.active && r[19] != "" && r[19] != "0"
 		if p.cwd == "" {
 			p.cwd = r[8]
@@ -504,6 +509,11 @@ func (s *Source) Gather(ctx context.Context, self string) (Model, Window, error)
 		}
 		if p.looked && doneAt > seenAt {
 			seen = append(seen, tmux.Cmd{"set-option", "-p", "-q", "-t", p.row.ID, OptSeen, strconv.FormatInt(now.Unix(), 10)})
+		}
+		// The user looks at the pane: the "✓ N" it gathered while they were
+		// away starts over (D112).
+		if p.looked && p.row.Approved > 0 {
+			seen = append(seen, tmux.Cmd{"set-option", "-p", "-q", "-t", p.row.ID, OptApproved, "0"})
 		}
 		all = append(all, p)
 	}
