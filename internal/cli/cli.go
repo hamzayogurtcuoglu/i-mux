@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/i18n"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/tmux"
 )
 
 // Exit codes.
@@ -62,6 +63,7 @@ func (x *ExitCodeError) Error() string { return x.Msg }
 
 // Main runs imux with os.Args-style arguments and returns the exit code.
 func Main(args []string) int {
+	tmux.SetPaneEnv()
 	return Run(&Env{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}, args[1:])
 }
 

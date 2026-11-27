@@ -1017,13 +1017,17 @@ slow (about a second).
 User request: text selected in Copilot inside i-mux does not reach the clipboard, while it does
 in the same terminal without i-mux (D114).
 
-- [ ] **T114.1 Programs' copies reach the clipboard** · S
+- [x] **T114.1 Programs' copies reach the clipboard** · S
   - AC: the generated config has `set -s set-clipboard on`, for tmux and i-mux-core, on every
     system (golden files); imux puts `COPILOT_MULTIPLEXER=none` in its environment unless set, so
     the server, its panes and the agents it starts have it. An e2e test: an agent pane has the
     variable, and a program's plain OSC 52 there becomes a paste buffer.
-- [ ] **T114.2 Docs** · XS · deps: T114.1
+  - Status: done. `tmux.SetPaneEnv` in `cli.Main` (i-mux-core has no `set-environment`);
+    `TestCopyReachesClipboard` fails without the change. Copilot's tmux path was traced in its
+    own code: it runs the system's `tmux` (3.2a here), which cannot talk to i-mux-core.
+- [x] **T114.2 Docs** · XS · deps: T114.1
   - AC: D114, §9.2, GUIDE, CHANGELOG (Unreleased).
+  - Status: done.
 - [ ] **T114.3 Copy from a real Copilot (USER)** · XS · deps: T114.1
   - AC: in a Copilot started after the change, text selected with the mouse pastes elsewhere.
 

@@ -234,6 +234,14 @@ It reads the macOS clipboard, Wayland's (`wl-clipboard`), X11's (`xclip`), and f
 Windows clipboard: copy on Windows, paste in WSL. Over SSH the clipboard is on the other machine,
 so it cannot work there. `imux doctor` says what it uses; Settings turns it off.
 
+## Copying text
+
+Text you select in an agent goes to your clipboard as it does without i-mux: the CLI copies it
+with OSC 52 and i-mux passes that on to the terminal, over SSH and VS Code tunnels too (the
+terminal has to allow it; most do). A Copilot started before i-mux 0.79 needs a restart for it.
+To keep programs off your clipboard, put `set -s set-clipboard external` in
+`~/.imux/tmux.local.conf`.
+
 ## OpenCode
 
 **OpenCode** works with any model endpoint you set up in OpenCode (OpenAI-compatible APIs such as

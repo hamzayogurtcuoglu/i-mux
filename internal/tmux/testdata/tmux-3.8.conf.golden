@@ -19,6 +19,9 @@ set -s  extended-keys on
 set -s  escape-time 10
 set -g  history-limit 50000
 set -g  mouse on
+# Text a program copies (OSC 52: a CLI's own selection) becomes a buffer and reaches the
+# terminal's clipboard, as without i-mux (D114).
+set -s  set-clipboard on
 set -g  focus-events on
 set -g  pane-border-status top
 set -g  automatic-rename-format '#{?@imux_agent,#{@imux_agent},#{pane_current_command}}'

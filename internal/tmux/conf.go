@@ -272,6 +272,9 @@ func GenerateConf(in *ConfInput) string {
 	w("set -s  escape-time 10")
 	w("set -g  history-limit %d", cfg.Tmux.HistoryLimit)
 	w("set -g  mouse %s", onOff(cfg.Tmux.Mouse))
+	w("# Text a program copies (OSC 52: a CLI's own selection) becomes a buffer and reaches the")
+	w("# terminal's clipboard, as without i-mux (D114).")
+	w("set -s  set-clipboard on")
 	w("set -g  focus-events on")
 	w("set -g  pane-border-status top")
 	// Windows are named after the active pane's agent ("claude"), not its process ("node").

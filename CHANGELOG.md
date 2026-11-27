@@ -6,6 +6,14 @@ All notable changes to i-mux are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Text you select in Copilot reaches your clipboard again**, as it does without i-mux. A
+  program's copy (OSC 52) now goes on to the terminal's clipboard (`set-clipboard on`, over SSH
+  and VS Code tunnels too), and Copilot is started with `COPILOT_MULTIPLEXER=none`, so it copies
+  that way instead of through a `tmux` passthrough i-mux's engine drops. Restart a Copilot that
+  was already running. `set -s set-clipboard external` in `~/.imux/tmux.local.conf` turns it off.
+
 ## [0.78.0] - 2026-11-27
 
 ### Added
