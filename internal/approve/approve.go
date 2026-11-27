@@ -192,9 +192,10 @@ var hintWords = func() map[string]bool {
 	return m
 }()
 
-// hintReplacer strips the punctuation a key hint's words sit in.
+// hintReplacer strips the punctuation a key hint's words sit in: the
+// arrows, the "·" between hints, and the "/" of "↑/↓".
 var hintReplacer = strings.NewReplacer("(", " ", ")", " ", ",", " ", ":", " ", ";", " ",
-	"·", " ", "↑", " ", "↓", " ", "←", " ", "→", " ", "⇆", " ", "‹", " ", "›", " ")
+	"·", " ", "↑", " ", "↓", " ", "←", " ", "→", " ", "⇆", " ", "‹", " ", "›", " ", "/", " ")
 
 // hint reports whether l is a key hint or a border: the only thing that may
 // follow the choices on the screen. The input box, a spinner's hint or a
@@ -209,7 +210,7 @@ func hint(l string) bool {
 		return true // blank or a border only
 	}
 	for _, w := range strings.Fields(strings.ToLower(hintReplacer.Replace(t))) {
-		if !hintWords[w] && !chord(w) {
+		if !hintWords[w] && !chord(w) && !keyRange(w) {
 			return false
 		}
 	}
@@ -222,6 +223,19 @@ func chord(w string) bool {
 		if strings.HasPrefix(w, m+"+") && len(w) > len(m)+1 {
 			return true
 		}
+	}
+	return false
+}
+
+// keyRange is a key's number or a span of them, "2", "1-4", as a hint names
+// the choices it takes.
+func keyRange(w string) bool {
+	if len(w) == 1 && w[0] >= '0' && w[0] <= '9' {
+		return true
+	}
+	if a, b, ok := strings.Cut(w, "-"); ok && len(a) == 1 && len(b) == 1 &&
+		a[0] >= '0' && a[0] <= '9' && b[0] >= '0' && b[0] <= '9' {
+		return true
 	}
 	return false
 }

@@ -1099,6 +1099,11 @@ screen (D112).
     OpenCode each have one permission prompt answered from the screen, and a
     second one left alone once answered does not take; the formats and keys go
     into §20/§21 as structure only.
+  - Status: Copilot verified 2026-11-27, live: an organization policy's
+    confirmation draws the question and the choices inside a box, its hint row
+    "↑/↓ to navigate · enter to select · esc to cancel" below them, and the
+    answer "1" ran the command at once (the "/" of "↑/↓" and key spans are
+    hint words since). Claude Code, Codex, Antigravity and OpenCode remain.
 
 ## M110: Several agents together (added 2026-11-25)
 

@@ -57,11 +57,31 @@ func TestFindKey(t *testing.T) {
 		{
 			"copilot organization policy",
 			"copilot",
-			"Organization policy requires confirmation\n" +
+			"Organization policy requires confirmation.\n" +
 				"Do you want to run this command?\n" +
 				"❯ 1. Yes\n" +
 				"  2. Yes, and approve shell for the rest of the running session\n" +
 				"  3. No, and tell Copilot what to do differently (Esc)\n",
+			"1",
+		},
+		{
+			// As Copilot really shows it under an organization policy: the
+			// question and the choices inside a box, the hint of its keys
+			// below them, then the box's bottom edge.
+			"copilot organization policy in a box",
+			"copilot",
+			"Organization policy requires confirmation.\n" +
+				"┌──────────────────────────────────────────────────────────────┐\n" +
+				"│ Show the recent commits                                      │\n" +
+				"│ git log --oneline -15                                         │\n" +
+				"│                                                              │\n" +
+				"│ Do you want to run this command?                             │\n" +
+				"│                                                              │\n" +
+				"│ ❯ 1. Yes                                                     │\n" +
+				"│   2. No, and tell Copilot what to do differently (Esc to stop) │\n" +
+				"│                                                              │\n" +
+				"│ ↑/↓ to navigate · enter to select · esc to cancel            │\n" +
+				"└──────────────────────────────────────────────────────────────┘\n",
 			"1",
 		},
 		{
