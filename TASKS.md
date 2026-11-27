@@ -1012,43 +1012,36 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
-## M111: Approve everything (added 2026-11-26)
+## M113: Auto-approve's own words (added 2026-11-27)
 
-User request: a setting that makes Claude, Copilot and the other agents approve every tool call
-themselves, in their interactive panes too, not only in Jobs' headless runs (D109).
+User request: Auto-approve should not be i-mux's fixed rules. It should look at the choices in
+order — the first first — and answer the first whose text holds one of a list of words ("Yes,
+Allow" and the like, case-insensitive), with the list in config.toml, where he edits it himself
+(D113).
 
-Shipped in v0.74.0 and removed in v0.74.1 at the user's request (D109): Copilot still asked under
-the organization's policy, so it did not help where it was wanted.
-
-- [x] **T111.1 The switch on every launch** · S
-  - AC: D109: `auto_approve` (top level, default false) in the config, its template and
-    docs/CONFIG.md; `agent.ApproveArgs` gives each CLI's switch (Claude Code and Antigravity
-    `--dangerously-skip-permissions`, Copilot `--allow-all`, Codex
-    `--dangerously-bypass-approvals-and-sandbox`, OpenCode `--auto`); the workspace's launch spec
-    and `imux handoff` put it before the agent's `args` when on, once (not when `args` already
-    has it), and nothing when off; Jobs unchanged. Unit tests (each agent's argv on and off, a
-    resume, the switch already in `args`, the handoff's argv).
-  - Status: done. `Info.ApproveFlag` and `agent.ApproveArgs`; `WS.Spec` and `imux handoff`;
-    `TestApproveArgs`, `TestSpecAutoApprove`, `TestHandoffAutoApprove`.
-- [x] **T111.2 Settings → Agents → Approve all** · S · deps: T111.1
-  - AC: D109: the row (`y`) shows Off or On ⚠; its menu has Off and On ⚠ (approve everything) and
-    a line saying it applies to agents started after; `__settings set auto_approve on|off` writes
-    the key; i18n (en, tr); unit tests (the row, the menu, the key written).
-  - Status: done. `approveLabel`, `SettingMenu("auto_approve")`, `settingKeys`;
-    `TestSettingsMenu`, `TestSettingMenus`, `TestSetSetting`.
-- [x] **T111.3 Docs** · XS · deps: T111.2
-  - AC: GUIDE, README and README.tr, CHANGELOG.
-  - Status: done (GUIDE Settings, README and README.tr Configuration, CHANGELOG Unreleased).
-- [x] ~~**T111.4 Check each CLI (USER)**~~ · XS · deps: T111.1
-  - Dropped with the feature (Q33 closed): Copilot 1.0.116 with `--allow-all` still asked,
-    "Organization policy requires confirmation".
-- [x] **T111.5 Remove Approve all** · S
-  - AC: D109: the Settings row, its menu and i18n keys, `auto_approve`, `agent.ApproveArgs` and
-    the launch changes are gone; a config with `auto_approve` loads with no warning
-    (`removedKeys`, top-level keys too); GUIDE, README, README.tr, docs/CONFIG.md, CHANGELOG
-    (Removed). Unit test: the removed key is quiet, a mistyped one still warns.
-  - Status: done. The feature commit reverted; `removedKeys` checked for every undecoded key;
-    `TestRemovedKeysQuiet`.
+- [x] **T113.1 The words drive the choice** · M
+  - AC: `approve.Answer(agent, prompt, words)`: the first choice, in the listed order, whose text
+    holds one of the words (case-insensitive) is answered with its own key — the key its row
+    shows, else its number, Enter on OpenCode's highlighted button, Antigravity's `y` on its
+    first choice. The per-CLI wordings and question rules go. Unit tests: each CLI's screen, a
+    word of the user's own in another language, the case, the order (the first match wins), none
+    matched; a plan, a trust question and an agent's yes/no question answered by the words.
+  - Status: done. `answer.go`; the box Copilot draws under an organization policy, the wrapped
+    label and the direct-mode footer all covered. Matches are literal substrings, not regular
+    expressions; choice order takes priority over word order. The menu warns that a matching
+    choice can grant future permissions too.
+- [x] **T113.2 The words in config.toml** · S · deps: T113.1
+  - AC: `approve_words` (default `["yes", "allow"]`) in config.toml and docs/CONFIG.md, kept
+    trimmed, lower-case, without doubles and never none — empty restores the defaults; the
+    Auto-approve menu's note names the words and where they live; the watcher takes a change at
+    once (it restarts on one already). Unit tests of the normalizing.
+  - Status: done. `config.NormalizeWords`; the note names the words and `approve_words` in
+    config.toml. `TestAutoApprove` covers defaults and custom case-insensitive words end to end
+    on Linux/macOS; its existing Windows skip remains because the fake uses `stty` raw mode.
+    Native Windows behavior is covered by parser/state-machine unit tests in CI.
+- [x] **T113.3 Docs** · XS · deps: T113.2
+  - AC: D113, GUIDE, README, README.tr, CHANGELOG (Unreleased).
+  - Status: done.
 
 ## M112: Auto-approve (added 2026-11-27)
 
@@ -1104,6 +1097,44 @@ screen (D112).
     "↑/↓ to navigate · enter to select · esc to cancel" below them, and the
     answer "1" ran the command at once (the "/" of "↑/↓" and key spans are
     hint words since). Claude Code, Codex, Antigravity and OpenCode remain.
+
+## M111: Approve everything (added 2026-11-26)
+
+User request: a setting that makes Claude, Copilot and the other agents approve every tool call
+themselves, in their interactive panes too, not only in Jobs' headless runs (D109).
+
+Shipped in v0.74.0 and removed in v0.74.1 at the user's request (D109): Copilot still asked under
+the organization's policy, so it did not help where it was wanted.
+
+- [x] **T111.1 The switch on every launch** · S
+  - AC: D109: `auto_approve` (top level, default false) in the config, its template and
+    docs/CONFIG.md; `agent.ApproveArgs` gives each CLI's switch (Claude Code and Antigravity
+    `--dangerously-skip-permissions`, Copilot `--allow-all`, Codex
+    `--dangerously-bypass-approvals-and-sandbox`, OpenCode `--auto`); the workspace's launch spec
+    and `imux handoff` put it before the agent's `args` when on, once (not when `args` already
+    has it), and nothing when off; Jobs unchanged. Unit tests (each agent's argv on and off, a
+    resume, the switch already in `args`, the handoff's argv).
+  - Status: done. `Info.ApproveFlag` and `agent.ApproveArgs`; `WS.Spec` and `imux handoff`;
+    `TestApproveArgs`, `TestSpecAutoApprove`, `TestHandoffAutoApprove`.
+- [x] **T111.2 Settings → Agents → Approve all** · S · deps: T111.1
+  - AC: D109: the row (`y`) shows Off or On ⚠; its menu has Off and On ⚠ (approve everything) and
+    a line saying it applies to agents started after; `__settings set auto_approve on|off` writes
+    the key; i18n (en, tr); unit tests (the row, the menu, the key written).
+  - Status: done. `approveLabel`, `SettingMenu("auto_approve")`, `settingKeys`;
+    `TestSettingsMenu`, `TestSettingMenus`, `TestSetSetting`.
+- [x] **T111.3 Docs** · XS · deps: T111.2
+  - AC: GUIDE, README and README.tr, CHANGELOG.
+  - Status: done (GUIDE Settings, README and README.tr Configuration, CHANGELOG Unreleased).
+- [x] ~~**T111.4 Check each CLI (USER)**~~ · XS · deps: T111.1
+  - Dropped with the feature (Q33 closed): Copilot 1.0.116 with `--allow-all` still asked,
+    "Organization policy requires confirmation".
+- [x] **T111.5 Remove Approve all** · S
+  - AC: D109: the Settings row, its menu and i18n keys, `auto_approve`, `agent.ApproveArgs` and
+    the launch changes are gone; a config with `auto_approve` loads with no warning
+    (`removedKeys`, top-level keys too); GUIDE, README, README.tr, docs/CONFIG.md, CHANGELOG
+    (Removed). Unit test: the removed key is quiet, a mistyped one still warns.
+  - Status: done. The feature commit reverted; `removedKeys` checked for every undecoded key;
+    `TestRemovedKeysQuiet`.
 
 ## M110: Several agents together (added 2026-11-25)
 
