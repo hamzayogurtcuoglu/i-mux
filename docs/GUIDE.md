@@ -238,7 +238,7 @@ so it cannot work there. `imux doctor` says what it uses; Settings turns it off.
 
 Text you select in an agent goes to your clipboard as it does without i-mux: the CLI copies it
 with OSC 52 and i-mux passes that on to the terminal, over SSH and VS Code tunnels too (the
-terminal has to allow it; most do). A Copilot started before i-mux 0.79 needs a restart for it.
+terminal has to allow it; most do). A Copilot started before i-mux 0.78.1 needs a restart for it.
 To keep programs off your clipboard, put `set -s set-clipboard external` in
 `~/.imux/tmux.local.conf`.
 
