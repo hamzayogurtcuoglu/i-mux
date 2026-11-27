@@ -1050,6 +1050,56 @@ the organization's policy, so it did not help where it was wanted.
   - Status: done. The feature commit reverted; `removedKeys` checked for every undecoded key;
     `TestRemovedKeysQuiet`.
 
+## M112: Auto-approve (added 2026-11-27)
+
+User request: instead of starting the agents with their approve-everything switch
+(D109, removed in v0.74.1), keep them as they are; when **Auto-approve** is on in
+Settings, let i-mux itself answer the permission prompts an agent shows, from the
+screen (D112).
+
+- [x] **T112.1 The prompt parser** · M
+  - AC: `internal/approve` finds the permission prompt at the bottom of a screen:
+    the choices (numbered rows, or OpenCode's buttons), followed only by blank
+    lines, box borders and key hints, the question line above; and per CLI the key
+    for the plain yes, this once (Claude Code and Copilot "1", Codex the key the
+    row itself shows, Antigravity "y", OpenCode Enter when a capture with colors
+    shows "Allow once" as the highlighted button). Never the "don't ask again"
+    choice, never anything whose first choice is not the plain yes. Unit tests with
+    synthetic screens of each CLI, and negatives: a transcript's numbered list, a
+    list above the input box, a plan approval, an unknown question, a menu.
+  - Status: done. `Find`, `Key` and `HighlightedOnce`; `approve_test.go` with each
+    CLI's screen and the negatives, the formats from each CLI's own docs and
+    source (Codex's keymap defaults, OpenCode's buttons, Antigravity's
+    confirmation keys).
+- [x] **T112.2 The watcher answers** · S · deps: T112.1
+  - AC: with `on_permission = "approve"` (default "wait") the watcher answers one
+    prompt per tick in one exec (`send-keys` and `@imux_approved`, the count on
+    the pane), once per prompt: a prompt still on screen 10 s later is left to the
+    user, never tried again; screens are read while no client is attached, at the
+    idle interval; `watch.log` notes each answer (pane and agent, no screen text).
+    Unit tests of the state machine.
+  - Status: done. `watch.Approver` behind `Detector.Approve`, `WatchDetached` with
+    it; `approve_test.go` over the fake server, `IMUX_APPROVE_GIVEUP` for tests.
+- [x] **T112.3 Settings → Agents → Auto-approve** · S · deps: T112.2
+  - AC: the row (`y`) with Off / On ⚠ and its menu's two values and a note;
+    `__settings set on_permission approve|wait`; `on_permission` in config.toml and
+    docs/CONFIG.md; the agent's row shows `✓ N`, the prompts i-mux answered since
+    the pane was last looked at. i18n (en, tr); unit tests (the row, the menu, the
+    key written, the badge).
+  - Status: done. `SettingMenu("on_permission")`, `autoApproveLabel`;
+    `sidebar.OptApproved` and the badge; settings, setSetting and approved tests.
+- [x] **T112.4 Docs and e2e** · S · deps: T112.2
+  - AC: GUIDE, README, README.tr, CHANGELOG (Unreleased); an e2e test whose fake
+    agent shows a Claude-style prompt and receives "1".
+  - Status: done. `e2e/approve_test.go` (the fake agent reads the key with its
+    pty in raw mode, as a real CLI does), skipped on Windows with its reason;
+    GUIDE, README, README.tr, CHANGELOG, docs/CONFIG.md regenerated.
+- [ ] **T112.5 Check each CLI (USER)** · S · deps: T112.1
+  - AC: with Auto-approve on, a real Claude Code, Copilot, Codex, Antigravity and
+    OpenCode each have one permission prompt answered from the screen, and a
+    second one left alone once answered does not take; the formats and keys go
+    into §20/§21 as structure only.
+
 ## M110: Several agents together (added 2026-11-25)
 
 User request (from a brainstorm): the agents should work together: several on one task, keeping
