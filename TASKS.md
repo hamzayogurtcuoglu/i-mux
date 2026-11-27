@@ -1012,6 +1012,21 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M114: Copying text out of an agent (added 2026-11-27)
+
+User request: text selected in Copilot inside i-mux does not reach the clipboard, while it does
+in the same terminal without i-mux (D114).
+
+- [ ] **T114.1 Programs' copies reach the clipboard** · S
+  - AC: the generated config has `set -s set-clipboard on`, for tmux and i-mux-core, on every
+    system (golden files); imux puts `COPILOT_MULTIPLEXER=none` in its environment unless set, so
+    the server, its panes and the agents it starts have it. An e2e test: an agent pane has the
+    variable, and a program's plain OSC 52 there becomes a paste buffer.
+- [ ] **T114.2 Docs** · XS · deps: T114.1
+  - AC: D114, §9.2, GUIDE, CHANGELOG (Unreleased).
+- [ ] **T114.3 Copy from a real Copilot (USER)** · XS · deps: T114.1
+  - AC: in a Copilot started after the change, text selected with the mouse pastes elsewhere.
+
 ## M113: Auto-approve's own words (added 2026-11-27)
 
 User request: Auto-approve should not be i-mux's fixed rules. It should look at the choices in
