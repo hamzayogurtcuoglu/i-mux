@@ -1033,10 +1033,14 @@ T109.5.
   - Status: done (i-mux-relay `1abae54`): `internal/relay`, `cmd/imux-relay`, `make ci`; tests
     with a fake computer over plain HTTP and TLS (the phone in HTTP/2), a dead computer dropped
     by the ping.
-- [ ] **T115.3 i-mux-relay: releases** · S · deps: T115.2
-  - AC: GoReleaser (Linux, macOS, Windows; amd64, arm64), a Docker image on GHCR, a README with
-    the steps (a server, a domain, `imux-relay --domain …`, `imux phone relay …`, pairing),
-    a systemd unit as an example; tags `vX.Y.Z`.
+- [ ] **T115.3 i-mux-relay: one line to install, releases** · M · deps: T115.2
+  - AC: D115: `install.sh` (`curl … | sudo sh [-s -- <domain>]`): Linux amd64 or arm64, the newest
+    release's binary into `/usr/local/bin`, a systemd service (its own user, `StateDirectory`,
+    the right to bind 443), started, and the link printed; run again, it updates and keeps the
+    secret. `imux-relay` prints the link `https://<domain>#<secret>`, and with no `--domain`
+    takes the server's public IPv4 as `a-b-c-d.sslip.io`. GoReleaser (Linux, macOS, Windows;
+    amd64, arm64) on a `vX.Y.Z` tag, a Docker image on GHCR (`docker run` in one line too), the
+    README's steps; shellcheck on the script. Tests: the link, the sslip.io name.
 - [x] **T115.4 i-mux: the computer dials the relay** · M · deps: T115.1
   - AC: `imux phone relay <url> --secret S` (checks it once and saves `~/.imux/phone/relay.json`,
     0600, with a room made then), `imux phone relay off`, `imux phone relay` (its state);
@@ -1050,6 +1054,10 @@ T109.5.
     and types through a fake relay, and checks the comeback, a refused secret and clearing the
     relay. Also run here with the real `imux-relay` (`--no-tls`, loopback) and a real `imux` in a
     temporary home, and paired in headless Chromium at `/r/<room>/`.
+- [ ] **T115.8 i-mux: connect from the Phone popup** · S · deps: T115.4
+  - AC: D115: `imux phone relay '<link>'` takes the link (`https://host#secret`); the Phone popup
+    shows the relay's state and offers **Connect a relay…** (paste the link) and **Disconnect
+    the relay**; English and Turkish. Unit tests of the link.
 - [ ] **T115.5 i-mux: notifications on the phone** · M · deps: T115.4
   - AC: D115: a service worker and a **Notify me** button in the app (over HTTPS only); the
     subscription reaches the computer sealed (`op: "push"`) and is kept with the device;

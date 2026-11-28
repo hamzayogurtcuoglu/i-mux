@@ -18,6 +18,8 @@ understand is a new version (v2), never a change to v1.
 - **The secret** is the relay's: 32 random bytes in URL-safe base64 without padding (43
   characters), made on the relay's first start. Only holders of it may connect a computer. The
   relay compares it in constant time.
+- **The link** is how a user hands a relay to i-mux: `https://<host>[:<port>]#<secret>`. It is
+  pasted into i-mux, never opened: the secret stays in the fragment, which no browser sends.
 
 ## Paths on the relay
 
