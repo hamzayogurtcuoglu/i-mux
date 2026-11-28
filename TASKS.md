@@ -1012,6 +1012,53 @@ slow (about a second).
     on reload); checked on tmux 3.2a that background updates arrive between `\e[?2026h` and
     `\e[?2026l`; the config test checks it is there once after reloads.
 
+## M115: The phone from anywhere, through a relay the user runs (added 2026-11-28)
+
+User request: the phone reaches i-mux away from home without i-mux depending on any service;
+anyone can run the relay on their own server, and it lives in its own repository (D115). Replaces
+T109.5.
+
+- [x] **T115.1 The protocol, written down** · XS
+  - AC: `docs/RELAY-PROTOCOL.md`: v1's connection, rooms, forwarding, limits, errors and what a
+    relay can see; i-mux and i-mux-relay both follow it.
+  - Status: done.
+- [ ] **T115.2 i-mux-relay: the relay** · M · deps: T115.1 · (repository `i-mux-relay`)
+  - AC: `imux-relay` (Go, one binary): `--domain` (Let's Encrypt, `:443` and `:80`), `--listen`
+    with `--no-tls`, `--data` (certificates and the secret, 0600); the secret made on the first
+    start and the `imux phone relay …` line printed; the computer's `Upgrade: imux-relay.v1`
+    connection checked against the secret, then spoken to in HTTP/2; `/r/<room>/…` forwarded with
+    the limits of the protocol, streamed (SSE), 503 while the computer is away; a newer
+    connection for a room replaces the older; `GET /healthz`. Unit tests with a fake computer;
+    `go vet`, CI on Linux, macOS and Windows.
+- [ ] **T115.3 i-mux-relay: releases** · S · deps: T115.2
+  - AC: GoReleaser (Linux, macOS, Windows; amd64, arm64), a Docker image on GHCR, a README with
+    the steps (a server, a domain, `imux-relay --domain …`, `imux phone relay …`, pairing),
+    a systemd unit as an example; tags `vX.Y.Z`.
+- [ ] **T115.4 i-mux: the computer dials the relay** · M · deps: T115.1
+  - AC: `imux phone relay <url> --secret S` (checks it once and saves `~/.imux/phone/relay.json`,
+    0600, with a room made then), `imux phone relay off`, `imux phone relay` (its state);
+    `__phone-serve` keeps one connection to the relay (proxy from the environment, a backoff of
+    1 s to 60 s) and serves its handler over it in HTTP/2, besides the LAN; the app's paths are
+    relative so it works under `/r/<room>/`; the QR code carries the relay's address when one is
+    set; the Phone popup shows the relay and its state (connected, connecting, the error).
+    Standard library only (D13). Unit tests against an in-process relay that follows the
+    protocol (the relay's repository is not imported).
+- [ ] **T115.5 i-mux: notifications on the phone** · M · deps: T115.4
+  - AC: D115: a service worker and a **Notify me** button in the app (over HTTPS only); the
+    subscription reaches the computer sealed (`op: "push"`) and is kept with the device;
+    `__phone-serve` follows the agents' states and pushes when one starts to need the user or
+    finishes working; VAPID (ES256, keys in `~/.imux/phone/vapid.json`, 0600) and RFC 8291
+    `aes128gcm`; endpoints only on the push services' hosts; a 404 or 410 drops the
+    subscription; `[phone] push` = `"names"` (default), `"plain"`, `"off"`; forgetting a device
+    drops its subscription. Unit tests: RFC 8291's test vector, the JWT, the hosts, the
+    transitions; the app checked in headless Chromium.
+- [ ] **T115.6 Docs** · XS · deps: T115.4, T115.5
+  - AC: GUIDE ("Your phone": anywhere, step by step), CONFIG (`[phone] push`), README,
+    CHANGELOG (Unreleased).
+- [ ] **T115.7 A real phone through a real relay (USER)** · S · deps: T115.3, T115.5
+  - AC: on a relay on a server, an iPhone and an Android phone pair on mobile data, watch and
+    answer an agent, and get a notification with the screen locked.
+
 ## M114: Copying text out of an agent (added 2026-11-27)
 
 User request: text selected in Copilot inside i-mux does not reach the clipboard, while it does
@@ -1290,10 +1337,8 @@ turn it on and off from the sidebar (D104).
     390×844 against a fake engine: the pairing steps, the tip, a swipe on the header moving
     from 1/3 to 2/3, + saving a prompt. Not yet on a real phone.
 
-- [ ] **T109.5 Anywhere: relay and notifications** · L · deps: T109.3
-  - AC: D104: after a hosting decision by the owner: an outbound relay over HTTPS (through the
-    system's proxy) for any network, carrying only sealed messages, and web push when an agent
-    needs the user.
+- [ ] ~~**T109.5 Anywhere: relay and notifications** · L · deps: T109.3~~ **Moved to M115
+  (2026-11-28):** the relay is one the user runs (D115).
 
 ## M107: Agents ask each other, across projects and CLIs (added 2026-11-24)
 
