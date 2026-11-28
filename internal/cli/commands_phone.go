@@ -24,7 +24,7 @@ func init() {
 	register(&command{
 		Name:    "phone",
 		Summary: "cmd.phone",
-		Args:    "[on | off | pair | devices [--json] | readonly <phone> on|off | forget <phone> | relay [<url> --secret S | off]] [--popup]",
+		Args:    "[on | off | pair | devices [--json] | readonly <phone> on|off | forget <phone> | relay [<link> | <url> --secret S | off]] [--popup]",
 		Run:     runPhone,
 	})
 	register(&command{
@@ -34,7 +34,7 @@ func init() {
 	})
 }
 
-const phoneUsage = "phone [on | off | pair | devices [--json] | readonly <phone> on|off | forget <phone> | relay [<url> --secret S | off]] [--popup]"
+const phoneUsage = "phone [on | off | pair | devices [--json] | readonly <phone> on|off | forget <phone> | relay [<link> | <url> --secret S | off]] [--popup]"
 
 // runPhone is the workspace from a phone (D104): its server on and off,
 // pairing a phone with a QR code, and the paired phones.
@@ -121,10 +121,15 @@ func runPhone(e *Env, args []string) error {
 			fmt.Fprintln(e.Stdout, i18n.T("phone.relay_off"))
 			return nil
 		case len(pos) == 2:
-			if *secret == "" {
-				return &UsageError{Msg: i18n.T("phone.relay_needs_secret")}
+			u, sec := pos[1], *secret
+			if sec == "" {
+				// The link imux-relay prints: https://host#secret.
+				var err error
+				if u, sec, err = phone.ParseRelayLink(u); err != nil {
+					return &UsageError{Msg: i18n.T("phone.relay_needs_secret")}
+				}
 			}
-			return phoneSetRelay(e, st, self, pos[1], *secret)
+			return phoneSetRelay(e, st, self, u, sec)
 		}
 		return usage
 	}
@@ -382,6 +387,10 @@ func phonePopup(e *Env, st *phone.Store, self string) error {
 		}
 		fmt.Fprintln(e.Stdout, "  o  "+toggle)
 		fmt.Fprintln(e.Stdout, "  p  "+i18n.T("phone.do_pair"))
+		fmt.Fprintln(e.Stdout, "  c  "+i18n.T("phone.do_relay"))
+		if st.Relay() != nil {
+			fmt.Fprintln(e.Stdout, "  x  "+i18n.T("phone.do_relay_off"))
+		}
 		if ds, _ := st.Devices(); len(ds) > 0 {
 			fmt.Fprintln(e.Stdout, "  r  "+i18n.T("phone.do_readonly"))
 			fmt.Fprintln(e.Stdout, "  f  "+i18n.T("phone.do_forget"))
@@ -407,6 +416,26 @@ func phonePopup(e *Env, st *phone.Store, self string) error {
 			} else {
 				fmt.Fprint(e.Stdout, "\n"+i18n.T("phone.press_enter"))
 				_, _ = in.ReadString('\n')
+			}
+		case "c":
+			// The link imux-relay printed, pasted here (D115).
+			fmt.Fprint(e.Stdout, "\n"+i18n.T("phone.paste_link"))
+			link, _ := in.ReadString('\n')
+			u, sec, err := phone.ParseRelayLink(link)
+			if err != nil {
+				msg = i18n.T("phone.relay_needs_secret")
+				break
+			}
+			fmt.Fprintln(e.Stdout)
+			if err := phoneSetRelay(e, st, self, u, sec); err != nil {
+				msg = err.Error()
+				break
+			}
+			fmt.Fprint(e.Stdout, "\n"+i18n.T("phone.press_enter"))
+			_, _ = in.ReadString('\n')
+		case "x":
+			if err := st.ClearRelay(); err != nil {
+				msg = err.Error()
 			}
 		case "r", "f":
 			if len(f) < 2 {

@@ -108,6 +108,22 @@ func NormalizeRelayURL(raw string) (string, error) {
 	return u.Scheme + "://" + strings.ToLower(u.Host), nil
 }
 
+// ParseRelayLink splits a relay's link, `https://host#secret` (what
+// imux-relay prints), into its address and secret.
+func ParseRelayLink(link string) (rawURL, secret string, err error) {
+	u, sec, ok := strings.Cut(strings.TrimSpace(link), "#")
+	if !ok || sec == "" || strings.ContainsAny(sec, " \t#") {
+		return "", "", ErrRelayLink
+	}
+	if _, err := NormalizeRelayURL(u); err != nil {
+		return "", "", err
+	}
+	return u, sec, nil
+}
+
+// ErrRelayLink means a relay's link lacks its secret.
+var ErrRelayLink = errors.New("phone: a relay's link is https://host#secret, as imux-relay prints it")
+
 // RelayPairURL is the QR code's address through the relay.
 func RelayPairURL(r *Relay, p Pending) string {
 	return r.URL + "/r/" + r.Room + "/#p=" + p.Token + "." + p.Key

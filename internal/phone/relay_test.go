@@ -201,6 +201,19 @@ func TestRelayURL(t *testing.T) {
 	}
 }
 
+// TestRelayLink: imux-relay's link carries the secret in its fragment.
+func TestRelayLink(t *testing.T) {
+	u, sec, err := ParseRelayLink(" https://relay.example.com#abc-_123 ")
+	if err != nil || u != "https://relay.example.com" || sec != "abc-_123" {
+		t.Fatalf("%q %q %v", u, sec, err)
+	}
+	for _, in := range []string{"https://relay.example.com", "https://relay.example.com#", "http://relay.example.com#x", "https://relay.example.com/x#y", "https://relay.example.com#a b"} {
+		if _, _, err := ParseRelayLink(in); err == nil {
+			t.Errorf("%q accepted", in)
+		}
+	}
+}
+
 // TestSetRelay: the relay is kept 0600; the same relay keeps its room (paired
 // phones keep their address), another gets a new one.
 func TestSetRelay(t *testing.T) {

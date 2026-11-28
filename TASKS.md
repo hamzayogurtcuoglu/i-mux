@@ -1054,10 +1054,12 @@ T109.5.
     and types through a fake relay, and checks the comeback, a refused secret and clearing the
     relay. Also run here with the real `imux-relay` (`--no-tls`, loopback) and a real `imux` in a
     temporary home, and paired in headless Chromium at `/r/<room>/`.
-- [ ] **T115.8 i-mux: connect from the Phone popup** · S · deps: T115.4
+- [x] **T115.8 i-mux: connect from the Phone popup** · S · deps: T115.4
   - AC: D115: `imux phone relay '<link>'` takes the link (`https://host#secret`); the Phone popup
     shows the relay's state and offers **Connect a relay…** (paste the link) and **Disconnect
     the relay**; English and Turkish. Unit tests of the link.
+  - Status: done (`phone.ParseRelayLink`, the popup's `c` and `x`). Run here with the real
+    `imux-relay` and `imux phone --popup`: the pasted link connected and the state showed.
 - [ ] **T115.5 i-mux: notifications on the phone** · M · deps: T115.4
   - AC: D115: a service worker and a **Notify me** button in the app (over HTTPS only); the
     subscription reaches the computer sealed (`op: "push"`) and is kept with the device;
