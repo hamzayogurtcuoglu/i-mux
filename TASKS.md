@@ -1022,7 +1022,7 @@ T109.5.
   - AC: `docs/RELAY-PROTOCOL.md`: v1's connection, rooms, forwarding, limits, errors and what a
     relay can see; i-mux and i-mux-relay both follow it.
   - Status: done.
-- [ ] **T115.2 i-mux-relay: the relay** · M · deps: T115.1 · (repository `i-mux-relay`)
+- [x] **T115.2 i-mux-relay: the relay** · M · deps: T115.1 · (repository `i-mux-relay`)
   - AC: `imux-relay` (Go, one binary): `--domain` (Let's Encrypt, `:443` and `:80`), `--listen`
     with `--no-tls`, `--data` (certificates and the secret, 0600); the secret made on the first
     start and the `imux phone relay …` line printed; the computer's `Upgrade: imux-relay.v1`
@@ -1030,11 +1030,14 @@ T109.5.
     the limits of the protocol, streamed (SSE), 503 while the computer is away; a newer
     connection for a room replaces the older; `GET /healthz`. Unit tests with a fake computer;
     `go vet`, CI on Linux, macOS and Windows.
+  - Status: done (i-mux-relay `1abae54`): `internal/relay`, `cmd/imux-relay`, `make ci`; tests
+    with a fake computer over plain HTTP and TLS (the phone in HTTP/2), a dead computer dropped
+    by the ping.
 - [ ] **T115.3 i-mux-relay: releases** · S · deps: T115.2
   - AC: GoReleaser (Linux, macOS, Windows; amd64, arm64), a Docker image on GHCR, a README with
     the steps (a server, a domain, `imux-relay --domain …`, `imux phone relay …`, pairing),
     a systemd unit as an example; tags `vX.Y.Z`.
-- [ ] **T115.4 i-mux: the computer dials the relay** · M · deps: T115.1
+- [x] **T115.4 i-mux: the computer dials the relay** · M · deps: T115.1
   - AC: `imux phone relay <url> --secret S` (checks it once and saves `~/.imux/phone/relay.json`,
     0600, with a room made then), `imux phone relay off`, `imux phone relay` (its state);
     `__phone-serve` keeps one connection to the relay (proxy from the environment, a backoff of
@@ -1043,6 +1046,10 @@ T109.5.
     set; the Phone popup shows the relay and its state (connected, connecting, the error).
     Standard library only (D13). Unit tests against an in-process relay that follows the
     protocol (the relay's repository is not imported).
+  - Status: done (`internal/phone/relay.go`, `imux phone relay`). `TestRunRelay` pairs, streams
+    and types through a fake relay, and checks the comeback, a refused secret and clearing the
+    relay. Also run here with the real `imux-relay` (`--no-tls`, loopback) and a real `imux` in a
+    temporary home, and paired in headless Chromium at `/r/<room>/`.
 - [ ] **T115.5 i-mux: notifications on the phone** · M · deps: T115.4
   - AC: D115: a service worker and a **Notify me** button in the app (over HTTPS only); the
     subscription reaches the computer sealed (`op: "push"`) and is kept with the device;

@@ -3,8 +3,8 @@
 // code, the device's id as additional data). No inline code: the page's CSP
 // allows only these files. The desktop is never changed by what the phone
 // shows: it reads the agents and a pane's screen, and types into it.
-import { gcm } from "/noble-aes.js";
-import { choices } from "/choices.js";
+import { gcm } from "./noble-aes.js";
+import { choices } from "./choices.js";
 
 const TR = (navigator.language || "").toLowerCase().startsWith("tr");
 const T = {
@@ -63,7 +63,9 @@ function b64uEncode(b) {
   for (const x of b) s += String.fromCharCode(x);
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-const KEY = "imux-phone";
+// A relay serves each computer under /r/<room>/ of one origin (D115): each
+// keeps its own pairing; the LAN's address keeps the original key.
+const KEY = "imux-phone" + (location.pathname === "/" ? "" : ":" + location.pathname);
 function saved() {
   try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; }
 }
@@ -96,7 +98,7 @@ async function pairFromFragment() {
   const name = (navigator.userAgentData && navigator.userAgentData.platform) ||
     (/iPhone|iPad|Android/.exec(navigator.userAgent) || ["Phone"])[0];
   try {
-    const r = await fetch("/api/pair", {
+    const r = await fetch("api/pair", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: m[1], name }),
@@ -149,7 +151,7 @@ function setStatus(on) {
 function connect() {
   clearTimeout(retry);
   if (es) es.close();
-  const u = "/api/events?d=" + encodeURIComponent(me.id) + "&a=" + encodeURIComponent(seal({ op: "events" }));
+  const u = "api/events?d=" + encodeURIComponent(me.id) + "&a=" + encodeURIComponent(seal({ op: "events" }));
   es = new EventSource(u);
   $("#status").hidden = false;
   es.onopen = () => setStatus(true);
@@ -174,7 +176,7 @@ function connect() {
     es.close();
     // A forgotten phone: the server refuses it; anything else, try again.
     try {
-      const r = await fetch("/api/events?d=" + encodeURIComponent(me.id) + "&a=x");
+      const r = await fetch("api/events?d=" + encodeURIComponent(me.id) + "&a=x");
       if (r.status === 401 && !(await r.text()).includes("refused")) return forgotten();
     } catch {}
     retry = setTimeout(connect, 2000);
@@ -187,7 +189,7 @@ function forgotten() {
 }
 async function cmd(obj) {
   try {
-    const r = await fetch("/api/cmd", {
+    const r = await fetch("api/cmd", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ d: me.id, m: seal(obj) }),

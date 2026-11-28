@@ -14,6 +14,7 @@ import (
 
 	"github.com/hamzayogurtcuoglu/i-mux/internal/paths"
 	"github.com/hamzayogurtcuoglu/i-mux/internal/sysx"
+	"github.com/hamzayogurtcuoglu/i-mux/internal/version"
 )
 
 // Port is where the server listens first (then the next free of 20).
@@ -82,7 +83,11 @@ func Serve(ctx context.Context, st *Store, eng Engine, look func() Look) error {
 		}
 	}()
 	srv := &Server{Store: st, Engine: eng, Look: look, Done: make(chan struct{})}
-	hs := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	h := srv.Handler()
+	hs := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second}
+	// The relay, when one is set up (D115): the same handler, from anywhere.
+	ver, _, _ := version.Info()
+	go RunRelay(ctx, st, h, ver, nil)
 	go func() {
 		<-ctx.Done()
 		close(srv.Done) // ends the event streams

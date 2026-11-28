@@ -24,7 +24,7 @@ func init() {
 	register(&command{
 		Name:    "phone",
 		Summary: "cmd.phone",
-		Args:    "[on | off | pair | devices [--json] | readonly <phone> on|off | forget <phone>] [--popup]",
+		Args:    "[on | off | pair | devices [--json] | readonly <phone> on|off | forget <phone> | relay [<url> --secret S | off]] [--popup]",
 		Run:     runPhone,
 	})
 	register(&command{
@@ -34,7 +34,7 @@ func init() {
 	})
 }
 
-const phoneUsage = "phone [on | off | pair | devices [--json] | readonly <phone> on|off | forget <phone>] [--popup]"
+const phoneUsage = "phone [on | off | pair | devices [--json] | readonly <phone> on|off | forget <phone> | relay [<url> --secret S | off]] [--popup]"
 
 // runPhone is the workspace from a phone (D104): its server on and off,
 // pairing a phone with a QR code, and the paired phones.
@@ -42,6 +42,7 @@ func runPhone(e *Env, args []string) error {
 	fs := newFlags(e, "phone")
 	popup := fs.Bool("popup", false, "the Phone popup (the rail's Phone)")
 	asJSON := fs.Bool("json", false, "devices: print JSON")
+	secret := fs.String("secret", "", "relay: the relay's secret (imux-relay prints it)")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
@@ -108,8 +109,79 @@ func runPhone(e *Env, args []string) error {
 		}
 		fmt.Fprintln(e.Stdout, i18n.T("phone.forgotten", d.Name))
 		return nil
+	case "relay":
+		switch {
+		case len(pos) == 1:
+			phoneRelayStatus(e, st)
+			return nil
+		case len(pos) == 2 && pos[1] == "off":
+			if err := st.ClearRelay(); err != nil {
+				return err
+			}
+			fmt.Fprintln(e.Stdout, i18n.T("phone.relay_off"))
+			return nil
+		case len(pos) == 2:
+			if *secret == "" {
+				return &UsageError{Msg: i18n.T("phone.relay_needs_secret")}
+			}
+			return phoneSetRelay(e, st, self, pos[1], *secret)
+		}
+		return usage
 	}
 	return usage
+}
+
+// phoneSetRelay checks the relay, saves it and turns the server on, which
+// dials it (D115).
+func phoneSetRelay(e *Env, st *phone.Store, self, rawURL, secret string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	if err := phone.CheckRelay(ctx, rawURL, secret); err != nil {
+		return err
+	}
+	r, err := st.SetRelay(rawURL, secret)
+	if err != nil {
+		return err
+	}
+	if err := st.SetOn(true); err != nil {
+		return err
+	}
+	if _, err := st.Ensure(self); err != nil {
+		return err
+	}
+	fmt.Fprintln(e.Stdout, i18n.T("phone.relay_set", r.URL))
+	// The server reads the relay within seconds; say how it went.
+	for i := 0; i < 40; i++ {
+		if s := st.RelayState().State; s == "connected" || s == "refused" {
+			break
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+	phoneRelayStatus(e, st)
+	return nil
+}
+
+// phoneRelayStatus is the relay's line: its address and state, or how to
+// set one up.
+func phoneRelayStatus(e *Env, st *phone.Store) {
+	r := st.Relay()
+	if r == nil {
+		fmt.Fprintln(e.Stdout, i18n.T("phone.relay_none"))
+		return
+	}
+	state := i18n.T("phone.relay_connecting")
+	rs := st.RelayState()
+	switch {
+	case st.Running() == nil:
+		state = i18n.T("phone.relay_server_off")
+	case rs.State == "connected":
+		state = i18n.T("phone.relay_connected")
+	case rs.State == "refused":
+		state = i18n.T("phone.relay_refused", rs.Error)
+	case rs.Error != "":
+		state = i18n.T("phone.relay_connecting") + " " + rs.Error
+	}
+	fmt.Fprintf(e.Stdout, "  %s/r/%s/  (%s: %s)\n", r.URL, r.Room, i18n.T("phone.via_relay"), state)
 }
 
 // runPhoneServe is the server (`imux __phone-serve`, started by `imux phone
@@ -177,6 +249,9 @@ func phoneStatus(e *Env, st *phone.Store) {
 	if i := st.Running(); i != nil {
 		fmt.Fprintln(e.Stdout, i18n.T("phone.status_on"))
 		printAddresses(e, i.Port)
+		if st.Relay() != nil {
+			phoneRelayStatus(e, st)
+		}
 	} else {
 		fmt.Fprintln(e.Stdout, i18n.T("phone.status_off"))
 	}
@@ -246,28 +321,35 @@ func phonePair(e *Env, st *phone.Store, self string, quiet bool) error {
 	if err != nil {
 		return err
 	}
+	// Through the relay when one is set up (D115), else the LAN's address
+	// (Tailscale's first: it reaches the phone anywhere).
+	relay := st.Relay()
 	addrs := phone.Addresses()
-	if len(addrs) == 0 {
+	if relay == nil && len(addrs) == 0 {
 		return fmt.Errorf("%s", i18n.T("phone.no_network"))
 	}
-	a := addrs[0] // Tailscale first: it reaches the phone anywhere
 	before, _ := st.Devices()
 	p, err := st.NewPairing(time.Now())
 	if err != nil {
 		return err
 	}
-	code, err := qr.Encode(phone.PairURL(a.IP, info.Port, p))
+	var u, note string
+	switch {
+	case relay != nil:
+		u, note = phone.RelayPairURL(relay, p), i18n.T("phone.relay_pair")
+	case addrs[0].Kind == "lan":
+		u, note = phone.PairURL(addrs[0].IP, info.Port, p), i18n.T("phone.lan_only")
+	default:
+		u, note = phone.PairURL(addrs[0].IP, info.Port, p), i18n.T("phone.tailscale")
+	}
+	code, err := qr.Encode(u)
 	if err != nil {
 		return err
 	}
 	fmt.Fprint(e.Stdout, code.Terminal())
 	fmt.Fprintln(e.Stdout)
 	fmt.Fprintln(e.Stdout, i18n.T("phone.scan", int(phone.PairFor/time.Minute)))
-	if a.Kind == "lan" {
-		fmt.Fprintln(e.Stdout, i18n.T("phone.lan_only"))
-	} else {
-		fmt.Fprintln(e.Stdout, i18n.T("phone.tailscale"))
-	}
+	fmt.Fprintln(e.Stdout, note)
 	if quiet {
 		return nil
 	}
